@@ -1,0 +1,346 @@
+---
+title: "looplook: An Integrative Framework for Chromatin Interaction Analysis and Functional Profiling"
+author: 
+  - name: Ying Zhang
+    affiliation: Zhejiang University
+    email: 12207129@zju.edu.cn
+    comment: ORCID:0009-0005-9644-7062
+date: "`r Sys.Date()`"
+output: 
+  BiocStyle::html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+vignette: >
+  %\VignetteIndexEntry{looplook: An Integrative Framework for Chromatin Interaction Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8, 
+  fig.height = 6,
+  eval = FALSE  
+)
+
+
+```
+
+# Introduction
+
+**looplook** is a comprehensive R/Bioconductor toolkit designed to decipher the complex interplay between **3D chromatin architecture** (HiChIP, ChIA-PET, Hi-C) and **transcriptional landscapes**. Unlike standard tools that treat loops as static features, `looplook` implements a dynamic, biologically-aware workflow.
+
+**Key Features & Capabilities:**
+
+1. **3D-Guided Peak Annotation**: Leverage chromatin loops to functionally annotate "orphan" peaks (e.g., intergenic ATAC-seq peaks or GWAS variants) by physically linking them to their target genes.
+2. **Expression-Aware Refinement**: Filter false-positive regulatory interactions by integrating RNA-seq data, identifying true functional Enhancer-Promoter contacts.
+3. **Reproducible Consolidation**: Merge biological replicates using graph-theoretic clustering to define high-confidence interactomes.
+4. **Automated Functional Profiling**: Bridge the gap between coordinates and biology via automated GO/GSEA enrichment and PPI network construction.
+
+This vignette provides a detailed guide to the pipeline, from raw data processing to publication-quality visualization.
+
+# Installation
+
+```{r install}
+if (!requireNamespace("devtools", quietly = TRUE))
+    install.packages("devtools")
+
+# Install from GitHub
+devtools::install_github("your_github_username/looplook")
+
+# Load package
+library(looplook)
+
+```
+
+# Module 1: Data Preprocessing & Consolidation
+
+This module focuses on standardization and reproducibility. It converts raw interaction data into robust Bioconductor objects and computes consensus sets from replicates.
+
+## Importing Data
+
+The `bedpe_to_gi` function is a robust importer that handles standard BEDPE formats. It automatically detects score columns (checking column 8 or 7) and normalizes anchor order (, ) to ensure compatibility with `InteractionSet`.
+
+```{r read_data}
+bedpe_file <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
+gi_obj <- bedpe_to_gi(bedpe_file)
+
+```
+
+## Consolidating Replicates (`consolidate_chromatin_loops`)
+
+This function addresses the challenge of merging biological replicates. Instead of simple overlaps, it employs **graph-based connected component analysis** to merge spatially proximal loops into consensus clusters.
+
+### Parameter Details
+
+```{r, echo=FALSE, eval=TRUE}
+params <- data.frame(
+  Parameter = c("files", "mode", "gap", "min_reproducible", "min_score", "blacklist_species", "target_bed_file", "out_file"),
+  Description = c(
+    "Character vector of file paths to BEDPE replicates (Required, n >= 2).",
+    "Merge strategy: 'reproducible' (Clustering + Majority Rule), 'intersect' (Strict Overlap), or 'union' (All loops).",
+    "Maximum distance (bp) to consider two anchors as overlapping (Default: 1000).",
+    "Minimum number of replicates required to retain a cluster. Default is NULL (auto-calculated majority, e.g., 2/2 or 2/3).",
+    "Minimum score threshold to filter input loops before merging.",
+    "Genome build (e.g., 'hg38') to automatically apply ENCODE blacklist filtering.",
+    "Path to a BED file. Only loops overlapping these regions are kept (e.g., Promoter-capture).",
+    "Path to save the consolidated BEDPE file."
+  )
+)
+knitr::kable(params, align = "c", caption = "Table 1: Parameters for Consolidate Chromatin Loops")
+
+```
+
+### Example Usage
+
+```{r consolidate}
+f1 <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
+f2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
+
+consensus_loops <- consolidate_chromatin_loops(
+  files = c(f1, f2),
+  mode = "reproducible",
+  gap = 1000,
+  min_reproducible = 2,
+  out_file = "results/consensus_loops.bedpe"
+)
+
+```
+
+# Module 2: Annotation & 3D-Guided Peak Integration
+
+**This is a core feature of looplook.** Standard annotation tools (like ChIPseeker) annotate peaks based on the *nearest* gene. However, distal regulatory elements often regulate genes far away via looping.
+
+The `annotate_peaks_and_loops` function uses the 3D interaction map to:
+
+1. Classify loops (e.g., **P-P**, **E-P**) based on genomic context.
+2. **Functionally annotate auxiliary peaks** (provided via `target_bed`). For example, it can determine that an intergenic GWAS SNP is physically connected to the *MYC* promoter, redefining its target gene.
+
+### Parameter Details
+
+```{r, echo=FALSE, eval=TRUE}
+params <- data.frame(
+  Parameter = c("bedpe_file", "target_bed", "species", "tss_region", "project_name", "out_dir", "color_palette", "karyo_bin_size"),
+  Description = c(
+    "Path to the input BEDPE file (loops).",
+    "**Crucial**: Path to an auxiliary BED file (e.g., ATAC-seq, ChIP-seq, GWAS). These peaks will be annotated via loops.",
+    "Genome build: 'hg38', 'hg19', 'mm10', or 'mm9'.",
+    "Numeric vector defining the Promoter window around TSS (Default: c(-2000, 2000)).",
+    "String prefix used for all output filenames and plot titles.",
+    "Directory path to save results.",
+    "Color palette for visualizations (e.g., 'Set2', 'Set3').",
+    "Bin size (bp) for the genome-wide Karyotype density plot (Default: 1e5)."
+  )
+)
+knitr::kable(params, align = "c", caption = "Table 2: Parameters for Annotation and Integration")
+
+```
+
+### Outputs
+
+* **Excel Report**: Contains `Target Annotation` sheet, explicitly linking `target_bed` peaks to their 3D-connected genes via the `all_annotated_gene` column.
+* **Visualizations**: Includes genomic distribution pies and connectivity bar charts.
+
+```{r annotation}
+loops_path <- "results/consensus_loops.bedpe"
+atac_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
+
+anno_res <- annotate_peaks_and_loops(
+  bedpe_file = loops_path,
+  target_bed = atac_path,
+  species = "hg38",
+  out_dir = "results/annotation",
+  project_name = "Study_H3K27ac"
+)
+
+```
+
+# Module 3: Expression-Aware Refinement
+
+Genomic annotation alone is static. A "Promoter" defined by distance to TSS might be transcriptionally silent in the cell type of interest.
+
+The `refine_loop_anchors_by_expression` function integrates **RNA-seq (TPM)** data to dynamically refine regulatory logic. If a loop anchor is annotated as a Promoter but the gene is silent, the function can:
+
+1. Downgrade the anchor to an **Enhancer** (assuming it might be a Poised Promoter acting as an enhancer).
+2. Reclassify the loop type (e.g., **P-P**  **E-P**).
+
+### Parameter Details
+
+```{r, echo=FALSE, eval=TRUE}
+params <- data.frame(
+  Parameter = c("annotation_res", "expr_matrix_file", "sample_columns", "threshold", "downgrade_nonexpressed", "target_bed", "unit_type", "draw_original_violin", "out_dir"),
+  Description = c(
+    "The list object returned by 'annotate_peaks_and_loops'.",
+    "Path to the expression matrix (Genes x Samples).",
+    "Vector of column names/indices in the matrix to average for expression quantification.",
+    "Expression cutoff (Default: 1.0). Genes < threshold are considered silent.",
+    "Logical (TRUE). If TRUE, silent Promoters are reclassified as Enhancers.",
+    "Optional. Re-evaluate target connectivity based on refined active genes.",
+    "Label for expression units (e.g., 'TPM') for plots.",
+    "Logical. Whether to draw QC violin plots of expression distribution.",
+    "Output directory for refined results."
+  )
+)
+knitr::kable(params, align = "c", caption = "Table 3: Parameters for Expression Refinement")
+
+```
+
+```{r refinement}
+expr_file <- "data/tpm_matrix.tsv" 
+
+refined_res <- refine_loop_anchors_by_expression(
+  annotation_res = anno_res,
+  expr_matrix_file = expr_file,
+  sample_columns = c("Rep1", "Rep2"),
+  threshold = 1.0,
+  downgrade_nonexpressed = TRUE,
+  out_dir = "results/refined",
+  project_name = "Study_Refined"
+)
+
+```
+
+# Module 4: Functional Profiling
+
+The `profile_target_genes` function acts as an automated "discovery engine". It takes the refined target genes (e.g., genes regulated by E-P loops) and performs a multi-omics deep dive.
+
+### Parameter Details
+
+```{r, echo=FALSE, eval=TRUE}
+params <- data.frame(
+  Parameter = c("target_source", "diff_file", "lfc_col", "run_go", "run_ppi", "ppi_score", "stat_test", "heatmap_ntop"),
+  Description = c(
+    "Source of genes: 'overlap' (genes overlapping anchors) or 'cluster' (genes in the 3D hub).",
+    "Path to DESeq2/edgeR result file (Must contain GeneIDs and LFC).",
+    "Column name for Log2 Fold Change in the diff_file.",
+    "Logical. Run Gene Ontology enrichment?",
+    "Logical. Run STRING PPI network analysis?",
+    "Minimum STRING interaction score (0-1000). Default: 400.",
+    "Statistical test for LFC boxplots ('t.test' or 'wilcox.test').",
+    "Max number of variable genes to display in the heatmap."
+  )
+)
+knitr::kable(params, align = "c", caption = "Table 4: Parameters for Functional Profiling")
+
+```
+
+### Outputs
+
+* **LFC Boxplot**: Validates if loop targets are significantly up/down-regulated compared to the background genome.
+* **GSEA Plot**: Tests if loop targets are enriched in specific transcriptional programs.
+* **PPI Network**: Visualizes protein-level interactions among target genes, highlighting hubs.
+
+```{r profiling}
+profile_target_genes(
+  annotation_res = refined_res,
+  use_filtered = TRUE,
+  diff_file = "data/deseq2_results.csv",
+  lfc_col = "log2FoldChange",
+  tpm_file = expr_file,
+  metadata_file = "data/metadata.csv",
+  target_source = "cluster",
+  loop_types = c("EP"), 
+  run_go = TRUE,
+  run_ppi = TRUE,
+  out_dir = "results/profiling"
+)
+
+```
+
+# Module 5: Visualization
+
+`looplook` offers specialized plotting functions for both global statistics and locus-specific exploration.
+
+## Integrative Track Plot (`plot_peaks_interactions`)
+
+Generates a publication-ready, IGV-style static visualization. It renders chromatin loops as Bezier arcs and aligns them with gene structures and auxiliary tracks (e.g., ChIP-seq peaks).
+
+### Parameter Details
+
+```{r, echo=FALSE, eval=TRUE}
+params <- data.frame(
+  Parameter = c("bedpe_file", "target_bed", "chr/from/to", "max_levels", "base_anchor_height", "score_to_alpha", "min_score", "loop_color"),
+  Description = c(
+    "Path to BEDPE file.",
+    "Path to auxiliary BED file (displayed as a track below loops).",
+    "Genomic coordinates to visualize.",
+    "Controls the height/stacking of loop arcs. Increase for dense regions.",
+    "Height of the rectangular anchor blocks (Default: 0.05).",
+    "Logical. If TRUE, loop transparency scales with interaction score.",
+    "Minimum score to display a loop.",
+    "Color for the loop arcs."
+  )
+)
+knitr::kable(params, align = "c", caption = "Table 5: Parameters for Track Plot")
+
+```
+
+```{r visual_track}
+plot_peaks_interactions(
+  bedpe_file = loops_path,
+  target_bed = atac_path,
+  chr = "chr8",
+  from = 127730000,
+  to = 127745000,
+  species = "hg38",
+  save_file = "results/plots/MYC_locus.pdf"
+)
+
+```
+
+## Contact Matrix Heatmap (`plot_contact_matrix`)
+
+This function visualizes the aggregate density of chromatin interactions over a specific genomic region. Unlike the arc plot, it presents data as a **rotated triangular heatmap**, similar to standard Hi-C browser views. This is ideal for visualizing Topologically Associating Domains (TADs) or dense interaction hotspots.
+
+### Parameter Details
+
+```{r, echo=FALSE, eval=TRUE}
+params <- data.frame(
+  Parameter = c("gi", "region", "resolution", "shape", "palette", "max_score", "ylim_bins"),
+  Description = c(
+    "The GInteractions object containing loop data.",
+    "String defining the genomic window (e.g., 'chr1:100000-200000').",
+    "Bin size in base pairs (e.g., 5000 or 10000). Controls the 'pixel' size.",
+    "Shape of the matrix pixels: 'diamond' (Classic Hi-C), 'triangle', or 'rect'.",
+    "Vector of colors for the heatmap gradient.",
+    "Cap value for interaction scores (to prevent outliers from washing out the plot).",
+    "Limit the Y-axis height (interaction distance) to zoom in."
+  )
+)
+knitr::kable(params, align = "c", caption = "Table 6: Parameters for Contact Matrix")
+
+```
+
+```{r visual_matrix}
+# Define region of interest
+region_str <- "chr1:9893482-13450001"
+
+# Generate Heatmap
+p_matrix <- plot_contact_matrix(
+  gi = gi_obj,
+  region = region_str,
+  resolution = 10000,       # 10kb resolution
+  shape = "diamond",        # Classic Hi-C style
+  palette = c("white", "orange", "red"),
+  max_score = 50            # Cap visualization at score 50
+)
+
+print(p_matrix)
+
+```
+
+# Session Info
+
+Here is the output of `sessionInfo()` on the system on which this document was compiled:
+
+```{r session_info, eval = TRUE}
+sessionInfo()
+
+```
+
+```
+
+```

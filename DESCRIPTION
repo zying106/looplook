@@ -1,0 +1,58 @@
+Package: looplook
+Title: Tools for Integrative Analysis of Chromatin Loops and Expression
+Version: 0.99.0
+Authors@R: 
+    person(given = "Ying", family = "Zhang" , email = "12207129@zju.edu.cn", role = c("aut", "cre"), comment = c(ORCID = "0009-0005-9644-7062"))
+Description: A comprehensive toolkit for processing HiChIP/Hi-C loops, 
+    annotating loop anchors with gene expression data, reclassifying regulatory elements, 
+    and generating publication-quality visualizations like flower plots and track plots.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Config/testthat/edition: 3
+biocViews: Software, Technology, HiC, Sequencing, GeneExpression, Visualization, 
+    Epigenetics, GeneTarget, Classification, Clustering, ChipOnChip
+VignetteBuilder: knitr
+Imports: 
+    dplyr,
+    tidyr,
+    ggplot2,
+    data.table,
+    igraph,
+    scales,
+    RColorBrewer,
+    openxlsx,
+    fields,
+    ggforce,
+    circlize,
+    ggpubr,
+    corrplot,
+    ggraph,
+    grid,
+    ggrepel,
+    InteractionSet,
+    GenomicRanges,
+    ChIPseeker,
+    AnnotationDbi,
+    karyoploteR,
+    ComplexHeatmap,
+    clusterProfiler,
+    enrichplot,
+    org.Hs.eg.db,
+    org.Mm.eg.db,
+    STRINGdb,
+    GenomicFeatures,
+    IRanges,
+    S4Vectors,
+    UpSetR,
+    grDevices
+Suggests: 
+    TxDb.Hsapiens.UCSC.hg38.knownGene,
+    TxDb.Hsapiens.UCSC.hg19.knownGene,
+    TxDb.Mmusculus.UCSC.mm10.knownGene,
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+URL: https://github.com/zying106/looplook
+BugReports: https://github.com/zying106/looplook/issues

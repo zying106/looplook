@@ -1,0 +1,232 @@
+---
+title: "looplook: An Integrative Framework for Chromatin Interaction Analysis"
+author: 
+  - name: Ying Zhang
+    affiliation: Zhejiang University
+    email: 12207129@zju.edu.cn
+date: "`r Sys.Date()`"
+output: 
+  BiocStyle::html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+vignette: >
+  %\VignetteIndexEntry{looplook: An Integrative Framework for Chromatin Interaction Analysis}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+# Global setup: 
+# eval = FALSE ensures the document builds even if example files are missing.
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8, 
+  fig.height = 6,
+  eval = FALSE  
+)
+
+```
+
+# Introduction
+
+**looplook** is a comprehensive R/Bioconductor toolkit designed to bridge the gap between 3D genomic interactions (HiChIP, ChIA-PET, Hi-C) and transcriptional landscapes. It provides a seamless workflow for:
+
+1. **Consolidating** biological replicates using graph-based clustering.
+2. **Annotating** loops with auxiliary genomic features (e.g., ATAC-seq peaks).
+3. **Refining** regulatory definitions using RNA-seq data (filtering inactive promoters).
+4. **Profiling** downstream functions via automated GO/GSEA and PPI networks.
+
+This vignette provides a step-by-step guide to the `looplook` pipeline.
+
+# Installation
+
+```{r install}
+if (!requireNamespace("devtools", quietly = TRUE))
+    install.packages("devtools")
+
+# Install from GitHub
+devtools::install_github("your_github_username/looplook")
+
+# Load package
+library(looplook)
+
+```
+
+# Module 1: Data Preprocessing & Consolidation
+
+## Importing Data
+
+The `bedpe_to_gi` function imports standard BEDPE files into Bioconductor `GInteractions` objects, automatically normalizing anchor order and detecting score columns.
+
+```{r read_data}
+bedpe_file <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
+gi_obj <- bedpe_to_gi(bedpe_file)
+
+```
+
+## Consolidating Replicates
+
+Use `consolidate_chromatin_loops` to merge biological or technical replicates and define a high-confidence consensus loop set.
+
+### Key Parameters
+
+| Parameter | Description | Recommendation |
+| --- | --- | --- |
+| `files` | Character vector of BEDPE file paths. | Required (). |
+| `mode` | Strategy for merging: <br>
+
+<br>• **`reproducible`**: Graph clustering (keeps clusters in  reps).<br>
+
+<br>• **`intersect`**: Strict overlap filtering.<br>
+
+<br>• **`union`**: Merges all loops. | Use `"reproducible"` for biological replicates. |
+| `gap` | Max distance (bp) to merge anchors. | Default `1000` bp. |
+| `min_reproducible` | Min reps required to keep a loop. | Default `NULL` (auto-majority rule). |
+
+### Example Usage
+
+```{r consolidate}
+f1 <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
+f2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
+
+consensus_loops <- consolidate_chromatin_loops(
+  files = c(f1, f2),
+  mode = "reproducible",
+  gap = 1000,
+  min_reproducible = 2,
+  out_file = "results/consensus_loops.bedpe"
+)
+
+```
+
+# Module 2: Annotation & Integration
+
+## Basic Annotation
+
+Classify loops (e.g., Promoter-Promoter, Enhancer-Promoter) and integrate auxiliary data (e.g., ATAC-seq peaks) to link open chromatin regions to target genes via 3D loops.
+
+### Key Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `target_bed` | Path to auxiliary BED file (e.g., ATAC-seq, GWAS SNPs). |
+| `species` | Genome build: `"hg38"`, `"hg19"`, `"mm10"`, `"mm9"`. |
+| `tss_region` | Window around TSS. Default `c(-2000, 2000)`. |
+
+### Outputs
+
+* **Excel**: `_Basic_Results.xlsx` (Loop types, Cluster hubs, Target links).
+* **Plots**: Rose Plot, Circular Bar Plot, Karyotype Heatmaps.
+
+```{r annotation}
+loops_path <- "results/consensus_loops.bedpe"
+atac_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
+
+anno_res <- annotate_peaks_and_loops(
+  bedpe_file = loops_path,
+  target_bed = atac_path,
+  species = "hg38",
+  out_dir = "results/annotation",
+  project_name = "Study_H3K27ac"
+)
+
+```
+
+# Module 3: Expression-Based Refinement
+
+Standard annotation relies on distance. `refine_loop_anchors_by_expression` incorporates RNA-seq to filter false positives: **inactive promoters are reclassified as enhancers**.
+
+### Key Parameters
+
+| Parameter | Description |
+| --- | --- |
+| `expr_matrix_file` | Path to expression matrix (TPM/FPKM). |
+| `sample_columns` | Columns to average (e.g., `c("Rep1", "Rep2")`). |
+| `threshold` | Expression cutoff (default `1.0`). |
+| `downgrade_nonexpressed` | Logical (`TRUE`). Reclassify silent promoters as enhancers. |
+
+```{r refinement}
+expr_file <- "data/tpm_matrix.tsv" 
+
+refined_res <- refine_loop_anchors_by_expression(
+  annotation_res = anno_res,
+  expr_matrix_file = expr_file,
+  sample_columns = c("Rep1", "Rep2"),
+  threshold = 1.0,
+  out_dir = "results/refined",
+  project_name = "Study_Refined"
+)
+
+```
+
+# Module 4: Functional Profiling
+
+The `profile_target_genes` pipeline performs multi-omics characterization:
+
+1. **LFC Profiling**: Target genes vs Background (Boxplots).
+2. **Enrichment**: GO & GSEA Analysis.
+3. **Clustering**: Heatmaps & Correlation.
+4. **Networks**: PPI construction via STRING.
+
+```{r profiling}
+profile_target_genes(
+  annotation_res = refined_res,
+  use_filtered = TRUE,
+  diff_file = "data/deseq2_results.csv",
+  lfc_col = "log2FoldChange",
+  tpm_file = expr_file,
+  metadata_file = "data/metadata.csv",
+  target_source = "cluster",
+  loop_types = c("EP"), 
+  out_dir = "results/profiling"
+)
+
+```
+
+# Module 5: Visualization
+
+## Integrative Track Plot
+
+Generate publication-quality IGV-style plots with arcs (loops) and blocks (genes/peaks).
+
+```{r visual_track}
+plot_peaks_interactions(
+  bedpe_file = loops_path,
+  target_bed = atac_path,
+  chr = "chr8",
+  from = 127730000,
+  to = 127745000,
+  species = "hg38",
+  save_file = "results/plots/MYC_locus.pdf"
+)
+
+```
+
+## Flower Plot
+
+Visualize gene set intersections (Core vs Unique).
+
+```{r visual_stats}
+draw_flower_simplified(
+  gene_lists = list(Ctrl = c("A","B","C"), Treat = c("B","C","D")),
+  project_name = "Comparison",
+  filename = "results/plots/flower.pdf",
+  group_colors = c("#E41A1C", "#377EB8")
+)
+
+```
+
+# Session Info
+
+Here is the output of `sessionInfo()` on the system on which this document was compiled:
+
+```{r session_info, eval = TRUE}
+sessionInfo()
+
+```
+
+```
+
+```
