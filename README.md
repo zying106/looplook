@@ -1,9 +1,8 @@
 
-<img src="man/figures/logo.png" width="160" alt="Looplook Logo" style="float: right; margin-left: 10px; margin-bottom: 10px;" />
+# Looplook <img src="man/figures/logo.png" align="right" width="160" alt="Looplook Logo" />
 
-# Looplook
-
-### A multi-omics suite for expression-aware target assignment <br> and topological profiling of 3D chromatin networks
+A multi-omics suite for expression-aware target assignment and
+topological profiling of 3D chromatin networks.
 
 [![R-CMD-check](https://github.com/zying106/looplook/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/zying106/looplook/actions/workflows/R-CMD-check.yaml)
 [![License: GPL (\>=
