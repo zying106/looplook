@@ -140,6 +140,24 @@ consensus_targeted <- consolidate_chromatin_loops(
 )
 ```
 
+## Example 3: Cross-Modality Consensus for Orthogonal Validation
+
+In integrative multi-omics studies, orthogonal validation across distinct functional assays is critical for defining robust 3D regulatory interactions. For instance, bona fide Enhancer-Promoter (E-P) loops are characterized by the concurrent spatial proximity of H3K27ac (active enhancer/promoter regions) and RNA Polymerase II (transcriptional machinery). By utilizing the `"consensus"` mode to intersect these distinct loop datasets, `looplook` facilitates the extraction of multi-modally supported interactions. This stringent merging strategy may effectively mitigate assay-specific technical artifacts, yielding a refined set of topological hubs that strictly couple physical chromatin architecture with active transcriptional regulation.
+
+```{r consolidate_multi_modal, message=FALSE, warning=FALSE}
+loop_k27ac <- system.file("extdata", "example_loops_H3K27ac.bedpe", package = "looplook")
+loop_pol2  <- system.file("extdata", "example_loops_pol2.bedpe", package = "looplook")
+dual_functional_out <- file.path(out_dir, "Dual_Functional_Consensus.bedpe")
+
+  consensus_dual <- consolidate_chromatin_loops(
+    files = c(loop_k27ac, loop_pol2),
+    mode = "consensus", 
+    gap = 1000,
+    min_raw_score = 2,
+    out_file = dual_functional_out
+  )
+```
+
 ***
 
 # Module 2: 3D-Guided Peak Annotation & Mapping
@@ -505,7 +523,7 @@ The function provides comprehensive control over the genomic locus, data filteri
 * **Color Controls (`loop_color`, `anchor_color`, `overlap_color`, `exon_color`, `intron_color`)**: Character strings defining the specific colors (e.g., hex codes) for the structural components across all three tracks.
 * **`save_file`**: Character (Optional). The file path and format extension (e.g., `".pdf"`) for exporting the final ggplot object.
 
-```{r visual_track, fig.cap="Integrative 3D Genomic Track Visualization"}
+```{r visual_track}
 if (requireNamespace("ggplot2", quietly = TRUE)) {
   # If 'from' and 'to' are omitted, it automatically detects the densest viewport.
   track_plot <- plot_peaks_interactions(
@@ -517,7 +535,6 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
     species = "hg38",
     save_file = file.path(out_dir, "Locus_Track.pdf")
   )
-  print(track_plot)
 }
 ```
 
