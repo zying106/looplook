@@ -7,3 +7,6 @@
 ^doc$
 ^Meta$
 ^README\.html$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

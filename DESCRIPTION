@@ -15,14 +15,10 @@ Authors@R: c(
            email = "xuliang.phd@zju.edu.cn",
            comment = "This work is funded by the Fundamental Research Funds for the Central Universities (226-2025-00101) and the National Natural Science Foundation of China (32270746, 82203247, 82203415).")
   )
-Description: An integrative multi-omics suite designed to bridge 1D epigenetic 
-    features with 3D chromatin architecture. Looplook facilitates the precise 
-    assignment of distal regulatory elements to their target genes through a 
-    robust expression-aware refinement algorithm. Furthermore, it empowers the 
-    topological profiling of spatial chromatin networks to identify core 
-    regulatory hubs, complemented by a specialized rendering engine for 
-    publication-quality IGV-style genomic tracks and integrative network 
-    visualizations.
+Description: looplook is an R package for 3D chromatin network analysis and 
+    multi-omics visualization. It provides flexible and publication-ready 
+    tools for exploring complex regulatory interactions, expression-aware 
+    target assignment, and auxiliary genomic annotation.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -87,6 +83,6 @@ Suggests:
     TxDb.Hsapiens.UCSC.hg38.knownGene,
     org.Hs.eg.db,
     testthat
-URL: https://github.com/zying106/looplook
+URL: https://github.com/zying106/looplook, https://zying106.github.io/looplook/
 BugReports: https://github.com/zying106/looplook/issues
 VignetteBuilder: knitr
