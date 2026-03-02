@@ -2,7 +2,7 @@
 % Please edit documentation in R/analysis.R
 \name{run_gsea_analysis}
 \alias{run_gsea_analysis}
-\title{Run GSEA Analysis (Internal)}
+\title{Run Custom Gene Set Enrichment Analysis (GSEA)}
 \usage{
 run_gsea_analysis(
   target_genes,
@@ -13,20 +13,20 @@ run_gsea_analysis(
 )
 }
 \arguments{
-\item{target_genes}{Character vector.}
+\item{target_genes}{Character vector. Target gene symbols forming the custom gene set.}
 
-\item{global_glist}{Named numeric vector (Ranked LFC).}
+\item{global_glist}{Named numeric vector. Globally ranked LFC values.}
 
-\item{gsea_ntop}{Integer.}
+\item{gsea_ntop}{Integer. Maximum number of target genes to use (randomly downsampled if exceeded).}
 
-\item{current_proj_name}{Character.}
+\item{current_proj_name}{Character. Prefix for plot and table.}
 
-\item{out_dir}{Character.}
+\item{out_dir}{Character. Output directory.}
 }
 \value{
-A GSEA result object or NULL if analysis fails.
+GSEA result object. Saves a composite GSEA plot (ES curve, barcode, LFC heatmap) to PDF.
 }
 \description{
-Run GSEA Analysis (Internal)
+Evaluates whether target genes are significantly enriched at the extremes (up/down-regulated) of the global ranked expression list.
 }
 \keyword{internal}

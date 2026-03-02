@@ -2,22 +2,21 @@
 % Please edit documentation in R/analysis.R
 \name{plot_summary_go_lollipop}
 \alias{plot_summary_go_lollipop}
-\title{Internal: Generate Summary Lollipop Plot of GO Results Across Loop Types}
+\title{Generate Summary GO Lollipop Facet Plot}
 \usage{
 plot_summary_go_lollipop(all_go_results, base_project_name, out_dir)
 }
 \arguments{
-\item{all_go_results}{Named list of GO result data frames (from \code{perform_go_enrichment}).}
+\item{all_go_results}{List of data frames containing GO results.}
 
-\item{base_project_name}{Base project name for output file.}
+\item{base_project_name}{Character. Prefix for output.}
 
-\item{out_dir}{Output directory.}
+\item{out_dir}{Character. Output directory.}
 }
 \value{
-Invisible \code{NULL}; saves PDF plot.
+Invisible \code{NULL}. Saves a combined PDF plot.
 }
 \description{
-Combines GO enrichment results from multiple loop types into a summary lollipop plot.
-Visualizes the top enriched terms for each loop type side-by-side.
+Combines GO enrichment results from multiple loop types (e.g., E-P, P-P) and plots them side-by-side in a faceted lollipop chart, categorized by GO Ontology (BP, CC, MF).
 }
 \keyword{internal}

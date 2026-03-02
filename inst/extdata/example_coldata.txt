@@ -1,0 +1,5 @@
+SampleID Group
+con1 con
+con1 con
+trt1 trt
+trt2 trt

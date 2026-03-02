@@ -50,6 +50,8 @@ plot_peaks_interactions(
 
 \item{intron_color}{Character. Gene intron line color (default: "black").}
 
+\item{score_to_alpha}{Logical. Whether to map interaction scores to arc transparency.}
+
 \item{min_score}{Logical. If TRUE, use score to control arc line width instead of color (not yet implemented in current version; future extension).}
 
 \item{save_file}{Optional character. File path to save the plot (e.g., "region_plot.pdf").}
@@ -69,7 +71,8 @@ bed_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
 
 # 2. Run plotting (requires TxDb package for gene annotation)
 if (bedpe_path != "" &&
-  requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE)) {
+  requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
+  requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   # Example A: Basic plot with loops only
   # Plotting the region around the example loop (chr1:10,000-50,000)
   p1 <- plot_peaks_interactions(

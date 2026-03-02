@@ -2,7 +2,7 @@
 % Please edit documentation in R/analysis.R
 \name{run_ppi_analysis}
 \alias{run_ppi_analysis}
-\title{Internal: Construct and Visualize PPI Network}
+\title{Construct and Visualize STRING PPI Network}
 \usage{
 run_ppi_analysis(
   target_genes,
@@ -17,23 +17,22 @@ run_ppi_analysis(
 \arguments{
 \item{target_genes}{Character vector of gene symbols.}
 
-\item{global_glist}{Named log fold change vector.}
+\item{global_glist}{Named numeric vector of LFC values.}
 
-\item{org_db}{Organism database to infer species (e.g., "org.Hs.eg.db" -> 9606).}
+\item{org_db}{Character. Organism database to automatically infer STRING species ID.}
 
-\item{ppi_score}{Minimum STRING interaction score (0–1000).}
+\item{ppi_score}{Numeric. Minimum combined score threshold for STRING edges (e.g., 400).}
 
-\item{ppi_ntop}{Max number of genes to include (prioritized by |LFC|).}
+\item{ppi_ntop}{Integer. Maximum number of genes to include (prioritized by highest absolute LFC).}
 
-\item{current_proj_name}{Project-specific prefix.}
+\item{current_proj_name}{Character. Project prefix.}
 
-\item{out_dir}{Output directory.}
+\item{out_dir}{Character. Output directory.}
 }
 \value{
-Invisible \code{NULL}; saves PDF plot if successful.
+Invisible \code{NULL}. Saves a \code{ggraph} network PDF.
 }
 \description{
-Maps target genes to STRING, builds a subnetwork, and visualizes it with node size
-reflecting degree and color reflecting log fold change.
+Maps target genes to STRING database, extracts the high-confidence protein-protein interaction subnetwork, removes isolated nodes, and visualizes the network colored by LFC and sized by degree.
 }
 \keyword{internal}

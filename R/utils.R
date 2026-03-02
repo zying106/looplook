@@ -1,3 +1,54 @@
+#' Internal Package Imports
+#'
+#' @name looplook_imports
+#' @noRd
+#' @importFrom grDevices col2rgb rgb
+#' @importFrom stats fisher.test median na.omit p.adjust quantile reorder runif setNames t.test var wilcox.test
+#' @importFrom utils head install.packages read.table write.csv
+NULL
+
+if (getRversion() >= "2.15.1") {
+  utils::globalVariables(c(
+    ".", "All_Anchor_Genes", "All_Loop_Connected_Genes", "Assigned_Target_Genes",
+    "CleanLoopType", "Conn_Group", "Count", "Degree", "Description",
+    "Description_unique", "Distal_Anchor_ID", "Dominant_Interaction",
+    "Dominant_Interaction_Filtered", "Expression", "Expression_Status", "FDR",
+    "Feature", "Filtered", "Final_Label", "Fraction", "GENENAME", "Gene",
+    "Genomic_Distribution", "Group", "High_Connectivity_Gene",
+    "Is_Active_Gene", "Is_High_Connectivity_Distal_Element",
+    "Is_High_Connectivity_Gene", "Is_High_Distal_Connectivity_Gene", "L1_Raw",
+    "L2_Raw", "L3_Raw", "LFC", "Label", "LabelText", "Label_Text",
+    "Linked_Loop_IDs", "Log10Degree", "LogFDR", "LogP", "Loop_Type",
+    "Mean_Expression_Temp", "MotifLabel", "ONTOLOGY", "OddsRatio", "Original",
+    "Percentage", "PlotFamily", "Putative_Target_Genes", "Rank",
+    "Regulated_promoter_genes", "SANKEY_RAW_GENES", "SYMBOL", "SampleID",
+    "Simplified", "Source", "Stage", "Status", "Target_Genes",
+    "Target_Genes_Filtered", "Total_Loops", "Total_Loops_Filtered",
+    "Unique_Gene_Count", "a1_id", "a2_id", "all_cluster_loop_genes", "all_of",
+    "anchor1_gene", "anchor1_source", "anchor1_type", "anchor2_gene",
+    "anchor2_source", "anchor2_type", "anchor_id", "annotation", "chr",
+    "cluster_id", "col2rgb", "combined_score", "count", "deg", "detail_anno",
+    "elementNROWS", "everything", "expansion", "final_color", "final_fill",
+    "final_label", "final_symbols", "fisher.test", "fraction",
+    "functional_anchor1_type", "functional_anchor2_type", "geneList",
+    "gene_id", "gene_level", "geom_hline", "group", "has_active", "head",
+    "hjust", "install.packages", "is_e_type", "is_lower_e", "label",
+    "labelPosition", "label_text", "label_x", "len", "lfc", "linked_loops",
+    "log_expr", "logP", "loop_ID", "loop_genes", "loop_genes_Total", "loop_i",
+    "loop_type", "median", "mid1", "mid2", "n", "n_Linked_Distal",
+    "n_Linked_Distal_Filtered", "n_Linked_Promoters",
+    "n_Linked_Promoters_Filtered", "na.omit", "name", "p.adjust", "plot_label",
+    "prop", "proximate_loop_gene", "pvalue", "qid", "quantile", "query_idx",
+    "read.table", "reg_loop_genes", "reorder", "rgb", "runif", "runningScore",
+    "scale_color_identity", "scale_fill_identity", "setNames",
+    "single_loop_genes", "strand", "t.test", "t1", "t2", "tgt_genes_p",
+    "tgt_genes_pg", "tgt_genes_prio", "topo_genes_p", "topo_genes_pg", "tpm",
+    "tx_id", "type", "type_code", "type_rank", "valid_genes", "valid_tpms",
+    "var", "width", "wilcox.test", "write.csv", "y_mid", "ymax", "ymin", "ypos", ":=",
+    "Loop_Connection", "Neighbor_Gene", "Neighbor_Type", "s1", "s2", "x", "y"
+  ))
+}
+
 #' Internal: Generate Colors
 #'
 #' Helper to generate a vector of n colors.
@@ -48,7 +99,7 @@ get_colors <- function(n, palette_input) {
 #' @importFrom karyoploteR plotKaryotype kpRect getDefaultPlotParams
 #' @importFrom fields image.plot
 #' @return Invisibly returns `NULL`. Side effect: saves a PDF karyotype heatmap to `filename`.
-draw_karyo_heatmap_internal <- function(gr_data, title_prefix, filename, bin_size, sat_level, ref_txdb, plot_species, unit_label) {
+draw_karyo_heatmap_internal <- function(gr_data, title_prefix, filename, bin_size, sat_level, ref_txdb, plot_species, unit_label, custom_colors = NULL) {
   standard_chroms <- paste0("chr", c(seq_len(22), "X", "Y"))
   if (grepl("mm", plot_species)) standard_chroms <- paste0("chr", c(seq_len(19), "X", "Y"))
 
@@ -75,33 +126,42 @@ draw_karyo_heatmap_internal <- function(gr_data, title_prefix, filename, bin_siz
     full_genome_gr <- GenomicRanges::GRanges(seqnames = valid_chroms, ranges = IRanges::IRanges(start = 1, end = GenomeInfoDb::seqlengths(std_seqinfo)[valid_chroms]))
     GenomeInfoDb::seqinfo(full_genome_gr) <- std_seqinfo[valid_chroms]
     tiles <- GenomicRanges::tileGenome(GenomeInfoDb::seqinfo(full_genome_gr), tilewidth = bin_size, cut.last.tile.in.chrom = TRUE)
-
     hits <- GenomicRanges::countOverlaps(tiles, gr_data)
+
     bin_size_mb <- bin_size / 1e6
     median_val <- median(hits[hits > 0], na.rm = TRUE)
     if (is.na(median_val)) median_val <- 0
 
+
+    if (is.null(custom_colors)) {
+      heatmap_colors <- c("#FFFFFF", "#FFFFCC", "#FFEDA0", "#FED976", "#FEB24C", "#FD8D3C", "#FC4E2A", "#E31A1C", "#BD0026", "#800026", "#000000")
+    } else {
+      heatmap_colors <- custom_colors
+    }
+
     if (max(hits) == 0) {
       max_load <- 0
       S4Vectors::mcols(tiles)$color <- "white"
+      cols <- c("white")
     } else {
       cutoff <- as.numeric(quantile(hits[hits > 0], probs = sat_level, names = FALSE))
       if (is.na(cutoff) || cutoff < 1) cutoff <- max(hits)
       max_load <- round(cutoff / bin_size_mb, 1)
       capped <- ifelse(hits > cutoff, cutoff, hits)
-      col_func <- grDevices::colorRampPalette(c("#313695", "#4575B4", "#74ADD1", "#ABD9E9", "#E0F3F8", "#FFFFBF", "#FEE090", "#FDAE61", "#F46D43", "#D73027", "#A50026"))
+
+      col_func <- grDevices::colorRampPalette(heatmap_colors)
       cols <- col_func(100)
-      idx <- ceiling((capped / cutoff) * 100)
-      idx[idx == 0] <- 1
+
+      idx <- ceiling((capped / cutoff) * 99) + 1
+      idx[hits == 0] <- 1
       S4Vectors::mcols(tiles)$color <- cols[idx]
     }
 
-    # [Fix] Increase height and use outer margins
     grDevices::pdf(filename, width = 10, height = 12)
-    graphics::par(oma = c(2, 2, 6, 2)) # Top margin = 6 lines for title
-
+    graphics::par(oma = c(2, 2, 6, 2))
     pp <- karyoploteR::getDefaultPlotParams(plot.type = 1)
-    pp$leftmargin <- 0.1
+    pp$leftmargin <- 0.08
+    pp$rightmargin <- 0.08
     pp$data1height <- 100
 
     kp <- karyoploteR::plotKaryotype(genome = plot_species, plot.type = 1, chromosomes = valid_chroms, plot.params = pp, main = NULL)
@@ -111,7 +171,10 @@ draw_karyo_heatmap_internal <- function(gr_data, title_prefix, filename, bin_siz
     graphics::mtext(main_title, side = 3, line = 1, outer = TRUE, cex = 1.2, font = 2)
 
     if (requireNamespace("fields", quietly = TRUE)) {
-      fields::image.plot(legend.only = TRUE, zlim = c(0, max_load), col = if (max(hits) == 0) "white" else cols, legend.lab = paste0("Load (", unit_label, "/MB)"), legend.mar = 4.5, smallplot = c(0.88, 0.91, 0.3, 0.7))
+      fields::image.plot(
+        legend.only = TRUE, zlim = c(0, max_load), col = cols,
+        legend.lab = paste0("Load (", unit_label, "/MB)"), legend.mar = 4.5, smallplot = c(0.88, 0.91, 0.3, 0.7)
+      )
     }
     grDevices::dev.off()
     message("    Saved Heatmap: ", filename)
@@ -130,46 +193,33 @@ draw_karyo_heatmap_internal <- function(gr_data, title_prefix, filename, bin_siz
 #' @param group_colors (character vector) Named or ordered colors for each `loop_type`.
 #' @keywords internal
 #' @importFrom ggplot2 ggplot aes geom_violin geom_boxplot scale_fill_manual theme_minimal theme element_text element_blank labs ggsave
-#' @examples
-#' df <- data.frame(
-#'   loop_type = rep(c("P-E", "E-E"), each = 50),
-#'   expression_value = c(rnorm(50, 10, 3), rnorm(50, 5, 2))
-#' )
-#' p <- draw_expression_violin(
-#'   df, "MyProject", "expr.pdf", "TPM",
-#'   group_colors = c("P-E" = "#1f78b4", "E-E" = "#33a02c")
-#' )
 #' @return A `ggplot` object of the violin + boxplot.
 draw_expression_violin <- function(plot_data, project_name, filename, unit_type, group_colors) {
   # 1. Log transform
   plot_data$log_expr <- log2(plot_data$expression_value + 0.01)
 
-  # [关键优化 1] 数据去重
-  # 确保每种 Loop Type 下，同一个基因只保留一行（只统计一次表达值）
-  # 这样 n= 显示的是基因数，而不是 Loop 数，图表分布也更真实
+
   plot_data_unique <- plot_data %>%
     dplyr::select(loop_type, loop_genes, log_expr) %>%
     dplyr::distinct(loop_type, loop_genes, .keep_all = TRUE)
 
-  # [关键优化 2] 基于去重后的数据统计数量
+
   count_df <- plot_data_unique %>%
     dplyr::group_by(loop_type) %>%
-    dplyr::summarise(n = dplyr::n()) %>% # 这里 n() 等于去重后的行数，即唯一基因数
+    dplyr::summarise(n = dplyr::n()) %>%
     dplyr::ungroup()
 
-  # 生成标签: "P-P\n(n=120)"
+
   new_labels <- stats::setNames(
     paste0(count_df$loop_type, "\n(n=", count_df$n, ")"),
     count_df$loop_type
   )
 
-  # 3. Plotting (使用 plot_data_unique)
+
   p <- ggplot2::ggplot(plot_data_unique, ggplot2::aes(x = loop_type, y = log_expr, fill = loop_type)) +
     ggplot2::geom_violin(scale = "width", trim = FALSE, alpha = 0.7, color = "grey30", size = 0.3) +
     ggplot2::geom_boxplot(width = 0.15, fill = "white", color = "black", outlier.shape = NA, alpha = 0.9) +
     ggplot2::scale_fill_manual(values = group_colors) +
-
-    # Apply new labels
     ggplot2::scale_x_discrete(labels = new_labels) +
     ggplot2::theme_minimal(base_size = 14) +
     ggplot2::theme(
@@ -204,14 +254,6 @@ draw_expression_violin <- function(plot_data, project_name, filename, unit_type,
 #' @importFrom dplyr select filter group_by summarise ungroup mutate arrange bind_rows
 #' @importFrom ggplot2 ggplot aes geom_bar geom_text scale_fill_manual scale_y_continuous theme_classic theme element_text element_blank labs ggsave
 #' @importFrom scales percent
-#' @examples
-#' df <- data.frame(
-#'   functional_anchor1_type = c("E", "P", "E"),
-#'   anchor1_source = c("Native", "Promoter", "Gene_body-derived enhancer"),
-#'   functional_anchor2_type = c("E", "E", "P"),
-#'   anchor2_source = c("Promoter-derived enhancer", "Native", "Promoter")
-#' )
-#' p <- draw_enhancer_source_distribution(df, "MyProject", "enh_sources.pdf")
 #' @return A `ggplot` object of the bar plot showing enhancer source distribution.
 draw_enhancer_source_distribution <- function(loop_data, project_name, filename) {
   a1 <- loop_data %>% dplyr::select(type = functional_anchor1_type, source = anchor1_source)
@@ -311,11 +353,9 @@ draw_circular_bar_plot <- function(data_df, project_name, filename, color_vec) {
     tidyr::separate_rows(loop_genes, sep = ";") %>%
     dplyr::group_by(loop_type) %>%
     dplyr::summarise(Unique_Gene_Count = dplyr::n_distinct(trimws(loop_genes))) %>%
-    # [Fix] Ascending Order
     dplyr::arrange(Unique_Gene_Count) %>%
     dplyr::mutate(Label_Text = paste0(loop_type, " : ", Unique_Gene_Count))
 
-  # [Fix] Lock Factor Levels
   circ_data$loop_type <- factor(circ_data$loop_type, levels = circ_data$loop_type)
   if (nrow(circ_data) == 0) {
     return(NULL)
@@ -381,7 +421,6 @@ draw_comparison_bar <- function(original_df, filtered_df, filename, color_vec) {
 #'
 #' @keywords internal
 draw_target_annotation_pie <- function(bed_info, project_name, filename, color_palette = "Set3") {
-  # 1. 数据处理 & 简化类别
   plot_data <- bed_info %>%
     dplyr::mutate(Feature = gsub(" \\(.*", "", annotation)) %>%
     dplyr::mutate(Feature = ifelse(grepl("Promoter", Feature), "Promoter", Feature)) %>%
@@ -390,36 +429,28 @@ draw_target_annotation_pie <- function(bed_info, project_name, filename, color_p
     dplyr::mutate(Percentage = Count / sum(Count)) %>%
     dplyr::arrange(dplyr::desc(Count))
 
-  # 2. [优化] 标签只保留 "数量 (百分比)"
-  # 逻辑: 如果占比 < 2% (0.02)，则标签设为空字符串 ""，防止重叠
   plot_data <- plot_data %>%
     dplyr::mutate(
       Label_Text = paste0(Count, "\n(", scales::percent(Percentage, 0.1), ")"),
       Final_Label = ifelse(Percentage >= 0.02, Label_Text, "")
     )
 
-  # 3. 颜色准备
+
   n_groups <- nrow(plot_data)
   if (!exists("get_colors")) custom_colors <- scales::hue_pal()(n_groups) else custom_colors <- get_colors(n_groups, color_palette)
 
-  # 4. 绘图
+
   p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = "", y = Count, fill = Feature)) +
     ggplot2::geom_bar(stat = "identity", width = 1, color = "white", size = 0.5) +
-
-    # 极坐标变换
     ggplot2::coord_polar("y", start = 0) +
-
-    # [优化] 标签位置
     ggplot2::geom_text(
       ggplot2::aes(label = Final_Label),
       position = ggplot2::position_stack(vjust = 0.5),
       size = 3.5,
       fontface = "bold",
-      color = "black" # 确保文字清晰
+      color = "black"
     ) +
     ggplot2::scale_fill_manual(values = custom_colors, name = "Genomic Feature") +
-
-    # 移除多余背景
     ggplot2::theme_void(base_size = 14) +
     ggplot2::theme(
       plot.title = ggplot2::element_text(hjust = 0.5, face = "bold", margin = ggplot2::margin(b = 10)),
@@ -460,9 +491,6 @@ draw_target_connectivity_bar <- function(bed_info, cluster_info, project_name, f
     ggplot2::theme(legend.position = "none", axis.title.x = ggplot2::element_blank()) +
     ggplot2::labs(title = "Target Connectivity", y = "Number of Peaks")
 
-  # 2. 如果有连接，展示连接的 Loop 类型 (需要一点复杂的数据处理，略过复杂join，仅做简单统计)
-  # 这里我们简单统计 Connected 的 Peaks 的数量即可，作为 Overview
-
   ggplot2::ggsave(filename, p1, width = 6, height = 6)
   message("    Saved (Target Connectivity): ", filename)
 }
@@ -481,32 +509,29 @@ draw_target_connectivity_bar <- function(bed_info, cluster_info, project_name, f
 #'
 #' @keywords internal
 draw_target_loop_donut <- function(loop_data, project_name, filename, color_vec) {
-  # 1. 统计数据
   plot_data <- loop_data %>%
     dplyr::group_by(loop_type) %>%
     dplyr::summarise(Count = dplyr::n()) %>%
     dplyr::mutate(Percentage = Count / sum(Count)) %>%
     dplyr::arrange(dplyr::desc(Count))
 
-  # 2. 构造标签 (包含数量和百分比)
   plot_data$Label <- paste0(
     plot_data$loop_type, "\n",
     plot_data$Count, " (", scales::percent(plot_data$Percentage, 0.1), ")"
   )
 
-  # 3. 计算累积位置 (用于标签定位)
+
   plot_data$ymax <- cumsum(plot_data$Percentage)
   plot_data$ymin <- c(0, head(plot_data$ymax, n = -1))
   plot_data$labelPosition <- (plot_data$ymax + plot_data$ymin) / 2
 
-  # 4. 绘图 (Donut Chart)
+
   p <- ggplot2::ggplot(plot_data, ggplot2::aes(ymax = ymax, ymin = ymin, xmax = 4, xmin = 3, fill = loop_type)) +
     ggplot2::geom_rect(color = "white") +
-    # 标签 (使用 x=4.2 放在环外)
     ggplot2::geom_text(x = 4.2, ggplot2::aes(y = labelPosition, label = Label), size = 3.5, color = "black") +
     ggplot2::coord_polar(theta = "y") +
     ggplot2::scale_fill_manual(values = color_vec) +
-    ggplot2::xlim(c(2, 4.5)) + # 这里的 xlim 决定了环的粗细和中空大小
+    ggplot2::xlim(c(2, 4.5)) +
     ggplot2::theme_void() +
     ggplot2::theme(legend.position = "none", plot.title = ggplot2::element_text(hjust = 0.5, face = "bold")) +
     ggplot2::labs(title = paste0(project_name, ": Loops Connected to Targets"))

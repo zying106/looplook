@@ -17,6 +17,7 @@
 #' @param overlap_color Character. Color for overlap track (default: "#E74C3C").
 #' @param exon_color Character. Gene exon fill color (default: "#2C3E50").
 #' @param intron_color Character. Gene intron line color (default: "black").
+#' @param score_to_alpha Logical. Whether to map interaction scores to arc transparency.
 #' @param min_score Logical. If TRUE, use score to control arc line width instead of color (not yet implemented in current version; future extension).
 #' @param save_file Optional character. File path to save the plot (e.g., "region_plot.pdf").
 #' @return A \code{ggplot} object.
@@ -36,7 +37,8 @@
 #'
 #' # 2. Run plotting (requires TxDb package for gene annotation)
 #' if (bedpe_path != "" &&
-#'   requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE)) {
+#'   requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
+#'   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
 #'   # Example A: Basic plot with loops only
 #'   # Plotting the region around the example loop (chr1:10,000-50,000)
 #'   p1 <- plot_peaks_interactions(
@@ -61,22 +63,22 @@
 #'   )
 #' }
 plot_peaks_interactions <- function(
-    bedpe_file,
-    target_bed = NULL,
-    chr = NULL,
-    from = NULL,
-    to = NULL,
-    species = "hg38",
-    max_levels = 10,
-    base_anchor_height = 0.05, # [修改] 改为 0.05，与 Target Track 厚度完全一致
-    loop_color = "#5D6D7E",
-    anchor_color = "#3498DB",
-    overlap_color = "#02ABB4",
-    exon_color = "#2C3E50",
-    intron_color = "black",
-    score_to_alpha = TRUE,
-    min_score = NULL,
-    save_file = NULL
+  bedpe_file,
+  target_bed = NULL,
+  chr = NULL,
+  from = NULL,
+  to = NULL,
+  species = "hg38",
+  max_levels = 10,
+  base_anchor_height = 0.05,
+  loop_color = "#5D6D7E",
+  anchor_color = "#3498DB",
+  overlap_color = "#02ABB4",
+  exon_color = "#2C3E50",
+  intron_color = "black",
+  score_to_alpha = TRUE,
+  min_score = NULL,
+  save_file = NULL
 ) {
   # === 0. Configuration & Checks ===
   if (!requireNamespace("ggforce", quietly = TRUE)) stop("Please install 'ggforce'")
@@ -103,7 +105,10 @@ plot_peaks_interactions <- function(
   if (!requireNamespace(txdb_pkg, quietly = TRUE)) stop("Please install ", txdb_pkg)
   if (!requireNamespace(org_db_pkg, quietly = TRUE)) stop("Please install ", org_db_pkg)
 
-  txdb <- get(txdb_pkg)
+  if (!requireNamespace(txdb_pkg, quietly = TRUE)) {
+    stop("Package ", txdb_pkg, " is not installed.")
+  }
+  txdb <- utils::getFromNamespace(txdb_pkg, txdb_pkg)
 
   # === 1. Data Reading & Preprocessing ===
   loops_raw <- read.table(bedpe_file, header = FALSE, sep = "\t", stringsAsFactors = FALSE)
@@ -127,7 +132,7 @@ plot_peaks_interactions <- function(
 
   loops <- loops_raw %>%
     dplyr::mutate(dplyr::across(c(start1, end1, start2, end2), as.numeric),
-                  chr1 = as.character(chr1), chr2 = as.character(chr2)
+      chr1 = as.character(chr1), chr2 = as.character(chr2)
     )
 
   # Score Filtering
@@ -219,7 +224,10 @@ plot_peaks_interactions <- function(
 
   feature_df <- data.frame()
   if (nrow(genes_df) > 0) {
-    org_db <- get(org_db_pkg)
+    if (!requireNamespace(org_db_pkg, quietly = TRUE)) {
+      stop("Package ", org_db_pkg, " is not installed.")
+    }
+    org_db <- utils::getFromNamespace(org_db_pkg, org_db_pkg)
     try(
       {
         symbol_map <- AnnotationDbi::select(org_db, keys = unique(as.character(genes_df$gene_id)), columns = "SYMBOL", keytype = "ENTREZID")
@@ -243,7 +251,7 @@ plot_peaks_interactions <- function(
     exons_gr <- unlist(exons_list)
     names(exons_gr) <- NULL
     exons_flat <- as.data.frame(exons_gr)
-    exons_flat$tx_id <- rep(names(exons_list), times = elementNROWS(exons_list))
+    exons_flat$tx_id <- rep(names(exons_list), times = S4Vectors::elementNROWS(exons_list))
     exons_joined <- exons_flat %>%
       dplyr::left_join(tx2gene, by = "tx_id") %>%
       dplyr::filter(gene_id %in% genes_df$gene_id) %>%
@@ -275,51 +283,51 @@ plot_peaks_interactions <- function(
   }
 
   # === 6. Plotting ===
-  p <- ggplot() +
-    geom_hline(yintercept = -0.04, linetype = "dashed", color = "grey85", size = 0.5) +
-    geom_hline(yintercept = -0.18, linetype = "dashed", color = "grey85", size = 0.5) +
-    annotate("text", x = text_indent, y = plot_ymax - 0.01, label = "loop track", hjust = 0, vjust = 1, size = 4, fontface = "bold", color = "black")
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_hline(yintercept = -0.04, linetype = "dashed", color = "grey85", size = 0.5) +
+    ggplot2::geom_hline(yintercept = -0.18, linetype = "dashed", color = "grey85", size = 0.5) +
+    ggplot2::annotate("text", x = text_indent, y = plot_ymax - 0.01, label = "loop track", hjust = 0, vjust = 1, size = 4, fontface = "bold", color = "black")
 
   if (!is.null(overlap_df_plot)) {
-    p <- p + annotate("text", x = text_indent, y = -0.08, label = "target track", hjust = 0, vjust = 0, size = 4, fontface = "bold", color = "black")
+    p <- p + ggplot2::annotate("text", x = text_indent, y = -0.08, label = "target track", hjust = 0, vjust = 0, size = 4, fontface = "bold", color = "black")
   }
 
-  p <- p + annotate("text", x = text_indent, y = -0.21, label = "gene track", hjust = 0, vjust = 0, size = 4, fontface = "bold", color = "black")
+  p <- p + ggplot2::annotate("text", x = text_indent, y = -0.21, label = "gene track", hjust = 0, vjust = 0, size = 4, fontface = "bold", color = "black")
 
 
   if (!is.null(overlap_df_plot) && nrow(overlap_df_plot) > 0) {
-    p <- p + geom_rect(data = overlap_df_plot, aes(xmin = start, xmax = end, ymin = ymin, ymax = ymax), fill = overlap_color, alpha = 1)
+    p <- p + ggplot2::geom_rect(data = overlap_df_plot, ggplot2::aes(xmin = start, xmax = end, ymin = ymin, ymax = ymax), fill = overlap_color, alpha = 1)
   }
 
   if (nrow(genes_df) > 0) {
-    p <- p + geom_segment(data = genes_df, aes(x = pmax(start, from), xend = pmin(end, to), y = y_mid, yend = y_mid), color = intron_color, size = 0.5) +
-      geom_segment(data = genes_df, aes(x = ifelse(strand == "+", pmin(end, to), pmax(start, from)), xend = ifelse(strand == "+", pmin(end, to), pmax(start, from)), y = y_mid, yend = y_mid), arrow = arrow(length = unit(0.15, "cm"), type = "open"), color = intron_color, size = 0.5)
+    p <- p + ggplot2::geom_segment(data = genes_df, ggplot2::aes(x = pmax(start, from), xend = pmin(end, to), y = y_mid, yend = y_mid), color = intron_color, size = 0.5) +
+      ggplot2::geom_segment(data = genes_df, ggplot2::aes(x = ifelse(strand == "+", pmin(end, to), pmax(start, from)), xend = ifelse(strand == "+", pmin(end, to), pmax(start, from)), y = y_mid, yend = y_mid), arrow = ggplot2::arrow(length = ggplot2::unit(0.15, "cm"), type = "open"), color = intron_color, size = 0.5)
 
     if (nrow(feature_df) > 0) {
-      p <- p + geom_rect(data = feature_df, aes(xmin = pmax(start, from), xmax = pmin(end, to), ymin = ymin, ymax = ymax), fill = exon_color, color = NA)
+      p <- p + ggplot2::geom_rect(data = feature_df, ggplot2::aes(xmin = pmax(start, from), xmax = pmin(end, to), ymin = ymin, ymax = ymax), fill = exon_color, color = NA)
     } else {
-      p <- p + geom_rect(data = genes_df, aes(xmin = pmax(start, from), xmax = pmin(end, to), ymin = y_mid - 0.025, ymax = y_mid + 0.025), fill = exon_color)
+      p <- p + ggplot2::geom_rect(data = genes_df, ggplot2::aes(xmin = pmax(start, from), xmax = pmin(end, to), ymin = y_mid - 0.025, ymax = y_mid + 0.025), fill = exon_color)
     }
 
-    p <- p + ggrepel::geom_text_repel(data = genes_df, aes(x = label_x, y = y_mid, label = final_label), nudge_y = -0.05, direction = "x", force = 1, size = 3, segment.size = 0.3, segment.color = "grey60", segment.linetype = "dashed", min.segment.length = 0)
+    p <- p + ggrepel::geom_text_repel(data = genes_df, ggplot2::aes(x = label_x, y = y_mid, label = final_label), nudge_y = -0.05, direction = "x", force = 1, size = 3, segment.size = 0.3, segment.color = "grey60", segment.linetype = "dashed", min.segment.length = 0)
   }
 
   if (nrow(bez_df) > 0) {
     p <- p +
-      geom_rect(data = anchors, aes(xmin = start, xmax = end, ymin = ymin, ymax = ymax, fill = final_fill), color = NA) +
-      scale_fill_identity() +
-      ggforce::geom_bezier(data = bez_df, aes(x = x, y = y, group = loop_i, color = final_color), size = 0.6) +
-      scale_color_identity()
+      ggplot2::geom_rect(data = anchors, ggplot2::aes(xmin = start, xmax = end, ymin = ymin, ymax = ymax, fill = final_fill), color = NA) +
+      ggplot2::scale_fill_identity() +
+      ggforce::geom_bezier(data = bez_df, ggplot2::aes(x = x, y = y, group = loop_i, color = final_color), size = 0.6) +
+      ggplot2::scale_color_identity()
   }
 
   p <- p +
-    coord_cartesian(xlim = c(from, to), ylim = c(plot_ymin, plot_ymax), expand = FALSE) +
-    scale_x_continuous(labels = scales::comma) +
-    theme_classic() +
-    theme(axis.line.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank(), axis.title.y = element_blank(), panel.border = element_rect(color = "black", fill = NA, size = 1), plot.title = element_text(hjust = 0.5)) +
-    labs(x = paste0(chr, ":", from, "-", to), title = "Loops Integrative View")
+    ggplot2::coord_cartesian(xlim = c(from, to), ylim = c(plot_ymin, plot_ymax), expand = FALSE) +
+    ggplot2::scale_x_continuous(labels = scales::comma) +
+    ggplot2::theme_classic() +
+    ggplot2::theme(axis.line.y = ggplot2::element_blank(), axis.text.y = ggplot2::element_blank(), axis.ticks.y = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(), panel.border = ggplot2::element_rect(color = "black", fill = NA, size = 1), plot.title = ggplot2::element_text(hjust = 0.5)) +
+    ggplot2::labs(x = paste0(chr, ":", from, "-", to), title = "Loops Integrative View")
 
-  if (!is.null(save_file)) ggsave(save_file, p, width = 12, height = 6)
+  if (!is.null(save_file)) ggplot2::ggsave(save_file, p, width = 12, height = 6)
   return(p)
 }
 
@@ -350,7 +358,7 @@ plot_peaks_interactions <- function(
 #' draw_flower_simplified(
 #'   gene_lists = gene_sets,
 #'   project_name = "Drug Response Study",
-#'   filename = "flower_plot.png",
+#'   filename = tempfile(fileext = ".png"),
 #'   group_colors = c(Control = "#E41A1C", Treated = "#377EB8", Resistant = "#4DAF4A")
 #' )
 draw_flower_simplified <- function(gene_lists, project_name, filename, group_colors) {
@@ -535,7 +543,7 @@ draw_upset_intersections <- function(gene_lists, project_name, filename, group_c
     },
     error = function(e) {
       try(grDevices::dev.off(), silent = TRUE)
-      message("    ⚠️ [UpSet Plot] Save failed: ", e$message)
+      message("     Save failed: ", e$message)
     }
   )
 

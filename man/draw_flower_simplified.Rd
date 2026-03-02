@@ -35,7 +35,7 @@ gene_sets <- list(
 draw_flower_simplified(
   gene_lists = gene_sets,
   project_name = "Drug Response Study",
-  filename = "flower_plot.png",
+  filename = tempfile(fileext = ".png"),
   group_colors = c(Control = "#E41A1C", Treated = "#377EB8", Resistant = "#4DAF4A")
 )
 }

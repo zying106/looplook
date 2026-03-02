@@ -2,35 +2,34 @@
 % Please edit documentation in R/analysis.R
 \name{run_go_enrichment}
 \alias{run_go_enrichment}
-\title{Internal: Perform GO Enrichment and Generate Circular Network Plot}
+\title{Perform GO Enrichment and Generate Network Plot}
 \usage{
 run_go_enrichment(
-  target_genes,
+  genes,
   org_db,
-  global_glist,
-  cnet_ntop,
-  current_proj_name,
-  out_dir
+  universe_genes,
+  cnet_nSample = 50,
+  project_name = "Analysis",
+  out_dir = "./"
 )
 }
 \arguments{
-\item{target_genes}{Character vector of gene symbols.}
+\item{genes}{Character vector of target gene symbols.}
 
-\item{org_db}{Organism database (e.g., "org.Hs.eg.db").}
+\item{org_db}{Character. Organism database (e.g., "org.Hs.eg.db").}
 
-\item{global_glist}{Named log fold change vector for coloring genes (names = symbols).}
+\item{universe_genes}{Named numeric vector (LFC) used as background universe and color scale.}
 
-\item{cnet_ntop}{Number of top pathways to display in the plot.}
+\item{cnet_nSample}{Integer. Number of top GO pathways to display in the network.}
 
-\item{current_proj_name}{Project-specific prefix.}
+\item{project_name}{Character. Prefix for outputs.}
 
-\item{out_dir}{Output directory.}
+\item{out_dir}{Character. Output directory.}
 }
 \value{
-Data frame of GO results (or \code{NULL} if failed).
+Data frame of raw GO enrichment results. Saves a Cnetplot PDF.
 }
 \description{
-Runs GO enrichment (Biological Process) and creates a circular gene-pathway network
-highlighting top pathways and most differentially expressed genes.
+Runs Biological Process GO enrichment via \code{clusterProfiler} and visualizes the top pathways and their core Hub genes in a highly readable, non-overlapping divergent concept network (Cnetplot).
 }
 \keyword{internal}

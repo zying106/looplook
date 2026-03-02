@@ -30,14 +30,4 @@ A \code{ggplot} object of the violin + boxplot.
 Creates a violin + boxplot showing log2-transformed gene expression
 grouped by loop type (e.g., promoter-enhancer, enhancer-enhancer).
 }
-\examples{
-df <- data.frame(
-  loop_type = rep(c("P-E", "E-E"), each = 50),
-  expression_value = c(rnorm(50, 10, 3), rnorm(50, 5, 2))
-)
-p <- draw_expression_violin(
-  df, "MyProject", "expr.pdf", "TPM",
-  group_colors = c("P-E" = "#1f78b4", "E-E" = "#33a02c")
-)
-}
 \keyword{internal}

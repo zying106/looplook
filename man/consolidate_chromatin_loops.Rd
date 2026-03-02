@@ -7,11 +7,12 @@
 consolidate_chromatin_loops(
   files = NULL,
   gap = 1000,
-  mode = c("reproducible", "intersect", "union"),
-  min_reproducible = NULL,
+  mode = c("consensus", "intersect", "union"),
+  min_consensus = NULL,
+  min_raw_score = NULL,
   min_score = NULL,
   blacklist_species = NULL,
-  target_bed_file = NULL,
+  region_of_interest = NULL,
   out_file = NULL
 )
 }
@@ -20,28 +21,38 @@ consolidate_chromatin_loops(
 
 \item{gap}{Numeric. Distance (bp) to consider loops as overlapping. Default 1000.}
 
-\item{mode}{Character. Choose one of the following: intersect, union, reproducible. Merge strategy:
+\item{mode}{Character. Choose one of the following: "consensus", "intersect", "union". Merge strategy:
 \itemize{
-\item{"intersect"}{ Strict reference-based filtering (keeps loops in File 1 supported by ALL other files)}
-\item{"union"}{ Merges all detected loops into a comprehensive map.}
-\item{"reproducible"}{ Graph-based clustering to find a consensus set supported by a majority of samples.}
+\item \code{"intersect"}: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files).
+\item \code{"union"}: Merges all detected loops into a comprehensive map.
+\item \code{"consensus"}: Graph-based clustering to find a consensus set supported by a majority of samples. (Formerly "reproducible").
 }}
 
-\item{min_reproducible}{Integer. Minimum number of replicates a loop must appear in
-(only effective when \code{mode = "reproducible"}).
+\item{min_consensus}{Integer. Minimum number of replicates a loop must appear in
+(only effective when \code{mode = "consensus"}).
 If \code{NULL} (default), the threshold is automatically calculated:
 \itemize{
 \item For 2 replicates: Requires both (2/2).
-\item For >2 replicates: Requires strict majority (>75\% support).
-(e.g., 3 for N=3, 4 for N=4, 4 for N=5).
+\item For >2 replicates: Requires strict majority (>75\\% support).
+\item (e.g., 3 for N=3, 4 for N=4, 4 for N=5).
 }}
 
-\item{min_score}{Numeric. Minimum score threshold to keep a loop.}
+\item{min_raw_score}{Numeric. \strong{Pre-filtering threshold}. Loops with a raw score (e.g., read count) below this value in individual files will be discarded \strong{before} any merging or intersection.
+\itemize{
+\item Recommended value: \code{2} (to remove singleton noise loops with count=1).
+\item Default: \code{NULL} (no pre-filtering).
+}}
+
+\item{min_score}{Numeric. \strong{Post-filtering threshold}. Minimum score to keep a consolidated loop \strong{after} merging.
+\itemize{
+\item For \code{"consensus"} mode, this filters the consensus loops based on their representative score.
+\item Default: \code{NULL} (no post-filtering).
+}}
 
 \item{blacklist_species}{Character. Species/build for built-in blacklist
 (e.g., "hg38", "hg19", "mm10", "mm9"), or a path to a custom BED file.}
 
-\item{target_bed_file}{Character. Path to BED file. Only loops overlapping these regions will be kept.}
+\item{region_of_interest}{Character. Path to BED file. Only loops overlapping these regions will be kept.}
 
 \item{out_file}{Character. The file name (including the file path) for saving results in the extended BEDPE format.}
 }
@@ -57,11 +68,16 @@ This function consolidates chromatin loops from multiple BEDPE files. It is desi
 
 The function supports three modes:
 \itemize{
-\item \code{"reproducible"}: Graph-based clustering to find a consensus set supported by a majority of samples.
+\item \code{"consensus"}: Graph-based clustering to find a consensus set supported by a majority of samples.
 \item \code{"intersect"}: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files).
 \item \code{"union"}: Merges all detected loops into a comprehensive map.
 }
-Optional filtering by blacklist regions or target genomic regions (e.g., promoters) is supported.
+
+It also supports a \strong{two-stage filtering strategy} to maximize signal-to-noise ratio:
+\itemize{
+\item \strong{Pre-filtering} (\code{min_raw_score}): Removes low-confidence noise (e.g., singleton reads) from raw files \emph{before} merging.
+\item \strong{Post-filtering} (\code{min_score}): Filters the final consensus loops based on their aggregated score (e.g., average intensity).
+}
 }
 \examples{
 # 1. Get paths to example BEDPE files included in the package
@@ -79,11 +95,11 @@ if (f1 != "" && f2 != "") {
     out_file = tempfile(fileext = ".bedpe")
   )
 
-  # Example B: Reproducible Mode
+  # Example B: Consensus Mode (formerly Reproducible)
   # Finds consensus loops supported by both replicates (default for N=2)
-  res_repro <- consolidate_chromatin_loops(
+  res_consensus <- consolidate_chromatin_loops(
     files = c(f1, f2),
-    mode = "reproducible",
+    mode = "consensus",
     gap = 1000,
     out_file = tempfile(fileext = ".bedpe")
   )
@@ -97,8 +113,21 @@ if (f1 != "" && f2 != "") {
     out_file = tempfile(fileext = ".bedpe")
   )
 
+  # Example D: Dual Filtering Strategy (Recommended for HiChIP)
+  # 1. Pre-filter: Discard singletons (score < 2) to remove noise.
+  # 2. Merge: Find loops present in both replicates.
+  # 3. Post-filter: Keep only strong consensus loops (score > 5).
+  res_clean <- consolidate_chromatin_loops(
+    files = c(f1, f2),
+    mode = "consensus",
+    min_raw_score = 2, # Pre-filter (remove noise)
+    min_score = 5, # Post-filter (keep strong loops)
+    gap = 1000,
+    out_file = tempfile(fileext = ".bedpe")
+  )
+
   # Inspect results
   length(res_intersect)
-  length(res_union)
+  length(res_clean)
 }
 }

@@ -6,203 +6,203 @@
 \usage{
 profile_target_genes(
   annotation_res,
-  use_filtered = TRUE,
   diff_file,
   lfc_col,
-  tpm_file,
+  expr_matrix_file,
   metadata_file,
-  target_source = c("overlap", "cluster"),
-  loop_types = c("EP", "PP"),
-  include_direct = FALSE,
+  target_source = c("loops", "targets"),
+  target_mapping_mode = c("all", "promoter"),
+  loop_types = c("E-P", "P-P"),
+  include_Filled = TRUE,
+  use_nearest_gene = FALSE,
   group_order = NULL,
   project_name = "Analysis",
   out_dir = "./",
   org_db = "org.Hs.eg.db",
+  run_motif = FALSE,
+  genome_id = "hg19",
+  motif_p_thresh = 1e-04,
+  motif_ntop = 5,
   run_go = TRUE,
   run_ppi = FALSE,
   ppi_score = 400,
-  ppi_ntop = 400,
-  heatmap_ntop = 1000,
-  gsea_ntop = 99999,
-  cnet_ntop = 50,
+  ppi_nSample = 400,
+  heatmap_nSample = 1000,
+  gsea_nSample = 99999,
+  cnet_nSample = 50,
   stat_test = "wilcox.test",
   cor_method = "pearson"
 )
 }
 \arguments{
-\item{annotation_res}{List. The result object returned by \code{\link{annotate_peaks_and_loops}}.}
-
-\item{use_filtered}{Logical. If \code{TRUE}, uses the refined/filtered loops; otherwise uses raw loops.}
+\item{annotation_res}{List. The result object returned by \code{\link{annotate_peaks_and_loops}} or \code{\link{refine_loop_anchors_by_expression}}.}
 
 \item{diff_file}{Character. Path to the differential expression file (CSV/TSV). Must contain gene IDs (rownames) and a Log Fold Change column.}
 
 \item{lfc_col}{Character. The column name in \code{diff_file} representing Log2 Fold Change (e.g., "log2FoldChange").}
 
-\item{tpm_file}{Character. Path to the TPM expression matrix (Genes x Samples).}
+\item{expr_matrix_file}{Character. Path to the normalized expression matrix (Genes x Samples, e.g., TPM or FPKM).}
 
 \item{metadata_file}{Character. Path to the sample metadata file. Must contain "SampleID" and "Group" columns.}
 
-\item{target_source}{Character vector. Source of target genes:
+\item{target_source}{Character vector. Source of target genes to analyze. Options include \code{"loops"} (genes connected by specific loops) and \code{"targets"} (genes overlapping with external target BED).}
+
+\item{target_mapping_mode}{Character. Specifies the mapping strategy for target genes. Must be one of:
 \itemize{
-\item \code{"overlap"}: Genes physically overlapping loop anchors.
-\item \code{"cluster"}: Genes associated with loop clusters (network awareness).
+\item \code{"all"} (Default): Accepts all physically connected 3D targets (including Gene Bodies).
+\item \code{"promoter"}: Strictly enforces that the 3D loop must explicitly anchor at a Promoter region.
 }}
 
-\item{loop_types}{Character vector. The types of loops to analyze (e.g., \code{c("EP", "PP")}).}
+\item{loop_types}{Character vector. The specific loop types to analyze (e.g., \code{c("E-P", "P-P")}). Active only when \code{"loops"} is included in \code{target_source}.}
 
-\item{include_direct}{Logical. Whether to include genes directly overlapping peaks (even without loops) in the analysis.}
+\item{include_Filled}{Logical. If \code{TRUE}, utilizes the comprehensively merged gene assignment (retaining both loop-assigned targets and local host genes).}
 
-\item{group_order}{Character vector. Optional factor levels to order the groups in plots (e.g., \code{c("Ctrl", "Treat")}).}
+\item{use_nearest_gene}{Logical. If \code{TRUE}, bypasses 3D loop-based gene assignment and strictly uses the nearest 1D gene (\code{SYMBOL}), serving as a spatial baseline reference.}
 
-\item{project_name}{Character. Prefix for all output files.}
+\item{group_order}{Character vector. Optional factor levels to sort sample groups in visualizations.}
 
-\item{out_dir}{Character. Directory to save output plots and tables.}
+\item{project_name}{Character. Prefix for all output files and plot titles.}
 
-\item{org_db}{Character. Annotation database for enrichment (e.g., "org.Hs.eg.db" for human, "org.Mm.eg.db" for mouse).}
+\item{out_dir}{Character. Directory path for saving output PDF plots and CSV tables.}
 
-\item{run_go}{Logical. Whether to run Gene Ontology enrichment.}
+\item{org_db}{Character. Organism annotation database (e.g., "org.Hs.eg.db" for human, "org.Mm.eg.db" for mouse).}
 
-\item{run_ppi}{Logical. Whether to run PPI network analysis (requires internet).}
+\item{run_motif}{Logical. Whether to perform Transcription Factor Binding Site (TFBS) motif analysis on proximal and distal anchors.}
 
-\item{ppi_score}{Numeric. Minimum confidence score for STRING PPI interactions (default: 400).}
+\item{genome_id}{Character. Reference genome assembly for motif sequence extraction (e.g., "hg38", "hg19", "mm10").}
 
-\item{ppi_ntop}{Numeric. Max number of top LFC genes to include in the PPI network.}
+\item{motif_p_thresh}{Numeric. P-value threshold for \code{motifmatchr} scanning.}
 
-\item{heatmap_ntop}{Numeric. Max number of variable genes to plot in the heatmap.}
+\item{motif_ntop}{Numeric. Number of top enriched motifs to output as SeqLogos.}
 
-\item{gsea_ntop}{Numeric. Max number of genes to use for GSEA visualization.}
+\item{run_go}{Logical. Whether to perform Gene Ontology (GO) ORA enrichment.}
 
-\item{cnet_ntop}{Numeric. Number of top enriched terms to show in the GO concept network plot.}
+\item{run_ppi}{Logical. Whether to construct Protein-Protein Interaction networks via the STRING database (requires internet access).}
 
-\item{stat_test}{Character. Statistical test for LFC comparison ("t.test" or "wilcox.test").}
+\item{ppi_score}{Numeric. Minimum combined confidence score for STRING interaction edges (0-1000).}
 
-\item{cor_method}{Character. Correlation method for sample clustering ("pearson", "spearman").}
+\item{ppi_nSample}{Numeric. Maximum number of top variable/LFC genes to include in the PPI network to prevent visual overcrowding.}
+
+\item{heatmap_nSample}{Numeric. Maximum number of highly variable genes to plot in the expression heatmap.}
+
+\item{gsea_nSample}{Numeric. Maximum number of target genes to sample for GSEA to maintain computational efficiency.}
+
+\item{cnet_nSample}{Numeric. Number of top GO terms to display in the divergent concept network plot.}
+
+\item{stat_test}{Character. Statistical test for LFC comparisons (\code{"wilcox.test"} or \code{"t.test"}).}
+
+\item{cor_method}{Character. Method for sample correlation matrices (\code{"pearson"} or \code{"spearman"}).}
 }
 \value{
-An invisible list containing:
+An invisible nested list containing:
 \itemize{
-\item \code{go_results}: A list of top GO enrichment tables for each analyzed loop type.
-\item \code{target_gene_sets}: The specific lists of gene IDs used for each analysis task.
+\item \code{go_results}: A list of top GO enrichment tables for each analyzed data source.
+\item \code{target_gene_sets}: The specific lists of gene IDs utilized for each analysis task.
 }
 }
 \description{
-This function acts as an automated pipeline that bridges 3D genomic interactions (loops)
-with transcriptomic data (RNA-seq). It extracts target genes linked to loops (e.g.,
-Enhancer-Promoter or Promoter-Promoter) and performs a comprehensive multi-omics
-profiling suite, including:
-\itemize{
-\item \strong{Differential Expression Analysis:} Compares the Log2 Fold Change (LFC) of loop-target genes against the genomic background to assess regulatory impact.
-\item \strong{Functional Enrichment:} Performs Gene Ontology (GO) ORA and Gene Set Enrichment Analysis (GSEA) to identify biological pathways.
-\item \strong{Expression Clustering:} Generates TPM heatmaps and sample correlation matrices to visualize expression patterns across groups.
-\item \strong{Interaction Networks:} (Optional) Constructs Protein-Protein Interaction (PPI) networks using the STRING database.
-}
-}
-\details{
-Performs an integrated downstream analysis to characterize the functional and expression
-landscapes of genes associated with specific chromatin loops.
+This function serves as a fully automated, end-to-end multi-omics analysis pipeline.
+It elegantly bridges 3D genomic interactions (e.g., Hi-C, HiChIP) with transcriptomic data (RNA-seq)
+to unveil the functional landscape and regulatory mechanisms of target genes.
 
-The analysis workflow proceeds in the following steps:
-\enumerate{
-\item \strong{Target Extraction:} Identifies target genes based on the provided \code{annotation_res}, filtering by loop type (e.g., "EP") and method ("overlap" or "cluster").
-\item \strong{LFC Profiling:} Checks if target genes show significant global shifts in expression (e.g., are EP-loop targets generally upregulated?).
-\item \strong{Enrichment Analysis:} Uses \code{clusterProfiler} to run GO and GSEA. GSEA requires a ranked gene list derived from the provided \code{diff_file}.
-\item \strong{Visualization:} Produces PDF plots for all analyses in the specified \code{out_dir}.
+The suite integrates multiple analytical modules:
+\itemize{
+\item \strong{Differential Expression (LFC) Profiling:} Compares the Log2 Fold Change of target genes against the genomic background using tailored violin/boxplots.
+\item \strong{GSEA Analysis:} Evaluates the rank-distribution of custom target gene sets within the global differential expression landscape.
+\item \strong{Expression & 3D Connectivity Dynamics:} Generates Z-score expression heatmaps and correlates 3D structural connectivity (e.g., Hub degree) with gene expression/LFC using scatter and sophisticated Raincloud plots.
+\item \strong{TF Motif Analysis:} Scans JASPAR core motifs across proximal and distal loop anchors, generating motif enrichment rank scatter plots and sequence logos (SeqLogos).
+\item \strong{Functional Enrichment (GO):} Performs Gene Ontology (BP) enrichment, visualizing results through divergent concept networks (cnetplot) and aggregated faceted lollipop charts.
+\item \strong{Interaction Networks (PPI):} Constructs and visualizes high-confidence Protein-Protein Interaction networks via the STRING database.
 }
-Robust error handling (\code{tryCatch}) is implemented to ensure that a failure in one module (e.g., PPI) does not stop the entire pipeline.
 }
 \examples{
 # =========================================================================
-# 1. Prepare Mock Input Files (Simulating user data)
+# 1. Get paths to real example files included in the package
 # =========================================================================
-tmp_dir <- tempdir()
+rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
+expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
+diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
+meta_path <- system.file("extdata", "example_coldata.txt", package = "looplook")
 
-# A. Mock TPM Matrix (Genes x Samples)
-tpm_df <- data.frame(
-  GeneID = c("TP53", "EGFR", "MYC", "GAPDH", "ACTB", "CD4"),
-  S1 = c(10, 20, 5, 100, 50, 0),
-  S2 = c(12, 18, 6, 105, 52, 0),
-  S3 = c(50, 5, 50, 98, 51, 20),
-  S4 = c(55, 4, 52, 100, 53, 22)
-)
-f_tpm <- file.path(tmp_dir, "mock_tpm.csv")
-write.csv(tpm_df, f_tpm, row.names = FALSE)
+# Check if all necessary files exist before running
+if (rdata_path != "" && expr_path != "" && diff_path != "" && meta_path != "") {
+  # Safely load the pre-computed annotation result from RData
+  temp_env <- new.env()
+  load(rdata_path, envir = temp_env)
+  raw_annotation <- temp_env[[ls(temp_env)[1]]]
 
-# B. Mock Differential Expression Table
-diff_df <- data.frame(
-  GeneID = c("TP53", "EGFR", "MYC", "GAPDH", "ACTB", "CD4"),
-  log2FoldChange = c(2.5, -2.0, 3.1, 0.1, 0.05, 5.0),
-  pvalue = c(0.001, 0.001, 0.001, 0.9, 0.8, 0.0001)
-)
-f_diff <- file.path(tmp_dir, "mock_diff.csv")
-write.csv(diff_df, f_diff, row.names = FALSE)
+  out_base <- tempdir()
 
-# C. Mock Metadata
-meta_df <- data.frame(
-  SampleID = c("S1", "S2", "S3", "S4"),
-  Group = c("Ctrl", "Ctrl", "Treat", "Treat")
-)
-f_meta <- file.path(tmp_dir, "mock_meta.csv")
-write.csv(meta_df, f_meta, row.names = FALSE)
-
-# =========================================================================
-# 2. Prepare Mock Annotation Result (KITCHEN SINK VERSION)
-# =========================================================================
-# Create a robust dataframe with ALL column variations
-loop_data <- data.frame(
-  loop_id = c("L1", "L2", "L3"),
-  # Support both "loop_type" and "type"
-  loop_type = c("EP", "EP", "PP"),
-  type = c("EP", "EP", "PP"),
-
-  # Support all naming conventions for gene 1
-  gene_name_1 = c("TP53", "MYC", "GAPDH"),
-  gene_id_1 = c("TP53", "MYC", "GAPDH"),
-  anchor1_gene = c("TP53", "MYC", "GAPDH"),
-
-  # Support all naming conventions for gene 2
-  gene_name_2 = c("Enhancer1", "Enhancer2", "Promoter2"),
-  gene_id_2 = c("Enhancer1", "Enhancer2", "Promoter2"),
-  anchor2_gene = c("Enhancer1", "Enhancer2", "Promoter2"),
-  cluster_id = c("C1", "C2", "C3"),
-  stringsAsFactors = FALSE
-)
-
-# [CRITICAL FIX] Populate BOTH 'loop_annotation' (Raw) and 'filtered_loops' (Filtered)
-# This ensures extract_target_gene_sets() finds data regardless of its default usage.
-mock_res <- list(
-  loop_annotation = loop_data, # For use_filtered = FALSE
-  filtered_loops = loop_data, # For use_filtered = TRUE (or default)
-  cluster_annotation = data.frame(
-    cluster_id = c("C1", "C2", "C3"),
-    expressed_genes_Total = c("TP53", "MYC", "GAPDH"),
-    stringsAsFactors = FALSE
-  )
-)
-
-# =========================================================================
-# 3. Run the Profiling Function
-# =========================================================================
-if (requireNamespace("ggplot2", quietly = TRUE)) {
-  res <- profile_target_genes(
-    annotation_res = mock_res,
-    use_filtered = FALSE,
-    diff_file = f_diff,
+  # =========================================================================
+  # Scenario A: Comprehensive Integrative Profiling (Loops + Targets)
+  #
+  # Application:
+  # Best for complete HiChIP + ATAC-seq (or ChIP-seq) joint analysis.
+  # It maps genes regulated by BOTH 3D distal loops and 1D direct target overlaps.
+  # =========================================================================
+  res_A <- profile_target_genes(
+    annotation_res = raw_annotation,
+    diff_file = diff_path,
     lfc_col = "log2FoldChange",
-    tpm_file = f_tpm,
-    metadata_file = f_meta,
-    target_source = "overlap",
-    loop_types = c("EP"),
-    project_name = "Example_Run",
-    out_dir = file.path(tmp_dir, "output"),
-    run_go = FALSE,
-    run_ppi = FALSE,
-    stat_test = "t.test"
+    expr_matrix_file = expr_path,
+    metadata_file = meta_path,
+    target_source = c("loops", "targets"),
+    target_mapping_mode = "all",
+    include_Filled = TRUE,
+    use_nearest_gene = FALSE,
+    project_name = "Scenario_A_Integrative",
+    out_dir = out_base,
+    run_go = FALSE, # Set to TRUE in real analysis
+    run_ppi = FALSE
   )
 
-  if (!is.null(res)) {
-    message("✅ Results generated successfully!")
-    print(names(res))
-    # print(list.files(file.path(tmp_dir, "output"))) # Optional: check files
-  }
+  # =========================================================================
+  # Scenario B: Peak-Centric & Promoter-Strict Profiling
+  #
+  # Application:
+  # Focuses ONLY on 1D peaks ("targets") and STRICTLY restricts the mapping
+  # to genes where peaks fall directly on their "promoter".
+  # Ideal for baseline epigenetic profiling, ignoring distal 3D regulation.
+  # =========================================================================
+  res_B <- profile_target_genes(
+    annotation_res = raw_annotation,
+    diff_file = diff_path,
+    lfc_col = "log2FoldChange",
+    expr_matrix_file = expr_path,
+    metadata_file = meta_path,
+    target_source = "targets", # Only 1D targets
+    target_mapping_mode = "promoter", # Strict promoter mapping
+    include_Filled = TRUE,
+    use_nearest_gene = FALSE,
+    project_name = "Scenario_B_PromoterOnly",
+    out_dir = out_base,
+    run_go = FALSE,
+    run_ppi = FALSE
+  )
+
+  # =========================================================================
+  # Scenario C: Highly Conservative Distal Enhancer-Targeting
+  #
+  # Application:
+  # Focuses on 3D loops. By setting `use_nearest_gene = TRUE` and
+  # `include_Filled = FALSE`, it forces the selection of strictly the nearest
+  # genes to the anchors, preventing the expansion of gene lists from broader
+  # annotated regions. Ensures a highly conservative gene target list.
+  # =========================================================================
+  res_C <- profile_target_genes(
+    annotation_res = raw_annotation,
+    diff_file = diff_path,
+    lfc_col = "log2FoldChange",
+    expr_matrix_file = expr_path,
+    metadata_file = meta_path,
+    target_source = "loops", # Only 3D loops
+    target_mapping_mode = "all",
+    include_Filled = FALSE,
+    use_nearest_gene = TRUE, # Strictly nearest gene
+    project_name = "Scenario_C_StrictLoops",
+    out_dir = out_base,
+    run_go = FALSE,
+    run_ppi = FALSE
+  )
 }
 }

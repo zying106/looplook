@@ -12,7 +12,8 @@ draw_karyo_heatmap_internal(
   sat_level,
   ref_txdb,
   plot_species,
-  unit_label
+  unit_label,
+  custom_colors = NULL
 )
 }
 \arguments{

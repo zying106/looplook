@@ -2,31 +2,34 @@
 % Please edit documentation in R/analysis.R
 \name{extract_target_gene_sets}
 \alias{extract_target_gene_sets}
-\title{Internal: Extract Target Gene Sets from Annotation Results}
+\title{Extract Target Gene Sets from Annotation Results}
 \usage{
 extract_target_gene_sets(
   annotation_res,
-  target_source,
-  loop_types,
-  include_direct
+  src,
+  active_loop_types = NULL,
+  include_Filled = TRUE,
+  use_nearest_gene = FALSE,
+  target_mapping_mode = "all"
 )
 }
 \arguments{
-\item{annotation_res}{List output from upstream annotation functions, expected to contain
-\code{loop_annotation} and/or \code{cluster_annotation}.}
+\item{annotation_res}{List output from \code{annotate_peaks_and_loops}.}
 
-\item{target_source}{Character vector: "overlap", "cluster", or both.}
+\item{src}{Character. Source to extract from ("loops" or "targets").}
 
-\item{loop_types}{Character vector of loop types to consider (e.g., "EP", "PP").}
+\item{active_loop_types}{Character vector. Which loop types to extract (if src is "loops").}
 
-\item{include_direct}{Logical. If \code{TRUE} and "cluster" is in \code{target_source},
-include direct peak-linked genes under key "Direct".}
+\item{include_Filled}{Logical. Whether to use \verb{_Filled} columns containing merged host/target genes.}
+
+\item{use_nearest_gene}{Logical. Whether to strictly use the 1D nearest gene (SYMBOL) instead of 3D loops.}
+
+\item{target_mapping_mode}{Character. Mapping mode for targets ("all" or "promoter").}
 }
 \value{
-Named list of gene vectors, keyed by loop type or "Direct".
+Named list of gene character vectors.
 }
 \description{
-Parses loop and cluster annotations to extract target genes based on specified sources
-("overlap" from loop-gene overlap, "cluster" from peak-associated expressed genes).
+Parses loop and target annotations using strict column matching to extract valid gene lists for downstream profiling.
 }
 \keyword{internal}

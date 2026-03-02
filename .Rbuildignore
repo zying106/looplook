@@ -1,3 +1,9 @@
 ^looplook\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
+^\.github$
+^README\.Rmd$
+^looplook\.BiocCheck$
+^doc$
+^Meta$
+^README\.html$

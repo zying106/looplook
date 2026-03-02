@@ -13,8 +13,8 @@ reduce_ginteractions(gi, gap = 1000)
 }
 \value{
 A list with two elements:
-\itemize{
-\item{\code{gi}}{Reduced \code{GInteractions} object, one per cluster.}
+\describe{
+\item{\code{gi}}{Reduced \code{\link[InteractionSet]{GInteractions}} object, one per cluster.}
 \item{\code{membership}}{Integer vector indicating cluster assignment for each input loop.}
 }
 Metadata columns include \code{cluster_id}, \code{n_members}, and averaged \code{score}.

@@ -22,7 +22,7 @@
 #' @importFrom GenomicRanges GRanges
 #' @importFrom IRanges IRanges
 #' @importFrom InteractionSet GInteractions
-#' @importFrom S4Vectors mcols<-
+#' @importFrom S4Vectors mcols mcols<-
 #' @export
 #' @examples
 #' # 1. Locate the example BEDPE file included in the package
@@ -96,16 +96,16 @@ bedpe_to_gi <- function(bedpe_file) {
 #'
 #' Merges spatially proximal chromatin loops into consensus interactions using graph-based clustering.
 #' Loops are considered overlapping if both anchors are within \code{gap} bp of each other.
-#' Each resulting cluster is represented by the **union genomic range (min start to max end)** spanning all its members.
+#' Each resulting cluster is represented by the \strong{union genomic range (min start to max end)} spanning all its members.
 #'
 #' @param gi A \code{\link[InteractionSet]{GInteractions}} object.
 #' @param gap Numeric. Maximum distance (in base pairs) allowed between anchors to consider two loops overlapping. Default: 1000.
 #' @return A list with two elements:
-#'   \itemize{
-#'     \item{\code{gi}}{Reduced \code{GInteractions} object, one per cluster.}
-#'     \item{\code{membership}}{Integer vector indicating cluster assignment for each input loop.}
-#'   }
-#'   Metadata columns include \code{cluster_id}, \code{n_members}, and averaged \code{score}.
+#' \describe{
+#'   \item{\code{gi}}{Reduced \code{\link[InteractionSet]{GInteractions}} object, one per cluster.}
+#'   \item{\code{membership}}{Integer vector indicating cluster assignment for each input loop.}
+#' }
+#' Metadata columns include \code{cluster_id}, \code{n_members}, and averaged \code{score}.
 #' @importFrom igraph make_empty_graph add_edges components
 #' @importFrom S4Vectors queryHits subjectHits mcols
 #' @importFrom GenomicRanges GRangesList
@@ -189,38 +189,52 @@ read_simple_bed <- function(bed_file) {
 #' @description
 #' This function consolidates chromatin loops from multiple BEDPE files. It is designed for two main purposes:
 #' \enumerate{
-#'   \item **Replicate Consolidation**: Merging biological or technical replicates to identify high-confidence, reproducible loops (e.g., 3 replicates of H3K27ac HiChIP).
-#'   \item **Multi-Omics Integration**: Intersecting or merging loops from distinct chromatin features to find shared regulatory architectures (e.g., integrating **H3K27ac** and **H3K4me3** HiChIP data, or overlapping Hi-C with ChIA-PET).
+#'   \item \strong{Replicate Consolidation}: Merging biological or technical replicates to identify high-confidence, reproducible loops (e.g., 3 replicates of H3K27ac HiChIP).
+#'   \item \strong{Multi-Omics Integration}: Intersecting or merging loops from distinct chromatin features to find shared regulatory architectures (e.g., integrating \strong{H3K27ac} and \strong{H3K4me3} HiChIP data, or overlapping Hi-C with ChIA-PET).
 #' }
 #'
 #' The function supports three modes:
 #' \itemize{
-#'   \item \code{"reproducible"}: Graph-based clustering to find a consensus set supported by a majority of samples.
+#'   \item \code{"consensus"}: Graph-based clustering to find a consensus set supported by a majority of samples.
 #'   \item \code{"intersect"}: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files).
 #'   \item \code{"union"}: Merges all detected loops into a comprehensive map.
 #' }
-#' Optional filtering by blacklist regions or target genomic regions (e.g., promoters) is supported.
+#'
+#' It also supports a \strong{two-stage filtering strategy} to maximize signal-to-noise ratio:
+#' \itemize{
+#'   \item \strong{Pre-filtering} (\code{min_raw_score}): Removes low-confidence noise (e.g., singleton reads) from raw files \emph{before} merging.
+#'   \item \strong{Post-filtering} (\code{min_score}): Filters the final consensus loops based on their aggregated score (e.g., average intensity).
+#' }
 #'
 #' @param files Character vector. Paths to BEDPE files (at least two).
 #' @param gap Numeric. Distance (bp) to consider loops as overlapping. Default 1000.
-#' @param mode Character. Choose one of the following: intersect, union, reproducible. Merge strategy:
+#' @param mode Character. Choose one of the following: "consensus", "intersect", "union". Merge strategy:
 #'   \itemize{
-#'     \item{"intersect"}{ Strict reference-based filtering (keeps loops in File 1 supported by ALL other files)}
-#'     \item{"union"}{ Merges all detected loops into a comprehensive map.}
-#'     \item{"reproducible"}{ Graph-based clustering to find a consensus set supported by a majority of samples.}
+#'     \item \code{"intersect"}: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files).
+#'     \item \code{"union"}: Merges all detected loops into a comprehensive map.
+#'     \item \code{"consensus"}: Graph-based clustering to find a consensus set supported by a majority of samples. (Formerly "reproducible").
 #'   }
-#' @param min_reproducible Integer. Minimum number of replicates a loop must appear in
-#'   (only effective when \code{mode = "reproducible"}).
+#' @param min_consensus Integer. Minimum number of replicates a loop must appear in
+#'   (only effective when \code{mode = "consensus"}).
 #'   If \code{NULL} (default), the threshold is automatically calculated:
 #'   \itemize{
 #'     \item For 2 replicates: Requires both (2/2).
-#'     \item For >2 replicates: Requires strict majority (>75% support).
-#'     (e.g., 3 for N=3, 4 for N=4, 4 for N=5).
+#'     \item For >2 replicates: Requires strict majority (>75\% support).
+#'     \item (e.g., 3 for N=3, 4 for N=4, 4 for N=5).
 #'   }
-#' @param min_score Numeric. Minimum score threshold to keep a loop.
+#' @param min_raw_score Numeric. \strong{Pre-filtering threshold}. Loops with a raw score (e.g., read count) below this value in individual files will be discarded \strong{before} any merging or intersection.
+#'   \itemize{
+#'     \item Recommended value: \code{2} (to remove singleton noise loops with count=1).
+#'     \item Default: \code{NULL} (no pre-filtering).
+#'   }
+#' @param min_score Numeric. \strong{Post-filtering threshold}. Minimum score to keep a consolidated loop \strong{after} merging.
+#'   \itemize{
+#'     \item For \code{"consensus"} mode, this filters the consensus loops based on their representative score.
+#'     \item Default: \code{NULL} (no post-filtering).
+#'   }
 #' @param blacklist_species Character. Species/build for built-in blacklist
 #'   (e.g., "hg38", "hg19", "mm10", "mm9"), or a path to a custom BED file.
-#' @param target_bed_file Character. Path to BED file. Only loops overlapping these regions will be kept.
+#' @param region_of_interest Character. Path to BED file. Only loops overlapping these regions will be kept.
 #' @param out_file Character. The file name (including the file path) for saving results in the extended BEDPE format.
 #' @return A filtered \code{\link[InteractionSet]{GInteractions}} object.
 #' @importFrom data.table fread
@@ -245,11 +259,11 @@ read_simple_bed <- function(bed_file) {
 #'     out_file = tempfile(fileext = ".bedpe")
 #'   )
 #'
-#'   # Example B: Reproducible Mode
+#'   # Example B: Consensus Mode (formerly Reproducible)
 #'   # Finds consensus loops supported by both replicates (default for N=2)
-#'   res_repro <- consolidate_chromatin_loops(
+#'   res_consensus <- consolidate_chromatin_loops(
 #'     files = c(f1, f2),
-#'     mode = "reproducible",
+#'     mode = "consensus",
 #'     gap = 1000,
 #'     out_file = tempfile(fileext = ".bedpe")
 #'   )
@@ -263,18 +277,32 @@ read_simple_bed <- function(bed_file) {
 #'     out_file = tempfile(fileext = ".bedpe")
 #'   )
 #'
+#'   # Example D: Dual Filtering Strategy (Recommended for HiChIP)
+#'   # 1. Pre-filter: Discard singletons (score < 2) to remove noise.
+#'   # 2. Merge: Find loops present in both replicates.
+#'   # 3. Post-filter: Keep only strong consensus loops (score > 5).
+#'   res_clean <- consolidate_chromatin_loops(
+#'     files = c(f1, f2),
+#'     mode = "consensus",
+#'     min_raw_score = 2, # Pre-filter (remove noise)
+#'     min_score = 5, # Post-filter (keep strong loops)
+#'     gap = 1000,
+#'     out_file = tempfile(fileext = ".bedpe")
+#'   )
+#'
 #'   # Inspect results
 #'   length(res_intersect)
-#'   length(res_union)
+#'   length(res_clean)
 #' }
 consolidate_chromatin_loops <- function(
   files = NULL,
   gap = 1000,
-  mode = c("reproducible", "intersect", "union"),
-  min_reproducible = NULL,
+  mode = c("consensus", "intersect", "union"),
+  min_consensus = NULL,
+  min_raw_score = NULL,
   min_score = NULL,
   blacklist_species = NULL,
-  target_bed_file = NULL,
+  region_of_interest = NULL,
   out_file = NULL
 ) {
   stopifnot(length(files) >= 2)
@@ -282,11 +310,23 @@ consolidate_chromatin_loops <- function(
   n_reps <- length(files)
 
   message(">>> Reading BEDPE files")
-  gi_list <- lapply(files, bedpe_to_gi)
+
+  gi_list <- lapply(seq_along(files), function(i) {
+    f <- files[i]
+    gi <- bedpe_to_gi(f)
+
+    if (!is.null(min_raw_score)) {
+      if ("score" %in% colnames(S4Vectors::mcols(gi))) {
+        keep_idx <- S4Vectors::mcols(gi)$score >= min_raw_score
+        gi <- gi[keep_idx]
+      }
+    }
+    return(gi)
+  })
 
   for (i in seq_along(gi_list)) {
     S4Vectors::mcols(gi_list[[i]])$source <- i
-    message("    File", i, ": ", length(gi_list[[i]]), " loops")
+    message("    File ", i, ": ", length(gi_list[[i]]), " loops")
   }
 
   result_gi <- NULL
@@ -298,16 +338,12 @@ consolidate_chromatin_loops <- function(
     message(">>> Intersect mode: Reference-based filtering (No Coordinate Merging)")
     message("    Base: File 1. Criterion: Must overlap with ALL other files.")
 
-    # Start with File 1 as the reference universe
     current_gi <- gi_list[[1]]
 
-    # Iteratively filter against File 2, 3, ... N
     for (i in 2:n_reps) {
       if (length(current_gi) == 0) break
-
       message("    Intersecting with File ", i, "...")
 
-      # Use S4 findOverlaps for robust gap checking
       hits <- InteractionSet::findOverlaps(
         current_gi,
         gi_list[[i]],
@@ -315,46 +351,36 @@ consolidate_chromatin_loops <- function(
         use.region = "both"
       )
 
-      # Keep only loops in current_gi that have a hit
       keep_idx <- unique(S4Vectors::queryHits(hits))
       current_gi <- current_gi[keep_idx]
     }
 
     result_gi <- current_gi
-
-    # In intersect mode, n_members/n_reps is logically N (since we filtered for it)
     S4Vectors::mcols(result_gi)$n_reps <- n_reps
-    # Set n_members to 1 (representing the single representative from File 1) or N?
-    # Let's use N to be consistent with the logic that N supports it.
     S4Vectors::mcols(result_gi)$n_members <- n_reps
 
     # ==========================================
-    # PATH B: CLUSTERING (Reproducible / Union)
+    # PATH B: CLUSTERING (Consensus / Union)
     # ==========================================
   } else {
-    message(">>> Clustering mode (Union/Reproducible): Merging coordinates via Graph")
+    #
+    message(">>> Clustering mode (Union/Consensus): Merging coordinates via Graph")
 
-    # 1. Combine
     combined_dt <- data.table::rbindlist(lapply(gi_list, gi_to_dt))
-
-    # 2. Cluster
     clustered <- cluster_loops_dt(combined_dt, gap)
-
-    # 3. Reduce
     reduced_dt <- reduce_clusters_dt(clustered)
 
-    # 4. Filter Logic
-    if (mode == "reproducible") {
-      if (is.null(min_reproducible)) {
+
+    if (mode == "consensus") {
+      if (is.null(min_consensus)) {
         if (n_reps == 2) {
-          min_reproducible <- 2
+          min_consensus <- 2
         } else {
-          # > 75% logic
-          min_reproducible <- floor(0.75 * n_reps) + 1
+          min_consensus <- floor(0.75 * n_reps) + 1
         }
       }
-      message(">>> Reproducible mode: Keeping clusters in >= ", min_reproducible, " replicates")
-      reduced_dt <- reduced_dt[n_reps >= min_reproducible]
+      message(">>> Consensus mode: Keeping clusters in >= ", min_consensus, " replicates")
+      reduced_dt <- reduced_dt[n_reps >= min_consensus]
     } else {
       message(">>> Union mode: Keeping all clusters")
     }
@@ -366,13 +392,11 @@ consolidate_chromatin_loops <- function(
   # POST-PROCESSING (Filters & Output)
   # ==========================================
 
-  # Score Filter
   if (!is.null(min_score)) {
-    keep <- S4Vectors::mcols(result_gi)$score > min_score
+    keep <- S4Vectors::mcols(result_gi)$score >= min_score
     result_gi <- result_gi[keep]
   }
 
-  # Blacklist Filter
   if (!is.null(blacklist_species)) {
     known_lists <- list(
       "hg38" = "hg38-blacklist.v2.bed",
@@ -399,21 +423,28 @@ consolidate_chromatin_loops <- function(
     }
   }
 
-  # Target Region Filter
-  if (!is.null(target_bed_file)) {
-    message(">>> Filtering targets: ", basename(target_bed_file))
-    if (file.exists(target_bed_file)) {
-      tg <- read_simple_bed(target_bed_file)
+  if (!is.null(region_of_interest)) {
+    message(">>> Filtering by region of interest: ", basename(region_of_interest))
+    if (file.exists(region_of_interest)) {
+      tg <- read_simple_bed(region_of_interest)
+
       h1 <- InteractionSet::findOverlaps(InteractionSet::anchors(result_gi, "first"), tg)
       h2 <- InteractionSet::findOverlaps(InteractionSet::anchors(result_gi, "second"), tg)
+
       keep <- unique(c(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2)))
-      result_gi <- result_gi[keep]
+
+      if (length(keep) > 0) {
+        result_gi <- result_gi[keep]
+        message("    Kept ", length(result_gi), " loops overlapping ROI.")
+      } else {
+        message("    No loops overlapped with the ROI. Returning empty set.")
+        result_gi <- result_gi[0]
+      }
     } else {
-      warning("Target BED file not found.")
+      warning("Region of interest file not found: ", region_of_interest)
     }
   }
 
-  # Output to file
   if (!is.null(out_file)) {
     a1 <- InteractionSet::anchors(result_gi, "first")
     a2 <- InteractionSet::anchors(result_gi, "second")
@@ -439,7 +470,7 @@ consolidate_chromatin_loops <- function(
     message("Finished! Saved to ", out_file)
   }
 
-  message("inished! Final loops: ", length(result_gi))
+  message("Finished! Final loops: ", length(result_gi))
   result_gi
 }
 
@@ -538,176 +569,5 @@ if (getRversion() >= "2.15.1") {
     "chr1", "start1", "end1", "chr2", "start2", "end2",
     "idx", "i.idx", "cluster", "score", "source", "n_members", "n_reps",
     "a1_l", "a1_r", "a2_l", "a2_r", ".N", ".I"
-  ))
-}
-
-#' Plot Contact Matrix Heatmap
-#'
-#' Visualizes chromatin interactions (GInteractions) as a rotated triangular heatmap.
-#' Supports custom shapes (diamond/triangle) with perfect boundary alignment.
-#'
-#' @param gi A \code{\link[InteractionSet]{GInteractions}} object.
-#' @param region Character. Genomic region to plot (e.g., "chr1:100000-200000").
-#' @param resolution Integer. Bin size in base pairs. Default 10000.
-#' @param palette Character vector. Color gradient.
-#' @param max_score Numeric. Cap the score at this value.
-#' @param ylim_bins Numeric. Limit Y-axis height (zoom in).
-#' @param shape Character. Shape of the pixels: "diamond" (standard Hi-C), "triangle", or "rect". Default "diamond".
-#' @return A ggplot object.
-#' @importFrom GenomicRanges GRanges start end seqnames
-#' @importFrom InteractionSet findOverlaps anchors
-#' @importFrom data.table data.table setkey .N :=
-#' @importFrom ggplot2 ggplot geom_tile geom_polygon geom_point geom_path scale_fill_gradientn scale_color_gradientn scale_x_continuous theme_classic theme element_blank element_text coord_fixed aes margin ggtitle guides guide_colorbar
-#' @importFrom S4Vectors queryHits subjectHits mcols
-#' @export
-#' @examples
-#' # 1. Load example data
-#' bedpe_path <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
-#'
-#' if (bedpe_path != "") {
-#'   # Convert BEDPE to GInteractions object
-#'   gi <- bedpe_to_gi(bedpe_path)
-#'
-#'   # 2. Define a region of interest
-#'   region_str <- "chr1:9893482-13450001"
-#'
-#'   # 3. Plot the contact heatmap
-#'   # We use a resolution of 10kb to match the scale of the example loops
-#'   p <- plot_contact_matrix(
-#'     gi = gi,
-#'     region = region_str,
-#'     resolution = 5000,
-#'     shape = "diamond"
-#'   )
-#'
-#'   print(p)
-#' }
-plot_contact_matrix <- function(gi, region, resolution = 10000,
-                                palette = c("white", "orange", "red"),
-                                max_score = NULL,
-                                ylim_bins = NULL,
-                                shape = c("diamond", "triangle", "rect")) {
-  shape <- match.arg(shape)
-
-  # 1. Parse Region
-  reg_gr <- .parse_region(region)
-  chr_name <- as.character(GenomicRanges::seqnames(reg_gr))
-  reg_start <- GenomicRanges::start(reg_gr)
-  reg_end <- GenomicRanges::end(reg_gr)
-
-  message(">>> Plotting region: ", region, " @ ", resolution / 1000, "kb | Shape: ", shape)
-
-  # 2. Filter Loops
-  hits <- InteractionSet::findOverlaps(gi, reg_gr, type = "within", use.region = "both")
-  if (length(hits) == 0) {
-    warning("No loops found.")
-    return(NULL)
-  }
-  sub_gi <- gi[unique(S4Vectors::queryHits(hits))]
-
-  # 3. Binning
-  a1 <- InteractionSet::anchors(sub_gi, "first")
-  a2 <- InteractionSet::anchors(sub_gi, "second")
-  scores <- if (!is.null(S4Vectors::mcols(sub_gi)$score)) S4Vectors::mcols(sub_gi)$score else 1
-
-  dt <- data.table::data.table(
-    s1 = GenomicRanges::start(a1), e1 = GenomicRanges::end(a1),
-    s2 = GenomicRanges::start(a2), e2 = GenomicRanges::end(a2),
-    score = scores
-  )
-  dt[, `:=`(bin1 = floor(((s1 + e1) / 2 - reg_start) / resolution), bin2 = floor(((s2 + e2) / 2 - reg_start) / resolution))]
-  dt[bin1 > bin2, c("bin1", "bin2") := list(bin2, bin1)]
-
-  max_bin <- floor((reg_end - reg_start) / resolution)
-  dt <- dt[bin1 >= 0 & bin2 >= 0 & bin1 <= max_bin & bin2 <= max_bin]
-
-  # Aggregate
-  mat_dt <- dt[, .(value = sum(score)), by = .(bin1, bin2)]
-
-  # 4. Coordinate Calculation
-  mat_dt[, `:=`(x_rot = (bin1 + bin2) / 2, y_rot = (bin2 - bin1) / 2)]
-
-  if (!is.null(max_score)) mat_dt[value > max_score, value := max_score]
-
-  # === Shape Logic ===
-  plot_layer <- NULL
-
-  if (shape == "diamond") {
-    mat_dt[, id := .I]
-    poly_dt <- mat_dt[, .(
-      x = c(x_rot, x_rot + 0.5, x_rot, x_rot - 0.5),
-      y = c(y_rot + 0.5, y_rot, y_rot - 0.5, y_rot),
-      value = value
-    ), by = id]
-
-    plot_layer <- ggplot2::geom_polygon(
-      data = poly_dt,
-      ggplot2::aes(x = x, y = y, fill = value, group = id)
-    )
-  } else if (shape == "triangle") {
-    plot_layer <- ggplot2::geom_point(
-      data = mat_dt,
-      ggplot2::aes(x = x_rot, y = y_rot, color = value),
-      shape = 17, size = 1.5
-    )
-  } else {
-    plot_layer <- ggplot2::geom_tile(
-      data = mat_dt,
-      ggplot2::aes(x = x_rot, y = y_rot, fill = value),
-      width = 1, height = 1
-    )
-  }
-
-  # === 5. Border (Fix Overlap) ===
-  # Expand border by 0.5 units to wrap AROUND the diamonds
-  expand <- 0.5
-  triangle_border <- data.frame(
-    x = c(-expand, max_bin + expand, max_bin / 2, -expand),
-    y = c(0, 0, max_bin / 2 + expand, 0)
-  )
-
-  max_h <- if (!is.null(ylim_bins)) ylim_bins else (max_bin / 2 + expand)
-  coord_system <- ggplot2::coord_fixed(ratio = 0.5, ylim = c(0, max_h))
-
-  # 6. Assemble Plot
-  p <- ggplot2::ggplot() +
-    plot_layer +
-    ggplot2::geom_path(data = triangle_border, ggplot2::aes(x = x, y = y), color = "black", size = 0.5) +
-    ggplot2::scale_fill_gradientn(colors = palette, name = "Score") +
-    ggplot2::scale_color_gradientn(colors = palette, name = "Score") +
-    ggplot2::scale_x_continuous(
-      name = paste0(chr_name, " (Mb)"),
-      breaks = seq(0, max_bin, length.out = 5),
-      labels = function(b) sprintf("%.2f", (reg_start + b * resolution) / 1e6)
-    ) +
-    coord_system +
-    ggplot2::theme_classic() +
-    ggplot2::theme(
-      axis.line.y = ggplot2::element_blank(),
-      axis.text.y = ggplot2::element_blank(),
-      axis.ticks.y = ggplot2::element_blank(),
-      axis.title.y = ggplot2::element_blank(),
-      panel.border = ggplot2::element_blank(),
-      plot.title = ggplot2::element_text(hjust = 0.5),
-      legend.position = "right"
-    ) +
-    ggplot2::ggtitle(paste0(chr_name, ":", prettyNum(reg_start, big.mark = ","), "-", prettyNum(reg_end, big.mark = ",")))
-
-  return(p)
-}
-
-# Helper
-.parse_region <- function(region_str) {
-  parts <- strsplit(region_str, ":")[[1]]
-  if (length(parts) != 2) stop("Invalid region format. Use 'chr:start-end'")
-  chrom <- parts[1]
-  coords <- strsplit(parts[2], "-")[[1]]
-  if (length(coords) != 2) stop("Invalid coordinates. Use 'chr:start-end'")
-  return(GenomicRanges::GRanges(chrom, IRanges::IRanges(as.numeric(coords[1]), as.numeric(coords[2]))))
-}
-
-if (getRversion() >= "2.15.1") {
-  utils::globalVariables(c(
-    "s1", "e1", "s2", "e2", "bin1", "bin2", "value", "x_rot", "y_rot", "x", "y", "id"
   ))
 }

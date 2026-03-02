@@ -1,58 +1,84 @@
 Package: looplook
-Title: Tools for Integrative Analysis of Chromatin Loops and Expression
+Title: Looplook: A multi-omics suite for expression-aware target assignment and topological profiling of 3D chromatin networks
 Version: 0.99.0
-Authors@R: 
-    person(given = "Ying", family = "Zhang" , email = "12207129@zju.edu.cn", role = c("aut", "cre"), comment = c(ORCID = "0009-0005-9644-7062"))
-Description: A comprehensive toolkit for processing HiChIP/Hi-C loops, 
-    annotating loop anchors with gene expression data, reclassifying regulatory elements, 
-    and generating publication-quality visualizations like flower plots and track plots.
+Authors@R: c(
+    person(given = "Ying", family = "Zhang", 
+           role = c("aut", "cre"), 
+           email = "12207129@zju.edu.cn", 
+           comment = c(ORCID = "0009-0005-9644-7062")),
+    person(given = "Xingze", family = "Huang", 
+           role = c("ctb"), 
+           email = "22407026@zju.edu.cn",
+           comment = c(ORCID = "0009-0002-9286-1344")),
+    person(given = "Liang", family = "Xu", 
+           role = c("ctb", "fnd"), 
+           email = "xuliang.phd@zju.edu.cn",
+           comment = "This work is funded by the Fundamental Research Funds for the Central Universities (226-2025-00101) and the National Natural Science Foundation of China (32270746, 82203247, 82203415).")
+  )
+Description: An integrative multi-omics suite designed to bridge 1D epigenetic features with 3D chromatin architecture. Looplook facilitates the precise assignment of distal regulatory elements to their target genes through a robust expression-aware refinement algorithm. Furthermore, it empowers the topological profiling of spatial chromatin networks to identify core regulatory hubs, complemented by a specialized rendering engine for publication-quality IGV-style genomic tracks and integrative network visualizations.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Config/testthat/edition: 3
-biocViews: Software, Technology, HiC, Sequencing, GeneExpression, Visualization, 
-    Epigenetics, GeneTarget, Classification, Clustering, ChipOnChip
-VignetteBuilder: knitr
-Imports: 
+biocViews: Software, Epigenetics, HiC, ChIPSeq, RNASeq, 
+    GeneExpression, FunctionalGenomics, GenomeAnnotation, 
+    SystemsBiology, Visualization, Classification, Clustering, 
+    QualityControl, ChipOnChip, Spatial, AnnotationHubSoftware, 
+    Network, Coverage, GeneTarget
+Depends: R (>= 4.5.0)
+Imports:
     dplyr,
-    tidyr,
     ggplot2,
-    data.table,
-    igraph,
-    scales,
-    RColorBrewer,
-    openxlsx,
-    fields,
-    ggforce,
-    circlize,
-    ggpubr,
-    corrplot,
-    ggraph,
-    grid,
-    ggrepel,
-    InteractionSet,
+    tidyr,
     GenomicRanges,
-    ChIPseeker,
-    AnnotationDbi,
-    karyoploteR,
-    ComplexHeatmap,
-    clusterProfiler,
-    enrichplot,
-    org.Hs.eg.db,
-    org.Mm.eg.db,
-    STRINGdb,
-    GenomicFeatures,
     IRanges,
     S4Vectors,
+    GenomeInfoDb,
+    openxlsx,
+    stats,
+    utils,
+    AnnotationDbi,
+    GenomicFeatures,
+    InteractionSet,
+    RColorBrewer,
     UpSetR,
-    grDevices
-Suggests: 
-    TxDb.Hsapiens.UCSC.hg38.knownGene,
-    TxDb.Hsapiens.UCSC.hg19.knownGene,
-    TxDb.Mmusculus.UCSC.mm10.knownGene,
+    data.table,
+    fields,
+    ggforce,
+    ggrepel,
+    igraph,
+    karyoploteR,
+    scales
+Suggests:
+    ComplexHeatmap,
+    circlize,
+    motifmatchr,
+    JASPAR2020,
+    TFBSTools,
+    BSgenome.Hsapiens.UCSC.hg38,
+    BSgenome.Mmusculus.UCSC.mm10,
+    ggseqlogo,
+    STRINGdb,
+    ggraph,
+    enrichplot,
+    clusterProfiler,
+    aplot,
+    ggtext,
+    ggpointdensity,
+    viridis,
+    ggpubr,
+    ggdist,
     knitr,
     rmarkdown,
-    testthat (>= 3.0.0)
+    BSgenome,
+    ChIPseeker,
+    htmlwidgets,
+    networkD3,
+    webshot2,
+    TxDb.Hsapiens.UCSC.hg38.knownGene,
+    org.Hs.eg.db,
+    testthat
 URL: https://github.com/zying106/looplook
 BugReports: https://github.com/zying106/looplook/issues
+VignetteBuilder: knitr

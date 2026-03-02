@@ -2,7 +2,7 @@
 % Please edit documentation in R/analysis.R
 \name{read_robust_general}
 \alias{read_robust_general}
-\title{Internal: Robust Data Reader}
+\title{Robust Data Reader}
 \usage{
 read_robust_general(
   f,
@@ -13,21 +13,20 @@ read_robust_general(
 )
 }
 \arguments{
-\item{f}{Character. Path to input file.}
+\item{f}{Character. Path to the input file.}
 
-\item{header}{Logical. Whether the file contains a header. Default: FALSE (standard for BED/BEDPE).}
+\item{header}{Logical. Whether the file contains a header row.}
 
-\item{row_name}{Either \code{NULL} or integer column index for row names.}
+\item{row_name}{Integer or NULL. Column index to be used as row names.}
 
-\item{desc}{Character. Description for error messages.}
+\item{desc}{Character. Short description for error logging (e.g., "BEDPE").}
 
-\item{min_cols}{Integer. Minimum required columns.}
+\item{min_cols}{Integer. Minimum number of columns required to pass validation.}
 }
 \value{
 A data frame.
 }
 \description{
-Safely reads standard genomic formats (BED, BEDPE, CSV, TSV) using data.table (if avail)
-or base R. Automatically handles delimiters and checks column counts.
+Safely reads standard genomic formats (BED, BEDPE, CSV, TSV) using \code{data.table::fread} (if available) with progressive fallbacks to base R. Automatically handles delimiters and validates minimum column counts.
 }
 \keyword{internal}

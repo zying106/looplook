@@ -25,13 +25,4 @@ A \code{ggplot} object of the bar plot showing enhancer source distribution.
 Bar plot showing the origin of functional enhancer anchors
 (e.g., native vs. promoter-derived).
 }
-\examples{
-df <- data.frame(
-  functional_anchor1_type = c("E", "P", "E"),
-  anchor1_source = c("Native", "Promoter", "Gene_body-derived enhancer"),
-  functional_anchor2_type = c("E", "E", "P"),
-  anchor2_source = c("Promoter-derived enhancer", "Native", "Promoter")
-)
-p <- draw_enhancer_source_distribution(df, "MyProject", "enh_sources.pdf")
-}
 \keyword{internal}
