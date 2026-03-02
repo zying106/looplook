@@ -58,6 +58,7 @@ Imports:
     karyoploteR,
     scales
 Suggests: 
+    BiocStyle,
     ComplexHeatmap,
     circlize,
     motifmatchr,
