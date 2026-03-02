@@ -1,5 +1,5 @@
 
-<img src="man/figures/logo.png" align="right" width="160" alt="Looplook Logo" />
+<img src="man/figures/logo.png" width="160" alt="Looplook Logo" style="float: right; margin-left: 10px; margin-bottom: 10px;" />
 
 # Looplook
 
