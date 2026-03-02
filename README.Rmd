@@ -1,3 +1,7 @@
+---
+output: github_document
+---
+
 <img src="man/figures/logo.png" align="right" width="160" alt="Looplook Logo" />
 
 # Looplook
@@ -29,7 +33,7 @@ Beyond its power as a spatial bridge, `looplook` serves as a standalone powerhou
 
 `looplook` heavily relies on the Bioconductor ecosystem for robust genomic arithmetic and annotation. Please ensure your environment is up to date:
 
-```r
+```{r, eval = FALSE}
 # 1. Install required annotation dependencies (Example for Human hg38)
 if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
 BiocManager::install(c("TxDb.Hsapiens.UCSC.hg38.knownGene", "org.Hs.eg.db"))
@@ -54,7 +58,7 @@ In 3D genomics, individual replicates often suffer from high noise. The `consoli
 * `blacklist_species`: Automatically drops loops falling into high-variance, artifact-prone genomic regions (e.g., centromeres, telomeres) by seamlessly applying the official ENCODE blacklist (e.g., `"hg38"`, `"mm10"`).
 * `region_of_interest`: By providing an auxiliary BED file (e.g., a specific disease locus or ChIP-seq peaks), the engine drops the global background and strictly outputs loops physically connected to this targeted zone.
 
-```r
+```{r, eval = FALSE}
 library(looplook)
 out_dir <- tempdir()
 
@@ -79,7 +83,7 @@ This module forms the core mapping engine. It seamlessly executes a rigorous hie
 * `neighbor_hop`: A highly advanced topological parameter for network traversal. `0` strictly annotates direct physical contacts. `1` (Hub Mode) evaluates secondary network effects within super-enhancer cliques.
 * `tss_region`: Defines the spatial boundary of a promoter relative to the Transcription Start Site (TSS).
 
-```r
+```{r, eval = FALSE}
 # Map 1D peaks to 3D loops and resolve multi-gene conflicts
 res_integrated <- annotate_peaks_and_loops(
   bedpe_file = file.path(out_dir, "consensus_loops.bedpe"),
@@ -114,7 +118,7 @@ Physical proximity is a structural prerequisite, but not a direct proxy for acti
 * `threshold` & `unit_type`: Defines the quantitative cutoff (e.g., `threshold = 1.0`, `unit_type = "TPM"`) required to consider a gene biologically active, allowing downward compatibility with various normalization methods.
 * `reclassify_by_expression`: When enabled (`TRUE`), mathematically silent Promoters are not simply discarded; they are biologically downgraded to enhancer-like regulatory elements. This corrects the regulatory syntax (e.g., transitioning a functionally silent `P-P` loop into a biologically accurate `eP-P` loop).
 
-```r
+```{r, eval = FALSE}
 # Expression-Aware Reclassification (Recommended)
 refined_res <- refine_loop_anchors_by_expression(
   annotation_res = res_integrated,
@@ -149,7 +153,7 @@ A fully automated, end-to-end multi-omics analysis pipeline that bridges 3D geno
 * `include_Filled` (The Stringency Toggle): `TRUE` (Hybrid Mode) utilizes the comprehensively merged annotation, prioritizing 3D loop-derived targets but rescuing unlooped 1D peaks by assigning them to nearest linear genes. `FALSE` (Pure Spatial Mode) strictly isolates the 3D interactome.
 * `use_nearest_gene` (The Control): If `TRUE`, it bypasses spatial topology and strictly assigns features to nearest 1D linear genes, serving as a classical baseline reference to demonstrate the novel functional insights gained by 3D mapping.
 
-```r
+```{r, eval = FALSE}
 # Comprehensive Integrative Profiling (RNA-seq + Spatial Hubs + JASPAR + GO/PPI)
 res_profile <- profile_target_genes(
   annotation_res = refined_res,
@@ -182,7 +186,7 @@ Precisely renders the local spatial interactome via a multi-tiered genomic brows
 * `score_to_alpha`: Logical. If `TRUE`, maps the quantitative interaction score to the alpha (transparency) channel of the Bezier arcs, visually differentiating interaction strengths.
 * `species`: Directs the function to automatically load the corresponding `TxDb` and `OrgDb` Bioconductor packages for precise gene track rendering (mapping exons and introns with strand directionality).
 
-```r
+```{r, eval = FALSE}
 library(ggplot2)
 
 # Generate an integrative multi-omics locus track

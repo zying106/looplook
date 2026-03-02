@@ -126,7 +126,7 @@ Often, researchers are only interested in 3D interactions mediated by specific b
 
 ```{r consolidate_targeted, message=FALSE, warning=FALSE}
 # Locate a BED file containing H3K27ac ChIP-seq peaks
-h3k27ac_peaks <- system.file("extdata", "example_peaks.bed", package = "looplook")
+h3k27ac_peaks <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
 targeted_out <- file.path(out_dir, "H3K27ac_anchored_loops.bedpe")
 
 # Execute consensus merging, strictly capturing H3K27ac-associated loops
@@ -171,9 +171,8 @@ This is the comprehensive "3D Spatial Bridge" scenario. It maps 1D external peak
 
 ```{r annotation_integrated, message=FALSE, warning=FALSE}
 # Locate auxiliary 1D peaks and RNA-seq expression matrix
-atac_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
 expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
-
+atac_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
 if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   res_integrated <- annotate_peaks_and_loops(
@@ -196,10 +195,11 @@ If you are purely interested in the 3D interactome and do not have auxiliary 1D 
 
 
 ```{r annotation_loops_only, message=FALSE, warning=FALSE}
+
 if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   res_loops_only <- annotate_peaks_and_loops(
-    bedpe_file = global_out, # Uses the global consensus network
+    bedpe_file = global_out, 
     target_bed = NULL, # Omit 1D features entirely
     expr_matrix_file = expr_path, # Resolves multi-gene conflicts at loop anchors
     sample_columns = c("con1", "con2"),
@@ -291,14 +291,17 @@ To execute this critical functional filtration, `refine_loop_anchors_by_expressi
 In this baseline scenario, we apply a strict threshold to eliminate any loops where the putative target genes are completely silent, without altering the original structural classifications.
 
 ```{r refinement_basic, message=FALSE, warning=FALSE}
-if (exists("res_integrated")) {
+res_integrated <- system.file("extdata", "analysis_results.RData", package = "looplook")
+
+if (res_integrated != "") {
+  load(res_integrated)
   res_basic <- refine_loop_anchors_by_expression(
-    annotation_res = res_integrated,
+    annotation_res = res_integrated, 
     expr_matrix_file = expr_path,
     sample_columns = c("con1", "con2"),
     threshold = 1.0,
     unit_type = "TPM",
-    reclassify_by_expression = FALSE, # No biological reclassification
+    reclassify_by_expression = FALSE,
     out_dir = out_dir,
     project_name = "Example_Basic_Filter"
   )
@@ -309,7 +312,7 @@ if (exists("res_integrated")) {
 
 This advanced mode is highly recommended. It preserves the invaluable 3D structural backbone but corrects the functional annotations. A silent promoter anchor is reclassified as an enhancer (`eP`), recognizing that while its resident gene is off, the topological locus itself is actively serving as a spatial regulatory element for a distant gene.
 
-```{r refinement_reclassified, message=FALSE, warning=FALSE}
+```{r refinement_reclassified, message=FALSE, warning=FALSE, eval = FALSE}
 if (exists("res_integrated")) {
   refined_res <- refine_loop_anchors_by_expression(
     annotation_res = res_integrated,
@@ -388,7 +391,7 @@ meta_path <- system.file("extdata", "example_coldata.txt", package = "looplook")
 
 if (exists("refined_res")) {
   res_A <- profile_target_genes(
-    annotation_res = refined_res,
+    annotation_res = res_integrated,
     diff_file = diff_path,
     lfc_col = "log2FoldChange",
     expr_matrix_file = expr_path,
@@ -412,10 +415,10 @@ This mode applies a rigorous double-filtration strategy to yield the highest con
 
 First, setting `target_source = "targets"` ensures the engine profiles *only* the specific genes regulated by your inputted 1D peaks (e.g., your GWAS SNPs or TF binding sites), completely discarding all background spatial loops. Second, `target_mapping_mode = "promoter"` enforces topological strictness: the spatial loop bridging your peak MUST directly anchor onto the canonical promoter of the target gene (i.e., strict E-P or P-P loops), deliberately excluding looser interactions like Enhancer-to-GeneBody (E-G) connections.
 
-```{r profiling_scenario_B, message=FALSE, warning=FALSE}
+```{r profiling_scenario_B, message=FALSE, warning=FALSE, eval = FALSE}
 if (exists("refined_res")) {
   res_B <- profile_target_genes(
-    annotation_res = refined_res,
+    annotation_res = res_integrated,
     diff_file = diff_path,
     lfc_col = "log2FoldChange",
     expr_matrix_file = expr_path,
@@ -435,10 +438,10 @@ if (exists("refined_res")) {
 
 By setting `use_nearest_gene = TRUE`, this mode deliberately bypasses the 3D spatial topology and strictly assigns features to their nearest 1D linear genes. It is specifically designed to serve as a classical "baseline control." By comparing these results against Example A or B, you can robustly demonstrate to reviewers how much novel functional insight is gained by utilizing 3D chromatin loops over traditional nearest-gene heuristics.
 
-```{r profiling_scenario_C, message=FALSE, warning=FALSE}
+```{r profiling_scenario_C, message=FALSE, warning=FALSE, eval = FALSE}
 if (exists("refined_res")) {
   res_C <- profile_target_genes(
-    annotation_res = refined_res,
+    annotation_res = res_integrated,
     diff_file = diff_path,
     lfc_col = "log2FoldChange",
     expr_matrix_file = expr_path,

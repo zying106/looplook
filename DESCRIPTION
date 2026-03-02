@@ -15,19 +15,26 @@ Authors@R: c(
            email = "xuliang.phd@zju.edu.cn",
            comment = "This work is funded by the Fundamental Research Funds for the Central Universities (226-2025-00101) and the National Natural Science Foundation of China (32270746, 82203247, 82203415).")
   )
-Description: An integrative multi-omics suite designed to bridge 1D epigenetic features with 3D chromatin architecture. Looplook facilitates the precise assignment of distal regulatory elements to their target genes through a robust expression-aware refinement algorithm. Furthermore, it empowers the topological profiling of spatial chromatin networks to identify core regulatory hubs, complemented by a specialized rendering engine for publication-quality IGV-style genomic tracks and integrative network visualizations.
+Description: An integrative multi-omics suite designed to bridge 1D epigenetic 
+    features with 3D chromatin architecture. Looplook facilitates the precise 
+    assignment of distal regulatory elements to their target genes through a 
+    robust expression-aware refinement algorithm. Furthermore, it empowers the 
+    topological profiling of spatial chromatin networks to identify core 
+    regulatory hubs, complemented by a specialized rendering engine for 
+    publication-quality IGV-style genomic tracks and integrative network 
+    visualizations.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Config/testthat/edition: 3
+SystemRequirements: libxml2, libcurl, libssl-dev, zlib1g-dev, libpng-dev, libjpeg-dev
 biocViews: Software, Epigenetics, HiC, ChIPSeq, RNASeq, 
     GeneExpression, FunctionalGenomics, GenomeAnnotation, 
     SystemsBiology, Visualization, Classification, Clustering, 
-    QualityControl, ChipOnChip, Spatial, AnnotationHubSoftware, 
-    Network, Coverage, GeneTarget
+    QualityControl, Spatial, Network, Coverage, GeneTarget
 Depends: R (>= 4.5.0)
-Imports:
+Imports: 
     dplyr,
     ggplot2,
     tidyr,
@@ -50,7 +57,7 @@ Imports:
     igraph,
     karyoploteR,
     scales
-Suggests:
+Suggests: 
     ComplexHeatmap,
     circlize,
     motifmatchr,
