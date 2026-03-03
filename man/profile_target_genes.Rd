@@ -2,7 +2,7 @@
 % Please edit documentation in R/analysis.R
 \name{profile_target_genes}
 \alias{profile_target_genes}
-\title{Comprehensive Functional Profiling of Loop-Associated Target Genes}
+\title{End-to-end functional annotation pipeline integrating JASPAR transcription factor motif analysis, gene ontology enrichment, and protein-protein interaction network analysis}
 \usage{
 profile_target_genes(
   annotation_res,

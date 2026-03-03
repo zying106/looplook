@@ -2,7 +2,7 @@
 % Please edit documentation in R/visualization.R
 \name{plot_peaks_interactions}
 \alias{plot_peaks_interactions}
-\title{Plot HiChIP/ChIA-PET Loops in IGV-Style Integrative View}
+\title{Publication-ready visualization toolkit for rendering genomic track data and statistical summaries related to 3D chromatin interactions}
 \usage{
 plot_peaks_interactions(
   bedpe_file,

@@ -1,4 +1,4 @@
-#' @title Advanced 3D Chromatin Loop Annotation & Multi-Omics Feature Mapping Engine
+#' @title A core analytical engine enabling high-resolution spatial mapping of genomic features/peaks to 3D chromatin interaction targets
 #'
 #' @description
 #' A highly sophisticated, dual-purpose 3D genomic engine designed to:
@@ -746,7 +746,7 @@ annotate_peaks_and_loops <- function(
   return(list(anchor_annotation = cluster_info, loop_annotation = if (exists("loop_annotation_clean")) loop_annotation_clean else loop_annotation_final, promoter_centric_stats = promoter_centric_df, distal_element_stats = distal_element_df, target_annotation = bed_info))
 }
 
-#' @title Transcriptome-Guided 3D Network Refinement & Anchor Reclassification
+#' @title A transcriptome-informed filtering framework to refine the regulatory element (anchor) classification and  the loop-target linkage using gene expression profiles
 #'
 #' @description
 #' A critical filtration engine that integrates quantitative RNA-seq data (e.g., TPM/FPKM)

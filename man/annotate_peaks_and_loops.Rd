@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotation.R
 \name{annotate_peaks_and_loops}
 \alias{annotate_peaks_and_loops}
-\title{Advanced 3D Chromatin Loop Annotation & Multi-Omics Feature Mapping Engine}
+\title{A core analytical engine enabling high-resolution spatial mapping of genomic features/peaks to 3D chromatin interaction targets}
 \usage{
 annotate_peaks_and_loops(
   bedpe_file,

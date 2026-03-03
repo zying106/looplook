@@ -1,4 +1,4 @@
-#' @title Comprehensive Functional Profiling of Loop-Associated Target Genes
+#' @title End-to-end functional annotation pipeline integrating JASPAR transcription factor motif analysis, gene ontology enrichment, and protein-protein interaction network analysis
 #'
 #' @description
 #' This function serves as a fully automated, end-to-end multi-omics analysis pipeline.

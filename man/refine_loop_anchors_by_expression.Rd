@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotation.R
 \name{refine_loop_anchors_by_expression}
 \alias{refine_loop_anchors_by_expression}
-\title{Transcriptome-Guided 3D Network Refinement & Anchor Reclassification}
+\title{A transcriptome-informed filtering framework to refine the regulatory element (anchor) classification and  the loop-target linkage using gene expression profiles}
 \usage{
 refine_loop_anchors_by_expression(
   annotation_res,
