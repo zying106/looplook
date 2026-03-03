@@ -1,4 +1,4 @@
-# Plot HiChIP/ChIA-PET Loops in IGV-Style Integrative View
+# Publication-ready visualization toolkit for rendering genomic track data and statistical summaries related to 3D chromatin interactions
 
 Generates an integrative genomic track plot resembling IGV, displaying
 chromatin loops as arcs, loop anchors as rectangles, optional

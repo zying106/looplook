@@ -1,4 +1,4 @@
-# Comprehensive Functional Profiling of Loop-Associated Target Genes
+# End-to-end functional annotation pipeline integrating JASPAR transcription factor motif analysis, gene ontology enrichment, and protein-protein interaction network analysis
 
 This function serves as a fully automated, end-to-end multi-omics
 analysis pipeline. It elegantly bridges 3D genomic interactions (e.g.,
@@ -321,13 +321,13 @@ if (rdata_path != "" && expr_path != "" && diff_path != "" && meta_path != "") {
 #>      Loops: Successfully located 'Putative_Target_Genes'
 #> 
 #> --- Task: EP_Genes (Valid Genes: 36) ---
-#>     Saved LFC Violin Plot: /tmp/RtmpE2nq4a/Scenario_A_Integrative_loops_EP_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmpE2nq4a/Scenario_A_Integrative_loops_EP_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/Rtmp2HPPhq/Scenario_A_Integrative_loops_EP_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/Rtmp2HPPhq/Scenario_A_Integrative_loops_EP_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #> --- Task: PP_Genes (Valid Genes: 124) ---
-#>     Saved LFC Violin Plot: /tmp/RtmpE2nq4a/Scenario_A_Integrative_loops_PP_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmpE2nq4a/Scenario_A_Integrative_loops_PP_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/Rtmp2HPPhq/Scenario_A_Integrative_loops_PP_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/Rtmp2HPPhq/Scenario_A_Integrative_loops_PP_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #> ================================================================
@@ -335,8 +335,8 @@ if (rdata_path != "" && expr_path != "" && diff_path != "" && meta_path != "") {
 #>       Targets: Successfully located 'Assigned_Target_Genes_Filled'
 #> 
 #> --- Task: Target_Genes (Valid Genes: 937) ---
-#>     Saved LFC Violin Plot: /tmp/RtmpE2nq4a/Scenario_A_Integrative_targets_Target_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmpE2nq4a/Scenario_A_Integrative_targets_Target_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/Rtmp2HPPhq/Scenario_A_Integrative_targets_Target_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/Rtmp2HPPhq/Scenario_A_Integrative_targets_Target_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #>  All analysis complete.
@@ -349,8 +349,8 @@ if (rdata_path != "" && expr_path != "" && diff_path != "" && meta_path != "") {
 #>       Targets: Successfully located 'Regulated_promoter_genes_Filled'
 #> 
 #> --- Task: Target_Genes (Valid Genes: 931) ---
-#>     Saved LFC Violin Plot: /tmp/RtmpE2nq4a/Scenario_B_PromoterOnly_Promoter_targets_Target_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmpE2nq4a/Scenario_B_PromoterOnly_Promoter_targets_Target_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/Rtmp2HPPhq/Scenario_B_PromoterOnly_Promoter_targets_Target_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/Rtmp2HPPhq/Scenario_B_PromoterOnly_Promoter_targets_Target_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #>  All analysis complete.
@@ -363,13 +363,13 @@ if (rdata_path != "" && expr_path != "" && diff_path != "" && meta_path != "") {
 #>      Loops: Successfully located 'Putative_Target_Genes'
 #> 
 #> --- Task: EP_Genes (Valid Genes: 36) ---
-#>     Saved LFC Violin Plot: /tmp/RtmpE2nq4a/Scenario_C_StrictLoops_loops_EP_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmpE2nq4a/Scenario_C_StrictLoops_loops_EP_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/Rtmp2HPPhq/Scenario_C_StrictLoops_loops_EP_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/Rtmp2HPPhq/Scenario_C_StrictLoops_loops_EP_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #> --- Task: PP_Genes (Valid Genes: 124) ---
-#>     Saved LFC Violin Plot: /tmp/RtmpE2nq4a/Scenario_C_StrictLoops_loops_PP_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmpE2nq4a/Scenario_C_StrictLoops_loops_PP_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/Rtmp2HPPhq/Scenario_C_StrictLoops_loops_PP_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/Rtmp2HPPhq/Scenario_C_StrictLoops_loops_PP_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #>  All analysis complete.
