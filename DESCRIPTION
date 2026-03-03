@@ -1,24 +1,26 @@
 Package: looplook
-Title: Looplook: A multi-omics suite for expression-aware target assignment and topological profiling of 3D chromatin networks
+Title: Integrative suite for target assignment and functional annotation of chromatin interactions
 Version: 0.99.0
 Authors@R: c(
-    person(given = "Ying", family = "Zhang", 
+    person(given = "Ying", family = "ZHANG", 
            role = c("aut", "cre"), 
            email = "12207129@zju.edu.cn", 
            comment = c(ORCID = "0009-0005-9644-7062")),
-    person(given = "Xingze", family = "Huang", 
+    person(given = "Xingze", family = "HUANG", 
            role = c("ctb"), 
            email = "22407026@zju.edu.cn",
            comment = c(ORCID = "0009-0002-9286-1344")),
-    person(given = "Liang", family = "Xu", 
+    person(given = "Liang", family = "XU", 
            role = c("ctb", "fnd"), 
            email = "xuliang.phd@zju.edu.cn",
            comment = "This work is funded by the Fundamental Research Funds for the Central Universities (226-2025-00101) and the National Natural Science Foundation of China (32270746, 82203247, 82203415).")
   )
-Description: looplook is an R package for 3D chromatin network analysis and 
-    multi-omics visualization. It provides flexible and publication-ready 
-    tools for exploring complex regulatory interactions, expression-aware 
-    target assignment, and auxiliary genomic annotation.
+Description: looplook is a versatile R package for target assignment and functional
+    annotation of chromatin interactions. It leverages customizable genomic feature
+    integration, expression-aware refinement, and connected components clustering
+    to prioritize biologically relevant chromatin interactions. The package also
+    provides flexible tools for multi-omics data integration, functional annotation,
+    and data visualization.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

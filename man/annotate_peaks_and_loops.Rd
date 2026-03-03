@@ -48,7 +48,7 @@ annotate_peaks_and_loops(
 An invisible list of comprehensive data frames (also auto-saved as a multi-sheet \code{.xlsx}):
 \itemize{
 \item \code{target_annotation}:
-Detailed annotation of \code{target_bed}. Features the gold-standard column: \code{Assigned_Target_Genes_Filled} (Loop-prioritized target, gracefully falling back to the local nearest gene if unlooped).
+Detailed annotation of \code{target_bed}. Features the important column: \code{Assigned_Target_Genes_Filled} (Loop-prioritized target, gracefully falling back to the local nearest gene if unlooped).
 \item \code{loop_annotation}:
 The fully annotated 3D network. Features \code{Putative_Target_Genes} capturing precisely resolved regulatory targets.
 \item \code{promoter_centric_stats}:
@@ -63,10 +63,10 @@ Locus-level summarization of all 1D anchor footprints.
 A highly sophisticated, dual-purpose 3D genomic engine designed to:
 \enumerate{
 \item \strong{Annotate Chromatin Loops:} Accurately classify 3D spatial interactions (e.g., Enhancer-Promoter, Promoter-Promoter) using a strict structural hierarchy.
-\item \strong{Map External Features (1D to 3D):} Act as a \strong{"3D Spatial Bridge"} to link auxiliary 1D genomic features (e.g., GWAS risk SNPs, ATAC-seq peaks, ChIP-seq binding sites) to their genuine regulated target genes, fundamentally outperforming simple "nearest gene" heuristics.
+\item \strong{Map External Features (genomic features to 3D):} Act as a \strong{"3D Spatial Bridge"} to link auxiliary 1D genomic features (e.g., GWAS risk SNPs, ATAC-seq peaks, ChIP-seq binding sites) to their genuine regulated target genes, fundamentally outperforming simple "nearest gene" heuristics.
 }
 
-\strong{Core Philosophy: Bridging the 1D-3D Gap}
+\strong{Core Philosophy: Bridging the genomic features-3D Gap}
 Traditional annotations typically assign non-coding variants to the nearest linear gene. This engine prioritizes \strong{physical 3D chromatin contacts}.
 If a GWAS SNP or enhancer lands in an anchor looping to a distal gene, the distal gene is accurately assigned. If no spatial loop exists, the engine intelligently falls back to the nearest active local gene (Smart Fallback), ensuring comprehensive and gapless annotation coverage.
 
@@ -75,9 +75,9 @@ If a GWAS SNP or enhancer lands in an anchor looping to a distal gene, the dista
 \item \strong{Biotype & Expression-Aware Conflict Resolution:}
 When an anchor overlaps multiple promoters (e.g., dense gene loci or bidirectional promoters), it executes a rigorous 3-step resolution:
 \enumerate{
-\item \emph{Expression Pre-filter:} Instantly eliminates entirely silent genes (e.g., TPM = 0) if active neighbors exist.
-\item \emph{Biotype Hierarchy:} Enforces a strict selection cascade: \code{Protein Coding > Antisense > lncRNA > Pseudogene}, preventing highly-transcribed pseudogenes from masking true coding targets.
-\item \emph{Smart TPM Merge:} If multiple top-tier genes coexist, it applies a dynamic relative threshold to merge genuine co-regulated targets while stripping background transcriptional noise.
+\item \emph{Expression Pre-filter:} Eliminates transcriptionally silent genes based on the user-provided expression matrix.
+\item \emph{Functional Biotype Prioritization::} Prioritizes the remaining candidates by functional class in the following order: \code{Protein Coding > Antisense > lncRNA > Pseudogene}.
+\item \emph{Dominant Expression Tiebreaker:} Designates the gene with the highest transcriptional abundance as the target gene to further resolve any remaining mapping ambiguities.
 }
 \item \strong{Dynamic Topology Control (\code{neighbor_hop}):}
 Controls network diffusion depth. Allows signal propagation from a SNP -> Enhancer -> Hub -> Target Gene, which is ideal for uncovering multi-way super-enhancer cliques.

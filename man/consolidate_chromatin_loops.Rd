@@ -63,14 +63,14 @@ A filtered \code{\link[InteractionSet]{GInteractions}} object.
 This function consolidates chromatin loops from multiple BEDPE files. It is designed for two main purposes:
 \enumerate{
 \item \strong{Replicate Consolidation}: Merging biological or technical replicates to identify high-confidence, reproducible loops (e.g., 3 replicates of H3K27ac HiChIP).
-\item \strong{Multi-Omics Integration}: Intersecting or merging loops from distinct chromatin features to find shared regulatory architectures (e.g., integrating \strong{H3K27ac} and \strong{H3K4me3} HiChIP data, or overlapping Hi-C with ChIA-PET).
+\item \strong{Multi-Omics Integration}: The framework can be used to identify multi-source consensus by integrating datasets from various experimental designs, such as HiChIP assays targeting different factors (e.g., integrating \strong{H3K27ac} and \strong{H3K4me3}, or overlapping Hi-C with ChIA-PET).
 }
 
 The function supports three modes:
 \itemize{
-\item \code{"consensus"}: Graph-based clustering to find a consensus set supported by a majority of samples.
-\item \code{"intersect"}: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files).
-\item \code{"union"}: Merges all detected loops into a comprehensive map.
+\item \code{"consensus"}: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in ≥ min_consensus biological replicates.
+\item \code{"intersect"}: Enforces strict reference-based filtering, retaining loops that show full genomic overlap with the reference file (File 1).
+\item \code{"union"}: Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.
 }
 
 It also supports a \strong{two-stage filtering strategy} to maximize signal-to-noise ratio:

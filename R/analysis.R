@@ -3,7 +3,7 @@
 #' @description
 #' This function serves as a fully automated, end-to-end multi-omics analysis pipeline.
 #' It elegantly bridges 3D genomic interactions (e.g., Hi-C, HiChIP) with transcriptomic data (RNA-seq)
-#' to unveil the functional landscape and regulatory mechanisms of target genes.
+#' to systematically characterize the functional landscape and regulatory mechanisms underlying the identified target genes.
 #'
 #' The suite integrates multiple analytical modules:
 #' \itemize{
