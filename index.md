@@ -28,16 +28,15 @@ Numerous studies have demonstrated that many distal regulatory elements
 physically interact with target gene promoters via 3D chromatin
 loopings, thereby regulating the expression of genes located tens of
 kilobases to megabases away in the linear genome. However, conventional
-annotations tend to assign putative elements (peaks) to their
-\*\*nearest genes in \*cis**, which often fails to reflect biological
-reality. Hence, the accurate assignment of non-coding genetic variants
-or orphan peaks to their cognate target genes remains a major bottleneck
-in the target annotation of functional elements. To address this,
-`looplook` systematically prioritizes** physical spatial chromatin
-contacts\*\* to batch-annotate thousands of regulatory elements at a
-**genome-wide**, \*\*high-throughput scale\*\*, thereby identifying
-their candidate target genes with high confidence and unprecedented
-efficiency.
+annotations tend to assign putative elements (peaks) to their **nearest
+genes in cis**, which often fails to reflect biological reality. Hence,
+the accurate assignment of non-coding genetic variants or orphan peaks
+to their cognate target genes remains a major bottleneck in the target
+annotation of functional elements. To address this, `looplook`
+systematically prioritizes **physical spatial chromatin contacts** to
+batch-annotate thousands of regulatory elements at a **genome-wide**,
+**high-throughput scale**, thereby identifying their candidate target
+genes with high confidence and unprecedented efficiency.
 
 Beyond its utility as a tool for integrative target annotation,
 `looplook` can be used as a **standalone utility for loop analysis** per

@@ -201,7 +201,7 @@ if (rdata_path != "" && expr_path != "") {
 #> >>> [Step 5] Generating Visualizations...
 #>     Drawing Target Sankey Diagram...
 #> Links is a tbl_df. Converting to a plain data frame.
-#> file:////tmp/Rtmp2HPPhq/Example_Basic_Filtered_Target_Sankey.html screenshot completed
+#> Warning:     Sankey Plot Failed: Chrome debugging port not open after 10 seconds.
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
 #>   be represented by a single genomic range.
@@ -224,7 +224,7 @@ if (rdata_path != "" && expr_path != "") {
 #> >>> [Step 5] Generating Visualizations...
 #>     Drawing Target Sankey Diagram...
 #> Links is a tbl_df. Converting to a plain data frame.
-#> file:////tmp/Rtmp2HPPhq/Example_Reclassified_Filtered_Target_Sankey.html screenshot completed
+#> file:////tmp/RtmpQXiS7z/Example_Reclassified_Filtered_Target_Sankey.html screenshot completed
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
 #>   be represented by a single genomic range.
