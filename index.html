@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Looplook: A multi-omics suite for expression-aware target assignment and topological profiling of 3D chromatin networks • looplook</title>
+<title>Integrative suite for target assignment and functional annotation of chromatin interactions • looplook</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -15,9 +15,9 @@
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Looplook: A multi-omics suite for expression-aware target assignment and topological profiling of 3D chromatin networks">
-<meta name="description" content="looplook is an R package for 3D chromatin network analysis and multi-omics visualization. It provides flexible and publication-ready tools for exploring complex regulatory interactions, expression-aware target assignment, and auxiliary genomic annotation.">
-<meta property="og:description" content="looplook is an R package for 3D chromatin network analysis and multi-omics visualization. It provides flexible and publication-ready tools for exploring complex regulatory interactions, expression-aware target assignment, and auxiliary genomic annotation.">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Integrative suite for target assignment and functional annotation of chromatin interactions">
+<meta name="description" content="looplook is a versatile R package for target assignment and functional annotation of chromatin interactions. It leverages customizable genomic feature integration, expression-aware refinement, and connected components clustering to prioritize biologically relevant chromatin interactions. The package also provides flexible tools for multi-omics data integration, functional annotation, and data visualization.">
+<meta property="og:description" content="looplook is a versatile R package for target assignment and functional annotation of chromatin interactions. It leverages customizable genomic feature integration, expression-aware refinement, and connected components clustering to prioritize biologically relevant chromatin interactions. The package also provides flexible tools for multi-omics data integration, functional annotation, and data visualization.">
 <meta property="og:image" content="https://zying106.github.io/looplook/logo.png">
 </head>
 <body>
@@ -57,7 +57,7 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header">
-<img src="logo.png" class="logo" alt=""><h1 id="looplook-">Looplook <a class="anchor" aria-label="anchor" href="#looplook-"></a>
+<img src="logo.png" class="logo" alt=""><h1 id="looplook-">looplook <a class="anchor" aria-label="anchor" href="#looplook-"></a>
 </h1>
 </div>
 <p>A multi-omics suite for expression-aware target assignment and topological profiling of 3D chromatin networks.</p>
@@ -67,16 +67,15 @@
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p>Welcome to <strong><code>looplook</code></strong>, a highly sophisticated R/Bioconductor toolkit designed to decipher the complex interplay between <strong>3D chromatin architecture</strong> (e.g., HiChIP, ChIA-PET, Hi-C) and <strong>1D multi-omics profiles</strong> (including transcriptomics, chromatin accessibility, protein-DNA interactions via ChIP-seq/CUT&amp;Tag, and genetic variants like GWAS SNPs).</p>
-<p>The toolkit resolves a major bottleneck in functional genomics: accurately assigning non-coding variants or orphan peaks to their target genes. While traditional annotations rely on the <em>nearest linear gene</em> heuristic, this often fails to capture biological reality. Many distal regulatory elements physically contact target gene promoters via 3D chromatin interactions, regulating the expression of genes located tens of kilobases to megabases away.</p>
-<p><code>looplook</code> computationally bridges this critical 1D-to-3D gap at a <strong>genome-wide, high-throughput scale</strong>. It systematically prioritizes physical spatial contacts to batch-annotate thousands of regulatory elements, revealing their high-confidence putative target genes with unprecedented efficiency.</p>
-<p>Beyond its power as a spatial bridge, <code>looplook</code> serves as a standalone powerhouse for <strong>intrinsic loop profiling</strong>. Even without auxiliary 1D inputs, it systematically annotates the 3D interactome itself, classifying complex spatial topologies (e.g., Enhancer-Promoter, Promoter-Promoter) and calculating node connectivities to uncover dense <strong>regulatory hubs</strong> and super-enhancer cliques that drive cell-type-specific transcriptional programs.</p>
+<p>Welcome to <strong><code>looplook</code></strong>, a versatile R/Bioconductor toolkit developed to <strong>integrate 3D chromatin architecture data</strong> (e.g., HiChIP, ChIA-PET, Hi-C) with <strong>other tabular omics datasets</strong>, including transcriptomics, chromatin accessibility, protein-DNA interactions (derived from ChIP-seq, CUT&amp;Tag, or CUT&amp;RUN), and genetic variants annotated by genome-wide association studies.</p>
+<p>Numerous studies have demonstrated that many distal regulatory elements physically interact with target gene promoters via 3D chromatin loopings, thereby regulating the expression of genes located tens of kilobases to megabases away in the linear genome. However, conventional annotations tend to assign putative elements (peaks) to their **nearest genes in *cis<strong>, which often fails to reflect biological reality. Hence, the accurate assignment of non-coding genetic variants or orphan peaks to their cognate target genes remains a major bottleneck in the target annotation of functional elements. To address this, <code>looplook</code> systematically prioritizes </strong>physical spatial chromatin contacts** to batch-annotate thousands of regulatory elements at a <strong>genome-wide</strong>, **high-throughput scale**, thereby identifying their candidate target genes with high confidence and unprecedented efficiency.</p>
+<p>Beyond its utility as a tool for integrative target annotation, <code>looplook</code> can be used as a <strong>standalone utility for loop analysis</strong> per se. Even in the absence of auxiliary omics data, it systematically annotates the 3D chromatin interactome itself, <strong>classifying complex spatial topologies</strong> (e.g., Enhancer-Promoter, Promoter-Promoter interactions) and <strong>quantifying node connectivity</strong> to uncover <strong>dense regulatory hubs and enhancer cliques</strong> (e.g., super-enhancers) that drive cell-type-specific transcriptional programs.</p>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p><code>looplook</code> heavily relies on the Bioconductor ecosystem for robust genomic arithmetic and annotation. Please ensure your environment is up to date:</p>
+<p><code>looplook</code> extensively leverages the Bioconductor ecosystem for <strong>robust genomic arithmetic and annotation</strong>. To ensure optimal compatibility, please ensure your <strong>system environment</strong> is fully up to date prior to installation:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># 1. Install required annotation dependencies (Example for Human hg38)</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"BiocManager"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"BiocManager"</span><span class="op">)</span></span>
@@ -93,19 +92,19 @@
 <div class="section level3">
 <h3 id="module-1-data-consolidation--preprocessing">Module 1: Data Consolidation &amp; Preprocessing<a class="anchor" aria-label="anchor" href="#module-1-data-consolidation--preprocessing"></a>
 </h3>
-<p>In 3D genomics, individual replicates often suffer from high noise. The <code>consolidate_chromatin_loops</code> function acts as the foundational data-cleaning engine, merging multiple replicates into a clean, unified 3D coordinate framework.</p>
+<p>In 3D genomics analyses, individual replicates typically exhibit <strong>certain degrees of inconsistency or noise</strong>. The <code>consolidate_chromatin_loops</code> function serves as the foundational data-cleaning module, merging multiple replicates into a <strong>standardized, unified 3D chromatin interaction coordinate framework</strong>.</p>
 <p><strong>Key Parameters:</strong></p>
 <ul>
 <li>
-<code>mode</code>: Defines the overarching merging algorithm. <code>"consensus"</code> (recommended) uses graph-based connected component analysis to group nearby anchors across samples. <code>"intersect"</code> applies strict reference-based filtering, while <code>"union"</code> retains all interactions for exploratory pan-tissue analysis.</li>
+<strong><code>mode</code></strong>: Defines the overarching merging algorithm. The <strong><code>"consensus"</code></strong> mode (recommended) <strong>employs graph-based connected component analysis</strong> to cluster nearby chromatin loop anchors across biological/technical samples. The <strong><code>"intersect"</code></strong> mode applies strict reference-based filtering to retain only overlapping interactions, while the <strong><code>"union"</code></strong> mode retains all detected interactions for <strong>exploratory pan-tissue analyses</strong>.</li>
 <li>
-<code>min_raw_score</code> &amp; <code>min_score</code> (The Dual-Filter): <code>min_raw_score</code> acts as a pre-filter applied to individual BEDPE files <em>before</em> clustering (e.g., removing singleton noise to drastically reduce memory overhead). <code>min_score</code> acts as a post-filter applied to the final merged interactome.</li>
+<strong><code>min_raw_score</code> &amp; <code>min_score</code></strong> (The Dual-Filter): <code>min_raw_score</code> acts as a <strong>pre-filter</strong> applied to individual BEDPE files before clustering (e.g., removing singleton noise to substantially reduce computational memory overhead). <code>min_score</code> serves as a <strong>post-filter</strong> applied to the final merged chromatin interactome to ensure high-confidence interactions.</li>
 <li>
-<code>gap</code>: The maximum spatial distance (in base pairs) allowed between anchors to consider them part of the same physical cluster.</li>
+<strong><code>gap</code></strong>: Defines the <strong>maximum spatial distance</strong> (in base pairs) allowed between loop anchors for consideration as part of the same physical cluster.</li>
 <li>
-<code>blacklist_species</code>: Automatically drops loops falling into high-variance, artifact-prone genomic regions (e.g., centromeres, telomeres) by seamlessly applying the official ENCODE blacklist (e.g., <code>"hg38"</code>, <code>"mm10"</code>).</li>
+<strong><code>blacklist_species</code></strong>: Automatically excludes chromatin loops overlapping with high-variance, artifact-prone genomic regions (e.g., centromeres, telomeres) by integrating the official ENCODE blacklist for specified species (e.g., <code>"hg38"</code>, <code>"mm10"</code>).</li>
 <li>
-<code>region_of_interest</code>: By providing an auxiliary BED file (e.g., a specific disease locus or ChIP-seq peaks), the engine drops the global background and strictly outputs loops physically connected to this targeted zone.</li>
+<strong><code>region_of_interest</code></strong>: Accepts an <strong>auxiliary BED file</strong> (e.g., a specific disease-associated locus or ChIP-seq peak set) to exclude global background interactions, outputting only loops with physical connectivity to the target genomic region.</li>
 </ul>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/zying106/looplook" class="external-link">looplook</a></span><span class="op">)</span></span>
@@ -124,20 +123,20 @@
 <div class="section level3">
 <h3 id="module-2-3d-guided-peak-annotation--mapping">Module 2: 3D-Guided Peak Annotation &amp; Mapping<a class="anchor" aria-label="anchor" href="#module-2-3d-guided-peak-annotation--mapping"></a>
 </h3>
-<p>This module forms the core mapping engine. It seamlessly executes a rigorous hierarchical pipeline to resolve locus conflicts: <em>Expression Pre-filter <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>→</mo><annotation encoding="application/x-tex">\rightarrow</annotation></semantics></math> Functional Biotype Prioritization <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mo>→</mo><annotation encoding="application/x-tex">\rightarrow</annotation></semantics></math> Dominant Expression Tiebreaker</em>.</p>
+<p>This module serves as the <strong>core target mapping engine</strong>. It seamlessly executes a rigorous hierarchical pipeline to resolve locus assignment conflicts: Expression Pre-filter → Functional Biotype Prioritization → Dominant Expression Tiebreaker.</p>
 <p><strong>Key Parameters:</strong></p>
 <ul>
 <li>
-<code>target_bed</code>: The 1D auxiliary features of interest (e.g., GWAS SNPs, ATAC-seq peaks, or ChIP-seq binding sites) that require spatial target assignment.</li>
+<strong><code>target_bed</code></strong>: pecifies the <strong>auxiliary genomic features of interest</strong> (e.g., GWAS SNPs, ATAC-seq peaks, or transcription factor binding sites) that require spatial target gene assignment.</li>
 <li>
-<code>expr_matrix_file</code> &amp; <code>sample_columns</code>: Providing an RNA-seq matrix allows the engine to activate the Expression Pre-filter and Tiebreaker logic, drastically reducing false-positive gene assignments in dense loci.</li>
+<strong><code>expr_matrix_file</code> &amp; <code>sample_columns</code></strong>: Providing an RNA-seq matrix allows the engine to activate the Expression Pre-filter and Tiebreaker logic, drastically reducing false-positive gene assignments in <strong>genomic regions harboring multiple genes</strong>.</li>
 <li>
-<code>neighbor_hop</code>: A highly advanced topological parameter for network traversal. <code>0</code> strictly annotates direct physical contacts. <code>1</code> (Hub Mode) evaluates secondary network effects within super-enhancer cliques.</li>
+<strong><code>neighbor_hop</code></strong>: An advanced topological parameter for 3D chromatin interactome network traversal. A value of 0 restricts annotation to direct physical chromatin interactions only; a value of 1 (Hub Mode) extends analysis to secondary network effects within enhancer cliques.</li>
 <li>
-<code>tss_region</code>: Defines the spatial boundary of a promoter relative to the Transcription Start Site (TSS).</li>
+<strong><code>tss_region</code></strong>: Defines the <strong>spatial boundary of gene promoters</strong> relative to the Transcription Start Site (TSS).</li>
 </ul>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Map 1D peaks to 3D loops and resolve multi-gene conflicts</span></span>
+<code class="sourceCode R"><span><span class="co"># Map auxiliary genomic features to 3D loops and resolve multi-gene conflicts</span></span>
 <span><span class="va">res_integrated</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></span><span class="op">(</span></span>
 <span>  bedpe_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">out_dir</span>, <span class="st">"consensus_loops.bedpe"</span><span class="op">)</span>,</span>
 <span>  target_bed <span class="op">=</span> <span class="st">"atac_peaks.bed"</span>,</span>
@@ -149,31 +148,29 @@
 <span>  out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
 <span>  project_name <span class="op">=</span> <span class="st">"Integrative_Annotation"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><strong>Output Data Dictionary: The Comprehensive 3D Spatial Catalog</strong> The module systematically exports a multi-layered tabular catalog (e.g., <code>*_Basic_Results.xlsx</code>) detailing the spatial interactome:</p>
+<p><strong>Output Data Dictionary: The Comprehensive 3D Spatial Catalog</strong></p>
+<p>The module systematically exports a multi-layered tabular catalog (e.g., <code>*_Basic_Results.xlsx</code>) detailing the spatial interactome:</p>
 <ul>
-<li>
-<strong>1D-to-3D Target Mapping (<code>target_annotation</code>)</strong>: Delineates the spatial reach of user-inputted variants. It strictly differentiates <code>Assigned_Target_Genes</code> (targets derived exclusively via 3D physical loops) from <code>*_Filled</code> columns, which implement a “Smart Fallback” logic to nearest linear genes for unlooped loci, ensuring comprehensive, gapless coverage.</li>
-<li>
-<strong>3D Network Architecture (<code>loop_annotation</code>)</strong>: Resolves the biological syntax of the structural interactome. It classifies topological interactions (<code>loop_type</code>, e.g., E-P, P-P) and isolates biologically relevant <code>Putative_Target_Genes</code> from the broader, raw physical footprints (<code>All_Anchor_Genes</code>).</li>
-<li>
-<strong>Topological Hub Detection (<code>promoter_centric_stats</code> &amp; <code>distal_element_stats</code>)</strong>: Quantifies structural node degrees (e.g., <code>n_Linked_Promoters</code>, <code>n_Linked_Distal</code>) to rigorously deconstruct the interactome from two complementary perspectives. <code>promoter_centric_stats</code> identifies core target genes orchestrated by complex regulatory landscapes (e.g., multi-enhancer arrays or transcription factories), while <code>distal_element_stats</code> highlights high-connectivity non-coding regions to facilitate the discovery of putative super-enhancer cliques.</li>
+<li><p><strong>Integrative Target Mapping (<code>target_annotation</code>)</strong> Delineates the spatial coverage of genomic variants/features inputted by the user. It strictly differentiates <code>Assigned_Target_Genes</code> (target genes identified exclusively via 3D physical chromatin loops) from <code>*_Filled columns</code>, which implement a <strong>“Smart Fallback”</strong> algorithm to assign nearest linear genes for unlooped loci, ensuring comprehensive, gap-free annotation coverage.</p></li>
+<li><p><strong>3D Network Architecture (<code>loop_annotation</code>)</strong> Resolves the biological syntax of the structural interactome. It classifies topological interactions (loop_type, e.g., E-P, P-P) and distinguishes biologically relevant <code>Putative_Target_Genes</code> from the broader, raw physical interaction footprints (<code>All_Anchor_Genes</code>).</p></li>
+<li><p><strong>Topological Hub Detection</strong> Quantifies structural node degrees (e.g., <code>n_Linked_Promoters</code>, <code>n_Linked_Distal</code>) to rigorously deconstruct the 3D interactome from two complementary perspectives: <strong><code>promoter_centric_stats</code></strong>: Identifies core target genes regulated by <strong>complex regulatory architectures</strong> (e.g., enhancer arrays or transcription factories)，while <strong><code>distal_element_stats</code></strong> highlights high-connectivity non-coding regions to facilitate the discovery of putative enhancer cliques.</p></li>
 </ul>
 <div align="center">
 <img src="reference/figures/g1_anno.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Annotation Results"><p>
-<em>Figure 1: <strong>Representative outputs of 3D-Guided Annotation.</strong> This composite visualization showcases a curated subset of the automated profiling suite, featuring macro-scale chromosomal ideograms and topological overlap profiling of the annotated 3D interactome.</em>
+<em>Figure 1: <strong>Representative outputs of 3D-Guided Annotation.</strong> This composite plot displays a curated subset of the automated profiling suite, featuring macro-scale chromosomal ideograms and topological overlap analysis of the annotated 3D interactome.</em>
 </p>
 </div>
 </div>
 <div class="section level3">
 <h3 id="module-3-expression-aware-refinement">Module 3: Expression-Aware Refinement<a class="anchor" aria-label="anchor" href="#module-3-expression-aware-refinement"></a>
 </h3>
-<p>Physical proximity is a structural prerequisite, but not a direct proxy for active gene regulation. This module integrates quantitative transcriptome data to systematically eliminate transcriptionally silent physical contacts.</p>
+<p>Physical proximity is a structural prerequisite, but not a direct proxy for active <strong>transcriptional regulation</strong>. This module integrates quantitative transcriptome data to systematically filter out <strong>transcriptionally silent physical chromatin contacts</strong>, ensuring only functionally relevant 3D interactions are retained.</p>
 <p><strong>Key Parameters:</strong></p>
 <ul>
 <li>
-<code>threshold</code> &amp; <code>unit_type</code>: Defines the quantitative cutoff (e.g., <code>threshold = 1.0</code>, <code>unit_type = "TPM"</code>) required to consider a gene biologically active, allowing downward compatibility with various normalization methods.</li>
+<code>threshold</code> &amp; <code>unit_type</code>: Defines the quantitative cutoff (e.g., <code>threshold = 1.0</code>, <code>unit_type = "TPM"</code>) required to consider a gene biologically active. This parameter enables downward compatibility with various normalization methods.</li>
 <li>
-<code>reclassify_by_expression</code>: When enabled (<code>TRUE</code>), mathematically silent Promoters are not simply discarded; they are biologically downgraded to enhancer-like regulatory elements. This corrects the regulatory syntax (e.g., transitioning a functionally silent <code>P-P</code> loop into a biologically accurate <code>eP-P</code> loop).</li>
+<code>reclassify_by_expression</code>: When enabled (<code>TRUE</code>), <strong>transcriptionally silent promoters</strong> are not simply discarded; instead, they are biologically reclassified to enhancer-like regulatory elements. This correction refines the <strong>regulatory topology</strong> (e.g., reclassifying a functionally silent <strong>P-P</strong> loop into a curated <strong>eP-P</strong> loop).</li>
 </ul>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Expression-Aware Reclassification (Recommended)</span></span>
@@ -181,39 +178,53 @@
 <span>  annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
 <span>  expr_matrix_file <span class="op">=</span> <span class="st">"rna_tpm.txt"</span>,</span>
 <span>  sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span>
-<span>  threshold <span class="op">=</span> <span class="fl">1.0</span>,</span>
+<span>  threshold <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  unit_type <span class="op">=</span> <span class="st">"TPM"</span>,</span>
 <span>  reclassify_by_expression <span class="op">=</span> <span class="cn">TRUE</span>, </span>
 <span>  out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
 <span>  project_name <span class="op">=</span> <span class="st">"Refined_Network"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p><strong>Output Data Dictionary: The Functionally Active Regulome</strong> Following transcriptome integration, the refined tabular outputs represent a high-confidence, functionally active subset of the original interactome:</p>
+<p><strong>Output Data Dictionary: The Functionally Active Regulome</strong> Following transcriptome integration, the refined tabular outputs represent a high-confidence, functionally active subset of the initial 3D chromatin interactome. The <strong>key features</strong> of these output are as follows:</p>
 <ul>
 <li>
-<strong>Expression-Aware Filtration</strong>: The resulting catalog explicitly excludes pure structural loops lacking functional transcriptional output, yielding a purely active regulatory network.</li>
+<strong>Expression-Aware Filtration</strong>: The resulting catalog explicitly excludes pure structural chromatin loops lacking functional transcriptional output, yielding a rigorously curated, functionally active regulatory network.</li>
 <li>
-<strong>Dynamic Topological Reclassification</strong>: The structural syntax within the <code>loop_type</code> annotations is biologically recalibrated. By dynamically downgrading transcriptionally silent promoters (<code>P</code>) to enhancer-like elements (<code>eP</code>), the catalog fundamentally corrects the spatial regulatory syntax (e.g., seamlessly transforming a mathematically silent <code>P-P</code> loop into a functionally accurate <code>eP-P</code> interaction axis).</li>
+<strong>Dynamic Topological Reclassification</strong>: The topological annotations within the <code>loop_type</code> are biologically recalibrated. By dynamically reclassifying transcriptionally silent promoters (<strong>P</strong>) as enhancer-like elements (<strong>eP</strong>), the catalog fundamentally corrects the spatial regulatory syntax (e.g., seamlessly transforming a transcriptionally silent <strong>P-P</strong> loop into a curated <strong>eP-P</strong> interaction axis).</li>
 </ul>
 <div align="center">
 <img src="reference/figures/g2_refine.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Refinement Results"><p>
-<em>Figure 2: <strong>Representative outputs of Expression-Aware Refinement.</strong> Highlighting the Multi-Omics Sankey Tracking, this selected visualization dynamically maps the ultimate fate of 1D variants through 3D topologies into transcriptionally active targets.</em>
+<em>Figure 2: <strong>Representative outputs of Expression-Aware Refinement.</strong> As shown by the Multi-Omics Sankey Tracking, this curated visualization dynamically traces the fate of peak through 3D chromatin topological interactions to their corresponding transcriptionally active target genes.</em>
 </p>
 </div>
 </div>
 <div class="section level3">
 <h3 id="module-4-automated-functional-profiling">Module 4: Automated Functional Profiling<a class="anchor" aria-label="anchor" href="#module-4-automated-functional-profiling"></a>
 </h3>
-<p>A fully automated, end-to-end multi-omics analysis pipeline that bridges 3D genomic interactions with transcriptomic data to unveil the regulatory mechanisms of your targets.</p>
+<p>This module provides a fully automated, end-to-end multi-omics analysis pipeline that integrates 3D genomic interactions with transcriptomic data to unveil the regulatory mechanisms of targets of interest.</p>
 <p><strong>Key Parameters:</strong></p>
 <ul>
 <li>
-<code>target_source</code> (The Biological Scope): <code>"targets"</code> focuses exclusively on the putative genes regulated by inputted 1D features (Peak-Centric). <code>"loops"</code> evaluates the entire 3D interactome independent of 1D peaks (Global Network-Centric).</li>
+<strong><code>target_source</code> (The Biological Scope)</strong> Defines the biological scope of functional profiling.
+<ul>
 <li>
-<code>target_mapping_mode</code>: <code>"all"</code> accepts broad 3D target regulation. <code>"promoter"</code> is highly stringent, strictly enforcing that the 3D loop must explicitly anchor at a canonical Promoter region (excluding E-G connections).</li>
+<strong><code>"targets"</code></strong>: Focuses exclusively on the putative target genes regulated by inputted genomic features (<strong>Peak-Centric mode</strong>).</li>
 <li>
-<code>include_Filled</code> (The Stringency Toggle): <code>TRUE</code> (Hybrid Mode) utilizes the comprehensively merged annotation, prioritizing 3D loop-derived targets but rescuing unlooped 1D peaks by assigning them to nearest linear genes. <code>FALSE</code> (Pure Spatial Mode) strictly isolates the 3D interactome.</li>
+<strong><code>"loops"</code></strong>: Evaluates the entire 3D interactome independently of the inputted genomic features (<strong>Global Network-Centric mode</strong>).</li>
+</ul>
+</li>
 <li>
-<code>use_nearest_gene</code> (The Control): If <code>TRUE</code>, it bypasses spatial topology and strictly assigns features to nearest 1D linear genes, serving as a classical baseline reference to demonstrate the novel functional insights gained by 3D mapping.</li>
+<strong><code>target_mapping_mode</code></strong> Controls the stringency of 3D target assignment. <strong><code>"all"</code></strong> accepts broad 3D target regulation, while <strong><code>"promoter"</code></strong> is highly stringent, requiring 3D loops to explicitly anchor at canonical promoter regions, excluding distal E-G connections.</li>
+<li>
+<strong><code>include_Filled</code> (The Stringency Toggle)</strong> Adjusts the stringency of annotation integration.
+<ul>
+<li>
+<strong><code>TRUE</code> (Hybrid Mode)</strong>: Utilizes the comprehensively merged annotation, prioritizing 3D loop-derived target genes while <strong>rescuing unlooped genomic elements</strong> by assigning them to their nearest linear genes.</li>
+<li>
+<strong><code>FALSE</code> (Pure Spatial Mode)</strong>: Strictly isolates and analyzes only the <strong>3D interactome</strong>.</li>
+</ul>
+</li>
+<li>
+<strong><code>use_nearest_gene</code> (The Control)</strong> Serves as a <strong>classical baseline reference</strong>. If set to <code>TRUE</code>, the engine bypasses 3D spatial topology and strictly assigns genomic features to their nearest linear genes, facilitating a direct comparison to demonstrate the <strong>novel functional insights</strong> gained from 3D-guided mapping.</li>
 </ul>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Comprehensive Integrative Profiling (RNA-seq + Spatial Hubs + JASPAR + GO/PPI)</span></span>
@@ -242,13 +253,13 @@
 <div class="section level3">
 <h3 id="module-5-igv-style-track-visualization">Module 5: IGV-Style Track Visualization<a class="anchor" aria-label="anchor" href="#module-5-igv-style-track-visualization"></a>
 </h3>
-<p>Precisely renders the local spatial interactome via a multi-tiered genomic browser view.</p>
+<p>This module precisely renders the <strong>local</strong> 3D chromatin spatial interactome through a multi-tiered genomic browser-style visualization interface, similar to the layout of the <code>Integrative Genomics Viewer</code> (IGV).</p>
 <p><strong>Key Parameters:</strong></p>
 <ul>
 <li>
-<code>score_to_alpha</code>: Logical. If <code>TRUE</code>, maps the quantitative interaction score to the alpha (transparency) channel of the Bezier arcs, visually differentiating interaction strengths.</li>
+<strong><code>score_to_alpha</code></strong> Logical parameter. If <code>TRUE</code>, it maps quantitative <strong>chromatin interaction scores</strong> to the alpha (transparency) channel of the Bezier arcs, enabling visual differentiation of interaction strength.</li>
 <li>
-<code>species</code>: Directs the function to automatically load the corresponding <code>TxDb</code> and <code>OrgDb</code> Bioconductor packages for precise gene track rendering (mapping exons and introns with strand directionality).</li>
+<strong><code>species</code></strong> Specifies the <strong>organism of interest</strong>, directing the function to automatically load the corresponding <code>TxDb</code> and <code>OrgDb</code> Bioconductor packages. This ensures <strong>precise rendering of gene tracks</strong>, including exon-intron structures and strand directionality.</li>
 </ul>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
@@ -266,7 +277,7 @@
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">track_plot</span><span class="op">)</span></span></code></pre></div>
 <div align="center">
 <img src="reference/figures/plot1.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Track Plot Results"><p>
-<em>Figure 4: Integrative genomic browser view displaying 3D chromatin loops, 1D BED peaks, and directional gene models.</em>
+<em>Figure 4: Integrative genomic browser view displaying 3D chromatin loops, genomic regions, and directional gene models.</em>
 </p>
 </div>
 <hr>
@@ -275,7 +286,7 @@
 <div class="section level2">
 <h2 id="contact">Contact<a class="anchor" aria-label="anchor" href="#contact"></a>
 </h2>
-<p><strong>Ying Zhang</strong> Zhejiang University<br>
+<p><strong>Ying ZHANG</strong> Zhejiang University<br>
 Email: <a href="mailto:12207129@zju.edu.cn" class="email">12207129@zju.edu.cn</a></p>
 <p>For bug reports, feature requests, or questions regarding the package, please open an issue at the <a href="https://github.com/zying106/looplook/issues" class="external-link">looplook GitHub repository</a>.</p>
 <hr>
@@ -335,8 +346,8 @@ Email: <a href="mailto:12207129@zju.edu.cn" class="email">12207129@zju.edu.cn</a
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Ying Zhang <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0009-0005-9644-7062" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
-<li>Liang Xu <br><small class="roles"> Contributor, funder </small>   </li>
+<li>Ying ZHANG <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0009-0005-9644-7062" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>Liang XU <br><small class="roles"> Contributor, funder </small>   </li>
 <li><a href="authors.html">More about authors...</a></li>
 </ul>
 </div>
@@ -348,7 +359,7 @@ Email: <a href="mailto:12207129@zju.edu.cn" class="email">12207129@zju.edu.cn</a
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Ying Zhang, Liang Xu.</p>
+  <p>Developed by Ying ZHANG, Liang XU.</p>
 </div>
 
 <div class="pkgdown-footer-right">

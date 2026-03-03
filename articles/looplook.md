@@ -1,68 +1,83 @@
-# Looplook: A multi-omics suite for expression-aware target assignment and topological profiling of 3D chromatin networks
+# Looplook: An integrative suite for target assignment and functional annotation of chromatin interactions
 
 ------------------------------------------------------------------------
 
 ## Introduction
 
-Welcome to **`looplook`**, a highly sophisticated R/Bioconductor toolkit
-designed to decipher the complex interplay between **3D chromatin
-architecture** (e.g., HiChIP, ChIA-PET, Hi-C) and **1D multi-omics
-profiles** (including transcriptomics, chromatin accessibility,
-protein-DNA interactions via ChIP-seq/CUT&Tag, and genetic variants like
-GWAS SNPs).
+Welcome to **`looplook`**, a versatile R/Bioconductor toolkit developed
+to integrate three-dimensional (3D) chromatin architecture data (e.g.,
+HiChIP, ChIA-PET, Hi-C) with other tabular omics datasets, including
+transcriptomics, chromatin accessibility, protein-DNA interactions
+(derived from ChIP-seq, CUT&Tag, or CUT&RUN), and genetic variants
+annotated by genome-wide association studies (GWAS).
 
-The toolkit resolves a major bottleneck in functional genomics:
-accurately assigning non-coding variants or orphan peaks to their target
-genes. While traditional annotations rely on the *nearest linear gene*
-heuristic, this often fails to capture reality. Many distal regulatory
-elements physically contact target gene promoters via 3D chromatin
-interactions (chromatin looping), thereby regulating the expression of
-genes located tens of kilobases (kb) to megabases (Mb) away.
+Numerous studies have demonstrated that distal regulatory elements
+physically interact with target gene promoters via **3D chromatin
+looping**, thereby regulating the expression of genes located tens of
+kilobases to megabases away along the linear genome. However,
+conventional annotation strategies typically assign putative regulatory
+elements (e.g., informed by ChIP-seq peaks) to their **nearest
+neighboring genes in cis**, which often deviates from actual biological
+mechanisms. Consequently, the accurate assignment of non-coding genetic
+variants or orphan regulatory peaks to their **cognate target genes**
+represents a major bottleneck in the functional annotation of genomic
+regulatory elements.
 
-Furthermore, while genome browsers like IGV allow researchers to
-visually inspect these 3D connections at individual loci, such manual,
-low-throughput approaches are unfeasible for global analysis. `looplook`
-computationally bridges this critical 1D-to-3D gap at a **genome-wide,
-high-throughput scale**. It systematically prioritizes physical spatial
-contacts to batch-annotate thousands of regulatory elements, revealing
-their **high-confidence putative target genes** with unprecedented
-efficiency.
+To overcome this challenge, **`looplook`** systematically prioritizes
+experimentally validated spatial chromatin contacts to batch-annotate
+thousands of regulatory elements at a **genome-wide, high-throughput
+scale**, thereby identifying their candidate target genes with high
+confidence and unprecedented efficiency.
 
-Beyond its power as a spatial bridge, `looplook` serves as a standalone
-powerhouse for **intrinsic loop profiling**. Even without auxiliary 1D
-inputs, it systematically annotates the 3D interactome itself,
-classifying complex spatial topologies (e.g., Enhancer-Promoter,
-Promoter-Promoter) and calculating node connectivities to uncover dense
-**regulatory hubs** and super-enhancer cliques that drive
-cell-type-specific transcriptional programs.
+Beyond its utility as an integrative tool for target gene annotation,
+**`looplook`** serves as a **standalone platform** dedicated to
+chromatin loop analysis. Even in the absence of auxiliary omics data,
+this tool enables systematic annotation of the 3D chromatin interactome
+itself, classification of complex spatial interaction topologies (e.g.,
+Enhancer-Promoter, Promoter-Promoter interactions), and quantification
+of node connectivity, which facilitates the identification of **dense
+regulatory hubs** and **enhancer cliques** (e.g., super-enhancers) that
+drive cell-type-specific transcriptional programs.
 
-#### Key Features & Capabilities
+### Key Features & Capabilities
 
-1.  **The “3D Spatial Bridge” for Multi-Omics:** Unites auxiliary 1D
-    genomic features (GWAS risk SNPs, ChIP-seq binding sites) with 3D
-    loops. It features a rigorous “Smart Fallback” logic—prioritizing
-    loop-assigned distal targets while gracefully falling back to the
-    nearest linear genes if no spatial structure is found, ensuring
-    comprehensive, gapless coverage.
-2.  **Comprehensive Loop Annotation & Topological Hub Detection:** Goes
-    beyond treating loops as mere bridges by biologically annotating the
-    3D interactome itself. It precisely classifies spatial interactions
-    and computes spatial node degrees to identify candidate 3D
-    regulatory hubs.
-3.  **Expression-Aware Refinement:** Integrates quantitative RNA-seq
-    data to filter false-positive structural interactions. It introduces
-    the biological reclassification of mathematically silent promoters
-    into enhancer-like elements (e.g., correcting a silent P-P loop to a
-    functional eP-P loop), yielding a strictly active regulatory
-    network.
-4.  **Reproducible Consolidation:** Employs graph-theoretic clustering
-    to merge biological replicates and eliminate technical noise,
-    forging a high-confidence consensus 3D interactome.
-5.  **Automated Multi-Omics Profiling:** A push-button engine that
-    translates structural coordinate sets into publication-quality
-    visualizations and functional insights, spanning network
-    connectivity vs. expression dynamics, motif enrichment (SeqLogos),
-    and pathway concept networks (Cnetplots).
+1.  **The “3D Spatial Bridge” for Multi-Omics**: Integrates auxiliary
+    genomic features (e.g., GWAS risk SNPs, ChIP-seq peaks) with 3D
+    chromatin loops. It implements a rigorous “Smart Fallback” logic
+    that prioritizes distal loop-mediated target genes while reverting
+    to the nearest neighboring genes when no spatial interactions are
+    detected, ensuring comprehensive and gapless target annotation.
+
+2.  **Comprehensive Loop Annotation & Topological Hub Detection**: In
+    addition to loop mapping, **`looplook`** enables biologically
+    informed annotation of the 3D chromatin interactome. It helps to
+    categorize spatial interaction types and computes spatial node
+    degrees to identify candidate 3D regulatory hubs.
+
+3.  **Expression-Aware Refinement**: Incorporates quantitative
+    expressional data to filter out spurious structural contacts. As
+    some chromatin regions may exhibit both enhancer and promoter
+    activities, **`looplook`** provides a function to reclassify loop
+    anchors which associate with transcriptionally silent reference
+    promoters into **enhancer-like elements (eP)**, yielding a refined
+    network of regulatory interactions.
+
+4.  **Reproducible Consolidation & Multi-source Consensus**: Utilizes
+    graph-theoretic clustering to effectively harmonize biological
+    replicates and mitigate potential technical noise. The framework can
+    be used to identify multi-source consensus by integrating datasets
+    from various experimental designs, such as HiChIP assays targeting
+    different factors (e.g., **H3K27ac and Pol II**). This enables
+    **orthogonal validation** to facilitate the construction of a
+    high-confidence, unified 3D chromatin interactome based on
+    consistent spatial features.
+
+5.  **Automated Multi-Omics Functional Interpretations**: Provides an
+    end-to-end analytical engine for generating publication-grade
+    visualizations and functional interpretations. This includes
+    assessments of network connectivity and expression dynamics,
+    transcription factor motif enrichment (**SeqLogos**), and pathway
+    association networks (**Cnetplots**).
 
 ------------------------------------------------------------------------
 
@@ -92,47 +107,61 @@ out_dir <- tempdir()
 
 ## Module 1: Data Consolidation & Preprocessing
 
-In 3D genomics, individual replicates often suffer from high noise and
-low signal. The `consolidate_chromatin_loops` function acts as the
-foundational data-cleaning engine, merging multiple replicates into a
-clean, unified 3D coordinate framework.
+In 3D genomics analyses, individual replicates typically exhibit certain
+degrees of **inconsistency or noise**. The
+**`consolidate_chromatin_loops`** function serves as the foundational
+data-cleaning module, merging multiple replicates into a standardized,
+unified 3D chromatin interaction coordinate framework.
 
-### Parameter Strategy
+This module identifies **multi-source consensus** by integrating
+datasets from varied experimental designs, such as HiChIP assays
+targeting H3K27ac and Pol II. By capturing shared spatial interactions
+across these inputs, the framework enables **orthogonal validation** to
+**mitigate potential technical artifacts** and assay-specific biases.
+This approach leverages consistent spatial features to provide a robust
+foundation for downstream analyses supported by multiple lines of
+experimental evidence.
 
-- `mode`: Defines the overarching merging algorithm.
-  - `"consensus"` *(Recommended)*: Uses graph-based connected component
-    analysis to group nearby anchors across samples. Retains clusters
-    present in $\geq$`min_consensus` replicates.
-  - `"intersect"`: Strict reference-based filtering (requires absolute
-    overlap with File 1).
-  - `"union"`: Retains all interactions across the cohort (useful for
-    exploratory pan-tissue analysis).
-- `min_consensus`: When using “consensus” mode, this defines the exact
-  number of biological replicates a loop cluster must appear in to be
-  retained. If left as `NULL`, the engine dynamically calculates a
-  strict majority threshold (e.g., $\geq$ 75% of replicates).
-- `gap`: The maximum spatial distance (in base pairs) allowed between
-  anchors to consider them part of the same physical cluster (default:
-  `1000`).
-- `min_raw_score` vs. `min_score` (The Dual-Filter):
-  - `min_raw_score` is a pre-filter applied to individual BEDPE files
-    *before* clustering (e.g., removing singleton noise where PET count
-    \< 2) to drastically reduce memory overhead.
-  - `min_score` acts as a post-filter applied to the *final merged
-    interactome*.
-- `blacklist_species`: Automatically drops loops falling into
-  high-variance, artifact-prone genomic regions (e.g., centromeres,
-  telomeres). By specifying `"hg38"`, `"hg19"`, `"mm10"`, or `"mm9"`,
-  the engine applies the official ENCODE blacklist seamlessly.
-- `region_of_interest`: A surgical precision tool. By providing an
-  auxiliary BED file (e.g., a specific 2Mb disease locus like the *MYC*
-  neighborhood), the engine drops the global background and strictly
-  outputs loops physically connected to this targeted zone.
+#### Parameter Strategy
+
+- **`mode`**: Defines the overarching merging algorithm.
+  - `"consensus"` *(Recommended)*: Implements graph-based connected
+    component analysis to cluster spatially proximal anchors across
+    samples. Only retains clusters detected in ≥ `min_consensus`
+    biological replicates.
+  - `"intersect"`: Enforces strict reference-based filtering, retaining
+    loops that show full genomic overlap with the reference file (File
+    1).
+  - `"union"`: Retains all chromatin interactions across the entire
+    cohort, ideal for exploratory pan-tissue analyses.
+- **`min_consensus`**: When using `"consensus"` mode, this parameter
+  defines the minimum number of biological replicates in which a loop
+  cluster must be detected to be retained in the final dataset. If set
+  to `NULL`, the algorithm dynamically computes a strict majority
+  threshold (e.g., ≥ 75% of replicates).
+- **`gap`**: Defines the maximum allowable spatial distance (in base
+  pairs) between loop anchors for them to be considered as part of the
+  same physical cluster (default: `1000`).
+- **`min_raw_score` vs. `min_score` (The Dual-Filter)**:
+  - `min_raw_score` acts as a pre-filter applied to individual BEDPE
+    files before clustering (e.g., removing singleton noise where PET
+    count \< 2) to substantially reduce computational memory overhead.
+  - `min_score` serves as a post-filter applied to the final merged
+    chromatin interactome to ensure high-confidence interactions.
+- **`blacklist_species`**: Automatically excludes chromatin loops
+  overlapping with high-variance, artifact-prone genomic regions (e.g.,
+  centromeres, telomeres) by integrating the official ENCODE blacklist
+  for specified species (e.g., `"hg38"`, `"mm10"`).
+- **`region_of_interest`**: Accepts an auxiliary BED file (e.g., a
+  specific disease-associated locus or ChIP-seq peak set) to exclude
+  global background interactions, outputting only loops with physical
+  connectivity to the target genomic region.
 
 ### Example 1: Building a Global Consensus Interactome
 
-This is the standard workflow to generate a clean, whole-genome 3D
-backbone by merging replicates and eliminating blacklisted artifacts.
+This represents the standard workflow for generating a high-confidence,
+whole-genome 3D chromatin interaction dataset via integration of
+biological replicates and removal of blacklist-associated artifacts.
 
 ``` r
 # Locate example BEDPE replicates
@@ -146,19 +175,21 @@ consensus_global <- consolidate_chromatin_loops(
   mode = "consensus",
   gap = 1000,
   min_raw_score = 2, # Pre-filter sequencing noise
-  blacklist_species = "hg38", # Apply ENCODE artifact blacklist
+  blacklist_species = "hg38", # Apply artifact blacklist
   out_file = global_out
 )
 ```
 
 ### Example 2: Feature-Driven Loop Filtering
 
-Often, researchers are only interested in 3D interactions mediated by
-specific biological features, such as active enhancers (marked by
-H3K27ac) or specific transcription factors. By providing a ChIP-seq BED
-file to `region_of_interest`, the engine performs an elegant
-“on-the-fly” capture, discarding any loops that do not physically anchor
-at these functional sites.
+In most scenarios, researchers are interested in 3D chromatin
+interactions associated with specific biological features, such as
+active enhancers (marked by H3K27ac) or particular transcription
+factors.
+
+By providing a BED file to `region_of_interest`, the tool enables
+efficient “on-the-fly” capture, retaining only those loops whose anchors
+overlap with the specified functional regions.
 
 ``` r
 # Locate a BED file containing H3K27ac ChIP-seq peaks
@@ -176,19 +207,20 @@ consensus_targeted <- consolidate_chromatin_loops(
 )
 ```
 
-### Example 3: Cross-Modality Consensus for Orthogonal Validation
+### Example 3: Multi-source Consensus for Orthogonal Validation
 
-In integrative multi-omics studies, orthogonal validation across
-distinct functional assays is critical for defining robust 3D regulatory
-interactions. For instance, bona fide Enhancer-Promoter (E-P) loops are
-characterized by the concurrent spatial proximity of H3K27ac (active
-enhancer/promoter regions) and RNA Polymerase II (transcriptional
-machinery). By utilizing the `"consensus"` mode to intersect these
-distinct loop datasets, `looplook` facilitates the extraction of
-multi-modally supported interactions. This stringent merging strategy
-may effectively mitigate assay-specific technical artifacts, yielding a
-refined set of topological hubs that strictly couple physical chromatin
-architecture with active transcriptional regulation.
+In integrative multi-omics analyses, orthogonal validation across
+independent functional assays is critical for identifying robust 3D
+regulatory interactions. For instance, enhancer-promoter (E-P) loops are
+typically supported by the spatial co-localization of H3K27ac (marking
+active chromatin) and RNA polymerase II (indicative of transcriptional
+machinery engagement). By utilizing the `"consensus"` mode to intersect
+independent loop datasets, `looplook` facilitates the identification of
+chromatin interactions supported by multi-source evidence. This rigorous
+intersection strategy effectively mitigates assay-specific technical
+biases and artifacts, yielding a refined set of topological hubs that
+couple physical chromatin architecture with active transcriptional
+regulation.
 
 ``` r
 loop_k27ac <- system.file("extdata", "example_loops_H3K27ac.bedpe", package = "looplook")
@@ -206,70 +238,70 @@ dual_functional_out <- file.path(out_dir, "Dual_Functional_Consensus.bedpe")
 
 ------------------------------------------------------------------------
 
-## Module 2: 3D-Guided Peak Annotation & Mapping
+#### Module 2: 3D-Guided Annotation & Mapping
 
-This module forms the core mapping engine of `looplook`. Using
-`annotate_peaks_and_loops`, users can classify the 3D topology of the
-interactome and, optionally, inject a `target_bed` (e.g., GWAS loci,
-eQTLs, ChIP-seq peaks) to trace non-coding signals to their **putative
-functional target genes**.
+This module constitutes the core mapping engine of **`looplook`**. Using
+**`annotate_peaks_and_loops`**, users can classify the topological
+architecture of the interactome. Optionally, users may supply a
+`target_bed` (e.g., GWAS loci, eQTLs, ChIP-seq peaks) to trace
+non-coding regulatory signals to their putative functional target genes.
 
-Concurrently, to resolve mapping conflicts in dense gene loci (e.g.,
-when a single loop anchor overlaps multiple genes), the engine
-seamlessly executes a rigorous 3-step hierarchical pipeline:
+To resolve mapping ambiguities within densely populated gene loci, where
+a single loop anchor overlaps multiple candidate genes, the engine
+implements a rigorous three-step hierarchical annotation pipeline:
 
-1.  **Expression Pre-filter:** Instantly eliminates transcriptionally
-    silent candidates based on your RNA-seq matrix.
-2.  **Functional Biotype Prioritization:** For the remaining active
-    genes, it biologically prioritizes meaningful functional classes
-    (Protein Coding \> lncRNA \> Pseudogene).
-3.  **Dominant Expression Tiebreaker:** If a mapping tie still exists
-    (e.g., multiple active protein-coding genes within the same anchor),
-    it automatically resolves the conflict by selecting the dominant
-    gene with the highest transcriptional abundance.
+1.  **Expression Pre-filter**: Eliminates transcriptionally silent genes
+    based on the user-provided expression matrix.
+2.  **Functional Biotype Prioritization**: Prioritizes the remaining
+    candidates by functional class in the following order: Protein
+    Coding \> lncRNA \> Pseudogene.
+3.  **Dominant Expression Tiebreaker**: Designates the gene with the
+    highest transcriptional abundance as the target gene to further
+    resolve any remaining mapping ambiguities.
 
-### Parameter Strategy & Core Inputs
+#### Parameter Strategy & Core Inputs
 
-To execute this intricate multi-omics integration, the function relies
-on several critical parameters:
+This multi-omic integration relies on several key parameters:
 
-- `bedpe_file`: The 3D structural backbone (e.g., the high-confidence
-  consensus interactome generated in Module 1).
-- `target_bed`: The 1D auxiliary features of interest (e.g., a BED file
-  of GWAS SNPs, ATAC-seq peaks, or ChIP-seq binding sites) that require
+- **`bedpe_file`**: The 3D structural framework (e.g., the
+  high-confidence consensus interactome generated in Module 1).
+- **`target_bed`**: The auxiliary genomic features of interest (e.g., a
+  BED file of GWAS SNPs, ATAC-seq peaks, or ChIP-seq peaks) awaiting
   spatial target assignment.
-- `expr_matrix_file` & `sample_columns`: While optional, providing an
-  RNA-seq matrix allows the engine to activate the **Expression
-  Pre-filter** and **Tiebreaker** logic, drastically reducing
+- **`expr_matrix_file` & `sample_columns`**: Optional but strongly
+  recommended. An expression matrix (e.g., RNA-seq) enables the
+  Expression Pre-filter and Tiebreaker logic, substantially reducing
   false-positive gene assignments.
-- `species`: Specifies the genome assembly (e.g., `"hg38"`, `"mm10"`).
-  The engine automatically detects and loads the appropriate
+- **`species`**: Specifies the genome assembly (e.g., `"hg38"`,
+  `"mm10"`). The engine automatically loads the corresponding
   Bioconductor `TxDb` and `org.db` annotations.
-- `neighbor_hop`: A highly advanced topological parameter for network
+- **`neighbor_hop`**: An advanced topological parameter for network
   traversal:
-  - `0` *(Default)*: Strictly annotates direct physical contacts (Anchor
-    A touches Anchor B).
+  - `0` *(Default)*: Restricts annotation to direct physical contacts
+    (Anchor A ↔︎ Anchor B).
   - `1` *(Hub Mode)*: Evaluates secondary network effects within
-    super-enhancer cliques (Anchor A touches B, B touches C
-    $\rightarrow$ A is topologically linked to C).
-- `tss_region`: Defines the spatial boundary of a promoter relative to
-  the Transcription Start Site (TSS) (default: `c(-3000, 3000)` bp).
+    enhancer cliques (If Anchor A ↔︎ Anchor B ↔︎ Anchor C, this function
+    enables topological linkage between A and C).
+- **`tss_region`**: Defines the genomic window surrounding the
+  transcription start site (TSS) used to define promoter regions
+  (default: `c(-3000, 3000)` bp).
 
-### Example A: Integrative Analysis (Loops + 1D Peaks + RNA-seq)
+### Example A: Integrative Analysis (Loops + Genomic Features + RNA-seq)
 
-This is the comprehensive “3D Spatial Bridge” scenario. It maps 1D
-external peaks to 3D target genes while simultaneously resolving gene
-locus conflicts using background expression data.
+This represents the comprehensive “3D Spatial Bridge” scenario. It links
+external genomic feature (peaks) to 3D‑inferred target genes, while
+simultaneously resolving ambiguous assignments in dense genomic regions
+by weighing gene expression.
 
 ``` r
-# Locate auxiliary 1D peaks and RNA-seq expression matrix
+# Locate auxiliary genomic features and RNA-seq expression matrix
 expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
 atac_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
 if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   res_integrated <- annotate_peaks_and_loops(
     bedpe_file = global_out, # Uses the global consensus network from Module 1
-    target_bed = atac_path, # 1D External features to map
+    target_bed = atac_path, # External genomic features 
     expr_matrix_file = expr_path, # Activates the rigorous 3-step tiebreaker
     sample_columns = c("con1", "con2"),
     species = "hg38",
@@ -279,22 +311,14 @@ if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
     project_name = "Example_HiChIP_Integrative"
   )
 }
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
 ```
 
 ### Example B: Intrinsic Loop Profiling (Loops ONLY)
 
-If you are purely interested in the 3D interactome and do not have
-auxiliary 1D peaks, `looplook` serves as a standalone powerhouse for
-intrinsic loop profiling and structural hub detection.
+For users focused exclusively on 3D interactome architecture without
+auxiliary data related to genomic features, looplook functions as a
+standalone platform for loop profiling and structural hub
+identification.
 
 ``` r
 
@@ -302,7 +326,7 @@ if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   res_loops_only <- annotate_peaks_and_loops(
     bedpe_file = global_out, 
-    target_bed = NULL, # Omit 1D features entirely
+    target_bed = NULL, # Omit genomic features entirely
     expr_matrix_file = expr_path, # Resolves multi-gene conflicts at loop anchors
     sample_columns = c("con1", "con2"),
     species = "hg38",
@@ -311,184 +335,167 @@ if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
     project_name = "Example_Loops_Only"
   )
 }
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
 ```
 
-### Deep Dive: Output Data Dictionary
+#### Deep Dive: Output Data Dictionary
 
-The function seamlessly exports an extensively detailed Excel workbook
-(`*_Basic_Results.xlsx`). Understanding the hierarchical logic of these
-columns is critical to interpreting the spatial regulation:
+The function exports a comprehensive Excel workbook
+(`*_Basic_Results.xlsx`) containing multi-layered annotations.
+Interpretation of spatial regulatory logic depends critically on the
+hierarchical structure of its columns:
 
-#### 1. `target_annotation` (The 1D-to-3D Mapping Result)
+##### 1. `target_annotation` (The Genomic Feature-to-3D Mapping Result)
 
-*(Generated only if `target_bed` is provided)*
+*(Generated only when `target_bed` is provided)*
 
-- **`annotation`**: The local 1D genomic context of the peak (e.g.,
-  “Distal Intergenic”, “Promoter”).
-- **`Linked_Loop_IDs`**: IDs of the specific 3D loops physically
-  overlapping this peak.
-- **`All_Loop_Connected_Genes`**: The broadest spatial reach. All genes
-  (including both Promoters and Gene Bodies) topologically connected to
-  this peak via the 3D network.
-- **`Regulated_promoter_genes`**: A biologically stricter subset. It
-  restricts the spatial connections *only* to genes where the peak loops
-  directly to their active Promoters.
-- **`Assigned_Target_Genes`**: Target genes derived *exclusively* via 3D
-  physical loops. If the peak does not overlap any structural loop, this
-  value remains empty (NA).
-- **`*_Filled` Columns (The “Smart Fallback” Logic)**: Columns ending in
-  `_Filled` (e.g., **`Assigned_Target_Genes_Filled`**,
-  **`Regulated_promoter_genes_Filled`**) provide a **comprehensive,
-  gapless annotation**. They retain the loop-derived distal targets if a
-  spatial loop exists, but intelligently “fill” the empty rows by
-  falling back to the nearest linear gene (`SYMBOL`) for peaks residing
-  in unlooped regions.
+- **`annotation`**: Genomic context of the input peaks (e.g., “Distal
+  Intergenic”, “Promoter”).
+- **`Linked_Loop_IDs`**: Identifiers of 3D loops that overlap the peak.
+- **`All_Loop_Connected_Genes`**: All genes (including promoters and
+  gene bodies) topologically linked to the peak via 3D looping.
+- **`Regulated_promoter_genes`**: A stringent subset restricted to genes
+  whose promoters are directly contacted by the peak via 3D looping.
+- **`Assigned_Target_Genes`**: Target genes assigned *exclusively* via
+  3D loops. If the peak does not overlap any structural loop, this value
+  remains empty (`NA`).
+- **`*_Filled` Columns (The “Smart Fallback” Logic)**: Columns suffixed
+  with `_Filled` (e.g., `Assigned_Target_Genes_Filled`,
+  `Regulated_promoter_genes_Filled`) provide complete, gapless
+  annotations. For peaks within looped regions, they retain 3D-refined
+  distal targets; for peaks in unlooped regions, they will be annotated
+  to the nearest linear gene.
 
-#### 2. `loop_annotation` (The 3D Network Architecture)
+##### 2. `loop_annotation` (3D Network Architecture)
 
 - **`loop_type`**: Topological classification (e.g., E-P, P-P, E-E)
   determined by the biotype-aware logic.
-- **`All_Anchor_Genes`**: The strict physical footprint. All genes
-  located linearly within the left and right anchors of this specific
-  individual loop.
-- **`Putative_Target_Genes`**: The biologically resolved target (e.g.,
-  For an E-P loop, it strictly outputs the gene located at the Promoter
-  anchor, deliberately ignoring genes at the Enhancer anchor).
-- **`Cluster_All_Genes`**: The macro-neighborhood. Because multiple
-  loops often form dense complex cliques (Clusters), this column reveals
-  the entire pool of genes involved in the broader 3D cluster that this
-  specific loop belongs to.
+- **`All_Anchor_Genes`**: All genes located linearly within the left and
+  right anchors of a given loop.
+- **`Putative_Target_Genes`**: Biologically resolved target genes. For
+  an E-P loop, this field will report only the gene at the Promoter
+  anchor.
+- **`Cluster_All_Genes`**: All genes within the broader 3D cluster or
+  clique in which the loop resides, reflecting the extended topological
+  neighborhood.
 
-#### 3. `anchor_annotation` (The Spatial Hub Footprints)
+##### 3. `anchor_annotation` (Spatial Hub Footprints)
 
-- **`Cluster_Locus_Genes`**: All genes residing linearly within the
-  merged 1D footprint of the spatial anchor cluster, defining the
-  foundational baseline of the locus before 3D tracking.
+- **`Cluster_Locus_Genes`**: All genes from loop anchors within a
+  spatially interconnected hub (defined by network-connected
+  components), representing the full gene set associated with the 3D
+  hub.
 
-#### 4. `promoter_centric_stats` & `distal_element_stats` (Topological Hub Detection)
+##### 4. `promoter_centric_stats` & `distal_element_stats` (Topological Hub Detection)
 
-Quantifies the structural node degrees of the interactome to identify
-putative regulatory hubs from two complementary perspectives:
+These metrics quantify interactome connectivity to identify candidate
+regulatory hubs from complementary perspectives:
 
-##### A. Gene-Centric (`promoter_centric_stats`)
+**A. Gene-Centric (`promoter_centric_stats`)**
 
 - **`Total_Loops` / `n_Linked_Promoters` / `n_Linked_Distal`**:
-  Deconstructs a gene’s 3D connectome. A high `n_Linked_Distal` might
-  suggest regulation by a super-enhancer cluster, while a high
-  `n_Linked_Promoters` could indicate possible participation in a
-  multi-gene transcription factory.
-- **`Dominant_Interaction`**: The predominant topology orchestrating the
-  gene (e.g., E-P vs. P-P).
+  Deconstructs a gene’s 3D connectome. High `n_Linked_Distal` suggests
+  potential regulation by enhancer clusters, whereas high
+  `n_Linked_Promoters` may indicate possible participation in multi-gene
+  transcription.
+- **`Dominant_Interaction`**: The predominant topological class
+  governing the gene (e.g., E-P vs. P-P).
 - **`Is_High_Connectivity_Gene`** *(and Distal variant)*: Binary flags
-  governed by the `hub_percentile` to help prioritize putative 3D
-  regulatory hubs.
+  defined by the `hub_percentile` to prioritize putative 3D regulatory
+  hubs.
 
-##### B. Enhancer-Centric (`distal_element_stats`)
+**B. Enhancer-Centric (`distal_element_stats`)**
 
-- **`Target_Genes`**: Promoters physically contacted by the specific
-  distal anchor.
-- **`n_Linked_Promoters`**: Aids in exploring candidate “master
-  enhancers” that might simultaneously interact with multiple distinct
-  genes.
-- **`Is_High_Connectivity_Distal_Element`**: Flags dense non-coding
-  nodes, highlighting putative enhancer domains that may maintain the
-  local 3D architecture.
+- **`Target_Genes`**: Promoters physically contacted by the distal
+  anchor.
+- **`n_Linked_Promoters`**: Facilitates identification of candidate
+  master enhancers that contact multiple distinct genes.
+- **`Is_High_Connectivity_Distal_Element`**: Flags highly connected
+  non-coding elements that may act as 3D hubs.
 
-### Deep Dive: Output Visualizations
+#### Deep Dive: Output Visualizations
 
-The module auto-generates a comprehensive suite of up to 10
-publication-grade PDF plots to evaluate the interactome from
-macro-chromosomal scales down to specific topological classes.
+The module automatically generates up to 10 publication-grade PDF plots,
+enabling multi-scale interrogation of the 3D interactome.
 
-#### 1. Global 3D Network Profiling
+##### 1. Global 3D Network Profiling
 
 *(Always Generated)*
 
-- **Loop Type Proportions (`*_Basic_Donut.pdf` &
-  `*_Basic_Circular.pdf`)**: The Donut chart visualizes the raw physical
-  frequency of topological interactions, demonstrating the dominance of
-  P-P and G-P loops. The Circular plot goes further by quantifying the
-  unique target genes orchestrated by each type, intuitively
-  illustrating how certain loop types might disproportionately regulate
-  a massive number of genes.
-- **Karyotype Density Heatmaps (`*_Basic_Karyo_Anchors.pdf` &
-  `*_Basic_Karyo_LoopGenes.pdf`)**: Macro-scale chromosomal ideograms
-  that plot the physical density of 3D anchors and their natively
-  associated loop genes across the genome, highlighting broad structural
-  hotspots.
-- **Topological Overlap (`*_Basic_Flower.pdf`)**: A simplified flower
-  plot revealing the intersection of target genes (Core vs. Unique)
-  across different loop types.
-- **Anchor Genomic Distribution
-  (`*_Basic_Anchor_Genomic_Distribution.pdf`)**: A pie chart mapping the
-  raw 3D anchors to their local 1D genomic context (e.g., Distal
-  Intergenic, Intron, Promoter), verifying the overall structural
-  distribution of the spatial data.
+- **Loop Type Proportions** (`*_Basic_Donut.pdf` &
+  `*_Basic_Circular.pdf`): The Donut chart visualizes the raw physical
+  frequency of each topological interaction. The Circular plot
+  quantifies unique target genes per loop type, intuitively illustrating
+  how certain loop types might disproportionately regulate target genes.
 
-#### 2. 1D-to-3D Target Profiling
+- **Karyotype Density Heatmaps** (`*_Basic_Karyo_Anchors.pdf` &
+  `*_Basic_Karyo_LoopGenes.pdf`): Genome-wide ideograms illustrating the
+  density of 3D anchors and their associated genes, highlighting
+  architectural hotspots.
+
+- **Topological Overlap** (`*_Basic_Flower.pdf`): A simplified flower
+  plot showing the intersection of target genes (Core vs. Unique) across
+  different loop types.
+
+- **Anchor Genomic Distribution**
+  (`*_Basic_Anchor_Genomic_Distribution.pdf`): Pie chart summarizing the
+  genomic context of 3D anchors (e.g., Distal Intergenic, Intron,
+  Promoter).
+
+##### 2. Genomic Feature-to-3D Target Profiling
 
 *(Requires `target_bed`)*
 
-- **Target Connected Rose Chart (`*_Target_Rose.pdf`)**: A coxcomb chart
-  that helps reveal which specific 3D topologies are predominantly
-  utilized by your inputted 1D variants.
-- **Target Genomic Distribution Pies
+- **Target Connected Rose Chart** (`*_Target_Rose.pdf`): Coxcomb chart
+  illustrating the dominant 3D topologies associated with user-defined
+  genomic features.
+
+- **Target Genomic Distribution Pies**
   (`*_Target_Genomic_Distribution.pdf` &
-  `*_Target_Loop_Genomic_Distribution.pdf`)**: Compares the baseline 1D
-  distribution of all input targets against the subset of targets
-  successfully bridged by 3D loops. This direct comparison is crucial
-  for demonstrating the enrichment of spatial interactions.
-- **Target Genes Karyotype (`*_Basic_Karyo_TargetGenes.pdf`)**: Maps the
-  chromosomal density of the final, resolved putative target genes
-  (Assigned + Local) to visually identify functionally active
-  multi-omics loci.
+  `*_Target_Loop_Genomic_Distribution.pdf`): Compares the genomic
+  distribution of input genomic features (peaks) versus those
+  successfully linked via 3D loops. This comparison is insightful for
+  demonstrating the enrichment of spatial interactions.
+
+- **Target Genes Karyotype** (`*_Basic_Karyo_TargetGenes.pdf`):
+  Chromosomal density map of final putative target genes, identifying
+  functionally active multi-omics loci.
 
 ------------------------------------------------------------------------
 
 ## Module 3: Expression-Aware Refinement
 
-Physical proximity within the 3D genome is a structural prerequisite,
-but not a direct proxy, for active gene regulation. A chromatin loop
-anchoring two unexpressed loci lacks functional output. To address this,
-this module integrates quantitative transcriptome data to systematically
-eliminate transcriptionally silent physical contacts. This critical
-refinement distills a purely structural interactome into a
-high-confidence, functionally active regulatory network.
+Physical proximity is a structural prerequisite, but not a direct proxy
+for active transcriptional regulation. This module integrates
+quantitative transcriptome data to systematically filter out
+transcriptionally silent physical chromatin contacts, ensuring only
+functionally relevant 3D interactions are retained.
 
-### Parameter Strategy & Core Inputs
+#### Parameter Strategy & Core Inputs
 
-To execute this critical functional filtration,
-`refine_loop_anchors_by_expression` utilizes the following key
-parameters:
+The `refine_loop_anchors_by_expression` function implements functional
+filtration via the following key parameters:
 
-- **`annotation_res`**: The foundational 3D annotation list generated by
+- **`annotation_res`**: Foundational 3D annotation output generated by
   Module 2.
-- **`expr_matrix_file` & `sample_columns`**: The quantitative expression
-  matrix (e.g., TPM, FPKM) and the specific replicates to average for
-  establishing a reliable baseline expression profile.
-- **`threshold` & `unit_type`**: Defines the quantitative cutoff (e.g.,
-  `threshold = 1.0`, `unit_type = "TPM"`) required to consider a gene
-  “biologically active”. This allows seamless downward compatibility
-  with various normalization methods.
+- **`expr_matrix_file` & `sample_columns`**: Quantitative expression
+  matrix (e.g., TPM, FPKM) and the specific replicates to average,
+  establishing a robust baseline expression profile.
+- **`threshold` & `unit_type`**: Defines the quantitative expression
+  cutoff (e.g., `threshold = 1`, `unit_type = "TPM"`) required to
+  consider a gene biologically active. This parameter enables downward
+  compatibility with various normalization methods.
 - **`reclassify_by_expression`**: A transformative logical parameter
-  (`TRUE`/`FALSE`). When enabled, mathematically silent Promoters (`P`)
-  and Gene Bodies (`G`) are not simply discarded; they are biologically
-  downgraded to enhancer-like regulatory elements (`eP` and `eG`). This
-  corrects the regulatory syntax (e.g., seamlessly transitioning a
-  functionally silent `P-P` loop into a biologically accurate `eP-P`
-  enhancer-promoter loop).
+  (`TRUE`/`FALSE`). When enabled, transcriptionally silent Promoters
+  (`P`) and Gene Bodies (`G`) are not simply discarded; instead, they
+  are reclassified as enhancer-like regulatory elements (`eP`, `eG`).
+  This correction refines the regulatory topology (e.g., reclassifying a
+  functionally silent `P-P` loop into a curated `eP-P` loop).
 
 ### Example A: Standard Filtration (Strict Removal)
 
-In this baseline scenario, we apply a strict threshold to eliminate any
-loops where the putative target genes are completely silent, without
-altering the original structural classifications.
+In this scenario, a strict expression threshold eliminates loops where
+putative target genes are transcriptionally silent, without modifying
+the original structural classifications.
 
 ``` r
 res_integrated <- system.file("extdata", "analysis_results.RData", package = "looplook")
@@ -510,11 +517,11 @@ if (res_integrated != "") {
 
 ### Example B: Expression-Aware Reclassification (Recommended)
 
-This advanced mode is highly recommended. It preserves the invaluable 3D
-structural backbone but corrects the functional annotations. A silent
-promoter anchor is reclassified as an enhancer (`eP`), recognizing that
-while its resident gene is off, the topological locus itself is actively
-serving as a spatial regulatory element for a distant gene.
+This advanced mode is strongly recommended, as it preserves the valuable
+3D structural framework while refining functional annotations. A silent
+promoter anchor is reclassified as an enhancer (`eP`), acknowledging
+that while its reference gene is transcriptionally inactive, this region
+itself may function as an active regulatory element for a distant gene.
 
 ``` r
 if (exists("res_integrated")) {
@@ -531,126 +538,127 @@ if (exists("res_integrated")) {
 }
 ```
 
-### Deep Dive: Filtration Visualizations
+#### Deep Dive: Filtration Visualizations
 
 This module automatically generates a specialized suite of visual
-diagnostics to quantify the impact of the transcriptome “Truth Serum”
-and profile the surviving functional network:
+diagnostics to quantify transcriptome-guided refinement efficacy and
+characterize the surviving functional network:
 
-#### 1. Global Filtration Profiling
+##### 1. Global Filtration Profiling
 
 *(Always Generated)*
 
-- **Filtration Effect Dumbbell (`*_Comparison_Dumbbell.pdf`)**: Visually
-  quantifies the “cleaning power” of the transcriptome threshold. It
-  plots the stark numerical contrast between original structural loops
-  and the surviving functional loops across all topological classes,
-  highlighting the volume of un-transcribed structural noise.
-- **Refined Loop Proportion Rose (`*_Rose.pdf`)**: A coxcomb chart
-  illustrating the topological distribution (by count) of the
-  interactome *after* expression-guided reclassification and filtration.
-- **Refined Active Genes Karyotype (`*_Refined_Karyo_Active.pdf`)**:
-  Macro-scale chromosomal ideograms mapping the physical density of the
-  transcriptionally active loop genes that successfully passed the
-  threshold.
+- **Filtration Effect Dumbbell** (`*_Comparison_Dumbbell.pdf`):
+  Quantifies the “cleaning power” of the expression threshold by
+  visualizing the numerical contrast between original structural loops
+  and surviving functional loops across all topological classes,
+  highlighting the importance of removing untranscribed structural
+  noise.
 
-#### 2. 1D-to-3D Target Filtration Profiling
+- **Refined Loop Proportion Rose** (`*_Rose.pdf`): Coxcomb chart
+  illustrating the topological distribution (by count) of the
+  interactome after expression-guided reclassification and filtration.
+
+- **Refined Active Genes Karyotype** (`*_Refined_Karyo_Active.pdf`):
+  Genome-wide ideograms mapping the chromosomal density of
+  transcriptionally active loop-associated genes that passed the
+  expression threshold.
+
+##### 2. Genomic Feature-to-3D Target Filtration Profiling
 
 *(Generated only if `target_bed` was provided in Module 2)*
 
-- **Multi-Omics Sankey Diagram (`*_Target_Sankey.pdf` / `.html`)**: The
-  core integration diagnostic. It elegantly maps the ultimate fate of
-  inputted 1D variants across three distinct logical flows: **Genomic
-  Region (L1)** $\rightarrow$**3D Loop Connection (L2)**
-  $\rightarrow$**Target Expression Status (L3)**. This intuitively
-  reveals the proportion of GWAS/ChIP-seq peaks that are structurally
-  connected to functionally active genes.
-- **Refined Target Loop Donut (`*_Target_Loop_Donut.pdf`)**:
-  Specifically visualizes the topological distribution of the
-  functionally active loops that successfully bridge your inputted 1D
-  targets.
-- **Refined Target Genes Karyotype
-  (`*_Refined_Karyo_TargetGenes.pdf`)**: Maps the chromosomal density of
-  the final, strictly refined putative target genes, aiding in the
-  visualization of transcriptionally verified multi-omics loci.
+- **Multi-Omics Sankey Diagram** (`*_Target_Sankey.pdf` / `.html`): Core
+  integration diagnostic that maps the fate of inputted genomic features
+  across three logical tiers: Genomic Region (L1) → 3D Loop Connection
+  (L2) → Target Expression Status (L3). This intuitively reveals the
+  proportion of GWAS/ChIP-seq peaks structurally connected to
+  functionally active genes.
+
+- **Refined Target Loop Donut** (`*_Target_Loop_Donut.pdf`): Visualizes
+  the topological distribution of functionally active loops that bridge
+  user-defined genomic features.
+
+- **Refined Target Genes Karyotype**
+  (`*_Refined_Karyo_TargetGenes.pdf`): Chromosomal density map of
+  strictly refined putative target genes, facilitating visualization of
+  transcriptionally verified multi-omics loci.
 
 ------------------------------------------------------------------------
 
-## Module 4: Automated Functional Profiling
+### Module 4: Automated Functional Profiling
 
-Once high-confidence putative target genes are identified,
-`profile_target_genes` serves as a fully automated, end-to-end
-multi-omics analysis pipeline. It elegantly bridges 3D genomic
-interactions with transcriptomic data to systematically unveil the
-functional landscape and regulatory mechanisms of your targets.
+Following identification of high-confidence putative target genes,
+`profile_target_genes` provides a fully automated, end-to-end
+multi-omics analysis pipeline. It integrates 3D genomic interactions
+with transcriptomic data to systematically characterize the functional
+landscape and regulatory mechanisms underlying the identified target
+genes.
 
-### Parameter Strategy: A Highly Modular Pipeline
+#### Parameter Strategy: A Highly Modular Pipeline
 
-This function is exceptionally flexible. It uses a combination of
-routing parameters to decide exactly *which* subset of genes to analyze,
-and toggle parameters to turn specific downstream biological modules on
-or off.
+This function supports highly flexible experimental design through a set
+of routing parameters that define the gene set to be analyzed, as well
+as toggle parameters that enable or disable specific downstream
+biological modules.
 
-#### 1. Core Data Inputs
+##### 1. Core Data Inputs
 
-- **`annotation_res`**: The foundational annotation list (inherits
-  seamlessly from the output of Module 2 or the refined output of Module
-  3).
+- **`annotation_res`**: The foundational annotation result, inherited
+  directly from Module 2 or the refined output from Module 3.
 - **`diff_file` & `lfc_col`**: Differential expression summary (e.g.,
-  from DESeq2) required for LFC profiling and GSEA.
+  from DESeq2) required for fold change profiling and gene set
+  enrichment analysis (GSEA).
 - **`expr_matrix_file` & `metadata_file`**: Normalized expression matrix
-  (TPM/FPKM) and sample groupings, essential for generating heatmaps and
+  and sample metadata, which are essential for generating heatmaps and
   Raincloud plots.
 
-#### 2. Target Selection & Mapping Strategies
+##### 2. Target Selection & Mapping Strategies
 
-This section contains the most critical routing parameters. They dictate
-the fundamental biological question your downstream analysis will
-answer:
+This section contains the most critical routing parameters that define
+the biological scope and stringency of downstream analyses:
 
-- **`target_source` (The Biological Scope)**:
-  - **`"targets"` *(Variant/Peak-Centric)***: Focuses **exclusively** on
-    the putative genes regulated by your inputted 1D features (e.g.,
+- **`target_source`** (The Biological Scope):
+  - `"targets"` *(Variant/Peak-Centric)*: Focuses exclusively on the
+    putative genes regulated by user-defined genomic features (e.g.,
     GWAS SNPs, ATAC-seq peaks).
-  - **`"loops"` *(Global Network-Centric)***: Evaluates the entire 3D
-    interactome. It analyzes all genes anchored by the spatial loops,
-    completely independent of your 1D peaks.
-  - **`c("loops", "targets")`**: Analyzes both scopes simultaneously,
-    which is highly recommended for comparative profiling.
+  - `"loops"` *(Global Network-Centric)*: Analyzes the full 3D
+    interactome, including all genes associated with spatial loops,
+    without considering user-defined genomic features.
+  - `c("loops", "targets")`: Analyzes both scopes simultaneously, which
+    is strongly recommended for comparative functional profiling.
 - **`target_mapping_mode`**:
-  - `"all"` *(Default)*: Accepts broad 3D target regulation (including
-    distal enhancers looping to gene bodies).
-  - `"promoter"`: Highly stringent. Strictly enforces that the 3D loop
-    must explicitly anchor at a canonical Promoter region.
-- **`include_Filled` (The Stringency Toggle)**: Logical. Controls the
-  purity of the spatial regulation:
-  - **`TRUE` *(Hybrid Mode)***: Utilizes the comprehensively merged
+  - `"all"` *(Default)*: Retains broad 3D regulatory targets, including
+    distal enhancers looping to gene bodies.
+  - `"promoter"`: Applies stringent filtering, requiring loops to anchor
+    explicitly at canonical promoter regions.
+- **`include_Filled`** (The Stringency Toggle): Logical parameter
+  controlling the purity of spatial regulation:
+  - `TRUE` *(Hybrid Mode)*: Utilizes the comprehensively merged
     annotation (`_Filled` columns from Module 2). It prioritizes 3D
-    loop-derived targets but “rescues” unlooped 1D peaks by assigning
-    them to their nearest linear gene. This ensures zero data loss and
-    provides a complete functional overview.
-  - **`FALSE` *(Pure Spatial Mode)***: Highly stringent. It strictly
-    isolates the “pure” 3D interactome by completely dropping any 1D
-    peaks or anchors that lack a validated 3D loop connection, isolating
-    only structurally driven regulatory events.
-- **`use_nearest_gene`**: Logical. If `TRUE`, it completely bypasses 3D
-  loop-based assignments and strictly uses the nearest 1D linear gene,
-  serving as a classical baseline reference (The Control).
+    loop-derived targets while rescuing unlooped genomic features
+    (peaks) by assigning them the nearest genes, ensuring no data loss
+    and a complete functional overview.
+  - `FALSE` *(Pure Spatial Mode)*: Highly stringent. It only keeps 3D
+    loop-derived targets with clear annotation.
+- **`use_nearest_gene`**: Logical parameter. If `TRUE`, the pipeline
+  bypasses 3D loop-based assignment and uses only the nearest
+  neighboring gene, serving as a conventional baseline reference for
+  Control comparisons.
 
-#### 3. Downstream Functional Analyses
+##### 3. Downstream Functional Analyses
 
-- **`run_go`**: Executes Gene Ontology (BP) enrichment and generates
-  Divergent Concept Networks.
-- **`run_motif` & `genome_id`**: Scans proximal and distal anchors
-  against JASPAR core motifs (requires `BSgenome`).
+- **`run_go`**: Executes Gene Ontology (Biological Process, BP)
+  enrichment and generates Divergent Concept Networks.
+- **`run_motif` & `genome_id`**: Scans proximal and distal anchor
+  sequences against JASPAR core motifs (requires `BSgenome`).
 - **`run_ppi` & `ppi_score`**: Constructs Protein-Protein Interaction
-  networks via the STRING database.
+  (PPI) networks via the STRING database.
 
 ### Example A: Comprehensive Integrative Profiling (Recommended)
 
-Best for complete multi-omics joint analysis (e.g., HiChIP + ATAC-seq).
-It comprehensively maps and profiles genes regulated by BOTH 3D distal
-loops and 1D direct target overlaps.
+Ideal for complete multi-omics integration (e.g., HiChIP + ATAC-seq).
+This mode comprehensively maps and profiles target genes of interest.
 
 ``` r
 diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
@@ -678,17 +686,16 @@ if (exists("refined_res")) {
 
 ### Example B: Peak-Driven Strict Promoter Profiling (High Stringency)
 
-This mode applies a rigorous double-filtration strategy to yield the
-highest confidence target gene set.
+This mode applies a rigorous dual-filtering strategy to yield a
+high-confidence target gene set.
 
-First, setting `target_source = "targets"` ensures the engine profiles
-*only* the specific genes regulated by your inputted 1D peaks (e.g.,
-your GWAS SNPs or TF binding sites), completely discarding all
-background spatial loops. Second, `target_mapping_mode = "promoter"`
-enforces topological strictness: the spatial loop bridging your peak
-MUST directly anchor onto the canonical promoter of the target gene
-(i.e., strict E-P or P-P loops), deliberately excluding looser
-interactions like Enhancer-to-GeneBody (E-G) connections.
+First, `target_source = "targets"` restricts profiling to genes
+regulated specifically by user-defined genomic features (e.g., GWAS SNPs
+or TF binding sites), excluding background spatial loops. Second,
+`target_mapping_mode = "promoter"` enforces topological stringency:
+loops linking peaks to target genes must directly contact canonical or
+reference promoters (i.e., strict `E-P` or `P-P` loops), excluding more
+permissive connections such as enhancer-gene body (`E-G`) interactions.
 
 ``` r
 if (exists("refined_res")) {
@@ -698,7 +705,7 @@ if (exists("refined_res")) {
     lfc_col = "log2FoldChange",
     expr_matrix_file = expr_path,
     metadata_file = meta_path,
-    target_source = "targets", # 1. Focus exclusively on inputted 1D peaks
+    target_source = "targets", # 1. Focus exclusively on inputted genomic features
     target_mapping_mode = "promoter", # 2. Require strict loop-to-promoter collision
     include_Filled = TRUE,
     use_nearest_gene = FALSE,
@@ -711,13 +718,12 @@ if (exists("refined_res")) {
 
 ### Example C: 1D Linear Annotation Baseline (The Control)
 
-By setting `use_nearest_gene = TRUE`, this mode deliberately bypasses
-the 3D spatial topology and strictly assigns features to their nearest
-1D linear genes. It is specifically designed to serve as a classical
-“baseline control.” By comparing these results against Example A or B,
-you can robustly demonstrate to reviewers how much novel functional
-insight is gained by utilizing 3D chromatin loops over traditional
-nearest-gene heuristics.
+By setting `use_nearest_gene = TRUE`, this mode intentionally bypasses
+the 3D spatial topology and assigns features exclusively to their
+nearest neighboring gene. It serves as a conventional “baseline
+control.” Comparing results against Example A or B enables rigorous
+demonstration of the novel functional insights gained from 3D chromatin
+looping analyses relative to conventional method.
 
 ``` r
 if (exists("refined_res")) {
@@ -730,7 +736,7 @@ if (exists("refined_res")) {
     target_source = "targets", # Focus on inputted peaks
     target_mapping_mode = "all",
     include_Filled = FALSE,
-    use_nearest_gene = TRUE, # Strictly nearest 1D linear gene (The Control)
+    use_nearest_gene = TRUE, # Nearest neighboring gene (The Control)
     project_name = "Scenario_C_LinearControl",
     out_dir = out_dir,
     run_go = FALSE
@@ -738,127 +744,117 @@ if (exists("refined_res")) {
 }
 ```
 
-### Deep Dive: Functional Visualizations
+#### Deep Dive: Functional Visualizations
 
-This module executes a massive downstream pipeline, generating an entire
-figure panel suitable for publication. Instead of basic data summaries,
-these visualizations are specifically designed to test core multi-omics
-hypotheses:
+This module executes an extensive downstream pipeline that generates a
+complete, publication-ready figure panel. Rather than simple descriptive
+summaries, these visualizations are designed to test research hypotheses
+related to multi-omics integration.
 
-#### 1. Expression & Topological Dynamics
+##### 1. Expression & Topological Dynamics
 
-- **Transcriptional Profiling (`*_LFC_Violin.pdf` &
-  `*_Expression_Heatmap.pdf`)**: Derived from the integration of
-  quantitative RNA-seq matrices and differential expression statistics.
-  These visualizations assess whether the structurally annotated 3D
-  target genes exhibit statistically significant transcriptional shifts
-  relative to the global genomic background. This provides a
-  quantitative framework to evaluate their potential functional
-  relevance, offering correlative evidence of transcriptional modulation
-  rather than definitive biological validation.
-- **Topological-Transcriptional Association
-  (`*_Connectivity_Scatter.pdf` & `*_Raincloud_*.pdf`)**: Sourced by
-  cross-referencing 3D topological node degrees (e.g., the number of
-  linked enhancers) with 1D expression and LFC values. This step
-  provides a statistical framework to explore the putative “Hub
-  Hypothesis,” assessing whether an increase in spatial connectivity is
-  positively associated with more dynamic transcriptional outputs,
-  without asserting direct causality.
+- **Transcriptional Profiling** (`*_LFC_Violin.pdf` &
+  `*_Expression_Heatmap.pdf`): Integrates quantitative transcriptome
+  data (e.g., RNA-seq) and differential expression statistics to
+  evaluate whether 3D-annotated target genes exhibit statistically
+  significant expression shifts relative to the global genome
+  background. This provides a quantitative measure of functional
+  relevance and correlative evidence of regulatory modulation.
+- **Topological-Transcriptional Association**
+  (`*_Connectivity_Scatter.pdf` & `*_Raincloud_*.pdf`): Cross-references
+  3D connectivity (e.g., number of linked enhancers) with transcript
+  abundance and fold changes. This may help to test the “hub hypothesis”
+  (whether increased spatial connectivity correlates with more dynamic
+  transcriptional output).
 
-#### 2. Regulatory Motif Scanning
+##### 2. Regulatory Motif Scanning
 
-- **Spatially Asymmetric Motif Signatures (`*_Motif_*_RankScatter.pdf` &
-  `*_Logos.pdf`)**: Enhancer-Promoter loops are functionally asymmetric,
-  recruiting different transcription factor (TF) families at each end.
-  By extracting DNA sequences and scanning them against the JASPAR
-  database *separately* for proximal (promoter) and distal (enhancer)
-  anchors, these profiles prevent signal dilution. They decode the
-  underlying *trans*-regulatory logic, explicitly pinpointing which
-  distinct TF families orchestrate the two ends of the spatial chromatin
-  architecture.
+- **Spatially Asymmetric Motif Signatures** (`*_Motif_*_RankScatter.pdf`
+  & `*_Logos.pdf`): Separately analyses transcription factor motifs
+  enriched in the promoter-proximal anchors and distal (enhancer)
+  anchors.
 
-#### 3. Pathway & Network Enrichment
+##### 3. Pathway & Network Enrichment
 
-- **Spatial Gene Set Enrichment (`*_GSEA.pdf`)**: Projects your custom,
-  3D-derived target gene sets onto the globally ranked differential
-  expression landscape. Instead of relying on predefined public
-  pathways, it treats your specific spatial network as a novel
-  biological “gene set,” statistically confirming whether your 3D
-  interactome is a primary driver of the observed global phenotypic
-  transition.
-- **Core Effector Networks (`*_GO_Network.pdf`, `*_GO_Lollipop_*.pdf` &
-  `*_PPI_Network_*.pdf`)**: Sourced from Gene Ontology (BP) and the
-  STRING database. Rather than merely listing enriched terms, the
-  Divergent Concept Networks and PPI graphs explicitly map shared
-  biological pathways to their highest-LFC core Hub genes. This bridges
-  the biological gap between spatial chromatin topology, transcriptomic
-  regulation, and ultimate protein-level cooperation.
+- **Spatial Gene Set Enrichment** (`*_GSEA.pdf`): Projects 3D-derived
+  target gene sets onto the globally ranked differential expression
+  landscape. Rather than relying on pre-defined pathways, it treats the
+  specific spatial network as a biologically meaningful gene set, and
+  examines whether the 3D interactome contributes to the observed
+  transcriptomic phenotype.
+- **Core Effector Networks** (`*_GO_Network.pdf`, `*_GO_Lollipop_*.pdf`
+  & `*_PPI_Network_*.pdf`): Derived from Gene Ontology and STRING
+  analyses. Rather than simply listing enriched terms, the Divergent
+  Concept Networks and PPI graphs link key pathways to high-magnitude
+  differentially expressed hub genes, bridging spatial chromatin
+  architecture, transcriptional regulation, and functional protein
+  networks.
 
 ------------------------------------------------------------------------
 
-## Module 5: IGV-Style Track Visualization
+### Module 5: IGV-Style Track Visualization
 
-To precisely render the local spatial interactome, this module generates
-a multi-tiered genomic browser view via the `plot_peaks_interactions`
-function. The visualization integrates the multi-omics data into three
-distinct, non-overlapping genomic tracks:
+To visualize the local spatial interactome with high resolution, this
+module generates an IGV-style multi-tiered genomic browser view via the
+`plot_peaks_interactions` function. This visualization integrates
+multi-omics datasets into three distinct, non-overlapping genomic
+tracks, enabling intuitive assessment of 3D structural context:
 
-- **Loop Track (Top)**: Represents 3D chromatin interactions using
-  Bezier arcs connecting spatial anchors. When `score_to_alpha = TRUE`
-  is enabled, the opacity (alpha channel) of each arc is scaled
-  proportionally to its quantitative interaction metric.
-- **Target Track (Middle)**: Maps user-provided 1D genomic features
+- **Loop Track (Top)**: Depicts 3D chromatin interactions as Bezier arcs
+  connecting paired spatial anchors. When `score_to_alpha = TRUE` is
+  enabled, the opacity (alpha channel) of each arc is scaled
+  proportionally to the quantitative interaction score.
+- **Target Track (Middle)**: Renders user-provided genomic features
   (e.g., ChIP-seq peaks or GWAS SNPs) from the input BED file,
-  facilitating direct visual assessment of their spatial overlap with
-  the 3D structural anchors.
+  facilitating direct visualization of their spatial overlap with the
+  loop anchors.
 - **Gene Track (Bottom)**: Retrieves the longest canonical transcript
-  using standard Bioconductor annotation databases, mapping exons and
-  introns with precise strand directionality. Overlapping gene models
-  are vertically separated to prevent label collisions.
+  for each gene using standard Bioconductor annotation databases, with
+  exons and introns mapped according to strand directionality.
+  Overlapping gene models are vertically separated to avoid label
+  collisions and improve readability.
 
-### Parameter Strategy & Core Inputs
+#### Parameter Strategy & Core Inputs
 
-The function provides comprehensive control over the genomic locus, data
-filtering, and aesthetic mapping through the following arguments:
+The function provides fine-grained control over genomic locus selection,
+data filtering, and visual aesthetics through the following arguments:
 
-#### 1. Data Inputs & Genomic Coordinates
+##### 1. Data Inputs & Genomic Coordinates
 
-- **`bedpe_file`**: Character. Path to the spatial interaction file in
-  BEDPE format. The function utilizes the first six columns for paired
-  anchor coordinates, and the seventh column (if present) as the
-  quantitative interaction score.
-- **`target_bed`**: Character (Optional). Path to a 1D feature file in
-  standard BED format, rendered as the middle track for overlap
-  assessment.
-- **`chr`, `from`, `to`**: Specifies the exact genomic coordinate window
-  for visualization. If `chr` is omitted (`NULL`), the function defaults
-  to the most frequent chromosome present in the BEDPE file.
-- **`min_score`**: Numeric (Optional). Applies a quantitative threshold
-  to filter the displayed loops based on the score column.
+- **`bedpe_file`**: Character. Specifies the path to the BEDPE-format
+  spatial interaction file. The function utilizes the first six columns
+  for paired anchor coordinates and the seventh column (if present) as
+  the quantitative interaction score.
+- **`target_bed`**: Character (Optional). Specifies the path to a
+  user-supplied genomic feature file in standard BED format, rendered in
+  the middle track to assess overlap with 3D anchors.
+- **`chr`, `from`, `to`**: Specifies the exact genomic window for
+  visualization. If `chr` is omitted (`NULL`), the function defaults to
+  the chromosome with the highest loop count in the BEDPE file.
+- **`min_score`**: Numeric (Optional). Applies a threshold to filter the
+  displayed loops based on the interaction score column.
 
-#### 2. Annotation Dependencies
+##### 2. Annotation Dependencies
 
-- **`species`**: Character. Specifies the reference genome assembly.
-  Supported inputs include `"hg38"`, `"hg19"`, `"mm10"`, or `"mm9"`.
-  This parameter directs the function to automatically load the
-  corresponding `TxDb` and `OrgDb` Bioconductor packages for gene track
-  rendering.
+- **`species`**: Character. Specifies the reference genome assembly
+  (supported: `"hg38"`, `"hg19"`, `"mm10"`, or `"mm9"`). This parameter
+  triggers automatic loading of the corresponding Bioconductor `TxDb`
+  and `OrgDb` annotation packages for gene track rendering.
 
-#### 3. Aesthetic Mapping & Track Configuration
+##### 3. Aesthetic Mapping & Track Configuration
 
-- **`score_to_alpha`**: Logical. If `TRUE`, maps the quantitative
-  interaction score to the alpha (transparency) channel of the Bezier
-  arcs, visually differentiating interaction strengths.
+- **`score_to_alpha`**: Logical flag. When `TRUE`, the quantitative
+  interaction score is mapped to the transparency of Bezier arcs,
+  enabling visual differentiation of interaction strength.
 - **`max_levels`**: Integer. Defines the maximum vertical stacking limit
-  for the loop arcs to manage rendering height.
+  for the loop arcs to manage rendering height and readability.
 - **`base_anchor_height`**: Numeric. Sets the vertical thickness of the
-  rectangular anchors plotted at the base of the loops.
-- **Color Controls (`loop_color`, `anchor_color`, `overlap_color`,
-  `exon_color`, `intron_color`)**: Character strings defining the
-  specific colors (e.g., hex codes) for the structural components across
-  all three tracks.
-- **`save_file`**: Character (Optional). The file path and format
-  extension (e.g., `".pdf"`) for exporting the final ggplot object.
+  rectangular anchors plotted at the base of the loop arcs.
+- **Color Controls** (`loop_color`, `anchor_color`, `overlap_color`,
+  `exon_color`, `intron_color`): Character strings specifying custom
+  colors for structural elements across all three tracks.
+- **`save_file`**: Character (Optional). Specifies the output file path
+  and format (e.g., `".pdf"`) for exporting the final ggplot object.
 
 ``` r
 if (requireNamespace("ggplot2", quietly = TRUE)) {

@@ -6,19 +6,19 @@ A highly sophisticated, dual-purpose 3D genomic engine designed to:
     interactions (e.g., Enhancer-Promoter, Promoter-Promoter) using a
     strict structural hierarchy.
 
-2.  **Map External Features (1D to 3D):** Act as a **"3D Spatial
-    Bridge"** to link auxiliary 1D genomic features (e.g., GWAS risk
-    SNPs, ATAC-seq peaks, ChIP-seq binding sites) to their genuine
+2.  **Map External Features (genomic features to 3D):** Act as a **"3D
+    Spatial Bridge"** to link auxiliary 1D genomic features (e.g., GWAS
+    risk SNPs, ATAC-seq peaks, ChIP-seq binding sites) to their genuine
     regulated target genes, fundamentally outperforming simple "nearest
     gene" heuristics.
 
-**Core Philosophy: Bridging the 1D-3D Gap** Traditional annotations
-typically assign non-coding variants to the nearest linear gene. This
-engine prioritizes **physical 3D chromatin contacts**. If a GWAS SNP or
-enhancer lands in an anchor looping to a distal gene, the distal gene is
-accurately assigned. If no spatial loop exists, the engine intelligently
-falls back to the nearest active local gene (Smart Fallback), ensuring
-comprehensive and gapless annotation coverage.
+**Core Philosophy: Bridging the genomic features-3D Gap** Traditional
+annotations typically assign non-coding variants to the nearest linear
+gene. This engine prioritizes **physical 3D chromatin contacts**. If a
+GWAS SNP or enhancer lands in an anchor looping to a distal gene, the
+distal gene is accurately assigned. If no spatial loop exists, the
+engine intelligently falls back to the nearest active local gene (Smart
+Fallback), ensuring comprehensive and gapless annotation coverage.
 
 **Key Algorithmic Innovations:**
 
@@ -26,16 +26,16 @@ comprehensive and gapless annotation coverage.
   overlaps multiple promoters (e.g., dense gene loci or bidirectional
   promoters), it executes a rigorous 3-step resolution:
 
-  1.  *Expression Pre-filter:* Instantly eliminates entirely silent
-      genes (e.g., TPM = 0) if active neighbors exist.
+  1.  *Expression Pre-filter:* Eliminates transcriptionally silent genes
+      based on the user-provided expression matrix.
 
-  2.  *Biotype Hierarchy:* Enforces a strict selection cascade:
-      `Protein Coding > Antisense > lncRNA > Pseudogene`, preventing
-      highly-transcribed pseudogenes from masking true coding targets.
+  2.  *Functional Biotype Prioritization::* Prioritizes the remaining
+      candidates by functional class in the following order:
+      `Protein Coding > Antisense > lncRNA > Pseudogene`.
 
-  3.  *Smart TPM Merge:* If multiple top-tier genes coexist, it applies
-      a dynamic relative threshold to merge genuine co-regulated targets
-      while stripping background transcriptional noise.
+  3.  *Dominant Expression Tiebreaker:* Designates the gene with the
+      highest transcriptional abundance as the target gene to further
+      resolve any remaining mapping ambiguities.
 
 - **Dynamic Topology Control (`neighbor_hop`):** Controls network
   diffusion depth. Allows signal propagation from a SNP -\> Enhancer -\>
@@ -134,7 +134,7 @@ An invisible list of comprehensive data frames (also auto-saved as a
 multi-sheet `.xlsx`):
 
 - `target_annotation`: Detailed annotation of `target_bed`. Features the
-  gold-standard column: `Assigned_Target_Genes_Filled` (Loop-prioritized
+  important column: `Assigned_Target_Genes_Filled` (Loop-prioritized
   target, gracefully falling back to the local nearest gene if
   unlooped).
 
@@ -301,20 +301,20 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
 #>   ?`trim,GenomicRanges-method` for more information.
 #> Step 6: Generating Visualizations...
 #> Warning: Ignoring unknown parameters: `size`
-#>  Saved: /tmp/RtmpkfVz6j/Example_HiChIP_Integrative_Basic_Circular.pdf
+#>  Saved: /tmp/RtmpE2nq4a/Example_HiChIP_Integrative_Basic_Circular.pdf
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
 #>   be represented by a single genomic range.
 #>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
 #>   object, or use suppressMessages() to suppress this message.
 #> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/RtmpkfVz6j/Example_HiChIP_Integrative_Basic_Karyo_LoopGenes.pdf
-#>     Saved Heatmap: /tmp/RtmpkfVz6j/Example_HiChIP_Integrative_Basic_Karyo_Anchors.pdf
+#>     Saved Heatmap: /tmp/RtmpE2nq4a/Example_HiChIP_Integrative_Basic_Karyo_LoopGenes.pdf
+#>     Saved Heatmap: /tmp/RtmpE2nq4a/Example_HiChIP_Integrative_Basic_Karyo_Anchors.pdf
 #> Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
 #> ℹ Please use `linewidth` instead.
 #> ℹ The deprecated feature was likely used in the looplook package.
 #>   Please report the issue at <https://github.com/zying106/looplook/issues>.
-#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpkfVz6j/Example_HiChIP_Integrative_Basic_Flower.pdf
+#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpE2nq4a/Example_HiChIP_Integrative_Basic_Flower.pdf
 #>     Plotting Target Visualizations...
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
@@ -322,7 +322,7 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
 #>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
 #>   object, or use suppressMessages() to suppress this message.
 #> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/RtmpkfVz6j/Example_HiChIP_Integrative_Basic_Karyo_TargetGenes.pdf
+#>     Saved Heatmap: /tmp/RtmpE2nq4a/Example_HiChIP_Integrative_Basic_Karyo_TargetGenes.pdf
 #>     Generating Pie Chart 0: All Anchors Genomic Distribution...
 #>     Generating Pie Chart 1: All Targets Distribution...
 #>     Generating Pie Chart 2: Loop-Connected Targets Distribution...
@@ -361,16 +361,16 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
 #>     Generating Distal Element Stats...
 #> Step 6: Generating Visualizations...
 #> Warning: Ignoring unknown parameters: `size`
-#>  Saved: /tmp/RtmpkfVz6j/Example_Loops_Only_Basic_Circular.pdf
+#>  Saved: /tmp/RtmpE2nq4a/Example_Loops_Only_Basic_Circular.pdf
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
 #>   be represented by a single genomic range.
 #>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
 #>   object, or use suppressMessages() to suppress this message.
 #> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/RtmpkfVz6j/Example_Loops_Only_Basic_Karyo_LoopGenes.pdf
-#>     Saved Heatmap: /tmp/RtmpkfVz6j/Example_Loops_Only_Basic_Karyo_Anchors.pdf
-#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpkfVz6j/Example_Loops_Only_Basic_Flower.pdf
+#>     Saved Heatmap: /tmp/RtmpE2nq4a/Example_Loops_Only_Basic_Karyo_LoopGenes.pdf
+#>     Saved Heatmap: /tmp/RtmpE2nq4a/Example_Loops_Only_Basic_Karyo_Anchors.pdf
+#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpE2nq4a/Example_Loops_Only_Basic_Flower.pdf
 #> Step 7: Exporting to Excel...
 #>     Excel file saved.
 #> Analysis Complete.

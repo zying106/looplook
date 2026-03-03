@@ -7,20 +7,23 @@ is designed for two main purposes:
     replicates to identify high-confidence, reproducible loops (e.g., 3
     replicates of H3K27ac HiChIP).
 
-2.  **Multi-Omics Integration**: Intersecting or merging loops from
-    distinct chromatin features to find shared regulatory architectures
-    (e.g., integrating **H3K27ac** and **H3K4me3** HiChIP data, or
+2.  **Multi-Omics Integration**: The framework can be used to identify
+    multi-source consensus by integrating datasets from various
+    experimental designs, such as HiChIP assays targeting different
+    factors (e.g., integrating **H3K27ac** and **H3K4me3**, or
     overlapping Hi-C with ChIA-PET).
 
 The function supports three modes:
 
-- `"consensus"`: Graph-based clustering to find a consensus set
-  supported by a majority of samples.
+- `"consensus"`: Implements graph-based connected component analysis to
+  cluster spatially proximal anchors across samples. Only retains
+  clusters detected in ≥ min_consensus biological replicates.
 
-- `"intersect"`: Strict reference-based filtering (keeps loops in File 1
-  supported by ALL other files).
+- `"intersect"`: Enforces strict reference-based filtering, retaining
+  loops that show full genomic overlap with the reference file (File 1).
 
-- `"union"`: Merges all detected loops into a comprehensive map.
+- `"union"`: Retains all chromatin interactions across the entire
+  cohort, ideal for exploratory pan-tissue analyses.
 
 It also supports a **two-stage filtering strategy** to maximize
 signal-to-noise ratio:
@@ -183,28 +186,28 @@ if (f1 != "" && f2 != "") {
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmpkfVz6j/file23121dd67a34.bedpe
+#> Finished! Saved to /tmp/RtmpE2nq4a/file22f03aba4970.bedpe
 #> Finished! Final loops: 104
 #> >>> Reading BEDPE files
 #>     File 1: 1000 loops
 #>     File 2: 1000 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/RtmpkfVz6j/file23121fb5c302.bedpe
+#> Finished! Saved to /tmp/RtmpE2nq4a/file22f074876b5f.bedpe
 #> Finished! Final loops: 101
 #> >>> Reading BEDPE files
 #>     File 1: 1000 loops
 #>     File 2: 1000 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Union mode: Keeping all clusters
-#> Finished! Saved to /tmp/RtmpkfVz6j/file23124943ee50.bedpe
+#> Finished! Saved to /tmp/RtmpE2nq4a/file22f0229755bd.bedpe
 #> Finished! Final loops: 1899
 #> >>> Reading BEDPE files
 #>     File 1: 369 loops
 #>     File 2: 333 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/RtmpkfVz6j/file231247307df3.bedpe
+#> Finished! Saved to /tmp/RtmpE2nq4a/file22f016150073.bedpe
 #> Finished! Final loops: 26
 #> [1] 26
 ```
