@@ -1,3 +1,4 @@
+*.BiocCheck/
 .Rproj.user
 .Rhistory
 .RData
