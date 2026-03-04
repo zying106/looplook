@@ -224,16 +224,16 @@ regulation.
 
 ``` r
 loop_k27ac <- system.file("extdata", "example_loops_H3K27ac.bedpe", package = "looplook")
-loop_pol2  <- system.file("extdata", "example_loops_pol2.bedpe", package = "looplook")
+loop_pol2 <- system.file("extdata", "example_loops_pol2.bedpe", package = "looplook")
 dual_functional_out <- file.path(out_dir, "Dual_Functional_Consensus.bedpe")
 
-  consensus_dual <- consolidate_chromatin_loops(
-    files = c(loop_k27ac, loop_pol2),
-    mode = "consensus", 
-    gap = 1000,
-    min_raw_score = 2,
-    out_file = dual_functional_out
-  )
+consensus_dual <- consolidate_chromatin_loops(
+  files = c(loop_k27ac, loop_pol2),
+  mode = "consensus",
+  gap = 1000,
+  min_raw_score = 2,
+  out_file = dual_functional_out
+)
 ```
 
 ------------------------------------------------------------------------
@@ -301,7 +301,7 @@ if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   res_integrated <- annotate_peaks_and_loops(
     bedpe_file = global_out, # Uses the global consensus network from Module 1
-    target_bed = atac_path, # External genomic features 
+    target_bed = atac_path, # External genomic features
     expr_matrix_file = expr_path, # Activates the rigorous 3-step tiebreaker
     sample_columns = c("con1", "con2"),
     species = "hg38",
@@ -321,11 +321,10 @@ standalone platform for loop profiling and structural hub
 identification.
 
 ``` r
-
 if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   res_loops_only <- annotate_peaks_and_loops(
-    bedpe_file = global_out, 
+    bedpe_file = global_out,
     target_bed = NULL, # Omit genomic features entirely
     expr_matrix_file = expr_path, # Resolves multi-gene conflicts at loop anchors
     sample_columns = c("con1", "con2"),
@@ -503,7 +502,7 @@ res_integrated <- system.file("extdata", "analysis_results.RData", package = "lo
 if (res_integrated != "") {
   load(res_integrated)
   res_basic <- refine_loop_anchors_by_expression(
-    annotation_res = res_integrated, 
+    annotation_res = res_integrated,
     expr_matrix_file = expr_path,
     sample_columns = c("con1", "con2"),
     threshold = 1.0,
@@ -901,14 +900,14 @@ sessionInfo()
 #> other attached packages:
 #> [1] org.Hs.eg.db_3.22.0  AnnotationDbi_1.72.0 IRanges_2.44.0      
 #> [4] S4Vectors_0.48.0     Biobase_2.70.0       BiocGenerics_0.56.0 
-#> [7] generics_0.1.4       looplook_0.99.0      BiocStyle_2.38.0    
+#> [7] generics_0.1.4       looplook_0.99.1      BiocStyle_2.38.0    
 #> 
 #> loaded via a namespace (and not attached):
 #>   [1] fs_1.6.6                                
 #>   [2] ProtGenerics_1.42.0                     
 #>   [3] matrixStats_1.5.0                       
 #>   [4] bitops_1.0-9                            
-#>   [5] enrichplot_1.30.4                       
+#>   [5] enrichplot_1.30.5                       
 #>   [6] httr_1.4.8                              
 #>   [7] RColorBrewer_1.1-3                      
 #>   [8] InteractionSet_1.38.0                   

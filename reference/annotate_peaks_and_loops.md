@@ -301,20 +301,20 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
 #>   ?`trim,GenomicRanges-method` for more information.
 #> Step 6: Generating Visualizations...
 #> Warning: Ignoring unknown parameters: `size`
-#>  Saved: /tmp/RtmpQXiS7z/Example_HiChIP_Integrative_Basic_Circular.pdf
+#>  Saved: /tmp/RtmppppxDY/Example_HiChIP_Integrative_Basic_Circular.pdf
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
 #>   be represented by a single genomic range.
 #>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
 #>   object, or use suppressMessages() to suppress this message.
 #> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/RtmpQXiS7z/Example_HiChIP_Integrative_Basic_Karyo_LoopGenes.pdf
-#>     Saved Heatmap: /tmp/RtmpQXiS7z/Example_HiChIP_Integrative_Basic_Karyo_Anchors.pdf
+#>     Saved Heatmap: /tmp/RtmppppxDY/Example_HiChIP_Integrative_Basic_Karyo_LoopGenes.pdf
+#>     Saved Heatmap: /tmp/RtmppppxDY/Example_HiChIP_Integrative_Basic_Karyo_Anchors.pdf
 #> Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
 #> ℹ Please use `linewidth` instead.
 #> ℹ The deprecated feature was likely used in the looplook package.
 #>   Please report the issue at <https://github.com/zying106/looplook/issues>.
-#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpQXiS7z/Example_HiChIP_Integrative_Basic_Flower.pdf
+#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmppppxDY/Example_HiChIP_Integrative_Basic_Flower.pdf
 #>     Plotting Target Visualizations...
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
@@ -322,7 +322,7 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
 #>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
 #>   object, or use suppressMessages() to suppress this message.
 #> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/RtmpQXiS7z/Example_HiChIP_Integrative_Basic_Karyo_TargetGenes.pdf
+#>     Saved Heatmap: /tmp/RtmppppxDY/Example_HiChIP_Integrative_Basic_Karyo_TargetGenes.pdf
 #>     Generating Pie Chart 0: All Anchors Genomic Distribution...
 #>     Generating Pie Chart 1: All Targets Distribution...
 #>     Generating Pie Chart 2: Loop-Connected Targets Distribution...
@@ -361,16 +361,16 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
 #>     Generating Distal Element Stats...
 #> Step 6: Generating Visualizations...
 #> Warning: Ignoring unknown parameters: `size`
-#>  Saved: /tmp/RtmpQXiS7z/Example_Loops_Only_Basic_Circular.pdf
+#>  Saved: /tmp/RtmppppxDY/Example_Loops_Only_Basic_Circular.pdf
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
 #>   be represented by a single genomic range.
 #>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
 #>   object, or use suppressMessages() to suppress this message.
 #> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/RtmpQXiS7z/Example_Loops_Only_Basic_Karyo_LoopGenes.pdf
-#>     Saved Heatmap: /tmp/RtmpQXiS7z/Example_Loops_Only_Basic_Karyo_Anchors.pdf
-#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpQXiS7z/Example_Loops_Only_Basic_Flower.pdf
+#>     Saved Heatmap: /tmp/RtmppppxDY/Example_Loops_Only_Basic_Karyo_LoopGenes.pdf
+#>     Saved Heatmap: /tmp/RtmppppxDY/Example_Loops_Only_Basic_Karyo_Anchors.pdf
+#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmppppxDY/Example_Loops_Only_Basic_Flower.pdf
 #> Step 7: Exporting to Excel...
 #>     Excel file saved.
 #> Analysis Complete.
