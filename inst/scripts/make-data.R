@@ -29,7 +29,7 @@
 #        example_loops_1.bedpe, example_loops_2.bedpe,
 #        example_loops_H3K27ac.bedpe, example_loops_pol2.bedpe
 # =========================================================================
-# Source: Derived from publicly available HiChIP and ChIP-seq datasets (GEO: GSE213300).
+# Source: Derived from publicly available HiChIP and ChIP-seq datasets (GEO: GSE213300,GSE111253).
 #
 # Raw data processing pipeline (Bash Pseudo-code):
 # ```bash
