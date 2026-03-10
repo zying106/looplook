@@ -184,7 +184,7 @@ annotate_peaks_and_loops <- function(
           candidates <- data.frame(query_idx = S4Vectors::queryHits(hits), gene_id = names(all_genes)[S4Vectors::subjectHits(hits)], stringsAsFactors = FALSE)
 
 
-          gene_map <- suppressMessages(AnnotationDbi::select(utils::getFromNamespace(org_db_pkg, org_db_pkg), keys = unique(candidates$gene_id), columns = c("SYMBOL", "GENETYPE"), keytype = "ENTREZID"))
+          gene_map <- AnnotationDbi::select(utils::getFromNamespace(org_db_pkg, org_db_pkg), keys = unique(candidates$gene_id), columns = c("SYMBOL", "GENETYPE"), keytype = "ENTREZID")
 
 
           gene_map$tpm <- if (!is.null(gene_expr_map)) ifelse(is.na(gene_expr_map[gene_map$SYMBOL]), 0, gene_expr_map[gene_map$SYMBOL]) else 0

@@ -724,7 +724,7 @@ run_gsea_analysis <- function(target_genes, global_glist, gsea_ntop, current_pro
         minGSSize = 2,
         maxGSSize = 50000,
         verbose = FALSE,
-        seed = 123
+        seed = TRUE
       )
     },
     error = function(e) {
@@ -855,12 +855,12 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
   clean_genes <- unique(trimws(as.character(genes)))
   clean_genes <- clean_genes[clean_genes != "" & clean_genes != "NA"]
 
-  gene_entrez <- suppressMessages(tryCatch(
+  gene_entrez <- tryCatch(
     {
       AnnotationDbi::mapIds(get(org_db), keys = clean_genes, column = "ENTREZID", keytype = "SYMBOL", multiVals = "first")
     },
     error = function(e) NULL
-  ))
+  )
 
   valid_entrez <- na.omit(gene_entrez)
 
@@ -880,12 +880,12 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
     if (use_symbol_mode) {
       final_universe <- names(universe_genes)
     } else {
-      univ_entrez <- suppressMessages(tryCatch(
+      univ_entrez <- tryCatch(
         {
           AnnotationDbi::mapIds(get(org_db), keys = names(universe_genes), column = "ENTREZID", keytype = "SYMBOL", multiVals = "first")
         },
         error = function(e) NULL
-      ))
+      )
       final_universe <- na.omit(univ_entrez)
     }
   }
@@ -1562,7 +1562,7 @@ run_heatmap_and_connectivity <- function(target_genes, tpm_mat_raw, meta_raw, lo
           clean_theme
 
         out_box_lfc <- file.path(out_dir, paste0(current_proj_name, "_", file_tag_rc, "_Raincloud_LFC.pdf"))
-        suppressWarnings(ggplot2::ggsave(out_box_lfc, p_box_lfc, width = plot_width, height = plot_height))
+        ggplot2::ggsave(out_box_lfc, p_box_lfc, width = plot_width, height = plot_height)
         message("    Saved Raincloud Plot (LFC): ", out_box_lfc)
 
         subtitle_text_expr <- get_pval_str("Expression")
@@ -1610,7 +1610,7 @@ run_heatmap_and_connectivity <- function(target_genes, tpm_mat_raw, meta_raw, lo
           clean_theme
 
         out_box_expr <- file.path(out_dir, paste0(current_proj_name, "_", file_tag_rc, "_Raincloud_Expr.pdf"))
-        suppressWarnings(ggplot2::ggsave(out_box_expr, p_box_expr, width = plot_width, height = plot_height))
+        ggplot2::ggsave(out_box_expr, p_box_expr, width = plot_width, height = plot_height)
         message("    Saved Raincloud Plot (Expr): ", out_box_expr)
       } else {
         warning("   Not enough variance to split groups.")
@@ -1731,8 +1731,10 @@ run_distal_motif_analysis <- function(target_genes, loop_df, genome_id, pval_thr
   }
 
   req_pkgs <- c("ggplot2", "dplyr")
-  for (pkg in req_pkgs) if (!requireNamespace(pkg, quietly = TRUE)) {
-    return()
+  for (pkg in req_pkgs) {
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+      return()
+    }
   }
 
   # Check if Family column exists
