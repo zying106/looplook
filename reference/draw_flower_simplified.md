@@ -52,5 +52,5 @@ draw_flower_simplified(
   filename = tempfile(fileext = ".png"),
   group_colors = c(Control = "#E41A1C", Treated = "#377EB8", Resistant = "#4DAF4A")
 )
-#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpcQ9gpW/file22ea3fb262d9.png
+#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpLFv4cM/file227a12f49671.png
 ```
