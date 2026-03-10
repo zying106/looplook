@@ -4,7 +4,7 @@ output: github_document
 
 # looplook <img src="man/figures/logo.png" align="right" width="160" alt="Looplook Logo" />
 
-A multi-omics suite for expression-aware target assignment and topological profiling of 3D chromatin networks.
+An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions.
 
 [![R-CMD-check](https://github.com/zying106/looplook/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/zying106/looplook/actions/workflows/R-CMD-check.yaml)
 [![License: GPL (>= 3)](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
