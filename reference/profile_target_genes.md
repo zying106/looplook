@@ -321,13 +321,13 @@ if (rdata_path != "" && expr_path != "" && diff_path != "" && meta_path != "") {
 #>      Loops: Successfully located 'Putative_Target_Genes'
 #> 
 #> --- Task: EP_Genes (Valid Genes: 36) ---
-#>     Saved LFC Violin Plot: /tmp/RtmppppxDY/Scenario_A_Integrative_loops_EP_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmppppxDY/Scenario_A_Integrative_loops_EP_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/RtmpRjnvH9/Scenario_A_Integrative_loops_EP_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/RtmpRjnvH9/Scenario_A_Integrative_loops_EP_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #> --- Task: PP_Genes (Valid Genes: 124) ---
-#>     Saved LFC Violin Plot: /tmp/RtmppppxDY/Scenario_A_Integrative_loops_PP_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmppppxDY/Scenario_A_Integrative_loops_PP_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/RtmpRjnvH9/Scenario_A_Integrative_loops_PP_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/RtmpRjnvH9/Scenario_A_Integrative_loops_PP_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #> ================================================================
@@ -335,8 +335,8 @@ if (rdata_path != "" && expr_path != "" && diff_path != "" && meta_path != "") {
 #>       Targets: Successfully located 'Assigned_Target_Genes_Filled'
 #> 
 #> --- Task: Target_Genes (Valid Genes: 937) ---
-#>     Saved LFC Violin Plot: /tmp/RtmppppxDY/Scenario_A_Integrative_targets_Target_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmppppxDY/Scenario_A_Integrative_targets_Target_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/RtmpRjnvH9/Scenario_A_Integrative_targets_Target_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/RtmpRjnvH9/Scenario_A_Integrative_targets_Target_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #>  All analysis complete.
@@ -349,8 +349,8 @@ if (rdata_path != "" && expr_path != "" && diff_path != "" && meta_path != "") {
 #>       Targets: Successfully located 'Regulated_promoter_genes_Filled'
 #> 
 #> --- Task: Target_Genes (Valid Genes: 931) ---
-#>     Saved LFC Violin Plot: /tmp/RtmppppxDY/Scenario_B_PromoterOnly_Promoter_targets_Target_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmppppxDY/Scenario_B_PromoterOnly_Promoter_targets_Target_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/RtmpRjnvH9/Scenario_B_PromoterOnly_Promoter_targets_Target_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/RtmpRjnvH9/Scenario_B_PromoterOnly_Promoter_targets_Target_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #>  All analysis complete.
@@ -363,13 +363,13 @@ if (rdata_path != "" && expr_path != "" && diff_path != "" && meta_path != "") {
 #>      Loops: Successfully located 'Putative_Target_Genes'
 #> 
 #> --- Task: EP_Genes (Valid Genes: 36) ---
-#>     Saved LFC Violin Plot: /tmp/RtmppppxDY/Scenario_C_StrictLoops_loops_EP_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmppppxDY/Scenario_C_StrictLoops_loops_EP_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/RtmpRjnvH9/Scenario_C_StrictLoops_loops_EP_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/RtmpRjnvH9/Scenario_C_StrictLoops_loops_EP_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #> --- Task: PP_Genes (Valid Genes: 124) ---
-#>     Saved LFC Violin Plot: /tmp/RtmppppxDY/Scenario_C_StrictLoops_loops_PP_Genes_LFC_Violin.pdf
-#>     Saved GSEA Plot (Custom): /tmp/RtmppppxDY/Scenario_C_StrictLoops_loops_PP_Genes_GSEA.pdf
+#>     Saved LFC Violin Plot: /tmp/RtmpRjnvH9/Scenario_C_StrictLoops_loops_PP_Genes_LFC_Violin.pdf
+#>     Saved GSEA Plot (Custom): /tmp/RtmpRjnvH9/Scenario_C_StrictLoops_loops_PP_Genes_GSEA.pdf
 #>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...
 #> 
 #>  All analysis complete.

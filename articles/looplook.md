@@ -900,10 +900,10 @@ sessionInfo()
 #> other attached packages:
 #> [1] org.Hs.eg.db_3.22.0  AnnotationDbi_1.72.0 IRanges_2.44.0      
 #> [4] S4Vectors_0.48.0     Biobase_2.70.0       BiocGenerics_0.56.0 
-#> [7] generics_0.1.4       looplook_0.99.1      BiocStyle_2.38.0    
+#> [7] generics_0.1.4       looplook_0.99.2      BiocStyle_2.38.0    
 #> 
 #> loaded via a namespace (and not attached):
-#>   [1] fs_1.6.6                                
+#>   [1] fs_1.6.7                                
 #>   [2] ProtGenerics_1.42.0                     
 #>   [3] matrixStats_1.5.0                       
 #>   [4] bitops_1.0-9                            
@@ -918,14 +918,14 @@ sessionInfo()
 #>  [13] withr_3.0.2                             
 #>  [14] gridExtra_2.3                           
 #>  [15] cli_3.6.5                               
-#>  [16] textshaping_1.0.4                       
+#>  [16] textshaping_1.0.5                       
 #>  [17] scatterpie_0.2.6                        
 #>  [18] labeling_0.4.3                          
 #>  [19] sass_0.4.10                             
 #>  [20] S7_0.2.1                                
 #>  [21] pkgdown_2.2.0                           
 #>  [22] Rsamtools_2.26.0                        
-#>  [23] systemfonts_1.3.1                       
+#>  [23] systemfonts_1.3.2                       
 #>  [24] yulab.utils_0.2.4                       
 #>  [25] foreign_0.8-90                          
 #>  [26] DOSE_4.4.0                              
@@ -951,7 +951,7 @@ sessionInfo()
 #>  [46] SummarizedExperiment_1.40.0             
 #>  [47] gplots_3.3.0                            
 #>  [48] qvalue_2.42.0                           
-#>  [49] SparseArray_1.10.8                      
+#>  [49] SparseArray_1.10.9                      
 #>  [50] grid_4.5.2                              
 #>  [51] blob_1.3.0                              
 #>  [52] promises_1.5.0                          
@@ -1078,9 +1078,9 @@ sessionInfo()
 #> [173] AnnotationFilter_1.34.0                 
 #> [174] tidytree_0.4.7                          
 #> [175] tidydr_0.0.6                            
-#> [176] later_1.4.7                             
+#> [176] later_1.4.8                             
 #> [177] viridisLite_0.4.3                       
-#> [178] ragg_1.5.0                              
+#> [178] ragg_1.5.1                              
 #> [179] TxDb.Hsapiens.UCSC.hg38.knownGene_3.22.0
 #> [180] tibble_3.3.1                            
 #> [181] websocket_1.4.4                         

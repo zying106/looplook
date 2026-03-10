@@ -186,28 +186,28 @@ if (f1 != "" && f2 != "") {
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmppppxDY/file22f8180cc8ad.bedpe
+#> Finished! Saved to /tmp/RtmpRjnvH9/file238178294a07.bedpe
 #> Finished! Final loops: 104
 #> >>> Reading BEDPE files
 #>     File 1: 1000 loops
 #>     File 2: 1000 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/RtmppppxDY/file22f834d012b.bedpe
+#> Finished! Saved to /tmp/RtmpRjnvH9/file23812c2ca131.bedpe
 #> Finished! Final loops: 101
 #> >>> Reading BEDPE files
 #>     File 1: 1000 loops
 #>     File 2: 1000 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Union mode: Keeping all clusters
-#> Finished! Saved to /tmp/RtmppppxDY/file22f882f5b3f.bedpe
+#> Finished! Saved to /tmp/RtmpRjnvH9/file2381292cab84.bedpe
 #> Finished! Final loops: 1899
 #> >>> Reading BEDPE files
 #>     File 1: 369 loops
 #>     File 2: 333 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/RtmppppxDY/file22f86132d87c.bedpe
+#> Finished! Saved to /tmp/RtmpRjnvH9/file23815565dfaf.bedpe
 #> Finished! Final loops: 26
 #> [1] 26
 ```
