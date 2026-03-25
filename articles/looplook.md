@@ -900,7 +900,7 @@ sessionInfo()
 #> other attached packages:
 #> [1] org.Hs.eg.db_3.22.0  AnnotationDbi_1.72.0 IRanges_2.44.0      
 #> [4] S4Vectors_0.48.0     Biobase_2.70.0       BiocGenerics_0.56.0 
-#> [7] generics_0.1.4       looplook_0.99.3      BiocStyle_2.38.0    
+#> [7] generics_0.1.4       looplook_0.99.4      BiocStyle_2.38.0    
 #> 
 #> loaded via a namespace (and not attached):
 #>   [1] fs_2.0.0                                
