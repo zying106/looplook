@@ -68,7 +68,7 @@ This function consolidates chromatin loops from multiple BEDPE files. It is desi
 
 The function supports three modes:
 \itemize{
-\item \code{"consensus"}: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in ≥ min_consensus biological replicates.
+\item \code{"consensus"}: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in >= min_consensus biological replicates.
 \item \code{"intersect"}: Enforces strict reference-based filtering, retaining loops that show full genomic overlap with the reference file (File 1).
 \item \code{"union"}: Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.
 }

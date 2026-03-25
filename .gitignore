@@ -9,3 +9,11 @@ docs
 .DS_Store
 looplook.Rproj
 *.Rproj
+..Rcheck/
+..Rcheck/
+.Rproj.user/
+.Rhistory
+*.Rproj
+.DS_Store
+Meta/
+pkgdown/
