@@ -94,10 +94,10 @@ This module identifies **multi-source consensus** by integrating datasets from v
 ### Parameter Strategy
 
 * **`mode`**: Defines the overarching merging algorithm.
-    * `"consensus"` *(Recommended)*: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in ≥ `min_consensus` biological replicates.
+    * `"consensus"` *(Recommended)*: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in >= `min_consensus` biological replicates.
     * `"intersect"`: Enforces strict reference-based filtering, retaining loops that show full genomic overlap with the reference file (File 1). 
     * `"union"`: Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.
-* **`min_consensus`**: When using `"consensus"` mode, this parameter defines the minimum number of biological replicates in which a loop cluster must be detected to be retained in the final dataset. If set to `NULL`, the algorithm dynamically computes a strict majority threshold (e.g., ≥ 75% of replicates).
+* **`min_consensus`**: When using `"consensus"` mode, this parameter defines the minimum number of biological replicates in which a loop cluster must be detected to be retained in the final dataset. If set to `NULL`, the algorithm dynamically computes a strict majority threshold (e.g., >= 75% of replicates).
 * **`gap`**: Defines the maximum allowable spatial distance (in base pairs) between loop anchors for them to be considered as part of the same physical cluster (default: `1000`).
 * **`min_raw_score` vs. `min_score` (The Dual-Filter)**:
     * `min_raw_score` acts as a pre-filter applied to individual BEDPE files before clustering (e.g., removing singleton noise where PET count < 2) to substantially reduce computational memory overhead.
