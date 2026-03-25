@@ -1,6 +1,6 @@
 Package: looplook
 Title: Integrative suite for target assignment and functional annotation of chromatin interactions
-Version: 0.99.3
+Version: 0.99.4
 Authors@R: c(
     person(given = "Ying", family = "ZHANG", 
            role = c("aut", "cre"), 
