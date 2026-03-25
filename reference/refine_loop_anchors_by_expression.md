@@ -157,24 +157,7 @@ if (rdata_path != "" && expr_path != "") {
   raw_annotation <- temp_env[[ls(temp_env)[1]]]
 
   # =========================================================================
-  # Example A: Standard filtering WITHOUT loop reclassification
-  # =========================================================================
-  res_basic <- refine_loop_anchors_by_expression(
-    annotation_res = raw_annotation,
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
-    threshold = 1.0,
-    unit_type = "TPM",
-    species = "hg38",
-    out_dir = tempdir(),
-    project_name = "Example_Basic",
-    reclassify_by_expression = FALSE
-  )
-
-  print(table(res_basic$loop_annotation$loop_type))
-
-  # =========================================================================
-  # Example B: Advanced filtering WITH Transcriptome-Guided Reclassification
+  # Example : Advanced filtering WITH Transcriptome-Guided Reclassification
   # =========================================================================
   res_reclassified <- refine_loop_anchors_by_expression(
     annotation_res = raw_annotation,
@@ -191,29 +174,6 @@ if (rdata_path != "" && expr_path != "") {
   # View the biologically corrected loop types (e.g., transition from P-P to eP-P)
   print(table(res_reclassified$loop_annotation$loop_type))
 }
-#> >>> [Refinement] Project Name: Example_Basic_Filtered
-#> >>> [Step 1] Loading Data & Expression Matrix...
-#>     [Info] 'a1_id'/'a2_id' columns missing. Reconstructing from coordinates...
-#>     >>> Active Genes (> 1 TPM): 0
-#> >>> [Step 2] Updating Anchors & Loops...
-#> >>> [Step 3] Updating Stats...
-#> >>> [Step 4] Refining Target Annotations...
-#> >>> [Step 5] Generating Visualizations...
-#>     Drawing Target Sankey Diagram...
-#> Links is a tbl_df. Converting to a plain data frame.
-#> file:////tmp/RtmpLFv4cM/Example_Basic_Filtered_Target_Sankey.html screenshot completed
-#>   2169 genes were dropped because they have exons located on both strands of
-#>   the same reference sequence or on more than one reference sequence, so cannot
-#>   be represented by a single genomic range.
-#>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
-#>   object, or use suppressMessages() to suppress this message.
-#> 'select()' returned 1:1 mapping between keys and columns
-#> >>> [Step 6] Exporting Refined Results...
-#>     Excel saved.
-#> Refinement Complete.
-#> 
-#> E-E E-G E-P G-G G-P P-P 
-#>   8  60  90 127 339 376 
 #> >>> [Refinement] Project Name: Example_Reclassified_Filtered
 #> >>> [Step 1] Loading Data & Expression Matrix...
 #>     [Info] 'a1_id'/'a2_id' columns missing. Reconstructing from coordinates...
@@ -224,7 +184,7 @@ if (rdata_path != "" && expr_path != "") {
 #> >>> [Step 5] Generating Visualizations...
 #>     Drawing Target Sankey Diagram...
 #> Links is a tbl_df. Converting to a plain data frame.
-#> file:////tmp/RtmpLFv4cM/Example_Reclassified_Filtered_Target_Sankey.html screenshot completed
+#> file:////tmp/Rtmpk68Xz3/Example_Reclassified_Filtered_Target_Sankey.html screenshot completed
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
 #>   be represented by a single genomic range.

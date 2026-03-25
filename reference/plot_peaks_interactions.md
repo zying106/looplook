@@ -116,19 +116,7 @@ bed_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
 if (bedpe_path != "" &&
   requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-  # Example A: Basic plot with loops only
-  # Plotting the region around the example loop (chr1:10,000-50,000)
-  p1 <- plot_peaks_interactions(
-    bedpe_file = bedpe_path,
-    target_bed = bed_path,
-    chr = "chr1",
-    from = 11884299,
-    to = 12106581,
-    species = "hg38"
-  )
-  print(p1)
-
-  # Example B: Integrative plot with overlapping peaks and output to file
+  # Example : Integrative plot with overlapping peaks and output to file
   p2 <- plot_peaks_interactions(
     bedpe_file = bedpe_path,
     target_bed = bed_path,
@@ -150,12 +138,4 @@ if (bedpe_path != "" &&
 #> ℹ Please use the `linewidth` argument instead.
 #> ℹ The deprecated feature was likely used in the looplook package.
 #>   Please report the issue at <https://github.com/zying106/looplook/issues>.
-
-#>   2169 genes were dropped because they have exons located on both strands of
-#>   the same reference sequence or on more than one reference sequence, so cannot
-#>   be represented by a single genomic range.
-#>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
-#>   object, or use suppressMessages() to suppress this message.
-#> 'select()' returned 1:1 mapping between keys and columns
-#> 'select()' returned 1:1 mapping between keys and columns
 ```

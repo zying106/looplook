@@ -39,21 +39,21 @@ if (bed_path != "") {
   # Check how many peaks were loaded
   length(gr)
 }
-#> GRanges object with 2000 ranges and 0 metadata columns:
-#>          seqnames              ranges strand
-#>             <Rle>           <IRanges>  <Rle>
-#>      [1]     chr1   36118048-36118548      *
-#>      [2]     chr1   64072284-64073108      *
-#>      [3]     chr1 119630541-119633050      *
-#>      [4]     chr1 209038325-209040095      *
-#>      [5]     chr1   28064912-28068276      *
-#>      ...      ...                 ...    ...
-#>   [1996]     chr1 226777783-226779926      *
-#>   [1997]     chr1   25642050-25642876      *
-#>   [1998]     chr1   84602828-84605421      *
-#>   [1999]     chr1     1437476-1439020      *
-#>   [2000]     chr1   21320654-21327079      *
+#> GRanges object with 300 ranges and 0 metadata columns:
+#>         seqnames              ranges strand
+#>            <Rle>           <IRanges>  <Rle>
+#>     [1]     chr1 171285865-171286512      *
+#>     [2]     chr1   69582109-69582609      *
+#>     [3]     chr1   93669531-93670158      *
+#>     [4]     chr1 230112638-230115006      *
+#>     [5]     chr1   83034931-83035876      *
+#>     ...      ...                 ...    ...
+#>   [296]     chr1     2193690-2196269      *
+#>   [297]     chr1 101024799-101027134      *
+#>   [298]     chr1   81834837-81835950      *
+#>   [299]     chr1 222711087-222714102      *
+#>   [300]     chr1 205449123-205449901      *
 #>   -------
 #>   seqinfo: 1 sequence from an unspecified genome; no seqlengths
-#> [1] 2000
+#> [1] 300
 ```

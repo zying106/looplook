@@ -876,7 +876,7 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 
 ``` r
 sessionInfo()
-#> R version 4.5.2 (2025-10-31)
+#> R version 4.5.3 (2026-03-11)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.3 LTS
 #> 
@@ -900,10 +900,10 @@ sessionInfo()
 #> other attached packages:
 #> [1] org.Hs.eg.db_3.22.0  AnnotationDbi_1.72.0 IRanges_2.44.0      
 #> [4] S4Vectors_0.48.0     Biobase_2.70.0       BiocGenerics_0.56.0 
-#> [7] generics_0.1.4       looplook_0.99.2      BiocStyle_2.38.0    
+#> [7] generics_0.1.4       looplook_0.99.3      BiocStyle_2.38.0    
 #> 
 #> loaded via a namespace (and not attached):
-#>   [1] fs_1.6.7                                
+#>   [1] fs_2.0.0                                
 #>   [2] ProtGenerics_1.42.0                     
 #>   [3] matrixStats_1.5.0                       
 #>   [4] bitops_1.0-9                            
@@ -911,7 +911,7 @@ sessionInfo()
 #>   [6] httr_1.4.8                              
 #>   [7] RColorBrewer_1.1-3                      
 #>   [8] InteractionSet_1.38.0                   
-#>   [9] tools_4.5.2                             
+#>   [9] tools_4.5.3                             
 #>  [10] backports_1.5.0                         
 #>  [11] R6_2.6.1                                
 #>  [12] lazyeval_0.2.2                          
@@ -927,7 +927,7 @@ sessionInfo()
 #>  [22] Rsamtools_2.26.0                        
 #>  [23] systemfonts_1.3.2                       
 #>  [24] yulab.utils_0.2.4                       
-#>  [25] foreign_0.8-90                          
+#>  [25] foreign_0.8-91                          
 #>  [26] DOSE_4.4.0                              
 #>  [27] R.utils_2.13.0                          
 #>  [28] dichromat_2.0-0.1                       
@@ -952,12 +952,12 @@ sessionInfo()
 #>  [47] gplots_3.3.0                            
 #>  [48] qvalue_2.42.0                           
 #>  [49] SparseArray_1.10.9                      
-#>  [50] grid_4.5.2                              
+#>  [50] grid_4.5.3                              
 #>  [51] blob_1.3.0                              
 #>  [52] promises_1.5.0                          
 #>  [53] crayon_1.5.3                            
 #>  [54] ggtangle_0.1.1                          
-#>  [55] lattice_0.22-7                          
+#>  [55] lattice_0.22-9                          
 #>  [56] cowplot_1.2.0                           
 #>  [57] GenomicFeatures_1.62.0                  
 #>  [58] cigarillo_1.0.0                         
@@ -976,19 +976,19 @@ sessionInfo()
 #>  [71] ggfun_0.2.0                             
 #>  [72] fontLiberation_0.1.0                    
 #>  [73] data.table_1.18.2.1                     
-#>  [74] vctrs_0.7.1                             
-#>  [75] png_0.1-8                               
+#>  [74] vctrs_0.7.2                             
+#>  [75] png_0.1-9                               
 #>  [76] treeio_1.34.0                           
 #>  [77] spam_2.11-3                             
 #>  [78] gtable_0.3.6                            
 #>  [79] cachem_1.1.0                            
-#>  [80] xfun_0.56                               
+#>  [80] xfun_0.57                               
 #>  [81] openxlsx_4.2.8.1                        
 #>  [82] S4Arrays_1.10.1                         
 #>  [83] Seqinfo_1.0.0                           
 #>  [84] fields_17.1                             
 #>  [85] nlme_3.1-168                            
-#>  [86] ggtree_4.0.4                            
+#>  [86] ggtree_4.0.5                            
 #>  [87] bit64_4.6.0-1                           
 #>  [88] fontquiver_0.2.1                        
 #>  [89] UpSetR_1.4.0                            
@@ -1005,7 +1005,7 @@ sessionInfo()
 #> [100] tidyselect_1.2.1                        
 #> [101] processx_3.8.6                          
 #> [102] bit_4.6.0                               
-#> [103] compiler_4.5.2                          
+#> [103] compiler_4.5.3                          
 #> [104] curl_7.0.0                              
 #> [105] htmlTable_2.4.3                         
 #> [106] bezier_1.1.2                            
@@ -1041,7 +1041,7 @@ sessionInfo()
 #> [136] GOSemSim_2.36.0                         
 #> [137] R.oo_1.27.1                             
 #> [138] VariantAnnotation_1.56.0                
-#> [139] RCurl_1.98-1.17                         
+#> [139] RCurl_1.98-1.18                         
 #> [140] magrittr_2.0.4                          
 #> [141] Formula_1.2-5                           
 #> [142] ggplotify_0.1.3                         
@@ -1055,14 +1055,14 @@ sessionInfo()
 #> [150] stringi_1.8.7                           
 #> [151] MASS_7.3-65                             
 #> [152] plyr_1.8.9                              
-#> [153] parallel_4.5.2                          
-#> [154] ggrepel_0.9.7                           
+#> [153] parallel_4.5.3                          
+#> [154] ggrepel_0.9.8                           
 #> [155] Biostrings_2.78.0                       
-#> [156] splines_4.5.2                           
+#> [156] splines_4.5.3                           
 #> [157] ps_1.9.1                                
 #> [158] igraph_2.2.2                            
 #> [159] reshape2_1.4.5                          
-#> [160] XML_3.99-0.22                           
+#> [160] XML_3.99-0.23                           
 #> [161] evaluate_1.0.5                          
 #> [162] biovizBase_1.58.0                       
 #> [163] BiocManager_1.30.27                     
@@ -1080,12 +1080,12 @@ sessionInfo()
 #> [175] tidydr_0.0.6                            
 #> [176] later_1.4.8                             
 #> [177] viridisLite_0.4.3                       
-#> [178] ragg_1.5.1                              
+#> [178] ragg_1.5.2                              
 #> [179] TxDb.Hsapiens.UCSC.hg38.knownGene_3.22.0
 #> [180] tibble_3.3.1                            
 #> [181] websocket_1.4.4                         
 #> [182] aplot_0.2.9                             
 #> [183] memoise_2.0.1                           
 #> [184] GenomicAlignments_1.46.0                
-#> [185] cluster_2.1.8.1
+#> [185] cluster_2.1.8.2
 ```

@@ -29,7 +29,7 @@ Interaction Networks (PPI): Constructs and visualizes high-confidence Protein-Pr
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -241,135 +241,36 @@ to systematically characterize the functional landscape and regulatory mechanism
 <span class="r-in"><span>  <span class="va">out_base</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># =========================================================================</span></span></span>
-<span class="r-in"><span>  <span class="co"># Scenario A: Comprehensive Integrative Profiling (Loops + Targets)</span></span></span>
+<span class="r-in"><span>  <span class="co"># Comprehensive Integrative Profiling (Loops + Targets)</span></span></span>
 <span class="r-in"><span>  <span class="co">#</span></span></span>
-<span class="r-in"><span>  <span class="co"># Application:</span></span></span>
-<span class="r-in"><span>  <span class="co"># Best for complete HiChIP + ATAC-seq (or ChIP-seq) joint analysis.</span></span></span>
-<span class="r-in"><span>  <span class="co"># It maps genes regulated by BOTH 3D distal loops and 1D direct target overlaps.</span></span></span>
 <span class="r-in"><span>  <span class="co"># =========================================================================</span></span></span>
-<span class="r-in"><span>  <span class="va">res_A</span> <span class="op">&lt;-</span> <span class="fu">profile_target_genes</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">profile_target_genes</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    annotation_res <span class="op">=</span> <span class="va">raw_annotation</span>,</span></span>
 <span class="r-in"><span>    diff_file <span class="op">=</span> <span class="va">diff_path</span>,</span></span>
 <span class="r-in"><span>    lfc_col <span class="op">=</span> <span class="st">"log2FoldChange"</span>,</span></span>
 <span class="r-in"><span>    expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span></span>
 <span class="r-in"><span>    metadata_file <span class="op">=</span> <span class="va">meta_path</span>,</span></span>
-<span class="r-in"><span>    target_source <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"loops"</span>, <span class="st">"targets"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    target_source <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"targets"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    target_mapping_mode <span class="op">=</span> <span class="st">"all"</span>,</span></span>
-<span class="r-in"><span>    include_Filled <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
+<span class="r-in"><span>    include_Filled <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
 <span class="r-in"><span>    use_nearest_gene <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
 <span class="r-in"><span>    project_name <span class="op">=</span> <span class="st">"Scenario_A_Integrative"</span>,</span></span>
 <span class="r-in"><span>    out_dir <span class="op">=</span> <span class="va">out_base</span>,</span></span>
 <span class="r-in"><span>    run_go <span class="op">=</span> <span class="cn">FALSE</span>, <span class="co"># Set to TRUE in real analysis</span></span></span>
 <span class="r-in"><span>    run_ppi <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="co"># =========================================================================</span></span></span>
-<span class="r-in"><span>  <span class="co"># Scenario B: Peak-Centric &amp; Promoter-Strict Profiling</span></span></span>
-<span class="r-in"><span>  <span class="co">#</span></span></span>
-<span class="r-in"><span>  <span class="co"># Application:</span></span></span>
-<span class="r-in"><span>  <span class="co"># Focuses ONLY on 1D peaks ("targets") and STRICTLY restricts the mapping</span></span></span>
-<span class="r-in"><span>  <span class="co"># to genes where peaks fall directly on their "promoter".</span></span></span>
-<span class="r-in"><span>  <span class="co"># Ideal for baseline epigenetic profiling, ignoring distal 3D regulation.</span></span></span>
-<span class="r-in"><span>  <span class="co"># =========================================================================</span></span></span>
-<span class="r-in"><span>  <span class="va">res_B</span> <span class="op">&lt;-</span> <span class="fu">profile_target_genes</span><span class="op">(</span></span></span>
-<span class="r-in"><span>    annotation_res <span class="op">=</span> <span class="va">raw_annotation</span>,</span></span>
-<span class="r-in"><span>    diff_file <span class="op">=</span> <span class="va">diff_path</span>,</span></span>
-<span class="r-in"><span>    lfc_col <span class="op">=</span> <span class="st">"log2FoldChange"</span>,</span></span>
-<span class="r-in"><span>    expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span></span>
-<span class="r-in"><span>    metadata_file <span class="op">=</span> <span class="va">meta_path</span>,</span></span>
-<span class="r-in"><span>    target_source <span class="op">=</span> <span class="st">"targets"</span>, <span class="co"># Only 1D targets</span></span></span>
-<span class="r-in"><span>    target_mapping_mode <span class="op">=</span> <span class="st">"promoter"</span>, <span class="co"># Strict promoter mapping</span></span></span>
-<span class="r-in"><span>    include_Filled <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
-<span class="r-in"><span>    use_nearest_gene <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>    project_name <span class="op">=</span> <span class="st">"Scenario_B_PromoterOnly"</span>,</span></span>
-<span class="r-in"><span>    out_dir <span class="op">=</span> <span class="va">out_base</span>,</span></span>
-<span class="r-in"><span>    run_go <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>    run_ppi <span class="op">=</span> <span class="cn">FALSE</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="co"># =========================================================================</span></span></span>
-<span class="r-in"><span>  <span class="co"># Scenario C: Highly Conservative Distal Enhancer-Targeting</span></span></span>
-<span class="r-in"><span>  <span class="co">#</span></span></span>
-<span class="r-in"><span>  <span class="co"># Application:</span></span></span>
-<span class="r-in"><span>  <span class="co"># Focuses on 3D loops. By setting `use_nearest_gene = TRUE` and</span></span></span>
-<span class="r-in"><span>  <span class="co"># `include_Filled = FALSE`, it forces the selection of strictly the nearest</span></span></span>
-<span class="r-in"><span>  <span class="co"># genes to the anchors, preventing the expansion of gene lists from broader</span></span></span>
-<span class="r-in"><span>  <span class="co"># annotated regions. Ensures a highly conservative gene target list.</span></span></span>
-<span class="r-in"><span>  <span class="co"># =========================================================================</span></span></span>
-<span class="r-in"><span>  <span class="va">res_C</span> <span class="op">&lt;-</span> <span class="fu">profile_target_genes</span><span class="op">(</span></span></span>
-<span class="r-in"><span>    annotation_res <span class="op">=</span> <span class="va">raw_annotation</span>,</span></span>
-<span class="r-in"><span>    diff_file <span class="op">=</span> <span class="va">diff_path</span>,</span></span>
-<span class="r-in"><span>    lfc_col <span class="op">=</span> <span class="st">"log2FoldChange"</span>,</span></span>
-<span class="r-in"><span>    expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span></span>
-<span class="r-in"><span>    metadata_file <span class="op">=</span> <span class="va">meta_path</span>,</span></span>
-<span class="r-in"><span>    target_source <span class="op">=</span> <span class="st">"loops"</span>, <span class="co"># Only 3D loops</span></span></span>
-<span class="r-in"><span>    target_mapping_mode <span class="op">=</span> <span class="st">"all"</span>,</span></span>
-<span class="r-in"><span>    include_Filled <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>    use_nearest_gene <span class="op">=</span> <span class="cn">TRUE</span>, <span class="co"># Strictly nearest gene</span></span></span>
-<span class="r-in"><span>    project_name <span class="op">=</span> <span class="st">"Scenario_C_StrictLoops"</span>,</span></span>
-<span class="r-in"><span>    out_dir <span class="op">=</span> <span class="va">out_base</span>,</span></span>
-<span class="r-in"><span>    run_go <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>    run_ppi <span class="op">=</span> <span class="cn">FALSE</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Analysis Init | Root Project: Scenario_A_Integrative</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Reading files...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Loaded Promoter Centric Stats.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ================================================================</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Processing Source: [loops]</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>      Loops: Successfully located 'Putative_Target_Genes'</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: EP_Genes (Valid Genes: 36) ---</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved LFC Violin Plot: /tmp/RtmpLFv4cM/Scenario_A_Integrative_loops_EP_Genes_LFC_Violin.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved GSEA Plot (Custom): /tmp/RtmpLFv4cM/Scenario_A_Integrative_loops_EP_Genes_GSEA.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: PP_Genes (Valid Genes: 124) ---</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved LFC Violin Plot: /tmp/RtmpLFv4cM/Scenario_A_Integrative_loops_PP_Genes_LFC_Violin.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved GSEA Plot (Custom): /tmp/RtmpLFv4cM/Scenario_A_Integrative_loops_PP_Genes_GSEA.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ================================================================</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Processing Source: [targets]</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>       Targets: Successfully located 'Assigned_Target_Genes_Filled'</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: Target_Genes (Valid Genes: 937) ---</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved LFC Violin Plot: /tmp/RtmpLFv4cM/Scenario_A_Integrative_targets_Target_Genes_LFC_Violin.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved GSEA Plot (Custom): /tmp/RtmpLFv4cM/Scenario_A_Integrative_targets_Target_Genes_GSEA.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  All analysis complete.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Analysis Init | Root Project: Scenario_B_PromoterOnly_Promoter</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Analysis Init | Root Project: Scenario_A_Integrative_LoopOnly</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Reading files...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Loaded Promoter Centric Stats.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ================================================================</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Processing Source: [targets]</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>       Targets: Successfully located 'Regulated_promoter_genes_Filled'</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>       Targets: Successfully located 'Assigned_Target_Genes'</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: Target_Genes (Valid Genes: 931) ---</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved LFC Violin Plot: /tmp/RtmpLFv4cM/Scenario_B_PromoterOnly_Promoter_targets_Target_Genes_LFC_Violin.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved GSEA Plot (Custom): /tmp/RtmpLFv4cM/Scenario_B_PromoterOnly_Promoter_targets_Target_Genes_GSEA.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  All analysis complete.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Analysis Init | Root Project: Scenario_C_StrictLoops</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Reading files...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Loaded Promoter Centric Stats.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ================================================================</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Processing Source: [loops]</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>      Loops: Successfully located 'Putative_Target_Genes'</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: EP_Genes (Valid Genes: 36) ---</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved LFC Violin Plot: /tmp/RtmpLFv4cM/Scenario_C_StrictLoops_loops_EP_Genes_LFC_Violin.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved GSEA Plot (Custom): /tmp/RtmpLFv4cM/Scenario_C_StrictLoops_loops_EP_Genes_GSEA.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: PP_Genes (Valid Genes: 124) ---</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved LFC Violin Plot: /tmp/RtmpLFv4cM/Scenario_C_StrictLoops_loops_PP_Genes_LFC_Violin.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved GSEA Plot (Custom): /tmp/RtmpLFv4cM/Scenario_C_StrictLoops_loops_PP_Genes_GSEA.pdf</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: Target_Genes (Valid Genes: 150) ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved LFC Violin Plot: /tmp/Rtmpk68Xz3/Scenario_A_Integrative_LoopOnly_targets_Target_Genes_LFC_Violin.pdf</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved GSEA Plot (Custom): /tmp/Rtmpk68Xz3/Scenario_A_Integrative_LoopOnly_targets_Target_Genes_GSEA.pdf</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     [Extra Analysis] Found 'n_Linked_Distal'. Running distal connectivity analysis...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  All analysis complete.</span>

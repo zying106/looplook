@@ -47,7 +47,7 @@ Calculates precise node degrees to identify high-connectivity Promoter and Dista
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -187,7 +187,7 @@ Locus-level summarization of all 1D anchor footprints.</p></li>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"TxDb.Hsapiens.UCSC.hg38.knownGene"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span>  <span class="co"># =========================================================================</span></span></span>
-<span class="r-in"><span>  <span class="co"># Example A: Integrative Analysis (Loops + GWAS/ChIP-seq + Expression)</span></span></span>
+<span class="r-in"><span>  <span class="co">#  Integrative Analysis (Loops + GWAS/ChIP-seq + Expression)</span></span></span>
 <span class="r-in"><span>  <span class="co"># =========================================================================</span></span></span>
 <span class="r-in"><span>  <span class="co"># Here, `target_bed` can represent GWAS risk SNPs, ATAC-seq peaks, or</span></span></span>
 <span class="r-in"><span>  <span class="co"># ChIP-seq peaks. The engine bridges these 1D regions to their 3D genes.</span></span></span>
@@ -208,27 +208,6 @@ Locus-level summarization of all 1D anchor footprints.</p></li>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="co"># View integrated annotations linking external peaks/SNPs to target genes</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">target_annotation</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="co"># =========================================================================</span></span></span>
-<span class="r-in"><span>  <span class="co"># Example B: Deep Analysis of Loops ONLY (No auxiliary peaks)</span></span></span>
-<span class="r-in"><span>  <span class="co"># =========================================================================</span></span></span>
-<span class="r-in"><span>  <span class="va">res_loops_only</span> <span class="op">&lt;-</span> <span class="fu">annotate_peaks_and_loops</span><span class="op">(</span></span></span>
-<span class="r-in"><span>    bedpe_file <span class="op">=</span> <span class="va">bedpe_path</span>,</span></span>
-<span class="r-in"><span>    target_bed <span class="op">=</span> <span class="cn">NULL</span>,</span></span>
-<span class="r-in"><span>    species <span class="op">=</span> <span class="st">"hg38"</span>,</span></span>
-<span class="r-in"><span>    expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span></span>
-<span class="r-in"><span>    sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    tss_region <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2000</span>, <span class="fl">2000</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    out_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    color_palette <span class="op">=</span> <span class="st">"Set1"</span>,</span></span>
-<span class="r-in"><span>    karyo_bin_size <span class="op">=</span> <span class="fl">1e5</span>,</span></span>
-<span class="r-in"><span>    neighbor_hop <span class="op">=</span> <span class="fl">0</span>,</span></span>
-<span class="r-in"><span>    hub_percentile <span class="op">=</span> <span class="fl">0.95</span>,</span></span>
-<span class="r-in"><span>    project_name <span class="op">=</span> <span class="st">"Example_Loops_Only"</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="co"># View standalone loop annotations</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res_loops_only</span><span class="op">$</span><span class="va">loop_annotation</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Step 0: Loading expression data...</span>
@@ -325,20 +304,20 @@ Locus-level summarization of all 1D anchor footprints.</p></li>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 'select()' returned 1:1 mapping between keys and columns</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Step 6: Generating Visualizations...</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Ignoring unknown parameters: `size`</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  Saved: /tmp/RtmpLFv4cM/Example_HiChIP_Integrative_Basic_Circular.pdf</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>  Saved: /tmp/Rtmpk68Xz3/Example_HiChIP_Integrative_Basic_Circular.pdf</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   2169 genes were dropped because they have exons located on both strands of</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   the same reference sequence or on more than one reference sequence, so cannot</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   be represented by a single genomic range.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   object, or use suppressMessages() to suppress this message.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 'select()' returned 1:1 mapping between keys and columns</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved Heatmap: /tmp/RtmpLFv4cM/Example_HiChIP_Integrative_Basic_Karyo_LoopGenes.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved Heatmap: /tmp/RtmpLFv4cM/Example_HiChIP_Integrative_Basic_Karyo_Anchors.pdf</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved Heatmap: /tmp/Rtmpk68Xz3/Example_HiChIP_Integrative_Basic_Karyo_LoopGenes.pdf</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved Heatmap: /tmp/Rtmpk68Xz3/Example_HiChIP_Integrative_Basic_Karyo_Anchors.pdf</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Please use `linewidth` instead.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> The deprecated feature was likely used in the <span style="color: #0000BB;">looplook</span> package.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span>   Please report the issue at <span style="color: #0000BB; font-style: italic;">&lt;https://github.com/zying106/looplook/issues&gt;</span>.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpLFv4cM/Example_HiChIP_Integrative_Basic_Flower.pdf</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved (Simplified Flower Plot with inner counts): /tmp/Rtmpk68Xz3/Example_HiChIP_Integrative_Basic_Flower.pdf</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Plotting Target Visualizations...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   2169 genes were dropped because they have exons located on both strands of</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   the same reference sequence or on more than one reference sequence, so cannot</span>
@@ -346,71 +325,62 @@ Locus-level summarization of all 1D anchor footprints.</p></li>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   object, or use suppressMessages() to suppress this message.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> 'select()' returned 1:1 mapping between keys and columns</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved Heatmap: /tmp/RtmpLFv4cM/Example_HiChIP_Integrative_Basic_Karyo_TargetGenes.pdf</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved Heatmap: /tmp/Rtmpk68Xz3/Example_HiChIP_Integrative_Basic_Karyo_TargetGenes.pdf</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Generating Pie Chart 0: All Anchors Genomic Distribution...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Generating Pie Chart 1: All Targets Distribution...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Generating Pie Chart 2: Loop-Connected Targets Distribution...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Step 7: Exporting to Excel...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Excel file saved.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Analysis Complete.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Step 0: Loading expression data...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     &gt;&gt;&gt; Expression loaded for 943 genes.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Step 1: Reading BEDPE file...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Step 2: Clustering loops...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Step 3: Biological Classification &amp; Topology...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &gt;&gt; Using Genome: hg38 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &gt;&gt; Using Genome: hg38 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &gt;&gt; Using Genome: hg38 ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 'select()' returned 1:many mapping between keys and columns</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   2169 genes were dropped because they have exons located on both strands of</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   the same reference sequence or on more than one reference sequence, so cannot</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   be represented by a single genomic range.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   object, or use suppressMessages() to suppress this message.</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GRanges object contains 8 out-of-bound ranges located on sequences</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   chr4_GL000257v2_alt, chr16_KI270728v1_random, chr22_KI270731v1_random,</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   chr3_GL000221v1_random, chr1_KI270706v1_random, chr16_GL383556v1_alt, and</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   chrUn_KI270748v1. Note that ranges located on a sequence whose length is</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   unknown (NA) or on a circular sequence are not considered out-of-bound (use</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   seqlengths() and isCircular() to get the lengths and circularity flags of the</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   underlying sequences). You can use trim() to trim these ranges. See</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   ?`trim,GenomicRanges-method` for more information.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 'select()' returned 1:1 mapping between keys and columns</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Calculating Topology (Hops)...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Step 4: Constructing Loop Tables...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &gt;&gt; Using Genome: hg38 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &gt;&gt; Using Genome: hg38 ...</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &gt;&gt; Using Genome: hg38 ...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 'select()' returned 1:many mapping between keys and columns</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Generating Promoter Centric Stats...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Generating Distal Element Stats...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Step 6: Generating Visualizations...</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Ignoring unknown parameters: `size`</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  Saved: /tmp/RtmpLFv4cM/Example_Loops_Only_Basic_Circular.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   2169 genes were dropped because they have exons located on both strands of</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   the same reference sequence or on more than one reference sequence, so cannot</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   be represented by a single genomic range.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   object, or use suppressMessages() to suppress this message.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> 'select()' returned 1:1 mapping between keys and columns</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved Heatmap: /tmp/RtmpLFv4cM/Example_Loops_Only_Basic_Karyo_LoopGenes.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved Heatmap: /tmp/RtmpLFv4cM/Example_Loops_Only_Basic_Karyo_Anchors.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpLFv4cM/Example_Loops_Only_Basic_Flower.pdf</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Step 7: Exporting to Excel...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Excel file saved.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Analysis Complete.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 16</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   loop_ID chr1     start1      end1 chr2     start2    end2 cluster_id loop_type</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> L1      chr1  112<span style="text-decoration: underline;">721</span>687 112<span style="text-decoration: underline;">724</span>586 chr1  112<span style="text-decoration: underline;">791</span>557  1.13<span style="color: #949494;">e</span>8 1          E-P      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> L2      chr1  113<span style="text-decoration: underline;">867</span>048 113<span style="text-decoration: underline;">875</span>597 chr1  113<span style="text-decoration: underline;">927</span>096  1.14<span style="color: #949494;">e</span>8 1          P-P      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> L3      chr1  115<span style="text-decoration: underline;">060</span>199 115<span style="text-decoration: underline;">071</span>191 chr1  116<span style="text-decoration: underline;">162</span>680  1.16<span style="color: #949494;">e</span>8 1          P-P      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> L4      chr1  118<span style="text-decoration: underline;">807</span>309 118<span style="text-decoration: underline;">811</span>756 chr1  119<span style="text-decoration: underline;">277</span>565  1.19<span style="color: #949494;">e</span>8 1          E-G      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span> L5      chr1  112<span style="text-decoration: underline;">399</span>375 112<span style="text-decoration: underline;">406</span>783 chr1  113<span style="text-decoration: underline;">756</span>152  1.14<span style="color: #949494;">e</span>8 1          G-P      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span> L6      chr1   12<span style="text-decoration: underline;">793</span>660  12<span style="text-decoration: underline;">795</span>281 chr1   12<span style="text-decoration: underline;">809</span>516  1.28<span style="color: #949494;">e</span>7 2          E-P      </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 7 more variables: anchor1_gene &lt;chr&gt;, anchor1_type &lt;chr&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   anchor2_gene &lt;chr&gt;, anchor2_type &lt;chr&gt;, Cluster_All_Genes &lt;chr&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   All_Anchor_Genes &lt;chr&gt;, Putative_Target_Genes &lt;chr&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   seqnames     start       end width strand input_id annotation</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1     chr1 171285865 171286512   648      *   Peak_1     3' UTR</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     chr1  69582109  69582609   501      *   Peak_2     Intron</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3     chr1  93669531  93670158   628      *   Peak_3     Intron</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4     chr1 230112638 230115006  2369      *   Peak_4   Promoter</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5     chr1  83034931  83035876   946      *   Peak_5     Intron</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6     chr1 156869712 156872016  2305      *   Peak_6       Exon</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                                            detail_anno geneChr geneStart</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                                               3' UTR       1 171282258</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2     Intron (ENST00000651989.2/57554, intron 1 of 26)       1  69568450</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3     Intron (ENST00000260502.11/8412, intron 2 of 11)       1  93561794</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4                                     Promoter (&lt;=1kb)       1 230112662</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 Intron (ENST00000452901.5/103283057, intron 5 of 10)       1  82973929</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6          Exon (ENST00000674537.2/4914, exon 9 of 18)       1 156874153</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     geneEnd geneLength geneStrand    geneId      transcriptId distanceToTSS</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 171285521       3264          1      2326 ENST00000469711.1          3607</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  69875004     306555          1     57554 ENST00000370958.5         13659</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  93681370     119577          2      8412 ENST00000370243.1         11212</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 230114032       1371          1      2590 ENST00000830731.1             0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  82986208      12280          2 101927498 ENST00000421931.1        -48723</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6 156876199       2047          1      4914 ENST00000534682.1         -2137</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           ENSEMBL    SYMBOL                                 Gene_description</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 ENSG00000010932      FMO1 flavin containing dimethylaniline monoxygenase 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 ENSG00000033122     LRRC7                 leucine rich repeat containing 7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 ENSG00000137936     BCAR3         BCAR3 adaptor protein, NSP family member</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 ENSG00000143641    GALNT2  polypeptide N-acetylgalactosaminyltransferase 2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 ENSG00000236268 LINC01361      long intergenic non-protein coding RNA 1361</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6 ENSG00000198400     NTRK1          neurotrophic receptor tyrosine kinase 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Linked_Loop_IDs All_Loop_Connected_Genes Regulated_promoter_genes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1            &lt;NA&gt;                     &lt;NA&gt;                     &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2            &lt;NA&gt;                     &lt;NA&gt;                     &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3            &lt;NA&gt;                     &lt;NA&gt;                     &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4            &lt;NA&gt;                     &lt;NA&gt;                     &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5            &lt;NA&gt;                     &lt;NA&gt;                     &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6            &lt;NA&gt;                     &lt;NA&gt;                     &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Assigned_Target_Genes All_Loop_Connected_Genes_Filled</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                  &lt;NA&gt;                            FMO1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                  &lt;NA&gt;                           LRRC7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3                  &lt;NA&gt;                           BCAR3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4                  &lt;NA&gt;                          GALNT2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5                  &lt;NA&gt;                       LINC01361</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6                  &lt;NA&gt;                           NTRK1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Regulated_promoter_genes_Filled Assigned_Target_Genes_Filled</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                            FMO1                         FMO1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                           LRRC7                        LRRC7</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3                           BCAR3                        BCAR3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4                          GALNT2                       GALNT2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5                       LINC01361                    LINC01361</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6                           NTRK1                        NTRK1</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

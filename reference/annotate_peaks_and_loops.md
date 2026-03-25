@@ -165,7 +165,7 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
   requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   # =========================================================================
-  # Example A: Integrative Analysis (Loops + GWAS/ChIP-seq + Expression)
+  #  Integrative Analysis (Loops + GWAS/ChIP-seq + Expression)
   # =========================================================================
   # Here, `target_bed` can represent GWAS risk SNPs, ATAC-seq peaks, or
   # ChIP-seq peaks. The engine bridges these 1D regions to their 3D genes.
@@ -186,27 +186,6 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
 
   # View integrated annotations linking external peaks/SNPs to target genes
   head(res_integrated$target_annotation)
-
-  # =========================================================================
-  # Example B: Deep Analysis of Loops ONLY (No auxiliary peaks)
-  # =========================================================================
-  res_loops_only <- annotate_peaks_and_loops(
-    bedpe_file = bedpe_path,
-    target_bed = NULL,
-    species = "hg38",
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
-    tss_region = c(-2000, 2000),
-    out_dir = tempdir(),
-    color_palette = "Set1",
-    karyo_bin_size = 1e5,
-    neighbor_hop = 0,
-    hub_percentile = 0.95,
-    project_name = "Example_Loops_Only"
-  )
-
-  # View standalone loop annotations
-  head(res_loops_only$loop_annotation)
 }
 #> 
 #> Step 0: Loading expression data...
@@ -303,20 +282,20 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
 #> 'select()' returned 1:1 mapping between keys and columns
 #> Step 6: Generating Visualizations...
 #> Warning: Ignoring unknown parameters: `size`
-#>  Saved: /tmp/RtmpLFv4cM/Example_HiChIP_Integrative_Basic_Circular.pdf
+#>  Saved: /tmp/Rtmpk68Xz3/Example_HiChIP_Integrative_Basic_Circular.pdf
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
 #>   be represented by a single genomic range.
 #>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
 #>   object, or use suppressMessages() to suppress this message.
 #> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/RtmpLFv4cM/Example_HiChIP_Integrative_Basic_Karyo_LoopGenes.pdf
-#>     Saved Heatmap: /tmp/RtmpLFv4cM/Example_HiChIP_Integrative_Basic_Karyo_Anchors.pdf
+#>     Saved Heatmap: /tmp/Rtmpk68Xz3/Example_HiChIP_Integrative_Basic_Karyo_LoopGenes.pdf
+#>     Saved Heatmap: /tmp/Rtmpk68Xz3/Example_HiChIP_Integrative_Basic_Karyo_Anchors.pdf
 #> Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
 #> ℹ Please use `linewidth` instead.
 #> ℹ The deprecated feature was likely used in the looplook package.
 #>   Please report the issue at <https://github.com/zying106/looplook/issues>.
-#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpLFv4cM/Example_HiChIP_Integrative_Basic_Flower.pdf
+#>     Saved (Simplified Flower Plot with inner counts): /tmp/Rtmpk68Xz3/Example_HiChIP_Integrative_Basic_Flower.pdf
 #>     Plotting Target Visualizations...
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
@@ -324,69 +303,60 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
 #>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
 #>   object, or use suppressMessages() to suppress this message.
 #> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/RtmpLFv4cM/Example_HiChIP_Integrative_Basic_Karyo_TargetGenes.pdf
+#>     Saved Heatmap: /tmp/Rtmpk68Xz3/Example_HiChIP_Integrative_Basic_Karyo_TargetGenes.pdf
 #>     Generating Pie Chart 0: All Anchors Genomic Distribution...
 #>     Generating Pie Chart 1: All Targets Distribution...
 #>     Generating Pie Chart 2: Loop-Connected Targets Distribution...
 #> Step 7: Exporting to Excel...
 #>     Excel file saved.
 #> Analysis Complete.
-#> Step 0: Loading expression data...
-#>     >>> Expression loaded for 943 genes.
-#> Step 1: Reading BEDPE file...
-#> Step 2: Clustering loops...
-#> Step 3: Biological Classification & Topology...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> 'select()' returned 1:many mapping between keys and columns
-#>   2169 genes were dropped because they have exons located on both strands of
-#>   the same reference sequence or on more than one reference sequence, so cannot
-#>   be represented by a single genomic range.
-#>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
-#>   object, or use suppressMessages() to suppress this message.
-#> Warning: GRanges object contains 8 out-of-bound ranges located on sequences
-#>   chr4_GL000257v2_alt, chr16_KI270728v1_random, chr22_KI270731v1_random,
-#>   chr3_GL000221v1_random, chr1_KI270706v1_random, chr16_GL383556v1_alt, and
-#>   chrUn_KI270748v1. Note that ranges located on a sequence whose length is
-#>   unknown (NA) or on a circular sequence are not considered out-of-bound (use
-#>   seqlengths() and isCircular() to get the lengths and circularity flags of the
-#>   underlying sequences). You can use trim() to trim these ranges. See
-#>   ?`trim,GenomicRanges-method` for more information.
-#> 'select()' returned 1:1 mapping between keys and columns
-#>     Calculating Topology (Hops)...
-#> Step 4: Constructing Loop Tables...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> 'select()' returned 1:many mapping between keys and columns
-#>     Generating Promoter Centric Stats...
-#>     Generating Distal Element Stats...
-#> Step 6: Generating Visualizations...
-#> Warning: Ignoring unknown parameters: `size`
-#>  Saved: /tmp/RtmpLFv4cM/Example_Loops_Only_Basic_Circular.pdf
-#>   2169 genes were dropped because they have exons located on both strands of
-#>   the same reference sequence or on more than one reference sequence, so cannot
-#>   be represented by a single genomic range.
-#>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
-#>   object, or use suppressMessages() to suppress this message.
-#> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/RtmpLFv4cM/Example_Loops_Only_Basic_Karyo_LoopGenes.pdf
-#>     Saved Heatmap: /tmp/RtmpLFv4cM/Example_Loops_Only_Basic_Karyo_Anchors.pdf
-#>     Saved (Simplified Flower Plot with inner counts): /tmp/RtmpLFv4cM/Example_Loops_Only_Basic_Flower.pdf
-#> Step 7: Exporting to Excel...
-#>     Excel file saved.
-#> Analysis Complete.
-#> # A tibble: 6 × 16
-#>   loop_ID chr1     start1      end1 chr2     start2    end2 cluster_id loop_type
-#>   <chr>   <chr>     <int>     <int> <chr>     <int>   <int> <chr>      <chr>    
-#> 1 L1      chr1  112721687 112724586 chr1  112791557  1.13e8 1          E-P      
-#> 2 L2      chr1  113867048 113875597 chr1  113927096  1.14e8 1          P-P      
-#> 3 L3      chr1  115060199 115071191 chr1  116162680  1.16e8 1          P-P      
-#> 4 L4      chr1  118807309 118811756 chr1  119277565  1.19e8 1          E-G      
-#> 5 L5      chr1  112399375 112406783 chr1  113756152  1.14e8 1          G-P      
-#> 6 L6      chr1   12793660  12795281 chr1   12809516  1.28e7 2          E-P      
-#> # ℹ 7 more variables: anchor1_gene <chr>, anchor1_type <chr>,
-#> #   anchor2_gene <chr>, anchor2_type <chr>, Cluster_All_Genes <chr>,
-#> #   All_Anchor_Genes <chr>, Putative_Target_Genes <chr>
+#>   seqnames     start       end width strand input_id annotation
+#> 1     chr1 171285865 171286512   648      *   Peak_1     3' UTR
+#> 2     chr1  69582109  69582609   501      *   Peak_2     Intron
+#> 3     chr1  93669531  93670158   628      *   Peak_3     Intron
+#> 4     chr1 230112638 230115006  2369      *   Peak_4   Promoter
+#> 5     chr1  83034931  83035876   946      *   Peak_5     Intron
+#> 6     chr1 156869712 156872016  2305      *   Peak_6       Exon
+#>                                            detail_anno geneChr geneStart
+#> 1                                               3' UTR       1 171282258
+#> 2     Intron (ENST00000651989.2/57554, intron 1 of 26)       1  69568450
+#> 3     Intron (ENST00000260502.11/8412, intron 2 of 11)       1  93561794
+#> 4                                     Promoter (<=1kb)       1 230112662
+#> 5 Intron (ENST00000452901.5/103283057, intron 5 of 10)       1  82973929
+#> 6          Exon (ENST00000674537.2/4914, exon 9 of 18)       1 156874153
+#>     geneEnd geneLength geneStrand    geneId      transcriptId distanceToTSS
+#> 1 171285521       3264          1      2326 ENST00000469711.1          3607
+#> 2  69875004     306555          1     57554 ENST00000370958.5         13659
+#> 3  93681370     119577          2      8412 ENST00000370243.1         11212
+#> 4 230114032       1371          1      2590 ENST00000830731.1             0
+#> 5  82986208      12280          2 101927498 ENST00000421931.1        -48723
+#> 6 156876199       2047          1      4914 ENST00000534682.1         -2137
+#>           ENSEMBL    SYMBOL                                 Gene_description
+#> 1 ENSG00000010932      FMO1 flavin containing dimethylaniline monoxygenase 1
+#> 2 ENSG00000033122     LRRC7                 leucine rich repeat containing 7
+#> 3 ENSG00000137936     BCAR3         BCAR3 adaptor protein, NSP family member
+#> 4 ENSG00000143641    GALNT2  polypeptide N-acetylgalactosaminyltransferase 2
+#> 5 ENSG00000236268 LINC01361      long intergenic non-protein coding RNA 1361
+#> 6 ENSG00000198400     NTRK1          neurotrophic receptor tyrosine kinase 1
+#>   Linked_Loop_IDs All_Loop_Connected_Genes Regulated_promoter_genes
+#> 1            <NA>                     <NA>                     <NA>
+#> 2            <NA>                     <NA>                     <NA>
+#> 3            <NA>                     <NA>                     <NA>
+#> 4            <NA>                     <NA>                     <NA>
+#> 5            <NA>                     <NA>                     <NA>
+#> 6            <NA>                     <NA>                     <NA>
+#>   Assigned_Target_Genes All_Loop_Connected_Genes_Filled
+#> 1                  <NA>                            FMO1
+#> 2                  <NA>                           LRRC7
+#> 3                  <NA>                           BCAR3
+#> 4                  <NA>                          GALNT2
+#> 5                  <NA>                       LINC01361
+#> 6                  <NA>                           NTRK1
+#>   Regulated_promoter_genes_Filled Assigned_Target_Genes_Filled
+#> 1                            FMO1                         FMO1
+#> 2                           LRRC7                        LRRC7
+#> 3                           BCAR3                        BCAR3
+#> 4                          GALNT2                       GALNT2
+#> 5                       LINC01361                    LINC01361
+#> 6                           NTRK1                        NTRK1
 ```
