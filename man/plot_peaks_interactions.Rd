@@ -73,19 +73,7 @@ bed_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
 if (bedpe_path != "" &&
   requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-  # Example A: Basic plot with loops only
-  # Plotting the region around the example loop (chr1:10,000-50,000)
-  p1 <- plot_peaks_interactions(
-    bedpe_file = bedpe_path,
-    target_bed = bed_path,
-    chr = "chr1",
-    from = 11884299,
-    to = 12106581,
-    species = "hg38"
-  )
-  print(p1)
-
-  # Example B: Integrative plot with overlapping peaks and output to file
+  # Example : Integrative plot with overlapping peaks and output to file
   p2 <- plot_peaks_interactions(
     bedpe_file = bedpe_path,
     target_bed = bed_path,

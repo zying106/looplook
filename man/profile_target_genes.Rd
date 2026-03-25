@@ -134,74 +134,22 @@ if (rdata_path != "" && expr_path != "" && diff_path != "" && meta_path != "") {
   out_base <- tempdir()
 
   # =========================================================================
-  # Scenario A: Comprehensive Integrative Profiling (Loops + Targets)
+  # Comprehensive Integrative Profiling (Loops + Targets)
   #
-  # Application:
-  # Best for complete HiChIP + ATAC-seq (or ChIP-seq) joint analysis.
-  # It maps genes regulated by BOTH 3D distal loops and 1D direct target overlaps.
   # =========================================================================
-  res_A <- profile_target_genes(
+  res <- profile_target_genes(
     annotation_res = raw_annotation,
     diff_file = diff_path,
     lfc_col = "log2FoldChange",
     expr_matrix_file = expr_path,
     metadata_file = meta_path,
-    target_source = c("loops", "targets"),
+    target_source = c("targets"),
     target_mapping_mode = "all",
-    include_Filled = TRUE,
+    include_Filled = FALSE,
     use_nearest_gene = FALSE,
     project_name = "Scenario_A_Integrative",
     out_dir = out_base,
     run_go = FALSE, # Set to TRUE in real analysis
-    run_ppi = FALSE
-  )
-
-  # =========================================================================
-  # Scenario B: Peak-Centric & Promoter-Strict Profiling
-  #
-  # Application:
-  # Focuses ONLY on 1D peaks ("targets") and STRICTLY restricts the mapping
-  # to genes where peaks fall directly on their "promoter".
-  # Ideal for baseline epigenetic profiling, ignoring distal 3D regulation.
-  # =========================================================================
-  res_B <- profile_target_genes(
-    annotation_res = raw_annotation,
-    diff_file = diff_path,
-    lfc_col = "log2FoldChange",
-    expr_matrix_file = expr_path,
-    metadata_file = meta_path,
-    target_source = "targets", # Only 1D targets
-    target_mapping_mode = "promoter", # Strict promoter mapping
-    include_Filled = TRUE,
-    use_nearest_gene = FALSE,
-    project_name = "Scenario_B_PromoterOnly",
-    out_dir = out_base,
-    run_go = FALSE,
-    run_ppi = FALSE
-  )
-
-  # =========================================================================
-  # Scenario C: Highly Conservative Distal Enhancer-Targeting
-  #
-  # Application:
-  # Focuses on 3D loops. By setting `use_nearest_gene = TRUE` and
-  # `include_Filled = FALSE`, it forces the selection of strictly the nearest
-  # genes to the anchors, preventing the expansion of gene lists from broader
-  # annotated regions. Ensures a highly conservative gene target list.
-  # =========================================================================
-  res_C <- profile_target_genes(
-    annotation_res = raw_annotation,
-    diff_file = diff_path,
-    lfc_col = "log2FoldChange",
-    expr_matrix_file = expr_path,
-    metadata_file = meta_path,
-    target_source = "loops", # Only 3D loops
-    target_mapping_mode = "all",
-    include_Filled = FALSE,
-    use_nearest_gene = TRUE, # Strictly nearest gene
-    project_name = "Scenario_C_StrictLoops",
-    out_dir = out_base,
-    run_go = FALSE,
     run_ppi = FALSE
   )
 }

@@ -66,7 +66,7 @@
 #'   requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
 #'   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
 #'   # =========================================================================
-#'   # Example A: Integrative Analysis (Loops + GWAS/ChIP-seq + Expression)
+#'   #  Integrative Analysis (Loops + GWAS/ChIP-seq + Expression)
 #'   # =========================================================================
 #'   # Here, `target_bed` can represent GWAS risk SNPs, ATAC-seq peaks, or
 #'   # ChIP-seq peaks. The engine bridges these 1D regions to their 3D genes.
@@ -87,28 +87,7 @@
 #'
 #'   # View integrated annotations linking external peaks/SNPs to target genes
 #'   head(res_integrated$target_annotation)
-#'
-#'   # =========================================================================
-#'   # Example B: Deep Analysis of Loops ONLY (No auxiliary peaks)
-#'   # =========================================================================
-#'   res_loops_only <- annotate_peaks_and_loops(
-#'     bedpe_file = bedpe_path,
-#'     target_bed = NULL,
-#'     species = "hg38",
-#'     expr_matrix_file = expr_path,
-#'     sample_columns = c("con1", "con2"),
-#'     tss_region = c(-2000, 2000),
-#'     out_dir = tempdir(),
-#'     color_palette = "Set1",
-#'     karyo_bin_size = 1e5,
-#'     neighbor_hop = 0,
-#'     hub_percentile = 0.95,
-#'     project_name = "Example_Loops_Only"
-#'   )
-#'
-#'   # View standalone loop annotations
-#'   head(res_loops_only$loop_annotation)
-#' }
+#'}
 annotate_peaks_and_loops <- function(
   bedpe_file,
   target_bed = NULL,
@@ -812,24 +791,7 @@ annotate_peaks_and_loops <- function(
 #'   raw_annotation <- temp_env[[ls(temp_env)[1]]]
 #'
 #'   # =========================================================================
-#'   # Example A: Standard filtering WITHOUT loop reclassification
-#'   # =========================================================================
-#'   res_basic <- refine_loop_anchors_by_expression(
-#'     annotation_res = raw_annotation,
-#'     expr_matrix_file = expr_path,
-#'     sample_columns = c("con1", "con2"),
-#'     threshold = 1.0,
-#'     unit_type = "TPM",
-#'     species = "hg38",
-#'     out_dir = tempdir(),
-#'     project_name = "Example_Basic",
-#'     reclassify_by_expression = FALSE
-#'   )
-#'
-#'   print(table(res_basic$loop_annotation$loop_type))
-#'
-#'   # =========================================================================
-#'   # Example B: Advanced filtering WITH Transcriptome-Guided Reclassification
+#'   # Example : Advanced filtering WITH Transcriptome-Guided Reclassification
 #'   # =========================================================================
 #'   res_reclassified <- refine_loop_anchors_by_expression(
 #'     annotation_res = raw_annotation,

@@ -89,24 +89,7 @@ if (rdata_path != "" && expr_path != "") {
   raw_annotation <- temp_env[[ls(temp_env)[1]]]
 
   # =========================================================================
-  # Example A: Standard filtering WITHOUT loop reclassification
-  # =========================================================================
-  res_basic <- refine_loop_anchors_by_expression(
-    annotation_res = raw_annotation,
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
-    threshold = 1.0,
-    unit_type = "TPM",
-    species = "hg38",
-    out_dir = tempdir(),
-    project_name = "Example_Basic",
-    reclassify_by_expression = FALSE
-  )
-
-  print(table(res_basic$loop_annotation$loop_type))
-
-  # =========================================================================
-  # Example B: Advanced filtering WITH Transcriptome-Guided Reclassification
+  # Example : Advanced filtering WITH Transcriptome-Guided Reclassification
   # =========================================================================
   res_reclassified <- refine_loop_anchors_by_expression(
     annotation_res = raw_annotation,

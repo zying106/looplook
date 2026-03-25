@@ -96,7 +96,7 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
   requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   # =========================================================================
-  # Example A: Integrative Analysis (Loops + GWAS/ChIP-seq + Expression)
+  #  Integrative Analysis (Loops + GWAS/ChIP-seq + Expression)
   # =========================================================================
   # Here, `target_bed` can represent GWAS risk SNPs, ATAC-seq peaks, or
   # ChIP-seq peaks. The engine bridges these 1D regions to their 3D genes.
@@ -117,26 +117,5 @@ if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
 
   # View integrated annotations linking external peaks/SNPs to target genes
   head(res_integrated$target_annotation)
-
-  # =========================================================================
-  # Example B: Deep Analysis of Loops ONLY (No auxiliary peaks)
-  # =========================================================================
-  res_loops_only <- annotate_peaks_and_loops(
-    bedpe_file = bedpe_path,
-    target_bed = NULL,
-    species = "hg38",
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
-    tss_region = c(-2000, 2000),
-    out_dir = tempdir(),
-    color_palette = "Set1",
-    karyo_bin_size = 1e5,
-    neighbor_hop = 0,
-    hub_percentile = 0.95,
-    project_name = "Example_Loops_Only"
-  )
-
-  # View standalone loop annotations
-  head(res_loops_only$loop_annotation)
 }
 }

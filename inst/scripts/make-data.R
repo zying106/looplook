@@ -41,11 +41,11 @@
 # Subsetting process for example data (Bash Pseudo-code):
 # ```bash
 # # Randomly sample exact number of lines using `shuf` to minimize package size
-# shuf -n 2000 raw_peaks_full.bed > example_peaks.bed
+# shuf -n 3wc-l00 raw_peaks_full.bed > example_peaks.bed
 # shuf -n 600  raw_k27ac_peaks_full.bed > example_k27ac_peaks.bed
 #
-# shuf -n 1000 raw_loops_1_full.bedpe > example_loops_1.bedpe
-# shuf -n 1000 raw_loops_2_full.bedpe > example_loops_2.bedpe
+# shuf -n 300 raw_loops_1_full.bedpe > example_loops_1.bedpe
+# shuf -n 300 raw_loops_2_full.bedpe > example_loops_2.bedpe
 #
 # shuf -n 300  raw_H3K27ac_loops_full.bedpe > example_loops_H3K27ac.bedpe
 # shuf -n 300  raw_Pol2_loops_full.bedpe > example_loops_pol2.bedpe
