@@ -1,6 +1,7 @@
 # tests/testthat/test-pipeline.R
 
 test_that("Module 4: profile_target_genes exhaustive branching", {
+  testthat::skip_on_bioc()
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
   expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
   diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")

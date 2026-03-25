@@ -467,7 +467,9 @@ if (exists("refined_res")) {
     use_nearest_gene = FALSE,
     project_name = "Scenario_B_StrictPromoter",
     out_dir = out_dir,
-    run_go = FALSE
+    run_motif = FALSE, # Set TRUE in real analysis to scan JASPAR motifs
+    run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
+    run_ppi = FALSE
   )
 }
 ```
@@ -490,7 +492,9 @@ if (exists("refined_res")) {
     use_nearest_gene = TRUE, # Nearest neighboring gene (The Control)
     project_name = "Scenario_C_LinearControl",
     out_dir = out_dir,
-    run_go = FALSE
+    run_motif = FALSE, # Set TRUE in real analysis to scan JASPAR motifs
+    run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
+    run_ppi = FALSE
   )
 }
 ```
