@@ -17,7 +17,7 @@ The function supports three modes:
 
 - `"consensus"`: Implements graph-based connected component analysis to
   cluster spatially proximal anchors across samples. Only retains
-  clusters detected in ≥ min_consensus biological replicates.
+  clusters detected in \>= min_consensus biological replicates.
 
 - `"intersect"`: Enforces strict reference-based filtering, retaining
   loops that show full genomic overlap with the reference file (File 1).
@@ -186,28 +186,28 @@ if (f1 != "" && f2 != "") {
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/Rtmpsu4Qh7/file24dbcfa6422.bedpe
+#> Finished! Saved to /tmp/Rtmp9Ivfu8/file254a77112f.bedpe
 #> Finished! Final loops: 12
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/Rtmpsu4Qh7/file24db8723c14.bedpe
+#> Finished! Saved to /tmp/Rtmp9Ivfu8/file254a10d68ad8.bedpe
 #> Finished! Final loops: 11
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Union mode: Keeping all clusters
-#> Finished! Saved to /tmp/Rtmpsu4Qh7/file24db6f0d8393.bedpe
+#> Finished! Saved to /tmp/Rtmp9Ivfu8/file254a31047b65.bedpe
 #> Finished! Final loops: 589
 #> >>> Reading BEDPE files
 #>     File 1: 115 loops
 #>     File 2: 100 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/Rtmpsu4Qh7/file24db39641c48.bedpe
+#> Finished! Saved to /tmp/Rtmp9Ivfu8/file254a1ce3cb55.bedpe
 #> Finished! Final loops: 4
 #> [1] 4
 ```

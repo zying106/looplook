@@ -127,7 +127,7 @@ experimental evidence.
 - **`mode`**: Defines the overarching merging algorithm.
   - `"consensus"` *(Recommended)*: Implements graph-based connected
     component analysis to cluster spatially proximal anchors across
-    samples. Only retains clusters detected in ≥ `min_consensus`
+    samples. Only retains clusters detected in \>= `min_consensus`
     biological replicates.
   - `"intersect"`: Enforces strict reference-based filtering, retaining
     loops that show full genomic overlap with the reference file (File
@@ -138,7 +138,7 @@ experimental evidence.
   defines the minimum number of biological replicates in which a loop
   cluster must be detected to be retained in the final dataset. If set
   to `NULL`, the algorithm dynamically computes a strict majority
-  threshold (e.g., ≥ 75% of replicates).
+  threshold (e.g., \>= 75% of replicates).
 - **`gap`**: Defines the maximum allowable spatial distance (in base
   pairs) between loop anchors for them to be considered as part of the
   same physical cluster (default: `1000`).
@@ -710,7 +710,9 @@ if (exists("refined_res")) {
     use_nearest_gene = FALSE,
     project_name = "Scenario_B_StrictPromoter",
     out_dir = out_dir,
-    run_go = FALSE
+    run_motif = FALSE, # Set TRUE in real analysis to scan JASPAR motifs
+    run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
+    run_ppi = FALSE
   )
 }
 ```
@@ -738,7 +740,9 @@ if (exists("refined_res")) {
     use_nearest_gene = TRUE, # Nearest neighboring gene (The Control)
     project_name = "Scenario_C_LinearControl",
     out_dir = out_dir,
-    run_go = FALSE
+    run_motif = FALSE, # Set TRUE in real analysis to scan JASPAR motifs
+    run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
+    run_ppi = FALSE
   )
 }
 ```
@@ -900,10 +904,10 @@ sessionInfo()
 #> other attached packages:
 #> [1] org.Hs.eg.db_3.22.0  AnnotationDbi_1.72.0 IRanges_2.44.0      
 #> [4] S4Vectors_0.48.0     Biobase_2.70.0       BiocGenerics_0.56.0 
-#> [7] generics_0.1.4       looplook_0.99.4      BiocStyle_2.38.0    
+#> [7] generics_0.1.4       looplook_0.99.8      BiocStyle_2.38.0    
 #> 
 #> loaded via a namespace (and not attached):
-#>   [1] fs_2.0.0                                
+#>   [1] fs_2.0.1                                
 #>   [2] ProtGenerics_1.42.0                     
 #>   [3] matrixStats_1.5.0                       
 #>   [4] bitops_1.0-9                            

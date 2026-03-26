@@ -5,7 +5,7 @@ Multi-Omics Integration: The framework can be used to identify multi-source cons
 
 
 The function supports three modes:
-"consensus": Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in ≥ min_consensus biological replicates.
+"consensus": Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in &amp;gt;= min_consensus biological replicates.
 "intersect": Enforces strict reference-based filtering, retaining loops that show full genomic overlap with the reference file (File 1).
 "union": Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.
 
@@ -20,7 +20,7 @@ Multi-Omics Integration: The framework can be used to identify multi-source cons
 
 
 The function supports three modes:
-"consensus": Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in ≥ min_consensus biological replicates.
+"consensus": Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in &amp;gt;= min_consensus biological replicates.
 "intersect": Enforces strict reference-based filtering, retaining loops that show full genomic overlap with the reference file (File 1).
 "union": Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.
 
@@ -37,7 +37,7 @@ Post-filtering (min_score): Filters the final consensus loops based on their agg
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -67,7 +67,7 @@ Post-filtering (min_score): Filters the final consensus loops based on their agg
     <div class="ref-description section level2">
     <p>This function consolidates chromatin loops from multiple BEDPE files. It is designed for two main purposes:</p><ol><li><p><strong>Replicate Consolidation</strong>: Merging biological or technical replicates to identify high-confidence, reproducible loops (e.g., 3 replicates of H3K27ac HiChIP).</p></li>
 <li><p><strong>Multi-Omics Integration</strong>: The framework can be used to identify multi-source consensus by integrating datasets from various experimental designs, such as HiChIP assays targeting different factors (e.g., integrating <strong>H3K27ac</strong> and <strong>H3K4me3</strong>, or overlapping Hi-C with ChIA-PET).</p></li>
-</ol><p>The function supports three modes:</p><ul><li><p><code>"consensus"</code>: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in ≥ min_consensus biological replicates.</p></li>
+</ol><p>The function supports three modes:</p><ul><li><p><code>"consensus"</code>: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in &gt;= min_consensus biological replicates.</p></li>
 <li><p><code>"intersect"</code>: Enforces strict reference-based filtering, retaining loops that show full genomic overlap with the reference file (File 1).</p></li>
 <li><p><code>"union"</code>: Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.</p></li>
 </ul><p>It also supports a <strong>two-stage filtering strategy</strong> to maximize signal-to-noise ratio:</p><ul><li><p><strong>Pre-filtering</strong> (<code>min_raw_score</code>): Removes low-confidence noise (e.g., singleton reads) from raw files <em>before</em> merging.</p></li>
@@ -205,28 +205,28 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Intersect mode: Reference-based filtering (No Coordinate Merging)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Base: File 1. Criterion: Must overlap with ALL other files.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Intersecting with File 2...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmpsu4Qh7/file24dbcfa6422.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp9Ivfu8/file254a77112f.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Consensus mode: Keeping clusters in &gt;= 2 replicates</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmpsu4Qh7/file24db8723c14.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp9Ivfu8/file254a10d68ad8.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 11</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Union mode: Keeping all clusters</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmpsu4Qh7/file24db6f0d8393.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp9Ivfu8/file254a31047b65.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 589</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 115 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 100 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Consensus mode: Keeping clusters in &gt;= 2 replicates</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmpsu4Qh7/file24db39641c48.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp9Ivfu8/file254a1ce3cb55.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 4</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 4</span>
 </code></pre></div>

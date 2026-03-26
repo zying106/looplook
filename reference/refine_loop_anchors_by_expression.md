@@ -184,7 +184,7 @@ if (rdata_path != "" && expr_path != "") {
 #> >>> [Step 5] Generating Visualizations...
 #>     Drawing Target Sankey Diagram...
 #> Links is a tbl_df. Converting to a plain data frame.
-#> file:////tmp/Rtmpsu4Qh7/Example_Reclassified_Filtered_Target_Sankey.html screenshot completed
+#> file:////tmp/Rtmp9Ivfu8/Example_Reclassified_Filtered_Target_Sankey.html screenshot completed
 #>   2169 genes were dropped because they have exons located on both strands of
 #>   the same reference sequence or on more than one reference sequence, so cannot
 #>   be represented by a single genomic range.

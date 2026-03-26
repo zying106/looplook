@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.8</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -216,7 +216,7 @@ algorithm.
 <li>
 <code>"consensus"</code> <em>(Recommended)</em>: Implements
 graph-based connected component analysis to cluster spatially proximal
-anchors across samples. Only retains clusters detected in ≥
+anchors across samples. Only retains clusters detected in &gt;=
 <code>min_consensus</code> biological replicates.</li>
 <li>
 <code>"intersect"</code>: Enforces strict reference-based filtering,
@@ -232,8 +232,8 @@ entire cohort, ideal for exploratory pan-tissue analyses.</li>
 <code>"consensus"</code> mode, this parameter defines the minimum number
 of biological replicates in which a loop cluster must be detected to be
 retained in the final dataset. If set to <code>NULL</code>, the
-algorithm dynamically computes a strict majority threshold (e.g., ≥ 75%
-of replicates).</li>
+algorithm dynamically computes a strict majority threshold (e.g., &gt;=
+75% of replicates).</li>
 <li>
 <strong><code>gap</code></strong>: Defines the maximum allowable
 spatial distance (in base pairs) between loop anchors for them to be
@@ -941,7 +941,9 @@ interactions.</p>
 <span>    use_nearest_gene <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>    project_name <span class="op">=</span> <span class="st">"Scenario_B_StrictPromoter"</span>,</span>
 <span>    out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
-<span>    run_go <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>    run_motif <span class="op">=</span> <span class="cn">FALSE</span>, <span class="co"># Set TRUE in real analysis to scan JASPAR motifs</span></span>
+<span>    run_go <span class="op">=</span> <span class="cn">FALSE</span>, <span class="co"># Set TRUE in real analysis for pathway enrichment</span></span>
+<span>    run_ppi <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 </div>
@@ -968,7 +970,9 @@ from 3D chromatin looping analyses relative to conventional method.</p>
 <span>    use_nearest_gene <span class="op">=</span> <span class="cn">TRUE</span>, <span class="co"># Nearest neighboring gene (The Control)</span></span>
 <span>    project_name <span class="op">=</span> <span class="st">"Scenario_C_LinearControl"</span>,</span>
 <span>    out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
-<span>    run_go <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>    run_motif <span class="op">=</span> <span class="cn">FALSE</span>, <span class="co"># Set TRUE in real analysis to scan JASPAR motifs</span></span>
+<span>    run_go <span class="op">=</span> <span class="cn">FALSE</span>, <span class="co"># Set TRUE in real analysis for pathway enrichment</span></span>
+<span>    run_ppi <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 <div class="section level4">
@@ -1184,10 +1188,10 @@ for exporting the final ggplot object.</li>
 <span><span class="co">#&gt; other attached packages:</span></span>
 <span><span class="co">#&gt; [1] org.Hs.eg.db_3.22.0  AnnotationDbi_1.72.0 IRanges_2.44.0      </span></span>
 <span><span class="co">#&gt; [4] S4Vectors_0.48.0     Biobase_2.70.0       BiocGenerics_0.56.0 </span></span>
-<span><span class="co">#&gt; [7] generics_0.1.4       looplook_0.99.4      BiocStyle_2.38.0    </span></span>
+<span><span class="co">#&gt; [7] generics_0.1.4       looplook_0.99.8      BiocStyle_2.38.0    </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
-<span><span class="co">#&gt;   [1] fs_2.0.0                                </span></span>
+<span><span class="co">#&gt;   [1] fs_2.0.1                                </span></span>
 <span><span class="co">#&gt;   [2] ProtGenerics_1.42.0                     </span></span>
 <span><span class="co">#&gt;   [3] matrixStats_1.5.0                       </span></span>
 <span><span class="co">#&gt;   [4] bitops_1.0-9                            </span></span>
