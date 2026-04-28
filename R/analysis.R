@@ -503,7 +503,7 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
         if (nrow(sub_df) > 0) {
           gs <- .clean_split_genes(sub_df[[gene_col]])
           if (length(gs) > 0) {
-            safe_name <- paste0(gsub("-", "", lt), "_Genes")
+            safe_name <- paste0(gsub("-", "", lt, fixed = TRUE), "_Genes")
             raw_gene_sets[[safe_name]] <- gs
           }
         }
