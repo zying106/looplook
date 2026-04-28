@@ -350,7 +350,7 @@ plot_peaks_interactions <- function(
 #'   group_colors = c(Control = "#E41A1C", Treated = "#377EB8", Resistant = "#4DAF4A")
 #' )
 draw_flower_simplified <- function(gene_lists, project_name, filename, group_colors) {
-  gene_lists <- gene_lists[vapply(gene_lists, length, FUN.VALUE = integer(1)) > 0]
+  gene_lists <- gene_lists[lengths(gene_lists) > 0]
   n_groups <- length(gene_lists)
   if (n_groups < 2) {
     message("Less than 2 non-empty gene lists; skipping flower plot.")
@@ -466,7 +466,7 @@ draw_upset_intersections <- function(gene_lists, project_name, filename, group_c
   }
 
   # 2. Data Preparation
-  gene_lists <- gene_lists[vapply(gene_lists, length, FUN.VALUE = integer(1)) > 0]
+  gene_lists <- gene_lists[lengths(gene_lists) > 0]
   if (length(gene_lists) < 2) {
     message("Less than 2 non-empty gene lists; skipping UpSet plot.")
     return(invisible(NULL))

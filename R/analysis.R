@@ -911,7 +911,7 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
             }
           }
 
-          hub_genes <- names(gene_to_pathways)[vapply(gene_to_pathways, length, integer(1)) >= 2]
+          hub_genes <- names(gene_to_pathways)[lengths(gene_to_pathways) >= 2]
           valid_hub <- intersect(hub_genes, names(fc_vec))
           if (length(valid_hub) > 0) {
             hub_sorted <- valid_hub[order(abs(fc_vec[valid_hub]), decreasing = TRUE)]
