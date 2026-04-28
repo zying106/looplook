@@ -123,7 +123,7 @@ profile_target_genes <- function(
   cor_method = "pearson"
 ) {
   # --- Environment Setup ---
-  target_source <- match.arg(target_source, choices = c("loops", "targets"), several.ok = TRUE)
+  target_source <- match.arg(target_source, several.ok = TRUE)
   target_mapping_mode <- match.arg(target_mapping_mode)
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
