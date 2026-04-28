@@ -812,15 +812,15 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 
   valid_entrez <- na.omit(gene_entrez)
 
-  use_symbol_mode <- FALSE
-  final_genes <- valid_entrez
-  final_keytype <- "ENTREZID"
+  use_symbol_mode <- length(valid_entrez) < 5 || (length(valid_entrez) / length(clean_genes) < 0.1)
 
-  if (length(valid_entrez) < 5 || (length(valid_entrez) / length(clean_genes) < 0.1)) {
+  if (use_symbol_mode) {
     message("    [GO] Low mapping. Switching to SYMBOL mode.")
-    use_symbol_mode <- TRUE
     final_genes <- clean_genes
     final_keytype <- "SYMBOL"
+  } else {
+    final_genes <- valid_entrez
+    final_keytype <- "ENTREZID"
   }
 
   final_universe <- NULL
