@@ -895,7 +895,7 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 
           gene_to_pathways <- list()
           for (i in seq_len(nrow(top_df))) {
-            genes <- unlist(strsplit(top_df$geneID[i], "/"))
+            genes <- unlist(strsplit(top_df$geneID[i], "/", fixed = TRUE))
             for (g in genes) {
               gene_to_pathways[[g]] <- c(gene_to_pathways[[g]], top_df$ID[i])
             }
@@ -903,7 +903,7 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 
 
           for (i in seq_len(nrow(top_df))) {
-            genes <- unlist(strsplit(top_df$geneID[i], "/"))
+            genes <- unlist(strsplit(top_df$geneID[i], "/", fixed = TRUE))
             valid_g <- intersect(genes, names(fc_vec))
             if (length(valid_g) > 0) {
               g_sorted <- valid_g[order(abs(fc_vec[valid_g]), decreasing = TRUE)]

@@ -101,7 +101,7 @@ get_colors <- function(n, palette_input) {
 #' @return Invisibly returns `NULL`. Side effect: saves a PDF karyotype heatmap to `filename`.
 draw_karyo_heatmap_internal <- function(gr_data, title_prefix, filename, bin_size, sat_level, ref_txdb, plot_species, unit_label, custom_colors = NULL) {
   standard_chroms <- paste0("chr", c(seq_len(22), "X", "Y"))
-  if (grepl("mm", plot_species)) standard_chroms <- paste0("chr", c(seq_len(19), "X", "Y"))
+  if (grepl("mm", plot_species, fixed = TRUE)) standard_chroms <- paste0("chr", c(seq_len(19), "X", "Y"))
 
   std_seqinfo <- GenomeInfoDb::seqinfo(ref_txdb)
   try(
