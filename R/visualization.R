@@ -176,7 +176,7 @@ plot_peaks_interactions <- function(
     plot_ymax <- max_loop_y * 1.05
 
     calc_alpha_color <- function(scores, base_col, use_alpha) {
-      if (any(is.na(scores))) scores[is.na(scores)] <- min(scores, na.rm = TRUE)
+      if (anyNA(scores)) scores[is.na(scores)] <- min(scores, na.rm = TRUE)
       if (use_alpha) {
         if (max(scores) == min(scores)) {
           alphas <- rep(0.8, length(scores))
@@ -363,7 +363,7 @@ draw_flower_simplified <- function(gene_lists, project_name, filename, group_col
   } else {
     group_colors[seq_along(gene_lists)]
   }
-  if (any(is.na(final_colors))) final_colors <- scales::hue_pal()(n_groups)
+  if (anyNA(final_colors)) final_colors <- scales::hue_pal()(n_groups)
 
   core_genes <- Reduce(intersect, gene_lists)
   core_count <- length(core_genes)

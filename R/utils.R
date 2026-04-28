@@ -273,7 +273,7 @@ draw_enhancer_source_distribution <- function(loop_data, project_name, filename)
   )
   avail_sources <- unique(plot_data$source)
   final_colors <- source_colors[avail_sources]
-  if (any(is.na(final_colors))) {
+  if (anyNA(final_colors)) {
     final_colors <- get_colors(length(avail_sources), "Set2")
     names(final_colors) <- avail_sources
   }
