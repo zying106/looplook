@@ -123,7 +123,7 @@ profile_target_genes <- function(
   cor_method = "pearson"
 ) {
   # --- Environment Setup ---
-  target_source <- match.arg(target_source, choices = c("loops", "targets"), several.ok = TRUE)
+  target_source <- match.arg(target_source, several.ok = TRUE)
   target_mapping_mode <- match.arg(target_mapping_mode)
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
@@ -503,7 +503,7 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
         if (nrow(sub_df) > 0) {
           gs <- .clean_split_genes(sub_df[[gene_col]])
           if (length(gs) > 0) {
-            safe_name <- paste0(gsub("-", "", lt), "_Genes")
+            safe_name <- paste0(gsub("-", "", lt, fixed = TRUE), "_Genes")
             raw_gene_sets[[safe_name]] <- gs
           }
         }
@@ -812,15 +812,15 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 
   valid_entrez <- na.omit(gene_entrez)
 
-  use_symbol_mode <- FALSE
-  final_genes <- valid_entrez
-  final_keytype <- "ENTREZID"
+  use_symbol_mode <- length(valid_entrez) < 5 || (length(valid_entrez) / length(clean_genes) < 0.1)
 
-  if (length(valid_entrez) < 5 || (length(valid_entrez) / length(clean_genes) < 0.1)) {
+  if (use_symbol_mode) {
     message("    [GO] Low mapping. Switching to SYMBOL mode.")
-    use_symbol_mode <- TRUE
     final_genes <- clean_genes
     final_keytype <- "SYMBOL"
+  } else {
+    final_genes <- valid_entrez
+    final_keytype <- "ENTREZID"
   }
 
   final_universe <- NULL
@@ -895,7 +895,7 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 
           gene_to_pathways <- list()
           for (i in seq_len(nrow(top_df))) {
-            genes <- unlist(strsplit(top_df$geneID[i], "/"))
+            genes <- unlist(strsplit(top_df$geneID[i], "/", fixed = TRUE))
             for (g in genes) {
               gene_to_pathways[[g]] <- c(gene_to_pathways[[g]], top_df$ID[i])
             }
@@ -903,7 +903,7 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 
 
           for (i in seq_len(nrow(top_df))) {
-            genes <- unlist(strsplit(top_df$geneID[i], "/"))
+            genes <- unlist(strsplit(top_df$geneID[i], "/", fixed = TRUE))
             valid_g <- intersect(genes, names(fc_vec))
             if (length(valid_g) > 0) {
               g_sorted <- valid_g[order(abs(fc_vec[valid_g]), decreasing = TRUE)]
@@ -911,7 +911,7 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
             }
           }
 
-          hub_genes <- names(gene_to_pathways)[vapply(gene_to_pathways, length, integer(1)) >= 2]
+          hub_genes <- names(gene_to_pathways)[lengths(gene_to_pathways) >= 2]
           valid_hub <- intersect(hub_genes, names(fc_vec))
           if (length(valid_hub) > 0) {
             hub_sorted <- valid_hub[order(abs(fc_vec[valid_hub]), decreasing = TRUE)]

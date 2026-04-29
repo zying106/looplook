@@ -311,8 +311,7 @@ consolidate_chromatin_loops <- function(
 
   message(">>> Reading BEDPE files")
 
-  gi_list <- lapply(seq_along(files), function(i) {
-    f <- files[i]
+  gi_list <- lapply(files, function(f) {
     gi <- bedpe_to_gi(f)
 
     if (!is.null(min_raw_score)) {
