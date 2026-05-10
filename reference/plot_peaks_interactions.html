@@ -101,8 +101,10 @@ the most frequent chromosome in the BEDPE.</p></dd>
 
 
 <dt id="arg-max-levels">max_levels<a class="anchor" aria-label="anchor" href="#arg-max-levels"></a></dt>
-<dd><p>Integer. Maximum number of vertical levels for arc stacking
-(default: 10).</p></dd>
+<dd><p>Integer. Maximum number of visible vertical levels for loop
+arc stacking (default: 10). Overlapping loops are separated into stacked
+bands up to this limit; denser regions are compressed into the available
+height while preserving relative layering.</p></dd>
 
 
 <dt id="arg-base-anchor-height">base_anchor_height<a class="anchor" aria-label="anchor" href="#arg-base-anchor-height"></a></dt>

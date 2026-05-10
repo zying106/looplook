@@ -158,16 +158,16 @@ results, and gene sets.
 ## Details
 
 Two analysis steps use R's random number generator: GSEA target-gene
-down-sampling (controlled by `gsea_nSample`) and motif background loop
-sampling (limited to 2 000 background regions). For fully reproducible
-results, call [`set.seed()`](https://rdrr.io/r/base/Random.html) before
-running this function. The `clusterProfiler::GSEA` call internally uses
-`seed = TRUE` and is not affected by the global RNG state.
+down-sampling (controlled by `gsea_nSample`) and motif background anchor
+sampling (class-matched, limited to 2 000 background regions per
+contrast). For fully reproducible results, call
+[`set.seed()`](https://rdrr.io/r/base/Random.html) before running this
+function. The `clusterProfiler::GSEA` call internally uses `seed = TRUE`
+and is not affected by the global RNG state.
 
 ## Examples
 
 ``` r
-# \donttest{
 rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
 diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
 expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
@@ -175,13 +175,17 @@ meta_path <- system.file("extdata", "example_coldata.txt", package = "looplook")
 tmp <- new.env()
 load(rdata_path, envir = tmp)
 res <- tmp[[ls(tmp)[1]]]
-profile_target_genes(
+profile_res <- profile_target_genes(
   annotation_res = res,
   diff_file = diff_path,
   expr_matrix_file = expr_path,
   metadata_file = meta_path,
   run_go = FALSE,
-  run_ppi = FALSE
+  run_ppi = FALSE,
+  run_motif = FALSE,
+  heatmap_nSample = 20,
+  gsea_nSample = 20,
+  cnet_nSample = 5
 )
 #> >>> Analysis Init | Root Project: Analysis
 #> --- Reading files...
@@ -191,16 +195,23 @@ profile_target_genes(
 #> 
 #> --- Task: EP_Genes (Valid Genes: 13) ---
 #> Warning: GSEA skipped: there is no package called 'clusterProfiler'
+#> Warning: Expression/connectivity plots skipped: there is no package called 'circlize'
+#> Warning: Distal connectivity plots skipped: there is no package called 'ggpointdensity'
 #> 
 #> --- Task: PP_Genes (Valid Genes: 67) ---
 #> Warning: GSEA skipped: there is no package called 'clusterProfiler'
+#> Warning: Expression/connectivity plots skipped: there is no package called 'circlize'
+#> Warning: Distal connectivity plots skipped: there is no package called 'ggpointdensity'
 #> 
 #> ================================================================
 #> >>> Processing Source: [targets]
 #> 
-#> --- Task: Target_Genes (Valid Genes: 10) ---
+#> --- Task: Target_Genes (Valid Genes: 217) ---
 #> Warning: GSEA skipped: there is no package called 'clusterProfiler'
+#> Warning: Expression/connectivity plots skipped: there is no package called 'circlize'
+#> Warning: Distal connectivity plots skipped: there is no package called 'ggpointdensity'
 #> 
 #>  All analysis complete.
-# }
+names(profile_res)
+#> [1] "loops"   "targets"
 ```

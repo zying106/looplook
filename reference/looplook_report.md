@@ -9,7 +9,7 @@ collaborators.
 
 ``` r
 looplook_report(
-  bedpe_file,
+  bedpe_file = NULL,
   target_bed = NULL,
   expr_matrix_file = NULL,
   sample_columns = NULL,
@@ -227,85 +227,46 @@ The path to the generated HTML report (invisibly).
 ## Details
 
 The profiling stage uses R's random number generator for GSEA gene-set
-down-sampling (`gsea_nSample`) and motif background sampling. Call
-[`set.seed()`](https://rdrr.io/r/base/Random.html) before
+down-sampling (`gsea_nSample`) and motif background anchor sampling.
+Call [`set.seed()`](https://rdrr.io/r/base/Random.html) before
 `looplook_report()` for fully reproducible results.
 
 ## Examples
 
 ``` r
-# \donttest{
-looplook_report(
-  bedpe_file   = system.file("extdata", "example_loops_1.bedpe", package = "looplook"),
-  target_bed   = system.file("extdata", "example_peaks.bed", package = "looplook"),
-  project_name = "My Study",
-  out_dir      = tempdir()
-)
-#> >> Generating looplook report: My_Study_Report.html
-#> 
-#> 
-#> processing file: skeleton.Rmd
-#> 1/36                            
-#> 2/36 [setup]                    
-#> 3/36                            
-#> 4/36 [summary-block]            
-#> 5/36                            
-#> 6/36 [annotation-core]          
-#> Error in .resolve_db(txdb, tx_species, "TxDb"): TxDb 'TxDb.Hsapiens.UCSC.hg38.knownGene' not installed
-#> Error: object 'res' not found
-#> Error: object 'res' not found
-#> Error: object 'ta' not found
-#> Error: object 'ta' not found
-#> Error: object 'n_targets' not found
-#> Error: object 'la' not found
-#> Error: object 'n_loop_types' not found
-#> Error: object 'n_targets' not found
-#> Error: object 'la' not found
-#> Error: object 'n_targets' not found
-#> 7/36                            
-#> 8/36 [annotation-donut]         
-#> Error: object 'res' not found
-#> 9/36                            
-#> 10/36 [annotation-table-top]     
-#> Error: object 'ta' not found
-#> 11/36                            
-#> 12/36 [annotation-table-loops]   
-#> Error: object 'res' not found
-#> Error: object 'la' not found
-#> 13/36                            
-#> 14/36 [annotation-table-promoter]
-#> Error: object 'res' not found
-#> Error: object 'pc' not found
-#> 15/36                            
-#> 16/36 [annotation-table-distal]  
-#> Error: object 'res' not found
-#> Error in if (!is.null(de) && nrow(de) > 0) {    render_table(de[order(de$n_Linked_Promoters, decreasing = TRUE),         ])}: missing value where TRUE/FALSE needed
-#> 17/36                            
-#> 18/36 [annotation-plots]         
-#> Error: object 'res' not found
-#> 19/36                            
-#> 20/36 [annotation-karyo]         
-#> Error: object 'res' not found
-#> 21/36                            
-#> 22/36 [refinement-run]           
-#> 23/36                            
-#> 24/36 [refinement-summary]       
-#> 25/36                            
-#> 26/36 [refinement-results]       
-#> 27/36                            
-#> 28/36 [refinement-sankey]        
-#> 29/36                            
-#> 30/36 [functional-profiling]     
-#> 31/36                            
-#> 32/36 [profiling-summary]        
-#> 33/36                            
-#> 34/36 [profiling-results]        
-#> 35/36                            
-#> 36/36 [sessioninfo]              
-#> output file: skeleton.knit.md
-#> /opt/hostedtoolcache/pandoc/3.8.3/x64/pandoc +RTS -K512m -RTS skeleton.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /tmp/Rtmp8jtPCJ/My_Study_Report.html --lua-filter /home/runner/work/_temp/R-lib/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /home/runner/work/_temp/R-lib/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /home/runner/work/_temp/R-lib/rmarkdown/rmarkdown/lua/latex-div.lua --lua-filter /home/runner/work/_temp/R-lib/rmarkdown/rmarkdown/lua/table-classes.lua --embed-resources --standalone --wrap preserve --variable bs3=TRUE --section-divs --table-of-contents --toc-depth 3 --variable toc_float=1 --variable toc_selectors=h1,h2,h3 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /tmp/Rtmp8jtPCJ/BiocStyle/template.html --syntax-highlighting none --variable highlightjs=1 --number-sections --variable theme=bootstrap --css /home/runner/work/_temp/R-lib/BiocStyle/resources/html/bioconductor.css --mathjax --variable 'mathjax-url=https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-in-header /tmp/Rtmp8jtPCJ/rmarkdown-str9b47703bcc92.html --variable code_folding=hide --variable code_menu=1 
-#> 
-#> Output created: /tmp/Rtmp8jtPCJ/My_Study_Report.html
-#> >> Report saved to: /tmp/Rtmp8jtPCJ/My_Study_Report.html
-# }
+if (requireNamespace("rmarkdown", quietly = TRUE) &&
+  requireNamespace("knitr", quietly = TRUE)) {
+  report_path <- looplook_report(
+    precomputed_res = system.file("extdata", "analysis_results.RData", package = "looplook"),
+    expr_matrix_file = system.file("extdata", "example_tpm.txt", package = "looplook"),
+    diff_file = system.file("extdata", "example_deg.txt", package = "looplook"),
+    metadata_file = system.file("extdata", "example_coldata.txt", package = "looplook"),
+    project_name = "Example",
+    out_dir = tempdir(),
+    output_file = "looplook-example-report.html",
+    quiet = TRUE,
+    run_go = FALSE,
+    run_ppi = FALSE,
+    run_motif = FALSE,
+    heatmap_nSample = 20,
+    gsea_nSample = 20,
+    cnet_nSample = 5
+  )
+  file.exists(report_path)
+}
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/refinement-results-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/refinement-results-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/refinement-results-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/profiling-results-1.png" but not available.
+#> [1] TRUE
 ```

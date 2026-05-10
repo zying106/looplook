@@ -59,8 +59,10 @@ plot_peaks_interactions(
 
 - max_levels:
 
-  Integer. Maximum number of vertical levels for arc stacking (default:
-  10).
+  Integer. Maximum number of visible vertical levels for loop arc
+  stacking (default: 10). Overlapping loops are separated into stacked
+  bands up to this limit; denser regions are compressed into the
+  available height while preserving relative layering.
 
 - base_anchor_height:
 

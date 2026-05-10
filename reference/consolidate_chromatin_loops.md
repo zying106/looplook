@@ -32,7 +32,12 @@ signal-to-noise ratio:
   (e.g., singleton reads) from raw files *before* merging.
 
 - **Post-filtering** (`min_score`): Filters the final consensus loops
-  based on their aggregated score (e.g., average intensity).
+  based on their aggregated score.
+
+- **Replicate-Balanced Aggregation**: In `"consensus"` and `"union"`
+  modes, each cluster score is computed as the mean of per-source mean
+  scores, so one replicate with many fragmented calls cannot dominate
+  the final representative score.
 
 ## Usage
 
@@ -46,7 +51,9 @@ consolidate_chromatin_loops(
   min_score = NULL,
   blacklist_species = NULL,
   region_of_interest = NULL,
-  out_file = NULL
+  out_file = NULL,
+  write_output = TRUE,
+  quiet = FALSE
 )
 ```
 
@@ -101,8 +108,12 @@ consolidate_chromatin_loops(
   Numeric. **Post-filtering threshold**. Minimum score to keep a
   consolidated loop **after** merging.
 
-  - For `"consensus"` mode, this filters the consensus loops based on
-    their representative score.
+  - For `"consensus"` and `"union"` modes, this filters loops based on a
+    replicate-balanced representative score (mean of per-source cluster
+    means).
+
+  - For `"intersect"` mode, this filters the retained File 1 loops by
+    their original score.
 
   - Default: `NULL` (no post-filtering).
 
@@ -120,6 +131,17 @@ consolidate_chromatin_loops(
 
   Character. The file name (including the file path) for saving results
   in the extended BEDPE format.
+
+- write_output:
+
+  Logical. If `TRUE` (default), write the consolidated BEDPE file when
+  `out_file` is provided. If `FALSE`, return the `GInteractions` object
+  without creating directories or files.
+
+- quiet:
+
+  Logical. If `TRUE`, suppress progress messages while preserving
+  warnings. Default: `FALSE`.
 
 ## Value
 
@@ -149,7 +171,7 @@ res_intersect <- consolidate_chromatin_loops(
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/Rtmp8jtPCJ/file9b4754d42aba.bedpe
+#> Finished! Saved to /tmp/RtmpB6hDPm/file9b9151b77842.bedpe
 #> Finished! Final loops: 12
 
 # Example B: Consensus Mode (formerly Reproducible)
@@ -165,7 +187,7 @@ res_consensus <- consolidate_chromatin_loops(
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/Rtmp8jtPCJ/file9b477fadc4f0.bedpe
+#> Finished! Saved to /tmp/RtmpB6hDPm/file9b917c439175.bedpe
 #> Finished! Final loops: 11
 
 # Example C: Union Mode
@@ -181,7 +203,7 @@ res_union <- consolidate_chromatin_loops(
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Union mode: Keeping all clusters
-#> Finished! Saved to /tmp/Rtmp8jtPCJ/file9b47e1aa218.bedpe
+#> Finished! Saved to /tmp/RtmpB6hDPm/file9b916169d3c9.bedpe
 #> Finished! Final loops: 589
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -201,7 +223,7 @@ res_clean <- consolidate_chromatin_loops(
 #>     File 2: 100 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/Rtmp8jtPCJ/file9b4770732f03.bedpe
+#> Finished! Saved to /tmp/RtmpB6hDPm/file9b917c39d93e.bedpe
 #> Finished! Final loops: 4
 
 # Inspect results

@@ -191,7 +191,10 @@ experimental evidence.
     files before clustering (e.g., removing singleton noise where PET
     count \< 2) to substantially reduce computational memory overhead.
   - `min_score` serves as a post-filter applied to the final merged
-    chromatin interactome to ensure high-confidence interactions.
+    chromatin interactome to ensure high-confidence interactions. In
+    `"consensus"` and `"union"` modes, this representative score is
+    computed in a replicate-balanced manner: loop scores are averaged
+    within each replicate first, then averaged across replicates.
 - **`blacklist_species`**: Automatically excludes chromatin loops
   overlapping with high-variance, artifact-prone genomic regions (e.g.,
   centromeres, telomeres) by integrating the official ENCODE blacklist
@@ -426,12 +429,14 @@ hierarchical structure of its columns:
   clique in which the loop resides, reflecting the extended topological
   neighborhood.
 
-##### 3. `anchor_annotation` (Spatial Hub Footprints)
+##### 3. `anchor_loci_annotation` (Non-redundant Spatial Anchor Footprints)
 
 - **`Cluster_Locus_Genes`**: All genes from loop anchors within a
-  spatially interconnected hub (defined by network-connected
-  components), representing the full gene set associated with the 3D
-  hub.
+  spatially interconnected component (defined by network-connected
+  components), representing the full gene set associated with the
+  deduplicated anchor loci.
+- **Backward compatibility**: `anchor_annotation` is retained as an
+  alias of `anchor_loci_annotation` for older scripts.
 
 ##### 4. `promoter_centric_stats` & `distal_element_stats` (Topological Hub Detection)
 
@@ -918,8 +923,10 @@ data filtering, and visual aesthetics through the following arguments:
 - **`score_to_alpha`**: Logical flag. When `TRUE`, the quantitative
   interaction score is mapped to the transparency of Bezier arcs,
   enabling visual differentiation of interaction strength.
-- **`max_levels`**: Integer. Defines the maximum vertical stacking limit
-  for the loop arcs to manage rendering height and readability.
+- **`max_levels`**: Integer. Defines the maximum number of visible
+  stacking bands for loop arcs. Overlapping loops are separated
+  vertically up to this cap; denser regions are compressed into the
+  available height while preserving relative layering.
 - **`base_anchor_height`**: Numeric. Sets the vertical thickness of the
   rectangular anchors plotted at the base of the loop arcs.
 - **Color Controls** (`loop_color`, `anchor_color`, `overlap_color`,

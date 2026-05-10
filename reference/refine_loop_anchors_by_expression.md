@@ -19,7 +19,9 @@ refine_loop_anchors_by_expression(
   color_palette = "Set2",
   karyo_bin_size = 1e+05,
   reclassify_by_expression = TRUE,
-  hub_percentile = 0.95
+  hub_percentile = 0.95,
+  write_output = TRUE,
+  quiet = FALSE
 )
 ```
 
@@ -83,6 +85,17 @@ refine_loop_anchors_by_expression(
   Numeric (0–1). Node-degree quantile for hub detection. Default:
   `0.95`.
 
+- write_output:
+
+  Logical. If `TRUE` (default), write the refined Excel workbook to
+  `out_dir`. If `FALSE`, return results without creating directories or
+  files.
+
+- quiet:
+
+  Logical. If `TRUE`, suppress progress messages while preserving
+  warnings. Default: `FALSE`.
+
 ## Value
 
 An invisible named list:
@@ -90,7 +103,11 @@ An invisible named list:
 - `loop_annotation` — Filtered 3D network with updated `loop_type`
   (e.g., eP-P).
 
-- `anchor_annotation` — Cluster annotations with expressed targets.
+- `anchor_loci_annotation` — Filtered non-redundant anchor-locus
+  annotations with expressed targets.
+
+- `anchor_annotation` — Backward-compatible alias of
+  `anchor_loci_annotation`.
 
 - `promoter_centric_stats` — Gene-level connectivity statistics.
 
@@ -99,10 +116,12 @@ An invisible named list:
 - `target_annotation` — External features linked to active loop
   components.
 
-- `plot_list` — Named list of ggplot objects (dumbbell, rose,
-  karyotype).
+- `plots` — Named list of ggplot objects (dumbbell, rose, karyotype).
 
-Also writes `_Refined_Results.xlsx` to `out_dir`.
+- `plot_list` — Backward-compatible alias of `plots`.
+
+If `write_output = TRUE`, also writes `_Refined_Results.xlsx` to
+`out_dir`.
 
 ## Details
 
@@ -159,8 +178,7 @@ res_reclassified <- refine_loop_anchors_by_expression(
 #> >>> [Refinement] Project Name: Example_Reclassified_Filtered
 #> >>> [Step 1] Loading Data & Expression Matrix...
 #>     [Info] 'a1_id'/'a2_id' columns missing. Reconstructing from coordinates...
-#> Warning: Detected 4 column names but the data has 5 columns (i.e. invalid file). Added an extra default column name for the first column which is guessed to be row names or an index. Use setnames() afterwards if this guess is not correct, or fix the file write command that created the file to create a valid file.
-#>     >>> Active Genes (> 1 TPM): 605
+#>     >>> Active Genes (> 1 TPM): 608
 #> >>> [Step 2] Updating Anchors & Loops...
 #> >>> [Step 3] Updating Stats...
 #> >>> [Step 4] Refining Target Annotations...
@@ -173,7 +191,7 @@ res_reclassified <- refine_loop_anchors_by_expression(
 print(table(res_reclassified$loop_annotation$loop_type))
 #> 
 #>   E-E   E-G   E-P  E-eG  E-eP   G-G   G-P  G-eG  G-eP   P-P  P-eG  P-eP eG-eG 
-#>     4     5    14    11    15     2    19    11    22    13    23    50    23 
+#>     4     6    14    10    15     6    21     9    25    14    22    50    21 
 #> eG-eP eP-eP 
-#>    43    45 
+#>    39    44 
 ```

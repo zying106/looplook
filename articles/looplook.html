@@ -602,8 +602,11 @@ where PET count &lt; 2) to substantially reduce computational memory
 overhead.</li>
 <li>
 <code>min_score</code> serves as a post-filter applied to the final
-merged chromatin interactome to ensure high-confidence
-interactions.</li>
+merged chromatin interactome to ensure high-confidence interactions. In
+<code>"consensus"</code> and <code>"union"</code> modes, this
+representative score is computed in a replicate-balanced manner: loop
+scores are averaged within each replicate first, then averaged across
+replicates.</li>
 </ul>
 </li>
 <li>
@@ -877,14 +880,19 @@ the extended topological neighborhood.</li>
 </ul>
 </div>
 <div class="section level5">
-<h5 id="anchor_annotation-spatial-hub-footprints">3. <code>anchor_annotation</code> (Spatial Hub Footprints)<a class="anchor" aria-label="anchor" href="#anchor_annotation-spatial-hub-footprints"></a>
+<h5 id="anchor_loci_annotation-non-redundant-spatial-anchor-footprints">3. <code>anchor_loci_annotation</code> (Non-redundant Spatial Anchor
+Footprints)<a class="anchor" aria-label="anchor" href="#anchor_loci_annotation-non-redundant-spatial-anchor-footprints"></a>
 </h5>
 <ul>
 <li>
 <strong><code>Cluster_Locus_Genes</code></strong>: All genes from
-loop anchors within a spatially interconnected hub (defined by
+loop anchors within a spatially interconnected component (defined by
 network-connected components), representing the full gene set associated
-with the 3D hub.</li>
+with the deduplicated anchor loci.</li>
+<li>
+<strong>Backward compatibility</strong>:
+<code>anchor_annotation</code> is retained as an alias of
+<code>anchor_loci_annotation</code> for older scripts.</li>
 </ul>
 </div>
 <div class="section level5">
@@ -1560,8 +1568,10 @@ transparency of Bezier arcs, enabling visual differentiation of
 interaction strength.</li>
 <li>
 <strong><code>max_levels</code></strong>: Integer. Defines the
-maximum vertical stacking limit for the loop arcs to manage rendering
-height and readability.</li>
+maximum number of visible stacking bands for loop arcs. Overlapping
+loops are separated vertically up to this cap; denser regions are
+compressed into the available height while preserving relative
+layering.</li>
 <li>
 <strong><code>base_anchor_height</code></strong>: Numeric. Sets the
 vertical thickness of the rectangular anchors plotted at the base of the

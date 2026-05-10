@@ -12,7 +12,8 @@ The function supports three modes:
 
 It also supports a two-stage filtering strategy to maximize signal-to-noise ratio:
 Pre-filtering (min_raw_score): Removes low-confidence noise (e.g., singleton reads) from raw files before merging.
-Post-filtering (min_score): Filters the final consensus loops based on their aggregated score (e.g., average intensity).
+Post-filtering (min_score): Filters the final consensus loops based on their aggregated score.
+Replicate-Balanced Aggregation: In "consensus" and "union" modes, each cluster score is computed as the mean of per-source mean scores, so one replicate with many fragmented calls cannot dominate the final representative score.
 
 '><meta property="og:description" content='This function consolidates chromatin loops from multiple BEDPE files. It is designed for two main purposes:
 Replicate Consolidation: Merging biological or technical replicates to identify high-confidence, reproducible loops (e.g., 3 replicates of H3K27ac HiChIP).
@@ -27,7 +28,8 @@ The function supports three modes:
 
 It also supports a two-stage filtering strategy to maximize signal-to-noise ratio:
 Pre-filtering (min_raw_score): Removes low-confidence noise (e.g., singleton reads) from raw files before merging.
-Post-filtering (min_score): Filters the final consensus loops based on their aggregated score (e.g., average intensity).
+Post-filtering (min_score): Filters the final consensus loops based on their aggregated score.
+Replicate-Balanced Aggregation: In "consensus" and "union" modes, each cluster score is computed as the mean of per-source mean scores, so one replicate with many fragmented calls cannot dominate the final representative score.
 
 '><meta property="og:image" content="https://zying106.github.io/looplook/logo.png"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -71,7 +73,8 @@ Post-filtering (min_score): Filters the final consensus loops based on their agg
 <li><p><code>"intersect"</code>: Enforces strict reference-based filtering, retaining loops that show full genomic overlap with the reference file (File 1).</p></li>
 <li><p><code>"union"</code>: Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.</p></li>
 </ul><p>It also supports a <strong>two-stage filtering strategy</strong> to maximize signal-to-noise ratio:</p><ul><li><p><strong>Pre-filtering</strong> (<code>min_raw_score</code>): Removes low-confidence noise (e.g., singleton reads) from raw files <em>before</em> merging.</p></li>
-<li><p><strong>Post-filtering</strong> (<code>min_score</code>): Filters the final consensus loops based on their aggregated score (e.g., average intensity).</p></li>
+<li><p><strong>Post-filtering</strong> (<code>min_score</code>): Filters the final consensus loops based on their aggregated score.</p></li>
+<li><p><strong>Replicate-Balanced Aggregation</strong>: In <code>"consensus"</code> and <code>"union"</code> modes, each cluster score is computed as the mean of per-source mean scores, so one replicate with many fragmented calls cannot dominate the final representative score.</p></li>
 </ul></div>
 
     <div class="section level2">
@@ -85,7 +88,9 @@ Post-filtering (min_score): Filters the final consensus loops based on their agg
 <span>  min_score <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  blacklist_species <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  region_of_interest <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  out_file <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  out_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  write_output <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -124,7 +129,8 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 
 
 <dt id="arg-min-score">min_score<a class="anchor" aria-label="anchor" href="#arg-min-score"></a></dt>
-<dd><p>Numeric. <strong>Post-filtering threshold</strong>. Minimum score to keep a consolidated loop <strong>after</strong> merging.</p><ul><li><p>For <code>"consensus"</code> mode, this filters the consensus loops based on their representative score.</p></li>
+<dd><p>Numeric. <strong>Post-filtering threshold</strong>. Minimum score to keep a consolidated loop <strong>after</strong> merging.</p><ul><li><p>For <code>"consensus"</code> and <code>"union"</code> modes, this filters loops based on a replicate-balanced representative score (mean of per-source cluster means).</p></li>
+<li><p>For <code>"intersect"</code> mode, this filters the retained File 1 loops by their original score.</p></li>
 <li><p>Default: <code>NULL</code> (no post-filtering).</p></li>
 </ul></dd>
 
@@ -140,6 +146,14 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 
 <dt id="arg-out-file">out_file<a class="anchor" aria-label="anchor" href="#arg-out-file"></a></dt>
 <dd><p>Character. The file name (including the file path) for saving results in the extended BEDPE format.</p></dd>
+
+
+<dt id="arg-write-output">write_output<a class="anchor" aria-label="anchor" href="#arg-write-output"></a></dt>
+<dd><p>Logical. If <code>TRUE</code> (default), write the consolidated BEDPE file when <code>out_file</code> is provided. If <code>FALSE</code>, return the <code>GInteractions</code> object without creating directories or files.</p></dd>
+
+
+<dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, suppress progress messages while preserving warnings. Default: <code>FALSE</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -168,7 +182,7 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Intersect mode: Reference-based filtering (No Coordinate Merging)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Base: File 1. Criterion: Must overlap with ALL other files.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Intersecting with File 2...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp8jtPCJ/file9b4754d42aba.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpB6hDPm/file9b9151b77842.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example B: Consensus Mode (formerly Reproducible)</span></span></span>
@@ -184,7 +198,7 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Consensus mode: Keeping clusters in &gt;= 2 replicates</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp8jtPCJ/file9b477fadc4f0.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpB6hDPm/file9b917c439175.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 11</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example C: Union Mode</span></span></span>
@@ -200,7 +214,7 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Union mode: Keeping all clusters</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp8jtPCJ/file9b47e1aa218.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpB6hDPm/file9b916169d3c9.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 589</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example D: Dual Filtering Strategy (Recommended for HiChIP)</span></span></span>
@@ -220,7 +234,7 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 100 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Consensus mode: Keeping clusters in &gt;= 2 replicates</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp8jtPCJ/file9b4770732f03.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpB6hDPm/file9b917c39d93e.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 4</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Inspect results</span></span></span>

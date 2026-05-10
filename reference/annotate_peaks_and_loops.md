@@ -29,7 +29,9 @@ annotate_peaks_and_loops(
   color_palette = "Set2",
   karyo_bin_size = 1e+05,
   neighbor_hop = 0,
-  hub_percentile = 0.95
+  hub_percentile = 0.95,
+  write_output = TRUE,
+  quiet = FALSE
 )
 ```
 
@@ -107,6 +109,16 @@ annotate_peaks_and_loops(
   Numeric (0–1). Node-degree quantile for hub detection. Default:
   `0.95`.
 
+- write_output:
+
+  Logical. If `TRUE` (default), write the Excel workbook to `out_dir`.
+  If `FALSE`, return results without creating directories or files.
+
+- quiet:
+
+  Logical. If `TRUE`, suppress progress messages while preserving
+  warnings. Default: `FALSE`.
+
 ## Value
 
 An invisible named list:
@@ -118,16 +130,23 @@ An invisible named list:
 - `loop_annotation` — Annotated 3D interactome with
   `Putative_Target_Genes`.
 
-- `anchor_annotation` — Anchor-level genomic classifications.
+- `anchor_loci_annotation` — Non-redundant anchor-locus genomic
+  classifications after within-cluster interval reduction.
+
+- `anchor_annotation` — Backward-compatible alias of
+  `anchor_loci_annotation`.
 
 - `promoter_centric_stats` — Gene-level connectivity statistics.
 
 - `distal_element_stats` — Distal-element connectivity statistics.
 
-- `plot_list` — Named list of ggplot objects (donut, karyotype, rose,
+- `plots` — Named list of ggplot objects (donut, karyotype, rose,
   flower).
 
-Also writes a multi-sheet Excel workbook to `out_dir`.
+- `plot_list` — Backward-compatible alias of `plots`.
+
+If `write_output = TRUE`, also writes a multi-sheet Excel workbook to
+`out_dir`.
 
 ## Details
 

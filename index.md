@@ -87,7 +87,11 @@ unified 3D chromatin interaction coordinate framework**.
   clustering (e.g., removing singleton noise to substantially reduce
   computational memory overhead). `min_score` serves as a
   **post-filter** applied to the final merged chromatin interactome to
-  ensure high-confidence interactions.
+  ensure high-confidence interactions. In `"consensus"` and `"union"`
+  modes, the representative score is **replicate-balanced**: the package
+  first averages clustered loop scores within each replicate, then
+  averages across replicates, so one replicate with denser loop calls
+  does not dominate the final score.
 - **`gap`**: Defines the **maximum spatial distance** (in base pairs)
   allowed between loop anchors for consideration as part of the same
   physical cluster.
