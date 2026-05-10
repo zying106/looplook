@@ -218,7 +218,7 @@ looplook_report(
 - ...:
 
   Additional arguments passed to
-  [`rmarkdown::render`](https://pkgs.rstudio.com/rmarkdown/reference/render.html).
+  [`rmarkdown::render`](https://rdrr.io/pkg/rmarkdown/man/render.html).
 
 ## Value
 
@@ -303,9 +303,9 @@ looplook_report(
 #> 35/36                            
 #> 36/36 [sessioninfo]              
 #> output file: skeleton.knit.md
-#> /opt/hostedtoolcache/pandoc/3.8.3/x64/pandoc +RTS -K512m -RTS skeleton.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /tmp/RtmpnrVdYJ/My_Study_Report.html --lua-filter /home/runner/work/_temp/R-lib/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /home/runner/work/_temp/R-lib/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /home/runner/work/_temp/R-lib/rmarkdown/rmarkdown/lua/latex-div.lua --lua-filter /home/runner/work/_temp/R-lib/rmarkdown/rmarkdown/lua/table-classes.lua --embed-resources --standalone --wrap preserve --variable bs3=TRUE --section-divs --table-of-contents --toc-depth 3 --variable toc_float=1 --variable toc_selectors=h1,h2,h3 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /tmp/RtmpnrVdYJ/BiocStyle/template.html --syntax-highlighting none --variable highlightjs=1 --number-sections --variable theme=bootstrap --css /home/runner/work/_temp/R-lib/BiocStyle/resources/html/bioconductor.css --mathjax --variable 'mathjax-url=https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-in-header /tmp/RtmpnrVdYJ/rmarkdown-str9b7d3c6d9eb1.html --variable code_folding=hide --variable code_menu=1 
+#> /opt/hostedtoolcache/pandoc/3.8.3/x64/pandoc +RTS -K512m -RTS skeleton.knit.md --to html4 --from markdown+autolink_bare_uris+tex_math_single_backslash --output /tmp/Rtmpxwk3qx/My_Study_Report.html --lua-filter /home/runner/work/_temp/R-lib/bookdown/rmarkdown/lua/custom-environment.lua --lua-filter /home/runner/work/_temp/R-lib/rmarkdown/rmarkdown/lua/pagebreak.lua --lua-filter /home/runner/work/_temp/R-lib/rmarkdown/rmarkdown/lua/latex-div.lua --lua-filter /home/runner/work/_temp/R-lib/rmarkdown/rmarkdown/lua/table-classes.lua --embed-resources --standalone --wrap preserve --variable bs3=TRUE --section-divs --table-of-contents --toc-depth 3 --variable toc_float=1 --variable toc_selectors=h1,h2,h3 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /tmp/Rtmpxwk3qx/BiocStyle/template.html --syntax-highlighting none --variable highlightjs=1 --number-sections --variable theme=bootstrap --css /home/runner/work/_temp/R-lib/BiocStyle/resources/html/bioconductor.css --mathjax --variable 'mathjax-url=https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --include-in-header /tmp/Rtmpxwk3qx/rmarkdown-str9b496e71ea3b.html --variable code_folding=hide --variable code_menu=1 
 #> 
-#> Output created: /tmp/RtmpnrVdYJ/My_Study_Report.html
-#> >> Report saved to: /tmp/RtmpnrVdYJ/My_Study_Report.html
+#> Output created: /tmp/Rtmpxwk3qx/My_Study_Report.html
+#> >> Report saved to: /tmp/Rtmpxwk3qx/My_Study_Report.html
 # }
 ```
