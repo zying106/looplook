@@ -117,7 +117,7 @@ if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
     target_bed = bed_path,
     chr = "chr1",
     from = 11884299,
-    to   = 12106581,
+    to = 12106581,
     species = "hg38"
   )
   print(p)

@@ -177,10 +177,10 @@ load(rdata_path, envir = tmp)
 res <- tmp[[ls(tmp)[1]]]
 profile_target_genes(
   annotation_res = res,
-  diff_file  = diff_path,
+  diff_file = diff_path,
   expr_matrix_file = expr_path,
   metadata_file = meta_path,
-  run_go  = FALSE,
+  run_go = FALSE,
   run_ppi = FALSE
 )
 #> >>> Analysis Init | Root Project: Analysis

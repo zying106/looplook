@@ -528,7 +528,7 @@ For `looplook_karyo` objects (karyotype heatmaps), use
 
 ``` r
 
-print(res_integrated$plots$Karyo_Anchors)  # renders via grid or opens in browser
+print(res_integrated$plots$Karyo_Anchors) # renders via grid or opens in browser
 ```
 
 ------------------------------------------------------------------------
@@ -571,7 +571,7 @@ the original structural classifications.
 ``` r
 
 rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
-load(rdata_path)  # loads res_integrated into the environment
+load(rdata_path) # loads res_integrated into the environment
 
 res_basic <- refine_loop_anchors_by_expression(
   annotation_res = res_integrated,
@@ -821,17 +821,19 @@ frames).
 ``` r
 
 # Accessing results from a profiling run
-names(res_profile)               # one element per target_source ("loops", "targets")
-names(res_profile$loops)         # "go_results" "target_gene_sets" "plots"
+names(res_profile) # one element per target_source ("loops", "targets")
+names(res_profile$loops) # "go_results" "target_gene_sets" "plots"
 
 # --- Target genes ---
-res_profile$loops$target_gene_sets           # named list of character vectors
-names(res_profile$loops$target_gene_sets)    # gene set keys (e.g. "All", "Up", "Down")
+res_profile$loops$target_gene_sets # named list of character vectors
+names(res_profile$loops$target_gene_sets) # gene set keys (e.g. "All", "Up", "Down")
 
 # --- GO enrichment table ---
-go_df <- res_profile$loops$go_results        # data frame
-head(go_df[order(go_df$pvalue),              # sort by significance
-  c("Description", "ONTOLOGY", "pvalue", "Count", "geneID")])
+go_df <- res_profile$loops$go_results # data frame
+head(go_df[
+  order(go_df$pvalue), # sort by significance
+  c("Description", "ONTOLOGY", "pvalue", "Count", "geneID")
+])
 
 # --- All plot keys ---
 names(res_profile$loops$plots)

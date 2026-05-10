@@ -1037,7 +1037,7 @@ layers for recolouring, theme adjustment, or annotation:</p>
 <p>For <code>looplook_karyo</code> objects (karyotype heatmaps), use
 <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> to display:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Karyo_Anchors</span><span class="op">)</span>  <span class="co"># renders via grid or opens in browser</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Karyo_Anchors</span><span class="op">)</span> <span class="co"># renders via grid or opens in browser</span></span></code></pre></div>
 <hr>
 </div>
 </div>
@@ -1091,7 +1091,7 @@ where putative target genes are transcriptionally silent, without
 modifying the original structural classifications.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rdata_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"analysis_results.RData"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/load.html" class="external-link">load</a></span><span class="op">(</span><span class="va">rdata_path</span><span class="op">)</span>  <span class="co"># loads res_integrated into the environment</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/load.html" class="external-link">load</a></span><span class="op">(</span><span class="va">rdata_path</span><span class="op">)</span> <span class="co"># loads res_integrated into the environment</span></span>
 <span></span>
 <span><span class="va">res_basic</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
 <span>  annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
@@ -1382,17 +1382,19 @@ from 3D chromatin looping analyses relative to conventional method.</p>
 <code>go_results</code> (data frames).</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Accessing results from a profiling run</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_profile</span><span class="op">)</span>               <span class="co"># one element per target_source ("loops", "targets")</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_profile</span><span class="op">$</span><span class="va">loops</span><span class="op">)</span>         <span class="co"># "go_results" "target_gene_sets" "plots"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_profile</span><span class="op">)</span> <span class="co"># one element per target_source ("loops", "targets")</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_profile</span><span class="op">$</span><span class="va">loops</span><span class="op">)</span> <span class="co"># "go_results" "target_gene_sets" "plots"</span></span>
 <span></span>
 <span><span class="co"># --- Target genes ---</span></span>
-<span><span class="va">res_profile</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">target_gene_sets</span>           <span class="co"># named list of character vectors</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_profile</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">target_gene_sets</span><span class="op">)</span>    <span class="co"># gene set keys (e.g. "All", "Up", "Down")</span></span>
+<span><span class="va">res_profile</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">target_gene_sets</span> <span class="co"># named list of character vectors</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_profile</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">target_gene_sets</span><span class="op">)</span> <span class="co"># gene set keys (e.g. "All", "Up", "Down")</span></span>
 <span></span>
 <span><span class="co"># --- GO enrichment table ---</span></span>
-<span><span class="va">go_df</span> <span class="op">&lt;-</span> <span class="va">res_profile</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">go_results</span>        <span class="co"># data frame</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">go_df</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">go_df</span><span class="op">$</span><span class="va">pvalue</span><span class="op">)</span>,              <span class="co"># sort by significance</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Description"</span>, <span class="st">"ONTOLOGY"</span>, <span class="st">"pvalue"</span>, <span class="st">"Count"</span>, <span class="st">"geneID"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">go_df</span> <span class="op">&lt;-</span> <span class="va">res_profile</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">go_results</span> <span class="co"># data frame</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">go_df</span><span class="op">[</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">go_df</span><span class="op">$</span><span class="va">pvalue</span><span class="op">)</span>, <span class="co"># sort by significance</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Description"</span>, <span class="st">"ONTOLOGY"</span>, <span class="st">"pvalue"</span>, <span class="st">"Count"</span>, <span class="st">"geneID"</span><span class="op">)</span></span>
+<span><span class="op">]</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># --- All plot keys ---</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_profile</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">plots</span><span class="op">)</span></span></code></pre></div>
