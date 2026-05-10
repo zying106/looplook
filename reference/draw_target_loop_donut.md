@@ -6,7 +6,7 @@ peaks.
 ## Usage
 
 ``` r
-draw_target_loop_donut(loop_data, project_name, filename, color_vec)
+draw_target_loop_donut(loop_data, project_name, filename = NULL, color_vec)
 ```
 
 ## Arguments

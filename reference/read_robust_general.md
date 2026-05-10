@@ -1,9 +1,8 @@
 # Robust Data Reader
 
-Safely reads standard genomic formats (BED, BEDPE, CSV, TSV) using
-[`data.table::fread`](https://rdrr.io/pkg/data.table/man/fread.html) (if
-available) with progressive fallbacks to base R. Automatically handles
-delimiters and validates minimum column counts.
+Safely reads standard genomic formats utilizing
+[`data.table::fread`](https://rdrr.io/pkg/data.table/man/fread.html) for
+intelligent format inference.
 
 ## Usage
 
@@ -33,11 +32,11 @@ read_robust_general(
 
 - desc:
 
-  Character. Short description for error logging (e.g., "BEDPE").
+  Character. Short description for error logging.
 
 - min_cols:
 
-  Integer. Minimum number of columns required to pass validation.
+  Integer. Minimum number of columns required.
 
 ## Value
 

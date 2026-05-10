@@ -9,8 +9,7 @@ all environments.
 ``` r
 draw_upset_intersections(
   gene_lists,
-  project_name,
-  filename,
+  project_name = "UpSet Plot",
   group_colors = NULL
 )
 ```
@@ -25,39 +24,33 @@ draw_upset_intersections(
 
   Character. Used for the file title.
 
-- filename:
-
-  Character. Output file path (must end in .pdf or .png).
-
 - group_colors:
 
-  Optional named character vector. Not used in this version.
+  Optional mapped color schemes.
 
 ## Value
 
-Invisibly returns `NULL`. Saves the plot to `filename`.
+Invisibly returns the `grob` object.
 
 ## Examples
 
 ``` r
 gene_sets <- list(
-  Upregulated = c("A", "B", "C", "D"),
-  Downregulated = c("C", "D", "E", "F"),
-  Bound_by_TF = c("B", "D", "F", "G")
+  Upregulated = c("TP53", "BRCA1", "MYC", "EGFR"),
+  Downregulated = c("BRCA1", "MYC", "CDKN1A", "BAX"),
+  Bound_by_TF = c("MYC", "EGFR", "CDKN1A", "KRAS")
 )
-
-tf <- tempfile(fileext = ".pdf")
-
-if (requireNamespace("UpSetR", quietly = TRUE)) {
-  draw_upset_intersections(
-    gene_lists = gene_sets,
-    project_name = "Transcriptional Regulation",
-    filename = tf
-  )
-}
+draw_upset_intersections(
+  gene_lists = gene_sets,
+  project_name = "Transcriptional Regulation"
+)
 #> Warning: `aes_string()` was deprecated in ggplot2 3.0.0.
 #> ℹ Please use tidy evaluation idioms with `aes()`.
 #> ℹ See also `vignette("ggplot2-in-packages")` for more information.
+#> ℹ The deprecated feature was likely used in the UpSetR package.
+#>   Please report the issue to the authors.
+#> Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+#> ℹ Please use `linewidth` instead.
 #> ℹ The deprecated feature was likely used in the UpSetR package.
 #>   Please report the issue to the authors.
 #> Warning: The `size` argument of `element_line()` is deprecated as of ggplot2 3.4.0.

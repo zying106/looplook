@@ -1,9 +1,9 @@
-pandoc: 3.1.11
+pandoc: 3.8.3
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   looplook: looplook.html
-last_built: 2026-04-29T09:41Z
+last_built: 2026-05-10T04:13Z
 urls:
   reference: https://zying106.github.io/looplook/reference
   article: https://zying106.github.io/looplook/articles

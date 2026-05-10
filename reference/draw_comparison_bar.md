@@ -6,7 +6,7 @@ datasets.
 ## Usage
 
 ``` r
-draw_comparison_bar(original_df, filtered_df, filename, color_vec)
+draw_comparison_bar(original_df, filtered_df, filename = NULL, color_vec)
 ```
 
 ## Arguments

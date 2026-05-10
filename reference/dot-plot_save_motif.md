@@ -1,27 +1,13 @@
 # Plot and Save Motif Results (Barplot)
 
-Plots the top 15 enriched motifs ranked by -log10(P-value).
+Plot and Save Motif Results (Barplot)
 
 ## Usage
 
 ``` r
-.plot_save_motif(res_df, out_dir, prefix)
+.plot_save_motif(res_df, prefix)
 ```
-
-## Arguments
-
-- res_df:
-
-  Data frame of motif enrichment results.
-
-- out_dir:
-
-  Character. Output directory.
-
-- prefix:
-
-  Character. File prefix.
 
 ## Value
 
-Invisible `NULL`.
+A `ggplot` barplot, or `NULL` if input is empty.

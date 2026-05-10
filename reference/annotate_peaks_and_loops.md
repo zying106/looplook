@@ -1,50 +1,16 @@
-# A core analytical engine enabling high-resolution spatial mapping of genomic features/peaks to 3D chromatin interaction targets
+# Spatial mapping of 1D genomic features to 3D chromatin interaction targets
 
-A highly sophisticated, dual-purpose 3D genomic engine designed to:
+A dual-purpose analytical framework designed to integrate 1D genomic
+features with 3D chromatin architecture.
 
-1.  **Annotate Chromatin Loops:** Accurately classify 3D spatial
-    interactions (e.g., Enhancer-Promoter, Promoter-Promoter) using a
-    strict structural hierarchy.
+1.  **Loop Annotation:** Classifies 3D spatial interactions (e.g.,
+    Enhancer-Promoter, Promoter-Promoter) using a defined structural
+    hierarchy.
 
-2.  **Map External Features (genomic features to 3D):** Act as a **"3D
-    Spatial Bridge"** to link auxiliary 1D genomic features (e.g., GWAS
-    risk SNPs, ATAC-seq peaks, ChIP-seq binding sites) to their genuine
-    regulated target genes, fundamentally outperforming simple "nearest
-    gene" heuristics.
-
-**Core Philosophy: Bridging the genomic features-3D Gap** Traditional
-annotations typically assign non-coding variants to the nearest linear
-gene. This engine prioritizes **physical 3D chromatin contacts**. If a
-GWAS SNP or enhancer lands in an anchor looping to a distal gene, the
-distal gene is accurately assigned. If no spatial loop exists, the
-engine intelligently falls back to the nearest active local gene (Smart
-Fallback), ensuring comprehensive and gapless annotation coverage.
-
-**Key Algorithmic Innovations:**
-
-- **Biotype & Expression-Aware Conflict Resolution:** When an anchor
-  overlaps multiple promoters (e.g., dense gene loci or bidirectional
-  promoters), it executes a rigorous 3-step resolution:
-
-  1.  *Expression Pre-filter:* Eliminates transcriptionally silent genes
-      based on the user-provided expression matrix.
-
-  2.  *Functional Biotype Prioritization::* Prioritizes the remaining
-      candidates by functional class in the following order:
-      `Protein Coding > Antisense > lncRNA > Pseudogene`.
-
-  3.  *Dominant Expression Tiebreaker:* Designates the gene with the
-      highest transcriptional abundance as the target gene to further
-      resolve any remaining mapping ambiguities.
-
-- **Dynamic Topology Control (`neighbor_hop`):** Controls network
-  diffusion depth. Allows signal propagation from a SNP -\> Enhancer -\>
-  Hub -\> Target Gene, which is ideal for uncovering multi-way
-  super-enhancer cliques.
-
-- **Hub Detection:** Calculates precise node degrees to identify
-  high-connectivity Promoter and Distal hubs based on the
-  `hub_percentile`.
+2.  **Feature-to-Target Mapping:** Links 1D genomic features (e.g., GWAS
+    risk SNPs, ATAC-seq peaks, ChIP-seq binding sites) to putative
+    target genes via 3D chromatin contacts, providing a spatial
+    complement to linear proximity-based assignments.
 
 ## Usage
 
@@ -52,6 +18,8 @@ Fallback), ensuring comprehensive and gapless annotation coverage.
 annotate_peaks_and_loops(
   bedpe_file,
   target_bed = NULL,
+  txdb = NULL,
+  org_db = NULL,
   species = "hg38",
   tss_region = c(-2000, 2000),
   out_dir = "./results",
@@ -69,294 +37,150 @@ annotate_peaks_and_loops(
 
 - bedpe_file:
 
-  Character. Path to the BEDPE file containing 3D loop coordinates (The
-  "3D Bridge").
+  Character. Path to a BEDPE file (at least 6 columns: chr1, start1,
+  end1, chr2, start2, end2).
 
 - target_bed:
 
-  Optional character. Path to an auxiliary BED file (e.g., GWAS summary
-  stats, eQTLs, ChIP-seq/ATAC-seq peaks). If provided, maps these 1D
-  regulatory regions to 3D target genes.
+  Optional path to a BED file of genomic features (e.g., ChIP-seq peaks,
+  GWAS SNPs). When provided, these 1D regions are mapped to 3D target
+  genes. Default: `NULL`.
+
+- txdb:
+
+  A [`TxDb`](https://rdrr.io/pkg/GenomicFeatures/man/TxDb-class.html)
+  object, a package name string, or `NULL` to auto-resolve from
+  `species`. Default: `NULL`.
+
+- org_db:
+
+  An `OrgDb` object, a package name string, or `NULL` to auto-resolve
+  from `species`. Default: `NULL`.
 
 - species:
 
-  Character. Reference genome build. Supported: `"hg38"`, `"hg19"`,
-  `"mm10"`, `"mm9"`.
+  Character. Genome assembly used when `txdb` and `org_db` are `NULL`.
+  One of `"hg38"`, `"hg19"`, `"mm10"`, `"mm9"`. Default: `"hg38"`.
 
 - tss_region:
 
-  Numeric vector. Defines the promoter window around the TSS. Default:
-  `c(-2000, 2000)`.
+  Numeric vector of length 2. Promoter window around the TSS in bp.
+  Default: `c(-2000, 2000)`.
 
 - out_dir:
 
-  Character. Directory for saving generated PDF plots and Excel results.
+  Character. Output directory for the Excel results file. Default:
+  `"./results"`.
 
 - expr_matrix_file:
 
-  Optional character. Path to the normalized RNA-seq matrix (e.g.,
-  TPM/FPKM). **Highly recommended** as it fuels the intelligent conflict
-  resolution and filters out silent elements.
+  Optional path to a normalised expression matrix (TPM/FPKM, genes ×
+  samples). Enables expression-aware conflict resolution. Default:
+  `NULL`.
 
 - sample_columns:
 
-  Character vector or Integer indices. Specifies which columns in
-  `expr_matrix_file` to average for the baseline expression reference.
+  Character vector or integer indices. Columns in `expr_matrix_file` to
+  average for baseline expression. Default: `NULL`.
 
 - project_name:
 
-  Character. Prefix for all output files and plot titles.
+  Character. Prefix for output files and plot titles. Default:
+  `"HiChIP"`.
 
 - color_palette:
 
-  Character. Color brewer palette name for visualizations (e.g.,
-  `"Set2"`).
+  Character. RColorBrewer palette name. Default: `"Set2"`.
 
 - karyo_bin_size:
 
-  Numeric. Bin size for Karyotype genomic density heatmaps. Default:
-  `1e5` (100kb).
+  Integer. Bin width in bp for karyotype heatmaps. Default: `1e5`.
 
 - neighbor_hop:
 
-  Integer. **Network Diffusion Depth**. `0` (Default) captures direct
-  physical connections only; `1` captures indirect 1-hop hub-mediated
-  connections.
+  Integer. k-hop ego-network expansion order via
+  [`igraph::ego()`](https://r.igraph.org/reference/ego.html). `0`
+  restricts to direct contacts. Default: `0`.
 
 - hub_percentile:
 
-  Numeric (0-1). Top percentile threshold for defining high-connectivity
-  "Regulatory Hubs" (default: `0.95`).
+  Numeric (0–1). Node-degree quantile for hub detection. Default:
+  `0.95`.
 
 ## Value
 
-An invisible list of comprehensive data frames (also auto-saved as a
-multi-sheet `.xlsx`):
+An invisible named list:
 
-- `target_annotation`: Detailed annotation of `target_bed`. Features the
-  important column: `Assigned_Target_Genes_Filled` (Loop-prioritized
-  target, gracefully falling back to the local nearest gene if
-  unlooped).
+- `target_annotation` — Peak-to-gene assignments with
+  `Assigned_Target_Genes_Filled` (3D-prioritised, falling back to
+  nearest gene).
 
-- `loop_annotation`: The fully annotated 3D network. Features
-  `Putative_Target_Genes` capturing precisely resolved regulatory
-  targets.
+- `loop_annotation` — Annotated 3D interactome with
+  `Putative_Target_Genes`.
 
-- `promoter_centric_stats`: Gene-level topological statistics. Contains
-  structural node degrees and identifies `Is_High_Connectivity_Gene`.
+- `anchor_annotation` — Anchor-level genomic classifications.
 
-- `distal_element_stats`: Enhancer-level topological statistics,
-  highlighting critical regulatory anchors orchestrating multiple
-  promoters.
+- `promoter_centric_stats` — Gene-level connectivity statistics.
 
-- `anchor_annotation`: Locus-level summarization of all 1D anchor
-  footprints.
+- `distal_element_stats` — Distal-element connectivity statistics.
+
+- `plot_list` — Named list of ggplot objects (donut, karyotype, rose,
+  flower).
+
+Also writes a multi-sheet Excel workbook to `out_dir`.
+
+## Details
+
+**Mapping Strategy and Fallback Mechanism** The method prioritizes
+physical 3D chromatin contacts. If a genomic feature overlaps an anchor
+looping to a distal gene, the distal gene is assigned as the target. In
+the absence of spatial loop evidence, the function implements a linear
+proximity-based fallback to assign the nearest active local gene,
+ensuring continuous annotation coverage.
+
+**Hierarchical Conflict Resolution** To address complex loci where a
+single anchor overlaps multiple promoters (e.g., dense gene clusters or
+bidirectional promoters), the function executes a 3-step resolution:
+
+1.  *Expression Filter:* Excludes transcriptionally silent genes using a
+    user-provided expression matrix.
+
+2.  *Biotype Prioritization:* Ranks remaining candidates by functional
+    class: `Protein Coding > Antisense > lncRNA > Pseudogene`.
+
+3.  *Expression Tiebreaker:* Resolves remaining ambiguities by
+    designating the gene with the highest transcriptional abundance as
+    the primary target.
+
+**Network Topology Analysis**
+
+- **Ego-Network Expansion (`neighbor_hop`):** Implements k-hop
+  neighborhood expansion via
+  [`igraph::ego()`](https://r.igraph.org/reference/ego.html). A value of
+  `0` restricts to direct contacts, while `1` includes secondary
+  contacts to capture broader regulatory cliques.
+
+- **Hub Detection:** Utilizes a node-degree quantile threshold
+  (`hub_percentile`) to identify highly connected regulatory elements.
 
 ## Examples
 
 ``` r
-# 1. Get paths to example files included in the package
-bedpe_path <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
-bed_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
-expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
-
-# 2. Check if files and required annotation databases exist
-if (bedpe_path != "" && bed_path != "" && expr_path != "" &&
-  requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
+if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-  # =========================================================================
-  #  Integrative Analysis (Loops + GWAS/ChIP-seq + Expression)
-  # =========================================================================
-  # Here, `target_bed` can represent GWAS risk SNPs, ATAC-seq peaks, or
-  # ChIP-seq peaks. The engine bridges these 1D regions to their 3D genes.
-  res_integrated <- annotate_peaks_and_loops(
+  # Mini example files (smaller subset for fast package checks)
+  bedpe_path <- system.file("extdata", "example_loops_mini.bedpe", package = "looplook")
+  bed_path <- system.file("extdata", "example_peaks_mini.bed", package = "looplook")
+
+  res <- annotate_peaks_and_loops(
     bedpe_file = bedpe_path,
     target_bed = bed_path,
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
     species = "hg38",
     tss_region = c(-2000, 2000),
     out_dir = tempdir(),
-    color_palette = "Set2",
-    karyo_bin_size = 1e5,
     neighbor_hop = 0,
-    hub_percentile = 0.95,
-    project_name = "Example_HiChIP_Integrative"
+    project_name = "Quick_Example"
   )
-
-  # View integrated annotations linking external peaks/SNPs to target genes
-  head(res_integrated$target_annotation)
+  head(res$target_annotation)
 }
-#> 
-#> Step 0: Loading expression data...
-#>     >>> Expression loaded for 943 genes.
-#> Step 1: Reading BEDPE file...
-#> Step 2: Clustering loops...
-#> Step 3: Biological Classification & Topology...
-#> 
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> Loading required package: org.Hs.eg.db
-#> Loading required package: AnnotationDbi
-#> Loading required package: stats4
-#> Loading required package: BiocGenerics
-#> Loading required package: generics
-#> 
-#> Attaching package: 'generics'
-#> The following objects are masked from 'package:base':
-#> 
-#>     as.difftime, as.factor, as.ordered, intersect, is.element, setdiff,
-#>     setequal, union
-#> 
-#> Attaching package: 'BiocGenerics'
-#> The following objects are masked from 'package:stats':
-#> 
-#>     IQR, mad, sd, var, xtabs
-#> The following objects are masked from 'package:base':
-#> 
-#>     Filter, Find, Map, Position, Reduce, anyDuplicated, aperm, append,
-#>     as.data.frame, basename, cbind, colnames, dirname, do.call,
-#>     duplicated, eval, evalq, get, grep, grepl, is.unsorted, lapply,
-#>     mapply, match, mget, order, paste, pmax, pmax.int, pmin, pmin.int,
-#>     rank, rbind, rownames, sapply, saveRDS, table, tapply, unique,
-#>     unsplit, which.max, which.min
-#> Loading required package: Biobase
-#> Welcome to Bioconductor
-#> 
-#>     Vignettes contain introductory material; view with
-#>     'browseVignettes()'. To cite Bioconductor, see
-#>     'citation("Biobase")', and for packages 'citation("pkgname")'.
-#> Loading required package: IRanges
-#> Loading required package: S4Vectors
-#> 
-#> Attaching package: 'S4Vectors'
-#> The following object is masked from 'package:utils':
-#> 
-#>     findMatches
-#> The following objects are masked from 'package:base':
-#> 
-#>     I, expand.grid, unname
-#> 'select()' returned 1:many mapping between keys and columns
-#>   2169 genes were dropped because they have exons located on both strands of
-#>   the same reference sequence or on more than one reference sequence, so cannot
-#>   be represented by a single genomic range.
-#>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
-#>   object, or use suppressMessages() to suppress this message.
-#> Warning: GRanges object contains 8 out-of-bound ranges located on sequences
-#>   chr4_GL000257v2_alt, chr16_KI270728v1_random, chr22_KI270731v1_random,
-#>   chr3_GL000221v1_random, chr1_KI270706v1_random, chr16_GL383556v1_alt, and
-#>   chrUn_KI270748v1. Note that ranges located on a sequence whose length is
-#>   unknown (NA) or on a circular sequence are not considered out-of-bound (use
-#>   seqlengths() and isCircular() to get the lengths and circularity flags of the
-#>   underlying sequences). You can use trim() to trim these ranges. See
-#>   ?`trim,GenomicRanges-method` for more information.
-#> 'select()' returned 1:1 mapping between keys and columns
-#>     Calculating Topology (Hops)...
-#> Step 4: Constructing Loop Tables...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> 'select()' returned 1:many mapping between keys and columns
-#>     Generating Promoter Centric Stats...
-#>     Generating Distal Element Stats...
-#> Step 5: Integrating Target Annotations...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> >> Using Genome: hg38 ...
-#> 'select()' returned 1:many mapping between keys and columns
-#>     Refining Target annotation...
-#>   2169 genes were dropped because they have exons located on both strands of
-#>   the same reference sequence or on more than one reference sequence, so cannot
-#>   be represented by a single genomic range.
-#>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
-#>   object, or use suppressMessages() to suppress this message.
-#> Warning: GRanges object contains 8 out-of-bound ranges located on sequences
-#>   chr4_GL000257v2_alt, chr16_KI270728v1_random, chr22_KI270731v1_random,
-#>   chr3_GL000221v1_random, chr1_KI270706v1_random, chr16_GL383556v1_alt, and
-#>   chrUn_KI270748v1. Note that ranges located on a sequence whose length is
-#>   unknown (NA) or on a circular sequence are not considered out-of-bound (use
-#>   seqlengths() and isCircular() to get the lengths and circularity flags of the
-#>   underlying sequences). You can use trim() to trim these ranges. See
-#>   ?`trim,GenomicRanges-method` for more information.
-#> 'select()' returned 1:1 mapping between keys and columns
-#> Step 6: Generating Visualizations...
-#> Warning: Ignoring unknown parameters: `size`
-#>  Saved: /tmp/Rtmpp3oEeP/Example_HiChIP_Integrative_Basic_Circular.pdf
-#>   2169 genes were dropped because they have exons located on both strands of
-#>   the same reference sequence or on more than one reference sequence, so cannot
-#>   be represented by a single genomic range.
-#>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
-#>   object, or use suppressMessages() to suppress this message.
-#> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/Rtmpp3oEeP/Example_HiChIP_Integrative_Basic_Karyo_LoopGenes.pdf
-#>     Saved Heatmap: /tmp/Rtmpp3oEeP/Example_HiChIP_Integrative_Basic_Karyo_Anchors.pdf
-#> Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
-#> ℹ Please use `linewidth` instead.
-#> ℹ The deprecated feature was likely used in the looplook package.
-#>   Please report the issue at <https://github.com/zying106/looplook/issues>.
-#>     Saved (Simplified Flower Plot with inner counts): /tmp/Rtmpp3oEeP/Example_HiChIP_Integrative_Basic_Flower.pdf
-#>     Plotting Target Visualizations...
-#>   2169 genes were dropped because they have exons located on both strands of
-#>   the same reference sequence or on more than one reference sequence, so cannot
-#>   be represented by a single genomic range.
-#>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
-#>   object, or use suppressMessages() to suppress this message.
-#> 'select()' returned 1:1 mapping between keys and columns
-#>     Saved Heatmap: /tmp/Rtmpp3oEeP/Example_HiChIP_Integrative_Basic_Karyo_TargetGenes.pdf
-#>     Generating Pie Chart 0: All Anchors Genomic Distribution...
-#>     Generating Pie Chart 1: All Targets Distribution...
-#>     Generating Pie Chart 2: Loop-Connected Targets Distribution...
-#> Step 7: Exporting to Excel...
-#>     Excel file saved.
-#> Analysis Complete.
-#>   seqnames     start       end width strand input_id annotation
-#> 1     chr1 171285865 171286512   648      *   Peak_1     3' UTR
-#> 2     chr1  69582109  69582609   501      *   Peak_2     Intron
-#> 3     chr1  93669531  93670158   628      *   Peak_3     Intron
-#> 4     chr1 230112638 230115006  2369      *   Peak_4   Promoter
-#> 5     chr1  83034931  83035876   946      *   Peak_5     Intron
-#> 6     chr1 156869712 156872016  2305      *   Peak_6       Exon
-#>                                            detail_anno geneChr geneStart
-#> 1                                               3' UTR       1 171282258
-#> 2     Intron (ENST00000651989.2/57554, intron 1 of 26)       1  69568450
-#> 3     Intron (ENST00000260502.11/8412, intron 2 of 11)       1  93561794
-#> 4                                     Promoter (<=1kb)       1 230112662
-#> 5 Intron (ENST00000452901.5/103283057, intron 5 of 10)       1  82973929
-#> 6          Exon (ENST00000674537.2/4914, exon 9 of 18)       1 156874153
-#>     geneEnd geneLength geneStrand    geneId      transcriptId distanceToTSS
-#> 1 171285521       3264          1      2326 ENST00000469711.1          3607
-#> 2  69875004     306555          1     57554 ENST00000370958.5         13659
-#> 3  93681370     119577          2      8412 ENST00000370243.1         11212
-#> 4 230114032       1371          1      2590 ENST00000830731.1             0
-#> 5  82986208      12280          2 101927498 ENST00000421931.1        -48723
-#> 6 156876199       2047          1      4914 ENST00000534682.1         -2137
-#>           ENSEMBL    SYMBOL                                 Gene_description
-#> 1 ENSG00000010932      FMO1 flavin containing dimethylaniline monoxygenase 1
-#> 2 ENSG00000033122     LRRC7                 leucine rich repeat containing 7
-#> 3 ENSG00000137936     BCAR3         BCAR3 adaptor protein, NSP family member
-#> 4 ENSG00000143641    GALNT2  polypeptide N-acetylgalactosaminyltransferase 2
-#> 5 ENSG00000236268 LINC01361      long intergenic non-protein coding RNA 1361
-#> 6 ENSG00000198400     NTRK1          neurotrophic receptor tyrosine kinase 1
-#>   Linked_Loop_IDs All_Loop_Connected_Genes Regulated_promoter_genes
-#> 1            <NA>                     <NA>                     <NA>
-#> 2            <NA>                     <NA>                     <NA>
-#> 3            <NA>                     <NA>                     <NA>
-#> 4            <NA>                     <NA>                     <NA>
-#> 5            <NA>                     <NA>                     <NA>
-#> 6            <NA>                     <NA>                     <NA>
-#>   Assigned_Target_Genes All_Loop_Connected_Genes_Filled
-#> 1                  <NA>                            FMO1
-#> 2                  <NA>                           LRRC7
-#> 3                  <NA>                           BCAR3
-#> 4                  <NA>                          GALNT2
-#> 5                  <NA>                       LINC01361
-#> 6                  <NA>                           NTRK1
-#>   Regulated_promoter_genes_Filled Assigned_Target_Genes_Filled
-#> 1                            FMO1                         FMO1
-#> 2                           LRRC7                        LRRC7
-#> 3                           BCAR3                        BCAR3
-#> 4                          GALNT2                       GALNT2
-#> 5                       LINC01361                    LINC01361
-#> 6                           NTRK1                        NTRK1
 ```

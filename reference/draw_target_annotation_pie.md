@@ -9,8 +9,8 @@ Optimized: Labels only show Count (%), and hides labels for small slices
 draw_target_annotation_pie(
   bed_info,
   project_name,
-  filename,
-  color_palette = "Set3"
+  filename = NULL,
+  color_palette = "Set2"
 )
 ```
 
@@ -30,7 +30,7 @@ draw_target_annotation_pie(
 
 - color_palette:
 
-  Character string for the color palette (default: "Set3").
+  Character string for the color palette (default: "Set2").
 
 ## Value
 

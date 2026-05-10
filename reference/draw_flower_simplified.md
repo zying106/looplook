@@ -9,48 +9,38 @@ for intuitive comparison of shared vs. condition-specific genes across
 ## Usage
 
 ``` r
-draw_flower_simplified(gene_lists, project_name, filename, group_colors)
+draw_flower_simplified(gene_lists, project_name, group_colors)
 ```
 
 ## Arguments
 
 - gene_lists:
 
-  A named list of character vectors containing gene identifiers (e.g.,
-  symbols or Entrez IDs).
+  A named list of character vectors containing gene identifiers.
 
 - project_name:
 
-  Character. Prefix for the plot title (e.g., "Differential Loops").
-
-- filename:
-
-  Character. Output file path (e.g., "flower.png" or "flower.pdf").
+  Character. Prefix for the plot title.
 
 - group_colors:
 
-  Character vector. Colors for each group (named or in same order as
-  `gene_lists`).
+  Named character vector for specific group mappings.
 
 ## Value
 
-Invisibly returns `NULL`. Saves the plot to `filename`.
+Invisibly returns the `ggplot` object.
 
 ## Examples
 
 ``` r
-# 1. Create dummy gene sets with some overlap
 gene_sets <- list(
-  Control = c("TP53", "BRCA1", "MYC"),
-  Treated = c("BRCA1", "MYC", "EGFR"),
-  Resistant = c("MYC", "EGFR", "KRAS")
+  Control = c("TP53", "BRCA1", "MYC", "EGFR"),
+  Treated = c("BRCA1", "MYC", "EGFR", "KRAS"),
+  Resistant = c("MYC", "EGFR", "KRAS", "BRAF")
 )
-# 2. Draw the flower plot
 draw_flower_simplified(
   gene_lists = gene_sets,
-  project_name = "Drug Response Study",
-  filename = tempfile(fileext = ".png"),
+  project_name = "Drug Response",
   group_colors = c(Control = "#E41A1C", Treated = "#377EB8", Resistant = "#4DAF4A")
 )
-#>     Saved (Simplified Flower Plot with inner counts): /tmp/Rtmpp3oEeP/file41ba6c8d783a.png
 ```

@@ -1,19 +1,17 @@
 # Annotate Motif Families
 
-Appends JASPAR TF family annotations to the motif enrichment results.
+Annotate Motif Families
 
 ## Usage
 
 ``` r
-.annotate_motif_families(res_df)
+.annotate_motif_families(
+  res_df,
+  jaspar_db = JASPAR2020::JASPAR2020,
+  jaspar_collection = "CORE"
+)
 ```
-
-## Arguments
-
-- res_df:
-
-  Data frame. Motif enrichment results from `.calc_motif_enrichment`.
 
 ## Value
 
-Data frame with an appended `Family` column.
+A data frame with added `Family` column, sorted by P-value.

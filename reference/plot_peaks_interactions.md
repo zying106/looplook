@@ -1,9 +1,9 @@
-# Publication-ready visualization toolkit for rendering genomic track data and statistical summaries related to 3D chromatin interactions
+# Integrative visualization of 3D chromatin loops and genomic features
 
-Generates an integrative genomic track plot resembling IGV, displaying
-chromatin loops as arcs, loop anchors as rectangles, optional
-overlapping features (e.g., ChIP-seq peaks), and annotated genes. Loop
-arcs can be colored or sized by interaction score (7th column in BEDPE).
+Generates an integrative genomic track plot displaying chromatin loops
+as arcs, loop anchors as rectangles, optional overlapping features
+(e.g., ChIP-seq peaks), and annotated genes. Loop arcs can be colored or
+sized by interaction score (7th column in BEDPE).
 
 ## Usage
 
@@ -42,8 +42,8 @@ plot_peaks_interactions(
 
 - chr:
 
-  Character. Chromosome name (e.g., "chr8"). If NULL, inferred from most
-  frequent chromosome in BEDPE.
+  Character. Chromosome name (e.g., "chr8"). If NULL, inferred from the
+  most frequent chromosome in the BEDPE.
 
 - from:
 
@@ -64,11 +64,11 @@ plot_peaks_interactions(
 
 - base_anchor_height:
 
-  Numeric. Height of anchor rectangles (default: 0.1).
+  Numeric. Height of anchor rectangles (default: 0.05).
 
 - loop_color:
 
-  Character. Default color for arcs when no score is provided (e.g.,
+  Character. Default color for arcs when no score is provided (default:
   "#5D6D7E").
 
 - anchor_color:
@@ -77,7 +77,7 @@ plot_peaks_interactions(
 
 - overlap_color:
 
-  Character. Color for overlap track (default: "#E74C3C").
+  Character. Color for overlap track (default: "#02ABB4").
 
 - exon_color:
 
@@ -93,49 +93,33 @@ plot_peaks_interactions(
 
 - min_score:
 
-  Logical. If TRUE, use score to control arc line width instead of color
-  (not yet implemented in current version; future extension).
+  Optional numeric. Floor value for score mapping.
 
 - save_file:
 
-  Optional character. File path to save the plot (e.g.,
-  "region_plot.pdf").
+  Character. Optional path to save the plot via
+  [`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html).
+  When set, the plot is written to this file and returned invisibly.
 
 ## Value
 
-A `ggplot` object.
+A `ggplot` object (invisibly when `save_file` is non-NULL).
 
 ## Examples
 
 ``` r
-# 1. Get paths to example files included in the package
-bedpe_path <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
-bed_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
-
-# 2. Run plotting (requires TxDb package for gene annotation)
-if (bedpe_path != "" &&
-  requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
+if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-  # Example : Integrative plot with overlapping peaks and output to file
-  p2 <- plot_peaks_interactions(
+  bedpe_path <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
+  bed_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
+  p <- plot_peaks_interactions(
     bedpe_file = bedpe_path,
     target_bed = bed_path,
     chr = "chr1",
     from = 11884299,
-    to = 12106581,
-    species = "hg38",
-    save_file = tempfile(fileext = ".pdf")
+    to   = 12106581,
+    species = "hg38"
   )
+  print(p)
 }
-#>   2169 genes were dropped because they have exons located on both strands of
-#>   the same reference sequence or on more than one reference sequence, so cannot
-#>   be represented by a single genomic range.
-#>   Use 'single.strand.genes.only=FALSE' to get all the genes in a GRangesList
-#>   object, or use suppressMessages() to suppress this message.
-#> 'select()' returned 1:1 mapping between keys and columns
-#> 'select()' returned 1:1 mapping between keys and columns
-#> Warning: The `size` argument of `element_rect()` is deprecated as of ggplot2 3.4.0.
-#> ℹ Please use the `linewidth` argument instead.
-#> ℹ The deprecated feature was likely used in the looplook package.
-#>   Please report the issue at <https://github.com/zying106/looplook/issues>.
 ```

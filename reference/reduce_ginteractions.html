@@ -77,39 +77,28 @@ Each resulting cluster is represented by the <strong>union genomic range (min st
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># 1. Load example data (loops that are close to each other)</span></span></span>
 <span class="r-in"><span><span class="va">bedpe_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_loops_1.bedpe"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Convert BEDPE to GInteractions object</span></span></span>
+<span class="r-in"><span><span class="va">gi_raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="bedpe_to_gi.html">bedpe_to_gi</a></span><span class="op">(</span><span class="va">bedpe_path</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="va">bedpe_path</span> <span class="op">!=</span> <span class="st">""</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span>  <span class="co"># Convert BEDPE to GInteractions object</span></span></span>
-<span class="r-in"><span>  <span class="va">gi_raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="bedpe_to_gi.html">bedpe_to_gi</a></span><span class="op">(</span><span class="va">bedpe_path</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># 2. Run clustering</span></span></span>
+<span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">reduce_ginteractions</span><span class="op">(</span><span class="va">gi_raw</span>, gap <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="co"># 2. Run clustering</span></span></span>
-<span class="r-in"><span>  <span class="co"># Merge loops if their anchors are within 1000bp</span></span></span>
-<span class="r-in"><span>  <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">reduce_ginteractions</span><span class="op">(</span><span class="va">gi_raw</span>, gap <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="co"># 3. Inspect results</span></span></span>
-<span class="r-in"><span>  <span class="co"># The 'gi' element contains the merged consensus loops</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">gi</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="co"># The 'membership' vector tells which original loop belongs to which cluster</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">membership</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="co"># Check cluster sizes (how many loops were merged into each cluster)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">membership</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span><span class="co"># 3. Inspect results</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">gi</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> StrictGInteractions object with 300 interactions and 4 metadata columns:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         seqnames1             ranges1     seqnames2             ranges2 |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>             &lt;Rle&gt;           &lt;IRanges&gt;         &lt;Rle&gt;           &lt;IRanges&gt; |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     [1]      chr1 109492652-109495835 ---      chr1 110644072-110649627 |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     [2]      chr1 116687216-116689300 ---      chr1 116844969-116856809 |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     [3]      chr1 116876465-116881376 ---      chr1 117819956-117830132 |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     [4]      chr1 146374138-146379497 ---      chr1 146442737-146445345 |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     [5]      chr1     1370034-1377149 ---      chr1     1469037-1474411 |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     [1]      chr1 109492653-109495835 ---      chr1 110644073-110649627 |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     [2]      chr1 116687217-116689300 ---      chr1 116844970-116856809 |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     [3]      chr1 116876466-116881376 ---      chr1 117819957-117830132 |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     [4]      chr1 146374139-146379497 ---      chr1 146442738-146445345 |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     [5]      chr1     1370035-1377149 ---      chr1     1469038-1474411 |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     ...       ...                 ... ...       ...                 ... .</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [296]      chr1     1011273-1015982 ---      chr1     1018256-1022868 |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [297]      chr1     1342739-1364987 ---      chr1     1397119-1403614 |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [298]      chr1 147271364-147274896 ---      chr1 147290756-147294529 |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [299]      chr1 108639596-108642391 ---      chr1 109098569-109102247 |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   [300]      chr1   11011474-11014295 ---      chr1   12745038-12747130 |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   [296]      chr1     1011274-1015982 ---      chr1     1018257-1022868 |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   [297]      chr1     1342740-1364987 ---      chr1     1397120-1403614 |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   [298]      chr1 147271365-147274896 ---      chr1 147290757-147294529 |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   [299]      chr1 108639597-108642391 ---      chr1 109098570-109102247 |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   [300]      chr1   11011475-11014295 ---      chr1   12745039-12747130 |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         cluster_id n_members     score    n_reps</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>          &lt;numeric&gt; &lt;integer&gt; &lt;numeric&gt; &lt;integer&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     [1]          1         1         1         1</span>
@@ -126,6 +115,9 @@ Each resulting cluster is represented by the <strong>union genomic range (min st
 <span class="r-out co"><span class="r-pr">#&gt;</span>   -------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   regions: 385 ranges and 0 metadata columns</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   seqinfo: 1 sequence from an unspecified genome; no seqlengths</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">membership</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1 2 3 4 5 6</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">membership</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1 </span>

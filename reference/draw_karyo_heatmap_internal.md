@@ -10,7 +10,6 @@ karyotype plot.
 draw_karyo_heatmap_internal(
   gr_data,
   title_prefix,
-  filename,
   bin_size,
   sat_level,
   ref_txdb,
@@ -29,10 +28,6 @@ draw_karyo_heatmap_internal(
 - title_prefix:
 
   (character) Subtitle descriptor (e.g., sample name).
-
-- filename:
-
-  (character) Output PDF path.
 
 - bin_size:
 
@@ -54,7 +49,11 @@ draw_karyo_heatmap_internal(
 
   (character) Unit for load annotation (e.g., "loops").
 
+- custom_colors:
+
+  (character vector) Optional custom color palette.
+
 ## Value
 
-Invisibly returns `NULL`. Side effect: saves a PDF karyotype heatmap to
-`filename`.
+A `looplook_karyo` object wrapping a rendered PNG payload. Use
+[`print()`](https://rdrr.io/r/base/print.html) to display.

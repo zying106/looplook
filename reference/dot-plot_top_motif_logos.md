@@ -1,32 +1,13 @@
 # Plot Top Motif Sequence Logos
 
-Retrieves Position Frequency Matrices (PFM) from JASPAR and plots
-sequence logos for the top N enriched motifs.
+Plot Top Motif Sequence Logos
 
 ## Usage
 
 ``` r
-.plot_top_motif_logos(res_df, out_dir, prefix, top_n)
+.plot_top_motif_logos(res_df, top_n, jaspar_db = JASPAR2020::JASPAR2020)
 ```
-
-## Arguments
-
-- res_df:
-
-  Data frame of motif enrichment results.
-
-- out_dir:
-
-  Character. Output directory.
-
-- prefix:
-
-  Character. File prefix.
-
-- top_n:
-
-  Integer. Number of top motifs to plot.
 
 ## Value
 
-Invisible `NULL`.
+A list of sequence logo plots, or `NULL` if input is empty.

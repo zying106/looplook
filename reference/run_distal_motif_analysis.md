@@ -1,8 +1,6 @@
 # Run Dual Motif Analysis for Loop Anchors
 
-Extracts genomic coordinates for proximal (gene-centric) and distal
-(enhancer-centric) anchors of loops connecting to target genes. Scans
-sequences against JASPAR core motifs to identify enriched TFBS.
+Run Dual Motif Analysis for Loop Anchors
 
 ## Usage
 
@@ -13,43 +11,24 @@ run_distal_motif_analysis(
   genome_id,
   pval_thresh,
   current_proj_name,
-  out_dir,
-  top_n = 5
+  top_n = 5,
+  jaspar_db = JASPAR2020::JASPAR2020,
+  jaspar_collection = "CORE"
 )
 ```
 
 ## Arguments
 
-- target_genes:
+- jaspar_db:
 
-  Character vector of target gene symbols.
+  A JASPAR database object (e.g., `JASPAR2020::JASPAR2020` or
+  `JASPAR2024::JASPAR2024`). Default: `JASPAR2020::JASPAR2020`.
 
-- loop_df:
+- jaspar_collection:
 
-  Data frame. Loop annotation table containing coordinates
-  (chr1/start1/end1) and gene assignments.
-
-- genome_id:
-
-  Character. Genome assembly (e.g., "hg19", "mm10") for sequence
-  extraction.
-
-- pval_thresh:
-
-  Numeric. P-value cutoff for motifmatchr scanning.
-
-- current_proj_name:
-
-  Character. Project prefix.
-
-- out_dir:
-
-  Character. Output directory.
-
-- top_n:
-
-  Integer. Number of top enriched motifs to output as SeqLogos.
+  Character. JASPAR collection to query (e.g., `"CORE"`, `"CNE"`).
+  Default: `"CORE"`.
 
 ## Value
 
-Invisible `NULL`. Triggers internal plotting functions.
+A named list containing motif enrichment results and plot objects.

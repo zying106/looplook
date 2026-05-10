@@ -6,7 +6,7 @@ vs. promoter-derived).
 ## Usage
 
 ``` r
-draw_enhancer_source_distribution(loop_data, project_name, filename)
+draw_enhancer_source_distribution(loop_data, project_name, filename = NULL)
 ```
 
 ## Arguments

@@ -5,7 +5,7 @@ Visualizes the proportion of loop types based on LOOP COUNTS.
 ## Usage
 
 ``` r
-draw_rose_plot(data_df, project_name, filename, color_vec)
+draw_rose_plot(data_df, project_name, filename = NULL, color_vec)
 ```
 
 ## Arguments

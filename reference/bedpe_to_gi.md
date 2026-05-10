@@ -43,29 +43,24 @@ values are treated as 0.
 bedpe_path <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
 
 # 2. Run the function (ensure file was found)
-if (bedpe_path != "") {
-  gi <- bedpe_to_gi(bedpe_path)
+gi <- bedpe_to_gi(bedpe_path)
 
-  # 3. Inspect the result
-  print(gi)
-
-  # Check the imported score column
-  S4Vectors::mcols(gi)$score
-}
+# 3. Inspect the result
+print(gi)
 #> StrictGInteractions object with 300 interactions and 1 metadata column:
 #>         seqnames1             ranges1     seqnames2             ranges2 |
 #>             <Rle>           <IRanges>         <Rle>           <IRanges> |
-#>     [1]      chr1 109492652-109495835 ---      chr1 110644072-110649627 |
-#>     [2]      chr1 116687216-116689300 ---      chr1 116844969-116856809 |
-#>     [3]      chr1 116876465-116881376 ---      chr1 117819956-117830132 |
-#>     [4]      chr1 146374138-146379497 ---      chr1 146442737-146445345 |
-#>     [5]      chr1     1370034-1377149 ---      chr1     1469037-1474411 |
+#>     [1]      chr1 109492653-109495835 ---      chr1 110644073-110649627 |
+#>     [2]      chr1 116687217-116689300 ---      chr1 116844970-116856809 |
+#>     [3]      chr1 116876466-116881376 ---      chr1 117819957-117830132 |
+#>     [4]      chr1 146374139-146379497 ---      chr1 146442738-146445345 |
+#>     [5]      chr1     1370035-1377149 ---      chr1     1469038-1474411 |
 #>     ...       ...                 ... ...       ...                 ... .
-#>   [296]      chr1     1011273-1015982 ---      chr1     1018256-1022868 |
-#>   [297]      chr1     1342739-1364987 ---      chr1     1397119-1403614 |
-#>   [298]      chr1 147271364-147274896 ---      chr1 147290756-147294529 |
-#>   [299]      chr1 108639596-108642391 ---      chr1 109098569-109102247 |
-#>   [300]      chr1   11011474-11014295 ---      chr1   12745038-12747130 |
+#>   [296]      chr1     1011274-1015982 ---      chr1     1018257-1022868 |
+#>   [297]      chr1     1342740-1364987 ---      chr1     1397120-1403614 |
+#>   [298]      chr1 147271365-147274896 ---      chr1 147290757-147294529 |
+#>   [299]      chr1 108639597-108642391 ---      chr1 109098570-109102247 |
+#>   [300]      chr1   11011475-11014295 ---      chr1   12745039-12747130 |
 #>             score
 #>         <numeric>
 #>     [1]         1
@@ -82,6 +77,9 @@ if (bedpe_path != "") {
 #>   -------
 #>   regions: 385 ranges and 0 metadata columns
 #>   seqinfo: 1 sequence from an unspecified genome; no seqlengths
+
+# Check the imported score column
+S4Vectors::mcols(gi)$score
 #>   [1]   1   1   2   1   3   1   2   8   3   1   1   4   2   1   1   1   1   1
 #>  [19]   2   8   3   1   1   1   1 219   7   2   1   1   2   1   1   1   1   1
 #>  [37]   1   3   1   1   2  44   1   1   2   4   1   1   1   3   1   1   5   2

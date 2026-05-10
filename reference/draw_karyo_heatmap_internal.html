@@ -46,7 +46,6 @@ binned by a fixed window size, and rendered as a karyotype plot.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">draw_karyo_heatmap_internal</span><span class="op">(</span></span>
 <span>  <span class="va">gr_data</span>,</span>
 <span>  <span class="va">title_prefix</span>,</span>
-<span>  <span class="va">filename</span>,</span>
 <span>  <span class="va">bin_size</span>,</span>
 <span>  <span class="va">sat_level</span>,</span>
 <span>  <span class="va">ref_txdb</span>,</span>
@@ -68,10 +67,6 @@ binned by a fixed window size, and rendered as a karyotype plot.</p>
 <dd><p>(character) Subtitle descriptor (e.g., sample name).</p></dd>
 
 
-<dt id="arg-filename">filename<a class="anchor" aria-label="anchor" href="#arg-filename"></a></dt>
-<dd><p>(character) Output PDF path.</p></dd>
-
-
 <dt id="arg-bin-size">bin_size<a class="anchor" aria-label="anchor" href="#arg-bin-size"></a></dt>
 <dd><p>(integer) Bin width in base pairs (e.g., 1e6 for 1 Mb).</p></dd>
 
@@ -91,10 +86,15 @@ binned by a fixed window size, and rendered as a karyotype plot.</p>
 <dt id="arg-unit-label">unit_label<a class="anchor" aria-label="anchor" href="#arg-unit-label"></a></dt>
 <dd><p>(character) Unit for load annotation (e.g., "loops").</p></dd>
 
+
+<dt id="arg-custom-colors">custom_colors<a class="anchor" aria-label="anchor" href="#arg-custom-colors"></a></dt>
+<dd><p>(character vector) Optional custom color palette.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>Invisibly returns <code>NULL</code>. Side effect: saves a PDF karyotype heatmap to <code>filename</code>.</p>
+    <p>A <code>looplook_karyo</code> object wrapping a rendered PNG payload. Use
+<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> to display.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

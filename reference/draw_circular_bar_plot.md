@@ -5,7 +5,7 @@ Optimized for strictly vertical label alignment using y=0 anchor.
 ## Usage
 
 ``` r
-draw_circular_bar_plot(data_df, project_name, filename, color_vec)
+draw_circular_bar_plot(data_df, project_name, filename = NULL, color_vec)
 ```
 
 ## Arguments

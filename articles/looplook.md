@@ -79,6 +79,45 @@ drive cell-type-specific transcriptional programs.
     transcription factor motif enrichment (**SeqLogos**), and pathway
     association networks (**Cnetplots**).
 
+### Comparison with Existing Tools
+
+`looplook` bridges the gap between conventional 1D linear annotation
+strategies and specialized 3D chromatin interaction tools, providing a
+unified environment for target assignment, expression-aware refinement,
+consensus consolidation, and functional inference. Table
+@ref(tab:comparison-table) highlights the core capabilities of
+`looplook` relative to existing tools in the ecosystem.
+
+| Feature | ChIPseeker | GREAT | GenomicInteractions | FUMA | ABC Model | looplook |
+|:---|:--:|:--:|:--:|:--:|:--:|:--:|
+| Primary annotation scheme | 1D | 1D | 3D | 3D | 3D | 1D & 3D |
+| User-input 3D interactome | ✘ | ✘ | ✔ | ✘ | ✔ | ✔ |
+| User-input omics data | ✔ | ✔ | ✘ | ✘ | ✔ | ✔ |
+| Graph-based topological consensus | ✘ | ✘ | ✘ | ✘ | ✘ | ✔ |
+| Expression-guided refinement | ✘ | ✘ | ✘ | Partial | ✘ | ✔ |
+| Topological reclassification | ✘ | ✘ | ✘ | ✘ | ✘ | ✔ |
+| Multi-hop network diffusion | ✘ | ✘ | ✘ | ✘ | ✘ | ✔ |
+| Smart linear fallback | ✘ | ✘ | ✘ | ✘ | ✘ | ✔ |
+| Functional inference | ✘ | ✔ | ✘ | ✘ | ✘ | ✔ |
+| Multi-track visualization | ✘ | ✘ | ✘ | ✘ | ✘ | ✔ |
+| Local execution | ✔ | ✘ | ✔ | ✘ | ✔ | ✔ |
+| Ecosystem | R | Web | R | Web | Python | R |
+
+Comparison of core features between looplook and existing genomic
+annotation tools. {.table}
+
+*Notes:* “1D” = linear proximity-based mapping; “3D” = mapping via
+spatial chromatin topology; “✔” = native support; “✘” = not supported;
+“Partial” = partial support (FUMA relies on precompiled data rather than
+user-provided input).
+
+`looplook` is the only tool in this comparison that unifies both 1D and
+3D annotation paradigms within a single R-based workflow, while
+additionally offering graph-theoretic consensus consolidation,
+topological reclassification of silent regulatory elements, and local
+execution for data privacy — capabilities not natively available in any
+of the alternatives listed above.
+
 ------------------------------------------------------------------------
 
 ## Installation
@@ -87,17 +126,22 @@ To ensure full functionality, install `looplook` along with its
 recommended Bioconductor annotation dependencies:
 
 ``` r
+
 if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
 if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
 
 # Install annotation databases required for human (hg38) analysis
 BiocManager::install(c("TxDb.Hsapiens.UCSC.hg38.knownGene", "org.Hs.eg.db"))
 
-# Install looplook from GitHub
+# Install looplook from Bioconductor (once accepted)
+# BiocManager::install("looplook")
+
+# Or install the development version from GitHub
 devtools::install_github("zying106/looplook")
 ```
 
 ``` r
+
 library(looplook)
 # Create a temporary directory to store all output plots and Excel files
 out_dir <- tempdir()
@@ -164,6 +208,7 @@ whole-genome 3D chromatin interaction dataset via integration of
 biological replicates and removal of blacklist-associated artifacts.
 
 ``` r
+
 # Locate example BEDPE replicates
 f1 <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
 f2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
@@ -192,6 +237,7 @@ efficient “on-the-fly” capture, retaining only those loops whose anchors
 overlap with the specified functional regions.
 
 ``` r
+
 # Locate a BED file containing H3K27ac ChIP-seq peaks
 h3k27ac_peaks <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
 targeted_out <- file.path(out_dir, "H3K27ac_anchored_loops.bedpe")
@@ -223,6 +269,7 @@ couple physical chromatin architecture with active transcriptional
 regulation.
 
 ``` r
+
 loop_k27ac <- system.file("extdata", "example_loops_H3K27ac.bedpe", package = "looplook")
 loop_pol2 <- system.file("extdata", "example_loops_pol2.bedpe", package = "looplook")
 dual_functional_out <- file.path(out_dir, "Dual_Functional_Consensus.bedpe")
@@ -294,6 +341,7 @@ simultaneously resolving ambiguous assignments in dense genomic regions
 by weighing gene expression.
 
 ``` r
+
 # Locate auxiliary genomic features and RNA-seq expression matrix
 expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
 atac_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
@@ -321,6 +369,7 @@ standalone platform for loop profiling and structural hub
 identification.
 
 ``` r
+
 if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   res_loops_only <- annotate_peaks_and_loops(
@@ -413,51 +462,74 @@ regulatory hubs from complementary perspectives:
 
 #### Deep Dive: Output Visualizations
 
-The module automatically generates up to 10 publication-grade PDF plots,
-enabling multi-scale interrogation of the 3D interactome.
+All plots are returned as objects in `res_integrated$plots$`, enabling
+direct inspection and customisation with standard **ggplot2** layers
+without re-running the pipeline.
 
 ##### 1. Global 3D Network Profiling
 
 *(Always Generated)*
 
-- **Loop Type Proportions** (`*_Basic_Donut.pdf` &
-  `*_Basic_Circular.pdf`): The Donut chart visualizes the raw physical
-  frequency of each topological interaction. The Circular plot
-  quantifies unique target genes per loop type, intuitively illustrating
-  how certain loop types might disproportionately regulate target genes.
-
-- **Karyotype Density Heatmaps** (`*_Basic_Karyo_Anchors.pdf` &
-  `*_Basic_Karyo_LoopGenes.pdf`): Genome-wide ideograms illustrating the
-  density of 3D anchors and their associated genes, highlighting
-  architectural hotspots.
-
-- **Topological Overlap** (`*_Basic_Flower.pdf`): A simplified flower
-  plot showing the intersection of target genes (Core vs. Unique) across
-  different loop types.
-
-- **Anchor Genomic Distribution**
-  (`*_Basic_Anchor_Genomic_Distribution.pdf`): Pie chart summarizing the
-  genomic context of 3D anchors (e.g., Distal Intergenic, Intron,
-  Promoter).
+| Plot key | Description |
+|----|----|
+| `Basic_Donut` | Loop-type frequency (donut chart) |
+| `Basic_Circular` | Unique target genes per loop type (circular bar) |
+| `Basic_Flower` | Shared vs. unique genes across loop types |
+| `Karyo_Anchors` | Genome-wide anchor density heatmap |
+| `Karyo_LoopGenes` | Genome-wide loop-associated gene density |
+| `Anchor_Genomic_Distribution` | Genomic context of anchors (pie) |
+| `Target_Genomic_Distribution` | Genomic context of input features (pie) |
 
 ##### 2. Genomic Feature-to-3D Target Profiling
 
 *(Requires `target_bed`)*
 
-- **Target Connected Rose Chart** (`*_Target_Rose.pdf`): Coxcomb chart
-  illustrating the dominant 3D topologies associated with user-defined
-  genomic features.
+| Plot key | Description |
+|----|----|
+| `Target_Rose` | Loop types linked to input features (coxcomb) |
+| `Target_Loop_Genomic_Distribution` | Genomic context of loop-connected features (pie) |
+| `Karyo_TargetGenes` | Chromosomal density of assigned target genes |
 
-- **Target Genomic Distribution Pies**
-  (`*_Target_Genomic_Distribution.pdf` &
-  `*_Target_Loop_Genomic_Distribution.pdf`): Compares the genomic
-  distribution of input genomic features (peaks) versus those
-  successfully linked via 3D loops. This comparison is insightful for
-  demonstrating the enrichment of spatial interactions.
+##### Customising Plots
 
-- **Target Genes Karyotype** (`*_Basic_Karyo_TargetGenes.pdf`):
-  Chromosomal density map of final putative target genes, identifying
-  functionally active multi-omics loci.
+All ggplot-based plots accept standard **ggplot2** layers for
+recolouring, theme adjustment, or annotation:
+
+``` r
+
+# Access a stored plot
+p <- res_integrated$plots$Basic_Donut
+
+# Extract data and original label mapping
+donut_data <- p$data
+labels_vec <- setNames(donut_data$legend_label, donut_data$loop_type)
+
+# Apply a custom colour palette
+p + ggplot2::scale_fill_manual(
+  values = RColorBrewer::brewer.pal(length(labels_vec), "Dark2"),
+  labels = labels_vec
+) + ggplot2::theme(legend.position = "bottom")
+```
+
+To save any plot to disk, use
+[`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html):
+
+``` r
+
+ggplot2::ggsave(
+  filename = "my_custom_donut.pdf",
+  plot = res_integrated$plots$Basic_Donut,
+  width = 8, height = 6
+)
+```
+
+For `looplook_karyo` objects (karyotype heatmaps), use
+[`print()`](https://rdrr.io/r/base/print.html) to display:
+
+``` r
+
+print(res_integrated$plots$Karyo_Anchors)  # renders via grid or opens in browser
+```
 
 ------------------------------------------------------------------------
 
@@ -497,21 +569,20 @@ putative target genes are transcriptionally silent, without modifying
 the original structural classifications.
 
 ``` r
-res_integrated <- system.file("extdata", "analysis_results.RData", package = "looplook")
 
-if (res_integrated != "") {
-  load(res_integrated)
-  res_basic <- refine_loop_anchors_by_expression(
-    annotation_res = res_integrated,
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
-    threshold = 1.0,
-    unit_type = "TPM",
-    reclassify_by_expression = FALSE,
-    out_dir = out_dir,
-    project_name = "Example_Basic_Filter"
-  )
-}
+rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
+load(rdata_path)  # loads res_integrated into the environment
+
+res_basic <- refine_loop_anchors_by_expression(
+  annotation_res = res_integrated,
+  expr_matrix_file = expr_path,
+  sample_columns = c("con1", "con2"),
+  threshold = 1.0,
+  unit_type = "TPM",
+  reclassify_by_expression = FALSE,
+  out_dir = out_dir,
+  project_name = "Example_Basic_Filter"
+)
 ```
 
 ### Example B: Expression-Aware Reclassification (Recommended)
@@ -523,18 +594,17 @@ that while its reference gene is transcriptionally inactive, this region
 itself may function as an active regulatory element for a distant gene.
 
 ``` r
-if (exists("res_integrated")) {
-  refined_res <- refine_loop_anchors_by_expression(
-    annotation_res = res_integrated,
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
-    threshold = 1.0,
-    unit_type = "TPM",
-    reclassify_by_expression = TRUE, # Activates biological reclassification (e.g., P -> eP)
-    out_dir = out_dir,
-    project_name = "Example_Reclassified_Filter"
-  )
-}
+
+refined_res <- refine_loop_anchors_by_expression(
+  annotation_res = res_integrated,
+  expr_matrix_file = expr_path,
+  sample_columns = c("con1", "con2"),
+  threshold = 1.0,
+  unit_type = "TPM",
+  reclassify_by_expression = TRUE,
+  out_dir = out_dir,
+  project_name = "Example_Reclassified_Filter"
+)
 ```
 
 #### Deep Dive: Filtration Visualizations
@@ -660,27 +730,25 @@ Ideal for complete multi-omics integration (e.g., HiChIP + ATAC-seq).
 This mode comprehensively maps and profiles target genes of interest.
 
 ``` r
+
 diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
 meta_path <- system.file("extdata", "example_coldata.txt", package = "looplook")
 
-if (exists("refined_res")) {
-  res_A <- profile_target_genes(
-    annotation_res = res_integrated,
-    diff_file = diff_path,
-    lfc_col = "log2FoldChange",
-    expr_matrix_file = expr_path,
-    metadata_file = meta_path,
-    target_source = c("loops", "targets"), # Analyzes both sources
-    target_mapping_mode = "all",
-    include_Filled = TRUE,
-    use_nearest_gene = FALSE,
-    project_name = "Scenario_A_Integrative",
-    out_dir = out_dir,
-    run_motif = FALSE, # Set TRUE in real analysis to scan JASPAR motifs
-    run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
-    run_ppi = FALSE
-  )
-}
+res_A <- profile_target_genes(
+  annotation_res = res_integrated,
+  diff_file = diff_path,
+  lfc_col = "log2FoldChange",
+  expr_matrix_file = expr_path,
+  metadata_file = meta_path,
+  target_source = c("loops", "targets"),
+  target_mapping_mode = "all",
+  include_Filled = TRUE,
+  use_nearest_gene = FALSE,
+  project_name = "Scenario_A_Integrative",
+  run_motif = FALSE,
+  run_go = FALSE,
+  run_ppi = FALSE
+)
 ```
 
 ### Example B: Peak-Driven Strict Promoter Profiling (High Stringency)
@@ -697,24 +765,22 @@ reference promoters (i.e., strict `E-P` or `P-P` loops), excluding more
 permissive connections such as enhancer-gene body (`E-G`) interactions.
 
 ``` r
-if (exists("refined_res")) {
-  res_B <- profile_target_genes(
-    annotation_res = res_integrated,
-    diff_file = diff_path,
-    lfc_col = "log2FoldChange",
-    expr_matrix_file = expr_path,
-    metadata_file = meta_path,
-    target_source = "targets", # 1. Focus exclusively on inputted genomic features
-    target_mapping_mode = "promoter", # 2. Require strict loop-to-promoter collision
-    include_Filled = TRUE,
-    use_nearest_gene = FALSE,
-    project_name = "Scenario_B_StrictPromoter",
-    out_dir = out_dir,
-    run_motif = FALSE, # Set TRUE in real analysis to scan JASPAR motifs
-    run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
-    run_ppi = FALSE
-  )
-}
+
+res_B <- profile_target_genes(
+  annotation_res = res_integrated,
+  diff_file = diff_path,
+  lfc_col = "log2FoldChange",
+  expr_matrix_file = expr_path,
+  metadata_file = meta_path,
+  target_source = "targets", # 1. Focus exclusively on inputted genomic features
+  target_mapping_mode = "promoter", # 2. Require strict loop-to-promoter collision
+  include_Filled = TRUE,
+  use_nearest_gene = FALSE,
+  project_name = "Scenario_B_StrictPromoter",
+  run_motif = FALSE, # Set TRUE in real analysis to scan JASPAR motifs
+  run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
+  run_ppi = FALSE
+)
 ```
 
 ### Example C: 1D Linear Annotation Baseline (The Control)
@@ -727,71 +793,72 @@ demonstration of the novel functional insights gained from 3D chromatin
 looping analyses relative to conventional method.
 
 ``` r
-if (exists("refined_res")) {
-  res_C <- profile_target_genes(
-    annotation_res = res_integrated,
-    diff_file = diff_path,
-    lfc_col = "log2FoldChange",
-    expr_matrix_file = expr_path,
-    metadata_file = meta_path,
-    target_source = "targets", # Focus on inputted peaks
-    target_mapping_mode = "all",
-    include_Filled = FALSE,
-    use_nearest_gene = TRUE, # Nearest neighboring gene (The Control)
-    project_name = "Scenario_C_LinearControl",
-    out_dir = out_dir,
-    run_motif = FALSE, # Set TRUE in real analysis to scan JASPAR motifs
-    run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
-    run_ppi = FALSE
-  )
-}
+
+res_C <- profile_target_genes(
+  annotation_res = res_integrated,
+  diff_file = diff_path,
+  lfc_col = "log2FoldChange",
+  expr_matrix_file = expr_path,
+  metadata_file = meta_path,
+  target_source = "targets", # Focus on inputted peaks
+  target_mapping_mode = "all",
+  include_Filled = FALSE,
+  use_nearest_gene = TRUE, # Nearest neighboring gene (The Control)
+  project_name = "Scenario_C_LinearControl",
+  run_motif = FALSE, # Set TRUE in real analysis to scan JASPAR motifs
+  run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
+  run_ppi = FALSE
+)
 ```
 
 #### Deep Dive: Functional Visualizations
 
-This module executes an extensive downstream pipeline that generates a
-complete, publication-ready figure panel. Rather than simple descriptive
-summaries, these visualizations are designed to test research hypotheses
-related to multi-omics integration.
+Results are returned as a named list, one element per `target_source`
+(e.g., `"loops"`, `"targets"`). Each element contains `plots` (ggplot
+objects), `target_gene_sets` (character vectors), and `go_results` (data
+frames).
 
-##### 1. Expression & Topological Dynamics
+``` r
 
-- **Transcriptional Profiling** (`*_LFC_Violin.pdf` &
-  `*_Expression_Heatmap.pdf`): Integrates quantitative transcriptome
-  data (e.g., RNA-seq) and differential expression statistics to
-  evaluate whether 3D-annotated target genes exhibit statistically
-  significant expression shifts relative to the global genome
-  background. This provides a quantitative measure of functional
-  relevance and correlative evidence of regulatory modulation.
-- **Topological-Transcriptional Association**
-  (`*_Connectivity_Scatter.pdf` & `*_Raincloud_*.pdf`): Cross-references
-  3D connectivity (e.g., number of linked enhancers) with transcript
-  abundance and fold changes. This may help to test the “hub hypothesis”
-  (whether increased spatial connectivity correlates with more dynamic
-  transcriptional output).
+# Accessing results from a profiling run
+names(res_profile)               # one element per target_source ("loops", "targets")
+names(res_profile$loops)         # "go_results" "target_gene_sets" "plots"
 
-##### 2. Regulatory Motif Scanning
+# --- Target genes ---
+res_profile$loops$target_gene_sets           # named list of character vectors
+names(res_profile$loops$target_gene_sets)    # gene set keys (e.g. "All", "Up", "Down")
 
-- **Spatially Asymmetric Motif Signatures** (`*_Motif_*_RankScatter.pdf`
-  & `*_Logos.pdf`): Separately analyses transcription factor motifs
-  enriched in the promoter-proximal anchors and distal (enhancer)
-  anchors.
+# --- GO enrichment table ---
+go_df <- res_profile$loops$go_results        # data frame
+head(go_df[order(go_df$pvalue),              # sort by significance
+  c("Description", "ONTOLOGY", "pvalue", "Count", "geneID")])
 
-##### 3. Pathway & Network Enrichment
+# --- All plot keys ---
+names(res_profile$loops$plots)
+```
 
-- **Spatial Gene Set Enrichment** (`*_GSEA.pdf`): Projects 3D-derived
-  target gene sets onto the globally ranked differential expression
-  landscape. Rather than relying on pre-defined pathways, it treats the
-  specific spatial network as a biologically meaningful gene set, and
-  examines whether the 3D interactome contributes to the observed
-  transcriptomic phenotype.
-- **Core Effector Networks** (`*_GO_Network.pdf`, `*_GO_Lollipop_*.pdf`
-  & `*_PPI_Network_*.pdf`): Derived from Gene Ontology and STRING
-  analyses. Rather than simply listing enriched terms, the Divergent
-  Concept Networks and PPI graphs link key pathways to high-magnitude
-  differentially expressed hub genes, bridging spatial chromatin
-  architecture, transcriptional regulation, and functional protein
-  networks.
+##### Available Plot Keys
+
+| Key                    | Description                                |
+|------------------------|--------------------------------------------|
+| `LFC_Violin`           | Differential expression violin + boxplot   |
+| `Heatmap`              | Expression heatmap with sample annotations |
+| `Scatter`              | Connectivity vs. expression scatter        |
+| `Raincloud_LFC`        | Raincloud plot of log2 fold changes        |
+| `Raincloud_Expr`       | Raincloud plot of expression levels        |
+| `GSEA`                 | Gene Set Enrichment Analysis plot          |
+| `GO_Network`           | GO enrichment cnetplot                     |
+| `GO_Lollipop`          | Summary GO lollipop facet                  |
+| `PPI`                  | STRING protein-protein interaction network |
+| `Proximal_Motif_Bar`   | Proximal anchor motif enrichment barplot   |
+| `Proximal_Motif_Logos` | Proximal anchor motif sequence logos       |
+| `Proximal_Motif_Rank`  | Proximal anchor motif rank scatter         |
+| `Distal_Motif_Bar`     | Distal anchor motif enrichment barplot     |
+| `Distal_Motif_Logos`   | Distal anchor motif sequence logos         |
+| `Distal_Motif_Rank`    | Distal anchor motif rank scatter           |
+
+All ggplot-based plots accept standard **ggplot2** `+` layers for
+recolouring or theme adjustment (see Module 2 for examples).
 
 ------------------------------------------------------------------------
 
@@ -860,7 +927,10 @@ data filtering, and visual aesthetics through the following arguments:
   and format (e.g., `".pdf"`) for exporting the final ggplot object.
 
 ``` r
-if (requireNamespace("ggplot2", quietly = TRUE)) {
+
+if (requireNamespace("ggplot2", quietly = TRUE) &&
+  requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
+  requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   # If 'from' and 'to' are omitted, it automatically detects the densest viewport.
   track_plot <- plot_peaks_interactions(
     bedpe_file = f1,
@@ -876,9 +946,94 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 
 ------------------------------------------------------------------------
 
+## One-Click Parameterised Report
+
+For rapid sharing with collaborators, a publication-ready HTML report
+can be generated with a single function call. The template automatically
+detects which pipeline stages are configured and hides unavailable
+sections:
+
+``` r
+
+library(looplook)
+
+# ── Required ──────────────────────────────────────────────────
+#   bedpe_file         Chromatin loops in BEDPE format
+# ── Required for annotation ───────────────────────────────────
+#   target_bed         Genomic features (ATAC-seq peaks, etc.)
+# ── Required for refinement + profiling ───────────────────────
+#   expr_matrix_file   Normalised expression matrix (TPM/FPKM)
+#   diff_file          Differential expression table (CSV/TSV)
+#   metadata_file      Sample metadata with Group column
+# ── Optional (defaults shown) ─────────────────────────────────
+#   species = "hg38"   project_name = "looplook Analysis"
+#   threshold = 1.0    unit_type = "TPM"
+#   run_go = TRUE      run_ppi = FALSE     run_motif = FALSE
+#   ... (see ?looplook_report for full list)
+# ── Reproducibility ────────────────────────────────────────
+#   The profiling stage uses R's random number generator for GSEA gene-set
+#   down-sampling and motif background sampling. For fully reproducible
+#   reports, call set.seed() before looplook_report():
+#     set.seed(42)
+#     looplook_report(...)
+
+# Minimal: annotation only
+looplook_report(
+  bedpe_file   = system.file("extdata", "example_loops_1.bedpe", package = "looplook"),
+  target_bed   = system.file("extdata", "example_peaks.bed", package = "looplook"),
+  project_name = "Quick Annotation"
+)
+
+# Full pipeline: annotation + refinement + profiling
+looplook_report(
+  bedpe_file       = "my_loops.bedpe",
+  target_bed       = "my_peaks.bed",
+  expr_matrix_file = "my_tpm.txt",
+  diff_file        = "my_deg.csv",
+  metadata_file    = "my_coldata.txt",
+  project_name     = "Integrative HiChIP Analysis",
+  run_go           = TRUE
+)
+
+# Reuse precomputed results: skip annotation and jump to refinement + profiling.
+# precomputed_res accepts a file path (.RData) or an in-memory list object.
+# bedpe_file is optional when precomputed_res is set.
+
+# Option A — save and reload from .RData:
+res <- annotate_peaks_and_loops(
+  bedpe_file = "my_loops.bedpe",
+  target_bed = "my_peaks.bed",
+  project_name = "MyProject"
+)
+save(res, file = "annotation_results.RData")
+
+looplook_report(
+  precomputed_res  = "annotation_results.RData",
+  expr_matrix_file = "my_tpm.txt",
+  diff_file        = "my_deg.csv",
+  metadata_file    = "my_coldata.txt",
+  run_go           = TRUE
+)
+
+# Option B — pass the object directly:
+looplook_report(
+  precomputed_res  = res,
+  expr_matrix_file = "my_tpm.txt",
+  diff_file        = "my_deg.csv",
+  metadata_file    = "my_coldata.txt",
+  run_go           = TRUE
+)
+```
+
+The template is also accessible from the RStudio menu: **File → New File
+→ R Markdown → From Template → looplook Report**.
+
+------------------------------------------------------------------------
+
 ## Session Info
 
 ``` r
+
 sessionInfo()
 #> R version 4.6.0 (2026-04-24)
 #> Platform: x86_64-pc-linux-gnu
@@ -898,191 +1053,79 @@ sessionInfo()
 #> tzcode source: system (glibc)
 #> 
 #> attached base packages:
-#> [1] stats4    stats     graphics  grDevices utils     datasets  methods  
-#> [8] base     
+#> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] org.Hs.eg.db_3.23.1  AnnotationDbi_1.73.1 IRanges_2.45.0      
-#> [4] S4Vectors_0.49.3     Biobase_2.71.0       BiocGenerics_0.57.1 
-#> [7] generics_0.1.4       looplook_0.99.8      BiocStyle_2.39.0    
+#> [1] looplook_0.99.8  BiocStyle_2.40.0
 #> 
 #> loaded via a namespace (and not attached):
-#>   [1] later_1.4.8                             
-#>   [2] BiocIO_1.21.0                           
-#>   [3] bitops_1.0-9                            
-#>   [4] ggplotify_0.1.3                         
-#>   [5] fields_17.1                             
-#>   [6] tibble_3.3.1                            
-#>   [7] polyclip_1.10-7                         
-#>   [8] enrichit_0.1.4                          
-#>   [9] XML_3.99-0.23                           
-#>  [10] rpart_4.1.27                            
-#>  [11] karyoploteR_1.37.0                      
-#>  [12] lifecycle_1.0.5                         
-#>  [13] processx_3.9.0                          
-#>  [14] lattice_0.22-9                          
-#>  [15] ensembldb_2.35.0                        
-#>  [16] MASS_7.3-65                             
-#>  [17] backports_1.5.1                         
-#>  [18] magrittr_2.0.5                          
-#>  [19] openxlsx_4.2.8.1                        
-#>  [20] Hmisc_5.2-5                             
-#>  [21] sass_0.4.10                             
-#>  [22] rmarkdown_2.31                          
-#>  [23] plotrix_3.8-14                          
-#>  [24] jquerylib_0.1.4                         
-#>  [25] yaml_2.3.12                             
-#>  [26] ggtangle_0.1.2                          
-#>  [27] otel_0.2.0                              
-#>  [28] spam_2.11-3                             
-#>  [29] zip_2.3.3                               
-#>  [30] chromote_0.5.1                          
-#>  [31] DBI_1.3.0                               
-#>  [32] RColorBrewer_1.1-3                      
-#>  [33] maps_3.4.3                              
-#>  [34] abind_1.4-8                             
-#>  [35] GenomicRanges_1.63.2                    
-#>  [36] purrr_1.2.2                             
-#>  [37] AnnotationFilter_1.35.0                 
-#>  [38] biovizBase_1.59.0                       
-#>  [39] RCurl_1.98-1.18                         
-#>  [40] yulab.utils_0.2.4                       
-#>  [41] nnet_7.3-20                             
-#>  [42] webshot2_0.1.2                          
-#>  [43] VariantAnnotation_1.57.1                
-#>  [44] tweenr_2.0.3                            
-#>  [45] rappdirs_0.3.4                          
-#>  [46] gdtools_0.5.0                           
-#>  [47] enrichplot_1.31.5                       
-#>  [48] data.tree_1.2.0                         
-#>  [49] ggrepel_0.9.8                           
-#>  [50] tidytree_0.4.7                          
-#>  [51] pkgdown_2.2.0                           
-#>  [52] ChIPseeker_1.47.1                       
-#>  [53] codetools_0.2-20                        
-#>  [54] DelayedArray_0.37.1                     
-#>  [55] DOSE_4.5.1                              
-#>  [56] ggforce_0.5.0                           
-#>  [57] tidyselect_1.2.1                        
-#>  [58] aplot_0.2.9                             
-#>  [59] UCSC.utils_1.7.1                        
-#>  [60] farver_2.1.2                            
-#>  [61] matrixStats_1.5.0                       
-#>  [62] base64enc_0.1-6                         
-#>  [63] Seqinfo_1.1.0                           
-#>  [64] bamsignals_1.43.0                       
-#>  [65] GenomicAlignments_1.47.0                
-#>  [66] jsonlite_2.0.0                          
-#>  [67] Formula_1.2-5                           
-#>  [68] systemfonts_1.3.2                       
-#>  [69] ggnewscale_0.5.2                        
-#>  [70] tools_4.6.0                             
-#>  [71] treeio_1.35.0                           
-#>  [72] TxDb.Hsapiens.UCSC.hg19.knownGene_3.22.1
-#>  [73] ragg_1.5.2                              
-#>  [74] Rcpp_1.1.1-1.1                          
-#>  [75] glue_1.8.1                              
-#>  [76] gridExtra_2.3                           
-#>  [77] SparseArray_1.11.13                     
-#>  [78] xfun_0.57                               
-#>  [79] MatrixGenerics_1.23.0                   
-#>  [80] websocket_1.4.4                         
-#>  [81] GenomeInfoDb_1.47.2                     
-#>  [82] dplyr_1.2.1                             
-#>  [83] withr_3.0.2                             
-#>  [84] BiocManager_1.30.27                     
-#>  [85] fastmap_1.2.0                           
-#>  [86] boot_1.3-32                             
-#>  [87] caTools_1.18.3                          
-#>  [88] digest_0.6.39                           
-#>  [89] R6_2.6.1                                
-#>  [90] gridGraphics_0.5-1                      
-#>  [91] networkD3_0.4.1                         
-#>  [92] textshaping_1.0.5                       
-#>  [93] colorspace_2.1-2                        
-#>  [94] GO.db_3.23.1                            
-#>  [95] gtools_3.9.5                            
-#>  [96] dichromat_2.0-0.1                       
-#>  [97] RSQLite_2.4.6                           
-#>  [98] cigarillo_1.1.0                         
-#>  [99] UpSetR_1.4.0                            
-#> [100] tidyr_1.3.2                             
-#> [101] fontLiberation_0.1.0                    
-#> [102] data.table_1.18.2.1                     
-#> [103] rtracklayer_1.71.3                      
-#> [104] InteractionSet_1.39.0                   
-#> [105] httr_1.4.8                              
-#> [106] htmlwidgets_1.6.4                       
-#> [107] S4Arrays_1.11.1                         
-#> [108] scatterpie_0.2.6                        
-#> [109] regioneR_1.43.0                         
-#> [110] pkgconfig_2.0.3                         
-#> [111] gtable_0.3.6                            
-#> [112] blob_1.3.0                              
-#> [113] S7_0.2.2                                
-#> [114] XVector_0.51.0                          
-#> [115] htmltools_0.5.9                         
-#> [116] fontBitstreamVera_0.1.1                 
-#> [117] dotCall64_1.2                           
-#> [118] bookdown_0.46                           
-#> [119] ProtGenerics_1.43.0                     
-#> [120] scales_1.4.0                            
-#> [121] TxDb.Hsapiens.UCSC.hg38.knownGene_3.22.0
-#> [122] png_0.1-9                               
-#> [123] ggfun_0.2.0                             
-#> [124] knitr_1.51                              
-#> [125] rstudioapi_0.18.0                       
-#> [126] reshape2_1.4.5                          
-#> [127] rjson_0.2.23                            
-#> [128] nlme_3.1-169                            
-#> [129] checkmate_2.3.4                         
-#> [130] curl_7.1.0                              
-#> [131] cachem_1.1.0                            
-#> [132] stringr_1.6.0                           
-#> [133] KernSmooth_2.23-26                      
-#> [134] parallel_4.6.0                          
-#> [135] foreign_0.8-91                          
-#> [136] restfulr_0.0.16                         
-#> [137] desc_1.4.3                              
-#> [138] pillar_1.11.1                           
-#> [139] grid_4.6.0                              
-#> [140] vctrs_0.7.3                             
-#> [141] gplots_3.3.0                            
-#> [142] promises_1.5.0                          
-#> [143] tidydr_0.0.6                            
-#> [144] cluster_2.1.8.2                         
-#> [145] htmlTable_2.5.0                         
-#> [146] evaluate_1.0.5                          
-#> [147] GenomicFeatures_1.63.2                  
-#> [148] cli_3.6.6                               
-#> [149] compiler_4.6.0                          
-#> [150] bezier_1.1.2                            
-#> [151] Rsamtools_2.27.2                        
-#> [152] rlang_1.2.0                             
-#> [153] crayon_1.5.3                            
-#> [154] labeling_0.4.3                          
-#> [155] ps_1.9.3                                
-#> [156] plyr_1.8.9                              
-#> [157] fs_2.1.0                                
-#> [158] ggiraph_0.9.6                           
-#> [159] stringi_1.8.7                           
-#> [160] viridisLite_0.4.3                       
-#> [161] BiocParallel_1.45.0                     
-#> [162] Biostrings_2.79.5                       
-#> [163] lazyeval_0.2.3                          
-#> [164] fontquiver_0.2.1                        
-#> [165] GOSemSim_2.37.2                         
-#> [166] Matrix_1.7-5                            
-#> [167] BSgenome_1.79.1                         
-#> [168] patchwork_1.3.2                         
-#> [169] bit64_4.8.0                             
-#> [170] ggplot2_4.0.3                           
-#> [171] KEGGREST_1.51.1                         
-#> [172] SummarizedExperiment_1.41.1             
-#> [173] igraph_2.3.0                            
-#> [174] memoise_2.0.1                           
-#> [175] bslib_0.10.0                            
-#> [176] ggtree_4.1.2                            
-#> [177] bit_4.6.0                               
-#> [178] ape_5.8-1
+#>   [1] RColorBrewer_1.1-3          rstudioapi_0.18.0          
+#>   [3] jsonlite_2.0.0              magrittr_2.0.5             
+#>   [5] GenomicFeatures_1.64.0      farver_2.1.2               
+#>   [7] rmarkdown_2.31              fs_2.1.0                   
+#>   [9] BiocIO_1.22.0               fields_17.3                
+#>  [11] ragg_1.5.2                  vctrs_0.7.3                
+#>  [13] memoise_2.0.1               Rsamtools_2.28.0           
+#>  [15] RCurl_1.98-1.18             base64enc_0.1-6            
+#>  [17] htmltools_0.5.9             S4Arrays_1.12.0            
+#>  [19] curl_7.1.0                  SparseArray_1.12.2         
+#>  [21] Formula_1.2-5               sass_0.4.10                
+#>  [23] bslib_0.10.0                htmlwidgets_1.6.4          
+#>  [25] desc_1.4.3                  plyr_1.8.9                 
+#>  [27] cachem_1.1.0                GenomicAlignments_1.48.0   
+#>  [29] igraph_2.3.1                lifecycle_1.0.5            
+#>  [31] pkgconfig_2.0.3             Matrix_1.7-5               
+#>  [33] R6_2.6.1                    fastmap_1.2.0              
+#>  [35] MatrixGenerics_1.24.0       digest_0.6.39              
+#>  [37] colorspace_2.1-2            AnnotationDbi_1.74.0       
+#>  [39] S4Vectors_0.50.0            regioneR_1.44.0            
+#>  [41] bezier_1.1.2                textshaping_1.0.5          
+#>  [43] Hmisc_5.2-5                 GenomicRanges_1.64.0       
+#>  [45] RSQLite_2.4.6               httr_1.4.8                 
+#>  [47] polyclip_1.10-7             abind_1.4-8                
+#>  [49] compiler_4.6.0              bit64_4.8.0                
+#>  [51] withr_3.0.2                 htmlTable_2.5.0            
+#>  [53] S7_0.2.2                    backports_1.5.1            
+#>  [55] BiocParallel_1.46.0         DBI_1.3.0                  
+#>  [57] UpSetR_1.4.0                ggforce_0.5.0              
+#>  [59] maps_3.4.3                  MASS_7.3-65                
+#>  [61] DelayedArray_0.38.1         rjson_0.2.23               
+#>  [63] tools_4.6.0                 foreign_0.8-91             
+#>  [65] zip_2.3.3                   karyoploteR_1.38.0         
+#>  [67] nnet_7.3-20                 glue_1.8.1                 
+#>  [69] restfulr_0.0.16             InteractionSet_1.40.0      
+#>  [71] grid_4.6.0                  checkmate_2.3.4            
+#>  [73] cluster_2.1.8.2             generics_0.1.4             
+#>  [75] gtable_0.3.6                BSgenome_1.80.0            
+#>  [77] tidyr_1.3.2                 ensembldb_2.36.0           
+#>  [79] data.table_1.18.4           XVector_0.52.0             
+#>  [81] BiocGenerics_0.58.0         ggrepel_0.9.8              
+#>  [83] pillar_1.11.1               stringr_1.6.0              
+#>  [85] spam_2.11-3                 dplyr_1.2.1                
+#>  [87] tweenr_2.0.3                lattice_0.22-9             
+#>  [89] rtracklayer_1.72.0          bit_4.6.0                  
+#>  [91] biovizBase_1.60.0           tidyselect_1.2.1           
+#>  [93] Biostrings_2.80.0           knitr_1.51                 
+#>  [95] gridExtra_2.3               bookdown_0.46              
+#>  [97] ProtGenerics_1.44.0         IRanges_2.46.0             
+#>  [99] Seqinfo_1.2.0               SummarizedExperiment_1.42.0
+#> [101] stats4_4.6.0                xfun_0.57                  
+#> [103] Biobase_2.72.0              matrixStats_1.5.0          
+#> [105] stringi_1.8.7               UCSC.utils_1.8.0           
+#> [107] lazyeval_0.2.3              yaml_2.3.12                
+#> [109] evaluate_1.0.5              codetools_0.2-20           
+#> [111] cigarillo_1.2.0             tibble_3.3.1               
+#> [113] BiocManager_1.30.27         cli_3.6.6                  
+#> [115] rpart_4.1.27                systemfonts_1.3.2          
+#> [117] jquerylib_0.1.4             dichromat_2.0-0.1          
+#> [119] Rcpp_1.1.1-1.1              GenomeInfoDb_1.48.0        
+#> [121] png_0.1-9                   XML_3.99-0.23              
+#> [123] parallel_4.6.0              pkgdown_2.2.0              
+#> [125] ggplot2_4.0.3               blob_1.3.0                 
+#> [127] dotCall64_1.2               AnnotationFilter_1.36.0    
+#> [129] bitops_1.0-9                viridisLite_0.4.3          
+#> [131] VariantAnnotation_1.58.0    scales_1.4.0               
+#> [133] purrr_1.2.2                 openxlsx_4.2.8.1           
+#> [135] crayon_1.5.3                bamsignals_1.43.0          
+#> [137] rlang_1.2.0                 KEGGREST_1.52.0
 ```

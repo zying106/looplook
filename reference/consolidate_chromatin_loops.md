@@ -1,4 +1,4 @@
-# Consolidate and Integrate Chromatin Loops from Multiple Sources
+# Consolidate and Integrate Chromatin Loops from Replicates or Multiple Sources
 
 This function consolidates chromatin loops from multiple BEDPE files. It
 is designed for two main purposes:
@@ -135,79 +135,78 @@ f1 <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
 f2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
 
 # 2. Run consolidation (ensure files exist)
-if (f1 != "" && f2 != "") {
-  # Example A: Intersect Mode
-  # Only keeps loops present in f1 that are also supported by f2
-  res_intersect <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "intersect",
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
-  )
-
-  # Example B: Consensus Mode (formerly Reproducible)
-  # Finds consensus loops supported by both replicates (default for N=2)
-  res_consensus <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "consensus",
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
-  )
-
-  # Example C: Union Mode
-  # Merges all loops into a single map
-  res_union <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "union",
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
-  )
-
-  # Example D: Dual Filtering Strategy (Recommended for HiChIP)
-  # 1. Pre-filter: Discard singletons (score < 2) to remove noise.
-  # 2. Merge: Find loops present in both replicates.
-  # 3. Post-filter: Keep only strong consensus loops (score > 5).
-  res_clean <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "consensus",
-    min_raw_score = 2, # Pre-filter (remove noise)
-    min_score = 5, # Post-filter (keep strong loops)
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
-  )
-
-  # Inspect results
-  length(res_intersect)
-  length(res_clean)
-}
+# Example A: Intersect Mode
+# Only keeps loops present in f1 that are also supported by f2
+res_intersect <- consolidate_chromatin_loops(
+  files = c(f1, f2),
+  mode = "intersect",
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
+)
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops
 #>     File 2: 300 loops
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/Rtmpp3oEeP/file41ba54cefc97.bedpe
+#> Finished! Saved to /tmp/RtmpnrVdYJ/file9b7d70b196a4.bedpe
 #> Finished! Final loops: 12
+
+# Example B: Consensus Mode (formerly Reproducible)
+# Finds consensus loops supported by both replicates (default for N=2)
+res_consensus <- consolidate_chromatin_loops(
+  files = c(f1, f2),
+  mode = "consensus",
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
+)
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/Rtmpp3oEeP/file41ba6e8d0d42.bedpe
+#> Finished! Saved to /tmp/RtmpnrVdYJ/file9b7d79d7e3af.bedpe
 #> Finished! Final loops: 11
+
+# Example C: Union Mode
+# Merges all loops into a single map
+res_union <- consolidate_chromatin_loops(
+  files = c(f1, f2),
+  mode = "union",
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
+)
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Union mode: Keeping all clusters
-#> Finished! Saved to /tmp/Rtmpp3oEeP/file41ba56cb154.bedpe
+#> Finished! Saved to /tmp/RtmpnrVdYJ/file9b7d58dffc5f.bedpe
 #> Finished! Final loops: 589
+
+# Example D: Dual Filtering Strategy (Recommended for HiChIP)
+# 1. Pre-filter: Discard singletons (score < 2) to remove noise.
+# 2. Merge: Find loops present in both replicates.
+# 3. Post-filter: Keep only strong consensus loops (score > 5).
+res_clean <- consolidate_chromatin_loops(
+  files = c(f1, f2),
+  mode = "consensus",
+  min_raw_score = 2, # Pre-filter (remove noise)
+  min_score = 5, # Post-filter (keep strong loops)
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
+)
 #> >>> Reading BEDPE files
 #>     File 1: 115 loops
 #>     File 2: 100 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/Rtmpp3oEeP/file41ba6c6f4ef5.bedpe
+#> Finished! Saved to /tmp/RtmpnrVdYJ/file9b7d22dde0b1.bedpe
 #> Finished! Final loops: 4
+
+# Inspect results
+length(res_intersect)
+#> [1] 12
+length(res_clean)
 #> [1] 4
 ```

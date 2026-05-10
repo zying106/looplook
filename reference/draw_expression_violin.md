@@ -9,7 +9,7 @@ grouped by loop type (e.g., promoter-enhancer, enhancer-enhancer).
 draw_expression_violin(
   plot_data,
   project_name,
-  filename,
+  filename = NULL,
   unit_type,
   group_colors
 )

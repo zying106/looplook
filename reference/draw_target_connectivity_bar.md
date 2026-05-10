@@ -10,7 +10,7 @@ draw_target_connectivity_bar(
   bed_info,
   cluster_info,
   project_name,
-  filename,
+  filename = NULL,
   color_palette = "Set2"
 )
 ```
