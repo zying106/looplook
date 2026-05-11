@@ -124,6 +124,9 @@ and annotated genes. Loop arcs can be colored or sized by interaction score
 <span>  from <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  to <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
+<span>  txdb <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  org_db <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  show_gene_track <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  max_levels <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  base_anchor_height <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>  loop_color <span class="op">=</span> <span class="st">"#5D6D7E"</span>,</span>
@@ -166,6 +169,23 @@ the most frequent chromosome in the BEDPE.</p></dd>
 
 <dt id="arg-species">species<a class="anchor" aria-label="anchor" href="#arg-species"></a></dt>
 <dd><p>Character. Genome assembly: "hg38", "hg19", "mm10", or "mm9".</p></dd>
+
+
+<dt id="arg-txdb">txdb<a class="anchor" aria-label="anchor" href="#arg-txdb"></a></dt>
+<dd><p>Optional <code>TxDb</code> object or installed package name. When
+<code>NULL</code>, looplook resolves a species-matched transcript annotation.</p></dd>
+
+
+<dt id="arg-org-db">org_db<a class="anchor" aria-label="anchor" href="#arg-org-db"></a></dt>
+<dd><p>Optional <code>OrgDb</code>/<code>AnnotationDb</code> object or installed
+package name used for gene-symbol mapping. When <code>NULL</code>, looplook
+attempts species-matched mapping and otherwise falls back to <code>gene_id</code>.</p></dd>
+
+
+<dt id="arg-show-gene-track">show_gene_track<a class="anchor" aria-label="anchor" href="#arg-show-gene-track"></a></dt>
+<dd><p>Logical. If <code>TRUE</code> (default), render the gene
+track using the resolved <code>txdb</code>. Set to <code>FALSE</code> for a lightweight
+loops-only view that skips transcript annotation.</p></dd>
 
 
 <dt id="arg-max-levels">max_levels<a class="anchor" aria-label="anchor" href="#arg-max-levels"></a></dt>
@@ -224,22 +244,20 @@ also written to disk via <code><a href="https://ggplot2.tidyverse.org/reference/
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"TxDb.Hsapiens.UCSC.hg38.knownGene"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span>  <span class="va">bedpe_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    <span class="st">"chr1\t11890000\t11890500\tchr1\t11905000\t11905500"</span>,</span></span>
-<span class="r-in"><span>    <span class="va">bedpe_path</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">p</span> <span class="op">&lt;-</span> <span class="fu">plot_peaks_interactions</span><span class="op">(</span></span></span>
-<span class="r-in"><span>    bedpe_file <span class="op">=</span> <span class="va">bedpe_path</span>,</span></span>
-<span class="r-in"><span>    chr <span class="op">=</span> <span class="st">"chr1"</span>,</span></span>
-<span class="r-in"><span>    from <span class="op">=</span> <span class="fl">11884299</span>,</span></span>
-<span class="r-in"><span>    to <span class="op">=</span> <span class="fl">12106581</span>,</span></span>
-<span class="r-in"><span>    species <span class="op">=</span> <span class="st">"hg38"</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">bedpe_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="st">"chr1\t11890000\t11890500\tchr1\t11905000\t11905500"</span>,</span></span>
+<span class="r-in"><span>  <span class="va">bedpe_path</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fu">plot_peaks_interactions</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  bedpe_file <span class="op">=</span> <span class="va">bedpe_path</span>,</span></span>
+<span class="r-in"><span>  chr <span class="op">=</span> <span class="st">"chr1"</span>,</span></span>
+<span class="r-in"><span>  from <span class="op">=</span> <span class="fl">11884299</span>,</span></span>
+<span class="r-in"><span>  to <span class="op">=</span> <span class="fl">12106581</span>,</span></span>
+<span class="r-in"><span>  show_gene_track <span class="op">=</span> <span class="cn">FALSE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="plot_peaks_interactions-1.png" alt="" width="700" height="433"></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

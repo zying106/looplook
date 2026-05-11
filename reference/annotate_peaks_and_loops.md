@@ -186,22 +186,26 @@ bidirectional promoters), the function executes a 3-step resolution:
 
 ``` r
 # Minimal runnable example for package checks
-if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
-  requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+  txdb_example <- AnnotationDbi::loadDb(
+    system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")
+  )
   bedpe_path <- tempfile(fileext = ".bedpe")
   writeLines(
-    "chr1\t11890000\t11890500\tchr1\t11905000\t11905500",
+    "chr6\t10412000\t10412600\tchr6\t10415000\t10415600",
     bedpe_path
   )
 
   res <- annotate_peaks_and_loops(
     bedpe_file = bedpe_path,
-    species = "hg38",
+    txdb = txdb_example,
+    org_db = "org.Hs.eg.db",
+    species = "hg19",
     out_dir = tempdir(),
     project_name = "Quick_Example",
     write_output = FALSE,
     quiet = TRUE
   )
-  head(res$loop_annotation)
+  head(res$loop_annotation, 1)
 }
 ```

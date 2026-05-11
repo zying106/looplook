@@ -15,6 +15,9 @@ plot_peaks_interactions(
   from = NULL,
   to = NULL,
   species = "hg38",
+  txdb = NULL,
+  org_db = NULL,
+  show_gene_track = TRUE,
   max_levels = 10,
   base_anchor_height = 0.05,
   loop_color = "#5D6D7E",
@@ -56,6 +59,23 @@ plot_peaks_interactions(
 - species:
 
   Character. Genome assembly: "hg38", "hg19", "mm10", or "mm9".
+
+- txdb:
+
+  Optional `TxDb` object or installed package name. When `NULL`,
+  looplook resolves a species-matched transcript annotation.
+
+- org_db:
+
+  Optional `OrgDb`/`AnnotationDb` object or installed package name used
+  for gene-symbol mapping. When `NULL`, looplook attempts
+  species-matched mapping and otherwise falls back to `gene_id`.
+
+- show_gene_track:
+
+  Logical. If `TRUE` (default), render the gene track using the resolved
+  `txdb`. Set to `FALSE` for a lightweight loops-only view that skips
+  transcript annotation.
 
 - max_levels:
 
@@ -113,20 +133,17 @@ to disk via
 ## Examples
 
 ``` r
-if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
-  requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-  bedpe_path <- tempfile(fileext = ".bedpe")
-  writeLines(
-    "chr1\t11890000\t11890500\tchr1\t11905000\t11905500",
-    bedpe_path
-  )
-  p <- plot_peaks_interactions(
-    bedpe_file = bedpe_path,
-    chr = "chr1",
-    from = 11884299,
-    to = 12106581,
-    species = "hg38"
-  )
-  print(p)
-}
+bedpe_path <- tempfile(fileext = ".bedpe")
+writeLines(
+  "chr1\t11890000\t11890500\tchr1\t11905000\t11905500",
+  bedpe_path
+)
+p <- plot_peaks_interactions(
+  bedpe_file = bedpe_path,
+  chr = "chr1",
+  from = 11884299,
+  to = 12106581,
+  show_gene_track = FALSE
+)
+print(p)
 ```
