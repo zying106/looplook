@@ -83,7 +83,7 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -231,22 +231,24 @@ To address complex loci where a single anchor overlaps multiple promoters (e.g.,
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Mini example files (smaller subset for fast package checks)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Minimal runnable example for package checks</span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"TxDb.Hsapiens.UCSC.hg38.knownGene"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span>  <span class="va">bedpe_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_loops_mini.bedpe"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">bed_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_peaks_mini.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">bedpe_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="st">"chr1\t11890000\t11890500\tchr1\t11905000\t11905500"</span>,</span></span>
+<span class="r-in"><span>    <span class="va">bedpe_path</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">annotate_peaks_and_loops</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    bedpe_file <span class="op">=</span> <span class="va">bedpe_path</span>,</span></span>
-<span class="r-in"><span>    target_bed <span class="op">=</span> <span class="va">bed_path</span>,</span></span>
 <span class="r-in"><span>    species <span class="op">=</span> <span class="st">"hg38"</span>,</span></span>
-<span class="r-in"><span>    tss_region <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2000</span>, <span class="fl">2000</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    out_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    neighbor_hop <span class="op">=</span> <span class="fl">0</span>,</span></span>
-<span class="r-in"><span>    project_name <span class="op">=</span> <span class="st">"Quick_Example"</span></span></span>
+<span class="r-in"><span>    project_name <span class="op">=</span> <span class="st">"Quick_Example"</span>,</span></span>
+<span class="r-in"><span>    write_output <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>    quiet <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">target_annotation</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">loop_annotation</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>
     </div>

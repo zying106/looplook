@@ -79,7 +79,7 @@ regulatory network from physical chromatin contacts."><meta property="og:image" 
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.10</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.11</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -223,6 +223,10 @@ regulatory network from physical chromatin contacts.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/load.html" class="external-link">load</a></span><span class="op">(</span><span class="va">rdata_path</span>, envir <span class="op">=</span> <span class="va">temp_env</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># Extract the first object found in the RData file</span></span></span>
 <span class="r-in"><span><span class="va">raw_annotation</span> <span class="op">&lt;-</span> <span class="va">temp_env</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="va">temp_env</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">]</span></span></span>
+<span class="r-in"><span><span class="va">raw_annotation</span><span class="op">$</span><span class="va">loop_annotation</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">raw_annotation</span><span class="op">$</span><span class="va">loop_annotation</span>, <span class="fl">12</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">raw_annotation</span><span class="op">$</span><span class="va">target_annotation</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">raw_annotation</span><span class="op">$</span><span class="va">target_annotation</span>, <span class="fl">6</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">raw_annotation</span><span class="op">$</span><span class="va">promoter_centric_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">raw_annotation</span><span class="op">$</span><span class="va">promoter_centric_stats</span>, <span class="fl">12</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">raw_annotation</span><span class="op">$</span><span class="va">distal_element_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">raw_annotation</span><span class="op">$</span><span class="va">distal_element_stats</span>, <span class="fl">12</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># =========================================================================</span></span></span>
 <span class="r-in"><span><span class="co"># Example : Advanced filtering WITH Transcriptome-Guided Reclassification</span></span></span>
@@ -236,27 +240,16 @@ regulatory network from physical chromatin contacts.</p>
 <span class="r-in"><span>  species <span class="op">=</span> <span class="st">"hg38"</span>,</span></span>
 <span class="r-in"><span>  out_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  project_name <span class="op">=</span> <span class="st">"Example_Reclassified"</span>,</span></span>
-<span class="r-in"><span>  reclassify_by_expression <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span>  reclassify_by_expression <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
+<span class="r-in"><span>  write_output <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>  quiet <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; [Refinement] Project Name: Example_Reclassified_Filtered</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; [Step 1] Loading Data &amp; Expression Matrix...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     [Info] 'a1_id'/'a2_id' columns missing. Reconstructing from coordinates...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     &gt;&gt;&gt; Active Genes (&gt; 1 TPM): 608</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; [Step 2] Updating Anchors &amp; Loops...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; [Step 3] Updating Stats...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; [Step 4] Refining Target Annotations...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; [Step 5] Generating Visualizations (Returning plot objects)...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; [Step 6] Exporting Refined Results...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     Excel saved.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Refinement Complete.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># View the biologically corrected loop types (e.g., transition from P-P to eP-P)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">res_reclassified</span><span class="op">$</span><span class="va">loop_annotation</span><span class="op">$</span><span class="va">loop_type</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   E-E   E-G   E-P  E-eG  E-eP   G-G   G-P  G-eG  G-eP   P-P  P-eG  P-eP eG-eG </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     4     6    14    10    15     6    21     9    25    14    22    50    21 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> eG-eP eP-eP </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    39    44 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   E-E  E-eP  G-eG  G-eP   P-P  P-eG eG-eG eG-eP eP-eP </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     1     2     1     1     1     1     1     2     2 </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

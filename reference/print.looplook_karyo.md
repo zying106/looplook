@@ -19,3 +19,8 @@ print(x, ...)
 - ...:
 
   Additional arguments (unused).
+
+## Value
+
+The input `looplook_karyo` object, returned invisibly after drawing the
+image.

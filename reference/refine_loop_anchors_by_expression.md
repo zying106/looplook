@@ -160,6 +160,10 @@ temp_env <- new.env()
 load(rdata_path, envir = temp_env)
 # Extract the first object found in the RData file
 raw_annotation <- temp_env[[ls(temp_env)[1]]]
+raw_annotation$loop_annotation <- head(raw_annotation$loop_annotation, 12)
+raw_annotation$target_annotation <- head(raw_annotation$target_annotation, 6)
+raw_annotation$promoter_centric_stats <- head(raw_annotation$promoter_centric_stats, 12)
+raw_annotation$distal_element_stats <- head(raw_annotation$distal_element_stats, 12)
 
 # =========================================================================
 # Example : Advanced filtering WITH Transcriptome-Guided Reclassification
@@ -173,25 +177,14 @@ res_reclassified <- refine_loop_anchors_by_expression(
   species = "hg38",
   out_dir = tempdir(),
   project_name = "Example_Reclassified",
-  reclassify_by_expression = TRUE
+  reclassify_by_expression = TRUE,
+  write_output = FALSE,
+  quiet = TRUE
 )
-#> >>> [Refinement] Project Name: Example_Reclassified_Filtered
-#> >>> [Step 1] Loading Data & Expression Matrix...
-#>     [Info] 'a1_id'/'a2_id' columns missing. Reconstructing from coordinates...
-#>     >>> Active Genes (> 1 TPM): 608
-#> >>> [Step 2] Updating Anchors & Loops...
-#> >>> [Step 3] Updating Stats...
-#> >>> [Step 4] Refining Target Annotations...
-#> >>> [Step 5] Generating Visualizations (Returning plot objects)...
-#> >>> [Step 6] Exporting Refined Results...
-#>     Excel saved.
-#> Refinement Complete.
 
 # View the biologically corrected loop types (e.g., transition from P-P to eP-P)
 print(table(res_reclassified$loop_annotation$loop_type))
 #> 
-#>   E-E   E-G   E-P  E-eG  E-eP   G-G   G-P  G-eG  G-eP   P-P  P-eG  P-eP eG-eG 
-#>     4     6    14    10    15     6    21     9    25    14    22    50    21 
-#> eG-eP eP-eP 
-#>    39    44 
+#>   E-E  E-eP  G-eG  G-eP   P-P  P-eG eG-eG eG-eP eP-eP 
+#>     1     2     1     1     1     1     1     2     2 
 ```
