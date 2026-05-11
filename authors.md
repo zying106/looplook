@@ -22,12 +22,12 @@ Source:
 
 ZHANG Y (2026). *looplook: Integrative Suite for Target Assignment and
 Functional Annotation of Chromatin Interactions*. R package version
-0.99.9, <https://github.com/zying106/looplook>.
+0.99.10, <https://github.com/zying106/looplook>.
 
     @Manual{,
       title = {looplook: Integrative Suite for Target Assignment and Functional Annotation of Chromatin Interactions},
       author = {Ying ZHANG},
       year = {2026},
-      note = {R package version 0.99.9},
+      note = {R package version 0.99.10},
       url = {https://github.com/zying106/looplook},
     }

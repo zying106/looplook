@@ -1069,7 +1069,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] looplook_0.99.9  dplyr_1.2.1      BiocStyle_2.40.0
+#> [1] looplook_0.99.10 dplyr_1.2.1      BiocStyle_2.40.0
 #> 
 #> loaded via a namespace (and not attached):
 #>   [1] RColorBrewer_1.1-3          rstudioapi_0.18.0          
