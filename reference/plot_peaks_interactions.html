@@ -145,12 +145,13 @@ transparency.</p></dd>
 <dt id="arg-save-file">save_file<a class="anchor" aria-label="anchor" href="#arg-save-file"></a></dt>
 <dd><p>Character. Optional path to save the plot via
 <code><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggplot2::ggsave()</a></code>. When set, the plot is written to this file and
-returned invisibly.</p></dd>
+the same <code>ggplot</code> object is still returned.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>ggplot</code> object (invisibly when <code>save_file</code> is non-NULL).</p>
+    <p>A <code>ggplot</code> object. If <code>save_file</code> is provided, the plot is
+also written to disk via <code><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggplot2::ggsave()</a></code>.</p>
     </div>
 
     <div class="section level2">

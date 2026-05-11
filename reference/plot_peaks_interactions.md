@@ -101,11 +101,14 @@ plot_peaks_interactions(
 
   Character. Optional path to save the plot via
   [`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html).
-  When set, the plot is written to this file and returned invisibly.
+  When set, the plot is written to this file and the same `ggplot`
+  object is still returned.
 
 ## Value
 
-A `ggplot` object (invisibly when `save_file` is non-NULL).
+A `ggplot` object. If `save_file` is provided, the plot is also written
+to disk via
+[`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html).
 
 ## Examples
 

@@ -642,12 +642,16 @@ characterize the surviving functional network:
 
 *(Generated only if `target_bed` was provided in Module 2)*
 
-- **Multi-Omics Sankey Diagram** (`*_Target_Sankey.pdf` / `.html`): Core
+- **Multi-Omics Sankey Diagram** (`Target_Sankey` htmlwidget in-memory;
+  `target_sankey.html` alongside the report when rendered): Core
   integration diagnostic that maps the fate of inputted genomic features
   across three logical tiers: Genomic Region (L1) → 3D Loop Connection
   (L2) → Target Expression Status (L3). This intuitively reveals the
   proportion of GWAS/ChIP-seq peaks structurally connected to
-  functionally active genes.
+  functionally active genes. When generated through
+  [`looplook_report()`](https://zying106.github.io/looplook/reference/looplook_report.md),
+  keep `target_sankey.html` in the same output directory as the main
+  HTML report.
 
 - **Refined Target Loop Donut** (`*_Target_Loop_Donut.pdf`): Visualizes
   the topological distribution of functionally active loops that bridge

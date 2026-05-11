@@ -1166,12 +1166,15 @@ genes that passed the expression threshold.</p></li>
 2)</em></p>
 <ul>
 <li><p><strong>Multi-Omics Sankey Diagram</strong>
-(<code>*_Target_Sankey.pdf</code> / <code>.html</code>): Core
-integration diagnostic that maps the fate of inputted genomic features
-across three logical tiers: Genomic Region (L1) → 3D Loop Connection
-(L2) → Target Expression Status (L3). This intuitively reveals the
-proportion of GWAS/ChIP-seq peaks structurally connected to functionally
-active genes.</p></li>
+(<code>Target_Sankey</code> htmlwidget in-memory;
+<code>target_sankey.html</code> alongside the report when rendered):
+Core integration diagnostic that maps the fate of inputted genomic
+features across three logical tiers: Genomic Region (L1) → 3D Loop
+Connection (L2) → Target Expression Status (L3). This intuitively
+reveals the proportion of GWAS/ChIP-seq peaks structurally connected to
+functionally active genes. When generated through
+<code><a href="../reference/looplook_report.html">looplook_report()</a></code>, keep <code>target_sankey.html</code> in
+the same output directory as the main HTML report.</p></li>
 <li><p><strong>Refined Target Loop Donut</strong>
 (<code>*_Target_Loop_Donut.pdf</code>): Visualizes the topological
 distribution of functionally active loops that bridge user-defined

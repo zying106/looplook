@@ -254,19 +254,19 @@ if (requireNamespace("rmarkdown", quietly = TRUE) &&
   )
   file.exists(report_path)
 }
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/refinement-results-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/refinement-results-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/refinement-results-3.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpB6hDPm/looplook-example-report_files/figure-html/profiling-results-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/refinement-results-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/refinement-results-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/refinement-results-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpvzJVXY/looplook-example-report_files/figure-html/profiling-results-1.png" but not available.
 #> [1] TRUE
 ```
