@@ -171,6 +171,23 @@ University<br><a class="author_email" href="mailto:#"></a><a href="mailto:xulian
     background: #f8f9fa;
     font-weight: 600;
   }
+  .comparison-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin: 30px 0;
+    clear: both;
+  }
+  .comparison-table-wrap .horizontal-scroll {
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+  }
+  .comparison-table-wrap table {
+    width: max-content;
+    min-width: 100%;
+    margin-bottom: 0;
+  }
 </style>
 <hr>
 <div class="section level2">
@@ -263,7 +280,7 @@ providing a unified environment for target assignment, expression-aware
 refinement, consensus consolidation, and functional inference. Table
 @ref(tab:comparison-table) highlights the core capabilities of
 <code>looplook</code> relative to existing tools in the ecosystem.</p>
-<div style="margin: 30px auto; display: table; clear: both;">
+<div class="comparison-table-wrap">
 <table class="table">
 <caption>
 Comparison of core features between looplook and existing genomic
@@ -571,6 +588,7 @@ R
 </tr>
 </tbody>
 </table>
+</div>
 <p><small style="color: #666; display: block; margin-top: -10px; margin-bottom: 20px;">
 <em>Notes:</em> “1D” = linear proximity-based mapping; “3D” = mapping
 via spatial chromatin topology; “<span style="color: #2E8B57;">✔</span>”
@@ -585,6 +603,8 @@ consolidation, topological reclassification of silent regulatory
 elements, and local execution for data privacy — capabilities not
 natively available in any of the alternatives listed above.</p>
 <hr>
+</div>
+</div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -1857,9 +1877,6 @@ New File → R Markdown → From Template → looplook Report</strong>.</p>
 <span><span class="co">#&gt; [133] openxlsx_4.2.8.1            crayon_1.5.3               </span></span>
 <span><span class="co">#&gt; [135] bamsignals_1.43.0           rlang_1.2.0                </span></span>
 <span><span class="co">#&gt; [137] KEGGREST_1.52.0</span></span></code></pre></div>
-</div>
-</div>
-</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
