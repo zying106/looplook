@@ -31,7 +31,75 @@ Pre-filtering (min_raw_score): Removes low-confidence noise (e.g., singleton rea
 Post-filtering (min_score): Filters the final consensus loops based on their aggregated score.
 Replicate-Balanced Aggregation: In "consensus" and "union" modes, each cluster score is computed as the mean of per-source mean scores, so one replicate with many fragmented calls cannot dominate the final representative score.
 
-'><meta property="og:image" content="https://zying106.github.io/looplook/logo.png"></head><body>
+'><meta property="og:image" content="https://zying106.github.io/looplook/logo.png"><style>
+.template-article .row > main,
+.template-reference .row > main {
+  min-width: 0;
+}
+
+.template-article div.sourceCode,
+.template-article pre,
+.template-reference div.sourceCode,
+.template-reference pre {
+  max-width: 100%;
+}
+
+.template-article div.sourceCode,
+.template-reference div.sourceCode {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.template-article div.sourceCode pre,
+.template-article pre:not([class]),
+.template-reference div.sourceCode pre,
+.template-reference pre:not([class]) {
+  white-space: pre;
+  word-break: normal;
+  overflow-wrap: normal;
+  margin-bottom: 0;
+}
+
+.template-article p,
+.template-article li,
+.template-article td,
+.template-article th,
+.template-article a,
+.template-article code:not(pre code),
+.template-reference p,
+.template-reference li,
+.template-reference td,
+.template-reference th,
+.template-reference a,
+.template-reference code:not(pre code) {
+  overflow-wrap: anywhere;
+  word-wrap: break-word;
+}
+
+.template-article .table-responsive,
+.template-article table,
+.template-reference .table-responsive,
+.template-reference table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .template-article .row > main,
+  .template-reference .row > main,
+  .template-article .row > aside,
+  .template-reference .row > aside {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .template-article .row > aside,
+  .template-reference .row > aside {
+    margin-top: 1.5rem;
+  }
+}
+</style></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -182,7 +250,7 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Intersect mode: Reference-based filtering (No Coordinate Merging)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Base: File 1. Criterion: Must overlap with ALL other files.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Intersecting with File 2...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpvzJVXY/file9b3d75ac73ae.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpyG2XX9/file9b444152c40c.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example B: Consensus Mode (formerly Reproducible)</span></span></span>
@@ -198,7 +266,7 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Consensus mode: Keeping clusters in &gt;= 2 replicates</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpvzJVXY/file9b3d62c16904.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpyG2XX9/file9b44199fb58f.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 11</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example C: Union Mode</span></span></span>
@@ -214,7 +282,7 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Union mode: Keeping all clusters</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpvzJVXY/file9b3d321e943f.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpyG2XX9/file9b4420c76493.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 589</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example D: Dual Filtering Strategy (Recommended for HiChIP)</span></span></span>
@@ -234,7 +302,7 @@ If <code>NULL</code> (default), the threshold is automatically calculated:</p><u
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 100 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Consensus mode: Keeping clusters in &gt;= 2 replicates</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpvzJVXY/file9b3d2cb0ff5.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpyG2XX9/file9b445d05ff77.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 4</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Inspect results</span></span></span>
