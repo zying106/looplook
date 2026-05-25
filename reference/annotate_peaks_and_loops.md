@@ -165,7 +165,8 @@ bidirectional promoters), the function executes a 3-step resolution:
     user-provided expression matrix.
 
 2.  *Biotype Prioritization:* Ranks remaining candidates by functional
-    class: `Protein Coding > Antisense > lncRNA > Pseudogene`.
+    class:
+    `Protein Coding > small-ncRNA (miRNA, snoRNA, snRNA, rRNA, scaRNA) > Antisense > lncRNA/ncRNA > Pseudogene`.
 
 3.  *Expression Tiebreaker:* Resolves remaining ambiguities by
     designating the gene with the highest transcriptional abundance as

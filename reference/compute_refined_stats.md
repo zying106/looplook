@@ -10,7 +10,6 @@ where available.
 compute_refined_stats(
   loop_df,
   upstream_promoter_stats,
-  upstream_distal_stats,
   vals,
   threshold,
   hub_percentile
@@ -26,10 +25,6 @@ compute_refined_stats(
 - upstream_promoter_stats:
 
   Upstream promoter-centric stats (or NULL).
-
-- upstream_distal_stats:
-
-  Upstream distal-element stats (or NULL).
 
 - vals:
 

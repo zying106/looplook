@@ -29,7 +29,7 @@ looplook_report(
   target_source = "targets",
   loop_types = c("E-P", "P-P"),
   stat_test = "wilcox.test",
-  run_go = TRUE,
+  run_go = FALSE,
   run_ppi = FALSE,
   run_motif = FALSE,
   genome_id = species,
@@ -256,15 +256,15 @@ if (requireNamespace("rmarkdown", quietly = TRUE) &&
   )
   file.exists(report_path)
 }
-#> The magick package is required to crop "/tmp/RtmpJxsyQQ/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpJxsyQQ/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpJxsyQQ/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpJxsyQQ/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpJxsyQQ/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpJxsyQQ/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpJxsyQQ/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpJxsyQQ/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpJxsyQQ/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpJxsyQQ/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpjxTBd9/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpjxTBd9/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpjxTBd9/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpjxTBd9/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpjxTBd9/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpjxTBd9/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpjxTBd9/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpjxTBd9/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpjxTBd9/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpjxTBd9/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
 #> [1] TRUE
 ```

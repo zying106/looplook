@@ -28,7 +28,7 @@ profile_target_genes(
   genome_id = "hg38",
   motif_p_thresh = 1e-04,
   motif_ntop = 5,
-  run_go = TRUE,
+  run_go = FALSE,
   run_ppi = FALSE,
   ppi_score = 400,
   ppi_nSample = 400,
