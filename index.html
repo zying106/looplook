@@ -97,7 +97,7 @@
 
     <a class="navbar-brand me-2" href="index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.13</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.14</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -145,7 +145,10 @@
 </h2>
 <p><code>looplook</code> extensively leverages the Bioconductor ecosystem for <strong>robust genomic arithmetic and annotation</strong>. To ensure optimal compatibility, please ensure your <strong>system environment</strong> is fully up to date prior to installation:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Installation from GitHub </span></span>
+<code class="sourceCode R"><span><span class="co"># Installation from GitHub</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"BiocManager"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"BiocManager"</span><span class="op">)</span></span>
+<span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"TxDb.Hsapiens.UCSC.hg38.knownGene"</span>, <span class="st">"org.Hs.eg.db"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"devtools"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"devtools"</span><span class="op">)</span></span>
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"zying106/looplook"</span><span class="op">)</span></span></code></pre></div>
 <hr>
@@ -202,11 +205,11 @@
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Use pre-computed example annotation (or run annotate_peaks_and_loops with example data)</span></span>
 <span><span class="va">rdata_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"analysis_results.RData"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/load.html" class="external-link">load</a></span><span class="op">(</span><span class="va">rdata_path</span><span class="op">)</span>  <span class="co"># loads res_integrated</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/load.html" class="external-link">load</a></span><span class="op">(</span><span class="va">rdata_path</span><span class="op">)</span> <span class="co"># loads res_integrated</span></span></code></pre></div>
 <p><strong>Output Data Dictionary: The Comprehensive 3D Spatial Catalog</strong></p>
 <p>The module systematically exports a multi-layered tabular catalog (e.g., <code>*_Basic_Results.xlsx</code>) detailing the spatial interactome:</p>
 <ul>
-<li><p><strong>Integrative Target Mapping (<code>target_annotation</code>)</strong> Delineates the spatial coverage of genomic variants/features inputted by the user. It strictly differentiates <code>Assigned_Target_Genes</code> (target genes identified exclusively via 3D physical chromatin loops) from <code>*_Filled columns</code>, which implement a <strong>“Smart Fallback”</strong> algorithm to assign nearest linear genes for unlooped loci, ensuring comprehensive, gap-free annotation coverage.</p></li>
+<li><p><strong>Integrative Target Mapping (<code>target_annotation</code>)</strong> Delineates the spatial coverage of genomic variants/features inputted by the user. It separates strict loop-derived columns (<code>Regulated_promoter_genes</code>, <code>Assigned_Target_Genes</code>) from <code>*_Filled</code> fallback columns, and records provenance through <code>Regulated_promoter_Evidence</code>, <code>Regulated_promoter_Fallback_Evidence</code>, and the long-format <code>target_gene_links</code> table. This keeps promoter-supported loop targets, historical assigned targets, and nearest-gene fallback choices traceable rather than conflated.</p></li>
 <li><p><strong>3D Network Architecture (<code>loop_annotation</code>)</strong> Resolves the biological syntax of the structural interactome. It classifies topological interactions (loop_type, e.g., E-P, P-P) and distinguishes biologically relevant <code>Putative_Target_Genes</code> from the broader, raw physical interaction footprints (<code>All_Anchor_Genes</code>).</p></li>
 <li><p><strong>Topological Hub Detection</strong> Quantifies structural node degrees (e.g., <code>n_Linked_Promoters</code>, <code>n_Linked_Distal</code>) to rigorously deconstruct the 3D interactome from two complementary perspectives: <strong><code>promoter_centric_stats</code></strong>: Identifies core target genes regulated by <strong>complex regulatory architectures</strong> (e.g., enhancer arrays or transcription factories)，while <strong><code>distal_element_stats</code></strong> highlights high-connectivity non-coding regions to facilitate the discovery of putative enhancer cliques.</p></li>
 </ul>
@@ -219,7 +222,7 @@
 <div class="section level3">
 <h3 id="module-3-expression-aware-refinement">Module 3: Expression-Aware Refinement<a class="anchor" aria-label="anchor" href="#module-3-expression-aware-refinement"></a>
 </h3>
-<p>Physical proximity is a structural prerequisite, but not a direct proxy for active <strong>transcriptional regulation</strong>. This module integrates quantitative transcriptome data to systematically filter out <strong>transcriptionally silent physical chromatin contacts</strong>, ensuring only functionally relevant 3D interactions are retained.</p>
+<p>Physical proximity is a structural prerequisite, but not a direct proxy for active <strong>transcriptional regulation</strong>. This module integrates quantitative transcriptome data to annotate each loop with expression-aware functional status. All structural loops are preserved; the pipeline reclassifies silent anchors (P → eP, G → eG), flags which loops belong to the high-confidence functional subset (<code>Retained_In_Functional_Network</code>), and exposes <code>Refinement_Action</code> for transparent interpretation.</p>
 <p><strong>Key Parameters:</strong></p>
 <ul>
 <li>
@@ -243,9 +246,11 @@
 <p><strong>Output Data Dictionary: The Functionally Active Regulome</strong> Following transcriptome integration, the refined tabular outputs represent a high-confidence, functionally active subset of the initial 3D chromatin interactome. The <strong>key features</strong> of these output are as follows:</p>
 <ul>
 <li>
-<strong>Expression-Aware Filtration</strong>: The resulting catalog explicitly excludes pure structural chromatin loops lacking functional transcriptional output, yielding a rigorously curated, functionally active regulatory network.</li>
+<strong>Expression-Aware Refinement</strong>: All structural loops are preserved. The pipeline annotates each loop with expression-aware functional status (<code>Has_Active_Target</code>, <code>Retained_In_Functional_Network</code>, <code>Refinement_Action</code>) and provides a high-confidence functional subset for downstream analysis, without discarding structural evidence.</li>
 <li>
 <strong>Dynamic Topological Reclassification</strong>: The topological annotations within the <code>loop_type</code> are biologically recalibrated. By dynamically reclassifying transcriptionally silent promoters (<strong>P</strong>) as enhancer-like elements (<strong>eP</strong>), the catalog fundamentally corrects the spatial regulatory syntax (e.g., seamlessly transforming a transcriptionally silent <strong>P-P</strong> loop into a curated <strong>eP-P</strong> interaction axis).</li>
+<li>
+<strong>Filtered Target Gene Links</strong>: The refined provenance sheet retains only peak-gene links still used by the refined target columns and appends <code>Mean_Expression</code> plus <code>Passes_Expression_Filter</code>, so inactive Basic-stage links are not carried forward as active refined evidence.</li>
 </ul>
 <div align="center">
 <img src="reference/figures/g2_refine.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Refinement Results"><p>
@@ -344,10 +349,10 @@
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># One-click report (renders a standalone HTML via nested rmarkdown)</span></span>
 <span><span class="fu">looplook</span><span class="fu">::</span><span class="fu"><a href="reference/looplook_report.html">looplook_report</a></span><span class="op">(</span></span>
-<span>  bedpe_file   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_loops_1.bedpe"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>,</span>
-<span>  target_bed   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>,</span>
+<span>  bedpe_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_loops_1.bedpe"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>,</span>
+<span>  target_bed <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>,</span>
 <span>  expr_matrix_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_tpm.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>,</span>
-<span>  diff_file    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_deg.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>,</span>
+<span>  diff_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_deg.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>,</span>
 <span>  metadata_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_coldata.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>,</span>
 <span>  project_name <span class="op">=</span> <span class="st">"My HiChIP Study"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -397,147 +402,20 @@
 <span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="do">## Platform: aarch64-apple-darwin20</span></span>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="do">## Running under: macOS Sequoia 15.3</span></span>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="do">## Matrix products: default</span></span>
-<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="do">## BLAS:   /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib </span></span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="do">## LAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1</span></span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="do">## locale:</span></span>
-<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="do">## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8</span></span>
-<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="do">## time zone: Asia/Singapore</span></span>
-<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="do">## tzcode source: internal</span></span>
-<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="do">## attached base packages:</span></span>
-<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="do">## [1] stats4    stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="do">## attached base packages:</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="do">## [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="do">## other attached packages:</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="do">## [1] looplook_0.99.13</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="do">## loaded via a namespace (and not attached):</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="do">##   [1] dplyr_1.1.4         rlang_1.1.6         S4Vectors_0.48.0   </span></span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="do">##   [4] GenomicRanges_1.60.0 IRanges_2.42.0      GenomeInfoDb_1.44.0</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="do">##   [7] BiocGenerics_0.54.1  AnnotationDbi_1.70.0 GenomicFeatures_1.60.0</span></span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="do">##  [10] ggplot2_4.0.0       openxlsx_4.2.8.1    data.table_1.17.8   </span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="do">##  [13] igraph_2.2.0        clusterProfiler_1.8.0</span></span>
 <span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="do">## other attached packages:</span></span>
-<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="do">##  [1] looplook_0.99.8      org.Hs.eg.db_3.21.0  AnnotationDbi_1.70.0 IRanges_2.42.0       S4Vectors_0.48.0    </span></span>
-<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="do">##  [6] Biobase_2.68.0       BiocGenerics_0.54.1  generics_0.1.4       scales_1.4.0         knitr_1.51          </span></span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="do">## [11] dplyr_1.1.4          ggplot2_4.0.0        BiocStyle_2.36.0    </span></span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="do">## loaded via a namespace (and not attached):</span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="do">##   [1] R.methodsS3_1.8.2                        dichromat_2.0-0.1                       </span></span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="do">##   [3] ggseqlogo_0.2.2                          nnet_7.3-20                             </span></span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="do">##   [5] DT_0.34.0                                Biostrings_2.76.0                       </span></span>
-<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="do">##   [7] TxDb.Hsapiens.UCSC.hg38.knownGene_3.21.0 vctrs_0.7.2                             </span></span>
-<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="do">##   [9] ggtangle_0.0.7                           digest_0.6.37                           </span></span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="do">##  [11] png_0.1-9                                shape_1.4.6.1                           </span></span>
-<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="do">##  [13] BiocBaseUtils_1.10.0                     ggrepel_0.9.8                           </span></span>
-<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="do">##  [15] magick_2.9.0                             MASS_7.3-65                             </span></span>
-<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="do">##  [17] reshape2_1.4.4                           foreach_1.5.2                           </span></span>
-<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="do">##  [19] qvalue_2.40.0                            withr_3.0.2                             </span></span>
-<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a><span class="do">##  [21] xfun_0.55                                ggfun_0.2.0                             </span></span>
-<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a><span class="do">##  [23] ggpubr_0.6.2                             ellipsis_0.3.2                          </span></span>
-<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a><span class="do">##  [25] memoise_2.0.1                            commonmark_2.0.0                        </span></span>
-<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a><span class="do">##  [27] rcmdcheck_1.4.0                          clusterProfiler_4.16.0                  </span></span>
-<span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a><span class="do">##  [29] gson_0.1.0                               bamsignals_1.40.0                       </span></span>
-<span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a><span class="do">##  [31] tidytree_0.4.6                           networkD3_0.4.1                         </span></span>
-<span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a><span class="do">##  [33] GlobalOptions_0.1.2                      gtools_3.9.5                            </span></span>
-<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a><span class="do">##  [35] ggdist_3.3.3                             R.oo_1.27.1                             </span></span>
-<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="do">##  [37] Formula_1.2-5                            sys_3.4.3                               </span></span>
-<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a><span class="do">##  [39] prettyunits_1.2.0                        KEGGREST_1.48.1                         </span></span>
-<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a><span class="do">##  [41] otel_0.2.0                               httr_1.4.7                              </span></span>
-<span id="cb9-45"><a href="#cb9-45" tabindex="-1"></a><span class="do">##  [43] rstatix_0.7.3                            restfulr_0.0.16                         </span></span>
-<span id="cb9-46"><a href="#cb9-46" tabindex="-1"></a><span class="do">##  [45] hash_2.2.6.3                             ps_1.9.1                                </span></span>
-<span id="cb9-47"><a href="#cb9-47" tabindex="-1"></a><span class="do">##  [47] rstudioapi_0.17.1                        UCSC.utils_1.4.0                        </span></span>
-<span id="cb9-48"><a href="#cb9-48" tabindex="-1"></a><span class="do">##  [49] DOSE_4.2.0                               base64enc_0.1-3                         </span></span>
-<span id="cb9-49"><a href="#cb9-49" tabindex="-1"></a><span class="do">##  [51] processx_3.8.6                           curl_7.0.0                              </span></span>
-<span id="cb9-50"><a href="#cb9-50" tabindex="-1"></a><span class="do">##  [53] fields_17.1                              zlibbioc_1.54.0                         </span></span>
-<span id="cb9-51"><a href="#cb9-51" tabindex="-1"></a><span class="do">##  [55] ggraph_2.2.2                             polyclip_1.10-7                         </span></span>
-<span id="cb9-52"><a href="#cb9-52" tabindex="-1"></a><span class="do">##  [57] GenomeInfoDbData_1.2.14                  SparseArray_1.8.1                       </span></span>
-<span id="cb9-53"><a href="#cb9-53" tabindex="-1"></a><span class="do">##  [59] xopen_1.0.1                              RBGL_1.84.0                             </span></span>
-<span id="cb9-54"><a href="#cb9-54" tabindex="-1"></a><span class="do">##  [61] stringr_1.5.2                            desc_1.4.3                              </span></span>
-<span id="cb9-55"><a href="#cb9-55" tabindex="-1"></a><span class="do">##  [63] doParallel_1.0.17                        evaluate_1.0.5                          </span></span>
-<span id="cb9-56"><a href="#cb9-56" tabindex="-1"></a><span class="do">##  [65] S4Arrays_1.8.1                           BiocFileCache_2.16.2                    </span></span>
-<span id="cb9-57"><a href="#cb9-57" tabindex="-1"></a><span class="do">##  [67] GenomicRanges_1.60.0                     bookdown_0.46                           </span></span>
-<span id="cb9-58"><a href="#cb9-58" tabindex="-1"></a><span class="do">##  [69] colorspace_2.1-2                         filelock_1.0.3                          </span></span>
-<span id="cb9-59"><a href="#cb9-59" tabindex="-1"></a><span class="do">##  [71] magrittr_2.0.4                           viridis_0.6.5                           </span></span>
-<span id="cb9-60"><a href="#cb9-60" tabindex="-1"></a><span class="do">##  [73] ggtree_3.16.3                            lattice_0.22-7                          </span></span>
-<span id="cb9-61"><a href="#cb9-61" tabindex="-1"></a><span class="do">##  [75] XML_3.99-0.19                            cowplot_1.2.0                           </span></span>
-<span id="cb9-62"><a href="#cb9-62" tabindex="-1"></a><span class="do">##  [77] matrixStats_1.5.0                        Hmisc_5.2-4                             </span></span>
-<span id="cb9-63"><a href="#cb9-63" tabindex="-1"></a><span class="do">##  [79] pillar_1.11.1                            nlme_3.1-168                            </span></span>
-<span id="cb9-64"><a href="#cb9-64" tabindex="-1"></a><span class="do">##  [81] pwalign_1.4.0                            iterators_1.0.14                        </span></span>
-<span id="cb9-65"><a href="#cb9-65" tabindex="-1"></a><span class="do">##  [83] caTools_1.18.3                           compiler_4.5.1                          </span></span>
-<span id="cb9-66"><a href="#cb9-66" tabindex="-1"></a><span class="do">##  [85] stringi_1.8.7                            SummarizedExperiment_1.38.1             </span></span>
-<span id="cb9-67"><a href="#cb9-67" tabindex="-1"></a><span class="do">##  [87] devtools_2.4.6                           GenomicAlignments_1.44.0                </span></span>
-<span id="cb9-68"><a href="#cb9-68" tabindex="-1"></a><span class="do">##  [89] plyr_1.8.9                               crayon_1.5.3                            </span></span>
-<span id="cb9-69"><a href="#cb9-69" tabindex="-1"></a><span class="do">##  [91] abind_1.4-8                              BiocIO_1.18.0                           </span></span>
-<span id="cb9-70"><a href="#cb9-70" tabindex="-1"></a><span class="do">##  [93] ggtext_0.1.2                             gridGraphics_0.5-1                      </span></span>
-<span id="cb9-71"><a href="#cb9-71" tabindex="-1"></a><span class="do">##  [95] chron_2.3-62                             graphlayouts_1.2.2                      </span></span>
-<span id="cb9-72"><a href="#cb9-72" tabindex="-1"></a><span class="do">##  [97] bit_4.6.0                                UpSetR_1.4.0                            </span></span>
-<span id="cb9-73"><a href="#cb9-73" tabindex="-1"></a><span class="do">##  [99] fastmatch_1.1-6                          codetools_0.2-20                        </span></span>
-<span id="cb9-74"><a href="#cb9-74" tabindex="-1"></a><span class="do">## [101] openssl_2.3.4                            crosstalk_1.2.2                         </span></span>
-<span id="cb9-75"><a href="#cb9-75" tabindex="-1"></a><span class="do">## [103] bslib_0.9.0                              TxDb.Hsapiens.UCSC.hg19.knownGene_3.2.2 </span></span>
-<span id="cb9-76"><a href="#cb9-76" tabindex="-1"></a><span class="do">## [105] biovizBase_1.56.0                        GetoptLong_1.1.0                        </span></span>
-<span id="cb9-77"><a href="#cb9-77" tabindex="-1"></a><span class="do">## [107] splines_4.5.1                            circlize_0.4.16                         </span></span>
-<span id="cb9-78"><a href="#cb9-78" tabindex="-1"></a><span class="do">## [109] Rcpp_1.1.0                               dbplyr_2.5.1                            </span></span>
-<span id="cb9-79"><a href="#cb9-79" tabindex="-1"></a><span class="do">## [111] BiocCheck_1.44.2                         gridtext_0.1.5                          </span></span>
-<span id="cb9-80"><a href="#cb9-80" tabindex="-1"></a><span class="do">## [113] blob_1.2.4                               seqLogo_1.74.0                          </span></span>
-<span id="cb9-81"><a href="#cb9-81" tabindex="-1"></a><span class="do">## [115] clue_0.3-66                              AnnotationFilter_1.32.0                 </span></span>
-<span id="cb9-82"><a href="#cb9-82" tabindex="-1"></a><span class="do">## [117] fs_1.6.6                                 checkmate_2.3.3                         </span></span>
-<span id="cb9-83"><a href="#cb9-83" tabindex="-1"></a><span class="do">## [119] pkgbuild_1.4.8                           openxlsx_4.2.8.1                        </span></span>
-<span id="cb9-84"><a href="#cb9-84" tabindex="-1"></a><span class="do">## [121] ggsignif_0.6.4                           ggplotify_0.1.3                         </span></span>
-<span id="cb9-85"><a href="#cb9-85" tabindex="-1"></a><span class="do">## [123] sqldf_0.4-11                             tibble_3.3.0                            </span></span>
-<span id="cb9-86"><a href="#cb9-86" tabindex="-1"></a><span class="do">## [125] Matrix_1.7-3                             callr_3.7.6                             </span></span>
-<span id="cb9-87"><a href="#cb9-87" tabindex="-1"></a><span class="do">## [127] tweenr_2.0.3                             pkgconfig_2.0.3                         </span></span>
-<span id="cb9-88"><a href="#cb9-88" tabindex="-1"></a><span class="do">## [129] tools_4.5.1                              cachem_1.1.0                            </span></span>
-<span id="cb9-89"><a href="#cb9-89" tabindex="-1"></a><span class="do">## [131] RSQLite_2.4.3                            viridisLite_0.4.2                       </span></span>
-<span id="cb9-90"><a href="#cb9-90" tabindex="-1"></a><span class="do">## [133] DBI_1.2.3                                fastmap_1.2.0                           </span></span>
-<span id="cb9-91"><a href="#cb9-91" tabindex="-1"></a><span class="do">## [135] rmarkdown_2.30                           grid_4.5.1                              </span></span>
-<span id="cb9-92"><a href="#cb9-92" tabindex="-1"></a><span class="do">## [137] credentials_2.0.3                        usethis_3.2.1                           </span></span>
-<span id="cb9-93"><a href="#cb9-93" tabindex="-1"></a><span class="do">## [139] Rsamtools_2.24.1                         broom_1.0.11                            </span></span>
-<span id="cb9-94"><a href="#cb9-94" tabindex="-1"></a><span class="do">## [141] sass_0.4.10                              patchwork_1.3.2                         </span></span>
-<span id="cb9-95"><a href="#cb9-95" tabindex="-1"></a><span class="do">## [143] BiocManager_1.30.26                      dotCall64_1.2                           </span></span>
-<span id="cb9-96"><a href="#cb9-96" tabindex="-1"></a><span class="do">## [145] VariantAnnotation_1.54.1                 graph_1.86.0                            </span></span>
-<span id="cb9-97"><a href="#cb9-97" tabindex="-1"></a><span class="do">## [147] carData_3.0-5                            rpart_4.1.24                            </span></span>
-<span id="cb9-98"><a href="#cb9-98" tabindex="-1"></a><span class="do">## [149] farver_2.1.2                             mgcv_1.9-3                              </span></span>
-<span id="cb9-99"><a href="#cb9-99" tabindex="-1"></a><span class="do">## [151] tidygraph_1.3.1                          gsubfn_0.7                              </span></span>
-<span id="cb9-100"><a href="#cb9-100" tabindex="-1"></a><span class="do">## [153] biocViews_1.76.0                         yaml_2.3.10                             </span></span>
-<span id="cb9-101"><a href="#cb9-101" tabindex="-1"></a><span class="do">## [155] roxygen2_7.3.3                           MatrixGenerics_1.20.0                   </span></span>
-<span id="cb9-102"><a href="#cb9-102" tabindex="-1"></a><span class="do">## [157] foreign_0.8-90                           rtracklayer_1.68.0                      </span></span>
-<span id="cb9-103"><a href="#cb9-103" tabindex="-1"></a><span class="do">## [159] cli_3.6.5                                purrr_1.2.1                             </span></span>
-<span id="cb9-104"><a href="#cb9-104" tabindex="-1"></a><span class="do">## [161] motifmatchr_1.30.0                       lifecycle_1.0.4                         </span></span>
-<span id="cb9-105"><a href="#cb9-105" tabindex="-1"></a><span class="do">## [163] askpass_1.2.1                            sessioninfo_1.2.3                       </span></span>
-<span id="cb9-106"><a href="#cb9-106" tabindex="-1"></a><span class="do">## [165] backports_1.5.0                          BSgenome.Hsapiens.UCSC.hg38_1.4.5       </span></span>
-<span id="cb9-107"><a href="#cb9-107" tabindex="-1"></a><span class="do">## [167] BiocParallel_1.42.2                      gtable_0.3.6                            </span></span>
-<span id="cb9-108"><a href="#cb9-108" tabindex="-1"></a><span class="do">## [169] rjson_0.2.23                             ChIPseeker_1.44.0                       </span></span>
-<span id="cb9-109"><a href="#cb9-109" tabindex="-1"></a><span class="do">## [171] parallel_4.5.1                           ape_5.8-1                               </span></span>
-<span id="cb9-110"><a href="#cb9-110" tabindex="-1"></a><span class="do">## [173] testthat_3.3.1                           jsonlite_2.0.0                          </span></span>
-<span id="cb9-111"><a href="#cb9-111" tabindex="-1"></a><span class="do">## [175] TFBSTools_1.46.0                         bitops_1.0-9                            </span></span>
-<span id="cb9-112"><a href="#cb9-112" tabindex="-1"></a><span class="do">## [177] bit64_4.6.0-1                            brio_1.1.5                              </span></span>
-<span id="cb9-113"><a href="#cb9-113" tabindex="-1"></a><span class="do">## [179] yulab.utils_0.2.1                        proto_1.0.0                             </span></span>
-<span id="cb9-114"><a href="#cb9-114" tabindex="-1"></a><span class="do">## [181] zip_2.3.3                                bezier_1.1.2                            </span></span>
-<span id="cb9-115"><a href="#cb9-115" tabindex="-1"></a><span class="do">## [183] jquerylib_0.1.4                          GOSemSim_2.34.0                         </span></span>
-<span id="cb9-116"><a href="#cb9-116" tabindex="-1"></a><span class="do">## [185] distributional_0.6.0                     R.utils_2.13.0                          </span></span>
-<span id="cb9-117"><a href="#cb9-117" tabindex="-1"></a><span class="do">## [187] lazyeval_0.2.2                           htmltools_0.5.8.1                       </span></span>
-<span id="cb9-118"><a href="#cb9-118" tabindex="-1"></a><span class="do">## [189] enrichplot_1.28.4                        GO.db_3.21.0                            </span></span>
-<span id="cb9-119"><a href="#cb9-119" tabindex="-1"></a><span class="do">## [191] rappdirs_0.3.3                           data.tree_1.2.0                         </span></span>
-<span id="cb9-120"><a href="#cb9-120" tabindex="-1"></a><span class="do">## [193] ensembldb_2.32.0                         tinytex_0.59                            </span></span>
-<span id="cb9-121"><a href="#cb9-121" tabindex="-1"></a><span class="do">## [195] glue_1.8.0                               STRINGdb_2.20.0                         </span></span>
-<span id="cb9-122"><a href="#cb9-122" tabindex="-1"></a><span class="do">## [197] TFMPvalue_1.0.0                          spam_2.11-1                             </span></span>
-<span id="cb9-123"><a href="#cb9-123" tabindex="-1"></a><span class="do">## [199] httr2_1.2.1                              XVector_0.48.0                          </span></span>
-<span id="cb9-124"><a href="#cb9-124" tabindex="-1"></a><span class="do">## [201] RCurl_1.98-1.17                          InteractionSet_1.36.1                   </span></span>
-<span id="cb9-125"><a href="#cb9-125" tabindex="-1"></a><span class="do">## [203] rprojroot_2.1.1                          treeio_1.32.0                           </span></span>
-<span id="cb9-126"><a href="#cb9-126" tabindex="-1"></a><span class="do">## [205] BSgenome_1.76.0                          gridExtra_2.3                           </span></span>
-<span id="cb9-127"><a href="#cb9-127" tabindex="-1"></a><span class="do">## [207] karyoploteR_1.34.2                       boot_1.3-31                             </span></span>
-<span id="cb9-128"><a href="#cb9-128" tabindex="-1"></a><span class="do">## [209] JASPAR2020_0.99.10                       igraph_2.2.0                            </span></span>
-<span id="cb9-129"><a href="#cb9-129" tabindex="-1"></a><span class="do">## [211] R6_2.6.1                                 tidyr_1.3.1                             </span></span>
-<span id="cb9-130"><a href="#cb9-130" tabindex="-1"></a><span class="do">## [213] gplots_3.2.0                             labeling_0.4.3                          </span></span>
-<span id="cb9-131"><a href="#cb9-131" tabindex="-1"></a><span class="do">## [215] ggpointdensity_0.2.1                     GenomicFeatures_1.60.0                  </span></span>
-<span id="cb9-132"><a href="#cb9-132" tabindex="-1"></a><span class="do">## [217] cluster_2.1.8.1                          pkgload_1.4.1                           </span></span>
-<span id="cb9-133"><a href="#cb9-133" tabindex="-1"></a><span class="do">## [219] regioneR_1.40.1                          stringdist_0.9.15                       </span></span>
-<span id="cb9-134"><a href="#cb9-134" tabindex="-1"></a><span class="do">## [221] aplot_0.2.9                              GenomeInfoDb_1.44.3                     </span></span>
-<span id="cb9-135"><a href="#cb9-135" tabindex="-1"></a><span class="do">## [223] DirichletMultinomial_1.50.0              DelayedArray_0.34.1                     </span></span>
-<span id="cb9-136"><a href="#cb9-136" tabindex="-1"></a><span class="do">## [225] tidyselect_1.2.1                         plotrix_3.8-4                           </span></span>
-<span id="cb9-137"><a href="#cb9-137" tabindex="-1"></a><span class="do">## [227] ProtGenerics_1.40.0                      htmlTable_2.4.3                         </span></span>
-<span id="cb9-138"><a href="#cb9-138" tabindex="-1"></a><span class="do">## [229] maps_3.4.3                               ggforce_0.5.0                           </span></span>
-<span id="cb9-139"><a href="#cb9-139" tabindex="-1"></a><span class="do">## [231] xml2_1.4.0                               car_3.1-3                               </span></span>
-<span id="cb9-140"><a href="#cb9-140" tabindex="-1"></a><span class="do">## [233] KernSmooth_2.23-26                       S7_0.2.0                                </span></span>
-<span id="cb9-141"><a href="#cb9-141" tabindex="-1"></a><span class="do">## [235] data.table_1.17.8                        htmlwidgets_1.6.4                       </span></span>
-<span id="cb9-142"><a href="#cb9-142" tabindex="-1"></a><span class="do">## [237] fgsea_1.34.2                             ComplexHeatmap_2.26.0                   </span></span>
-<span id="cb9-143"><a href="#cb9-143" tabindex="-1"></a><span class="do">## [239] RColorBrewer_1.1-3                       rlang_1.2.0                             </span></span>
-<span id="cb9-144"><a href="#cb9-144" tabindex="-1"></a><span class="do">## [241] gert_2.1.5                               remotes_2.5.0                           </span></span>
-<span id="cb9-145"><a href="#cb9-145" tabindex="-1"></a><span class="do">## [243] RUnit_0.4.33.1</span></span></code></pre></div>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="do">## For the full session info, run `sessionInfo()` in R.</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

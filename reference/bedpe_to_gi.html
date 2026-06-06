@@ -77,7 +77,7 @@ GInteractions object."><meta property="og:image" content="https://zying106.githu
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.13</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.14</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -111,7 +111,7 @@ GInteractions object."><meta property="og:image" content="https://zying106.githu
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">bedpe_to_gi</span><span class="op">(</span><span class="va">bedpe_file</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">bedpe_to_gi</span><span class="op">(</span><span class="va">bedpe_file</span>, score_col <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -121,6 +121,19 @@ GInteractions object."><meta property="og:image" content="https://zying106.githu
 <dl><dt id="arg-bedpe-file">bedpe_file<a class="anchor" aria-label="anchor" href="#arg-bedpe-file"></a></dt>
 <dd><p>Character. Path to a BEDPE file. Must contain at least six columns:
 <code>chr1, start1, end1, chr2, start2, end2</code>.</p></dd>
+
+
+<dt id="arg-score-col">score_col<a class="anchor" aria-label="anchor" href="#arg-score-col"></a></dt>
+<dd><p>Integer or <code>NULL</code>. Column index to use as interaction
+score (e.g. PET count, -log10(p-value)). If <code>NULL</code> (default), column 8
+is tried first, then column 7; if neither is numeric, scores default to 0.
+Set explicitly when the score column position differs from the standard or
+when auto-detection picks the wrong column. Note: downstream filtering
+parameters such as <code>min_score</code> in
+<code><a href="consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></code> assume <em>higher scores = better
+interactions</em>. If your score column contains p-values or other metrics where
+<em>smaller is better</em>, convert it first (e.g. <code>-log10(p)</code>) or filter
+manually after consolidation.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -94,7 +94,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.13</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.14</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -215,7 +215,7 @@ the functional annotation of genomic regulatory elements.</p>
 systematically prioritizes experimentally validated spatial chromatin
 contacts to batch-annotate thousands of regulatory elements at a
 <strong>genome-wide, high-throughput scale</strong>, thereby identifying
-their candidate target genes with high confidence and unprecedented
+their candidate target genes with high confidence and systematic
 efficiency.</p>
 <p>Beyond its utility as an integrative tool for target gene annotation,
 <strong><code>looplook</code></strong> serves as a <strong>standalone
@@ -225,9 +225,9 @@ of the 3D chromatin interactome itself, classification of complex
 spatial interaction topologies (e.g., Enhancer-Promoter,
 Promoter-Promoter interactions), and quantification of node
 connectivity, which facilitates the identification of <strong>dense
-regulatory hubs</strong> and <strong>enhancer cliques</strong> (e.g.,
-super-enhancers) that drive cell-type-specific transcriptional
-programs.</p>
+regulatory hubs</strong> and <strong>enhancer cliques</strong> that may
+represent candidate regulatory domains driving cell-type-specific
+transcriptional programs.</p>
 <div class="section level3">
 <h3 id="key-features-capabilities">Key Features &amp; Capabilities<a class="anchor" aria-label="anchor" href="#key-features-capabilities"></a>
 </h3>
@@ -246,13 +246,13 @@ annotation of the 3D chromatin interactome. It helps to categorize
 spatial interaction types and computes spatial node degrees to identify
 candidate 3D regulatory hubs.</p></li>
 <li><p><strong>Expression-Aware Refinement</strong>: Incorporates
-quantitative expressional data to filter out spurious structural
-contacts. As some chromatin regions may exhibit both enhancer and
-promoter activities, <strong><code>looplook</code></strong> provides a
-function to reclassify loop anchors which associate with
-transcriptionally silent reference promoters into <strong>enhancer-like
-elements (eP)</strong>, yielding a refined network of regulatory
-interactions.</p></li>
+quantitative expression data to annotate expression-aware functional
+status while preserving structural contacts. As some chromatin regions
+may exhibit both enhancer and promoter activities,
+<strong><code>looplook</code></strong> provides a function to reclassify
+loop anchors which associate with transcriptionally silent reference
+promoters into <strong>enhancer-like elements (eP)</strong>, yielding a
+refined network of regulatory interactions.</p></li>
 <li><p><strong>Reproducible Consolidation &amp; Multi-source
 Consensus</strong>: Utilizes graph-theoretic clustering to effectively
 harmonize biological replicates and mitigate potential technical noise.
@@ -264,7 +264,7 @@ facilitate the construction of a high-confidence, unified 3D chromatin
 interactome based on consistent spatial features.</p></li>
 <li><p><strong>Automated Multi-Omics Functional
 Interpretations</strong>: Provides an end-to-end analytical engine for
-generating publication-grade visualizations and functional
+generating publication-ready visualizations and functional
 interpretations. This includes assessments of network connectivity and
 expression dynamics, transcription factor motif enrichment
 (<strong>SeqLogos</strong>), and pathway association networks
@@ -673,8 +673,8 @@ entire cohort, ideal for exploratory pan-tissue analyses.</li>
 <code>"consensus"</code> mode, this parameter defines the minimum number
 of biological replicates in which a loop cluster must be detected to be
 retained in the final dataset. If set to <code>NULL</code>, the
-algorithm dynamically computes a strict majority threshold (e.g., &gt;=
-75% of replicates).</li>
+algorithm automatically computes the threshold: 100% for 2–3 replicates,
+and ⌊0.75N⌋ + 1 for N ≥ 4.</li>
 <li>
 <strong><code>gap</code></strong>: Defines the maximum allowable
 spatial distance (in base pairs) between loop anchors for them to be
@@ -707,9 +707,44 @@ official ENCODE blacklist for specified species (e.g.,
 <li>
 <strong><code>region_of_interest</code></strong>: Accepts an
 auxiliary BED file (e.g., a specific disease-associated locus or
-ChIP-seq peak set) to exclude global background interactions, outputting
-only loops with physical connectivity to the target genomic region.</li>
+ChIP-seq peak set) to capture only loops with physical connectivity to
+the target genomic region.</li>
+<li>
+<strong><code>roi_mode</code></strong>: Controls how strictly loops
+must overlap the ROI:
+<ul>
+<li>
+<code>"both"</code> <em>(Default)</em>: Both loop anchors must
+overlap the ROI. Suitable for TAD confinement, domain-internal
+interaction queries, or when filtering with a ChIP-seq peak set (e.g.,
+keep only loops where both anchors fall in H3K27ac-marked regions).</li>
+<li>
+<code>"any"</code>: Either anchor may overlap the ROI. Suitable for
+promoter-centric queries (e.g., find all distal interactions involving a
+specific gene locus).</li>
 </ul>
+</li>
+<li>
+<strong><code>score_col</code></strong>: Integer column index for
+the interaction score (e.g., PET count) when BEDPE files follow a
+non-standard column layout. If <code>NULL</code> (default), columns 8
+and 7 are auto-detected by checking the proportion of numeric
+values.</li>
+<li>
+<strong><code>quiet</code></strong>: Logical. If <code>TRUE</code>,
+suppress progress messages while preserving warnings (default:
+<code>FALSE</code>).</li>
+</ul>
+<p>The exported BEDPE file (when <code>write_output = TRUE</code> and
+<code>out_file</code> is set) contains 10 columns: the standard BEDPE
+fields (chr1, start1, end1, chr2, start2, end2, name, score) plus two
+metadata columns: - <strong><code>n_members</code></strong> (column 9):
+Number of raw loops merged into this consensus entry, giving a sense of
+cluster size. In intersect mode this is <code>1</code> (no merging, each
+retained loop stands alone); in consensus/union modes it reflects the
+number of loops clustered. - <strong><code>n_reps</code></strong>
+(column 10): Number of input files that support this entry, useful for
+filtering by replication evidence.</p>
 </div>
 <div class="section level3">
 <h3 id="example-1-building-a-global-consensus-interactome">Example 1: Building a Global Consensus Interactome<a class="anchor" aria-label="anchor" href="#example-1-building-a-global-consensus-interactome"></a>
@@ -802,16 +837,23 @@ where a single loop anchor overlaps multiple candidate genes, the engine
 implements a rigorous three-step hierarchical annotation pipeline:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Expression Pre-filter</strong>: Eliminates transcriptionally
-silent genes based on the user-provided expression matrix.</li>
+<strong>Functional Biotype Prioritization</strong>: Selects the
+highest-priority candidates by functional class: Protein Coding &gt;
+small-ncRNA (miRNA, snoRNA, snRNA, rRNA, scaRNA) &gt; Antisense &gt;
+lncRNA/ncRNA &gt; Pseudogene.</li>
 <li>
-<strong>Functional Biotype Prioritization</strong>: Prioritizes the
-remaining candidates by functional class in the following order: Protein
-Coding &gt; lncRNA &gt; Pseudogene.</li>
+<strong>Expression Filter</strong>: Within the selected biotype
+tier, excludes transcriptionally silent genes (expression &lt;
+<code>min_expr</code>) if at least one candidate in the tier is
+expressed. If no gene in that tier is expressed, all are retained to
+avoid losing correct annotations due to low expression.</li>
 <li>
-<strong>Dominant Expression Tiebreaker</strong>: Designates the gene
-with the highest transcriptional abundance as the target gene to further
-resolve any remaining mapping ambiguities.</li>
+<strong>Co-Dominant Expression Tiebreaker</strong>: Among remaining
+candidates, retains all genes with expression &gt;= 10% of the
+highest-expressing candidate in the group (i.e., within one order of
+magnitude). This rule preserves functionally redundant candidates (e.g.,
+bidirectional promoter pairs) rather than forcing a single-gene
+assignment.</li>
 </ol>
 </div>
 <div class="section level4">
@@ -834,27 +876,57 @@ An expression matrix (e.g., RNA-seq) enables the Expression Pre-filter
 and Tiebreaker logic, substantially reducing false-positive gene
 assignments.</li>
 <li>
-<strong><code>species</code></strong>: Specifies the genome assembly
-(e.g., <code>"hg38"</code>, <code>"mm10"</code>). The engine
-automatically loads the corresponding Bioconductor <code>TxDb</code> and
-<code>org.db</code> annotations.</li>
+<strong><code>min_expr</code></strong>: Minimum expression value for
+a gene to be considered “active” during anchor-level conflict resolution
+(default: <code>0</code>). Any gene with expression &gt;=
+<code>min_expr</code> is eligible to compete for target assignment.
+Increase to <code>1</code> or higher for stricter filtering. Note this
+is distinct from Module 3’s <strong><code>threshold</code></strong>
+parameter, which controls promoter reclassification during
+expression-aware refinement.</li>
 <li>
 <strong><code>neighbor_hop</code></strong>: An advanced topological
-parameter for network traversal:
+parameter for network traversal. Note: target gene assignment searches
+one additional graph step (<code>neighbor_hop + 1</code>) to capture
+genes at the opposite anchor of directly connected loops, while
+loop-level topology uses the specified hop count.
 <ul>
 <li>
-<code>0</code> <em>(Default)</em>: Restricts annotation to direct
-physical contacts (Anchor A ↔︎ Anchor B).</li>
+<code>0</code> <em>(Default)</em>: Loop topology restricted to
+direct contacts; target genes searched within 1-hop.</li>
 <li>
-<code>1</code> <em>(Hub Mode)</em>: Evaluates secondary network
-effects within enhancer cliques (If Anchor A ↔︎ Anchor B ↔︎ Anchor C, this
-function enables topological linkage between A and C).</li>
+<code>1</code> <em>(Hub Mode)</em>: Loop topology includes secondary
+contacts; target genes searched within 2-hop.</li>
 </ul>
 </li>
 <li>
 <strong><code>tss_region</code></strong>: Defines the genomic window
 surrounding the transcription start site (TSS) used to define promoter
-regions (default: <code>c(-3000, 3000)</code> bp).</li>
+regions (default: <code>c(-2000, 2000)</code> bp).</li>
+<li>
+<strong><code>conflict_strategy</code></strong>: Controls the order
+of biotype and expression filtering when multiple genes overlap an
+anchor. <code>"biotype_first"</code> (default) selects the best biotype
+tier first, then applies expression filtering within that tier — a
+silent protein-coding gene is preferred over a highly expressed lncRNA.
+<code>"expression_first"</code> applies expression filtering across all
+biotypes before selecting the best tier.</li>
+<li>
+<strong><code>hub_percentile</code></strong>: Node-degree quantile
+threshold for identifying highly connected regulatory elements (default:
+<code>0.95</code>, i.e. top 5%).</li>
+<li>
+<strong><code>species</code></strong>: Genome assembly
+(<code>"hg38"</code>, <code>"hg19"</code>, <code>"mm10"</code>, or
+<code>"mm9"</code>). Auto-resolves the corresponding <code>TxDb</code>
+and <code>OrgDb</code> annotation packages.</li>
+<li>
+<strong><code>color_palette</code></strong>: RColorBrewer palette
+for loop-type colour assignments in annotation plots (default:
+<code>"Set2"</code>).</li>
+<li>
+<strong><code>karyo_bin_size</code></strong>: Genomic bin width in
+base pairs for karyotype heatmaps (default: <code>1e5</code>).</li>
 </ul>
 </div>
 </div>
@@ -932,25 +1004,192 @@ loops that overlap the peak.</li>
 via 3D looping.</li>
 <li>
 <strong><code>Regulated_promoter_genes</code></strong>: A stringent
-subset restricted to genes whose promoters are directly contacted by the
-peak via 3D looping.</li>
+promoter-target set supported by loop-anchor context. A promoter gene
+may be local to the overlapped anchor or located on the
+opposite/interacting anchor; the evidence type is recorded
+separately.</li>
 <li>
-<strong><code>Assigned_Target_Genes</code></strong>: Target genes
-assigned <em>exclusively</em> via 3D loops. If the peak does not overlap
-any structural loop, this value remains empty (<code>NA</code>).</li>
+<strong><code>Regulated_promoter_Evidence</code></strong>:
+Semicolon-delimited evidence labels for
+<code>Regulated_promoter_genes</code>, such as
+<code>local_promoter_overlap</code>,
+<code>direct_opposite_promoter</code>, or
+<code>expanded_promoter_loop</code>.</li>
+<li>
+<strong><code>Assigned_Target_Genes</code></strong>: The historical
+promoter-first 3D assignment. It prefers promoter genes reachable
+through the loop neighborhood and falls back to gene-body loop genes
+only when no promoter target is available.</li>
 <li>
 <strong><code>*_Filled</code> Columns (The “Smart Fallback”
 Logic)</strong>: Columns suffixed with <code>_Filled</code> (e.g.,
 <code>Assigned_Target_Genes_Filled</code>,
 <code>Regulated_promoter_genes_Filled</code>) provide complete, gapless
-annotations. They resolve target genes via a two-tier priority: (1)
-3D-loop-derived distal targets are used when an expressed gene is
-reachable through chromatin contacts; (2) when no expressed gene is
-found through 3D connections — either because the peak has no loop
-contacts or all contactable genes are transcriptionally silent — the
-nearest expressed linear gene (<code>SYMBOL</code>) serves as the final
-fallback.</li>
+annotations. They use strict 3D assignments first and add the nearest
+linear gene (<code>SYMBOL</code>/<code>geneId</code>) only when the
+corresponding strict column is empty.</li>
+<li>
+<strong><code>Regulated_promoter_Fallback_Evidence</code></strong>:
+Records why <code>Regulated_promoter_genes_Filled</code> used a linear
+fallback (<code>local_promoter</code>, <code>local_gene_body</code>,
+<code>linear_nearest</code>, or <code>linear_fallback</code>); it is
+<code>none</code> when strict loop-derived promoter targets exist.</li>
+<li>
+<strong><code>target_gene_links</code></strong>: A long-format
+provenance table. Each row is one peak-gene link with
+<code>source</code>, <code>evidence</code>, <code>anchor_role</code>,
+<code>loop_ID</code>, fallback status, and membership flags for the
+summary columns. In the refined workbook,
+<code>Filtered Target Gene Links</code> keeps only links still used by
+the refined target columns and adds <code>Mean_Expression</code> plus
+<code>Passes_Expression_Filter</code>.</li>
+<li>
+<strong><code>SYMBOL</code></strong>: The gene symbol resolved by
+the biotype-aware conflict resolution logic. May be a single gene or
+semicolon-delimited when multiple co-dominant candidates are
+retained.</li>
+<li>
+<strong><code>loop_type</code></strong>: The dominant loop topology
+among the 3D interactions that overlap the feature.</li>
+<li>
+<strong><code>All_Loop_Connected_Genes_Filled</code></strong>:
+Lineage column that preserves the original loop-connected gene set and
+fills empty entries with the nearest linear gene fallback.</li>
 </ul>
+<div style="page-break-after: always;"></div>
+<div class="section level6">
+<h6 id="a--evidence-label-reference">1a. Evidence label reference<a class="anchor" aria-label="anchor" href="#a--evidence-label-reference"></a>
+</h6>
+<p><strong><code>Regulated_promoter_Evidence</code></strong> —
+provenance of <code>Regulated_promoter_genes</code> (from 3D loop
+anchors):</p>
+<table class="table">
+<colgroup>
+<col width="43%">
+<col width="56%">
+</colgroup>
+<thead><tr class="header">
+<th>Value</th>
+<th>Meaning</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>local_promoter_overlap</code></td>
+<td>The peak overlaps the promoter of the anchor gene</td>
+</tr>
+<tr class="even">
+<td><code>direct_opposite_promoter</code></td>
+<td>The opposite anchor of the linked loop is a promoter</td>
+</tr>
+<tr class="odd">
+<td><code>gene_body_context</code></td>
+<td>The anchor overlaps a gene body (not a promoter)</td>
+</tr>
+<tr class="even">
+<td><code>expanded_promoter_loop</code></td>
+<td>The promoter gene was reached via ego-network expansion
+(<code>neighbor_hop</code>)</td>
+</tr>
+<tr class="odd">
+<td><code>none</code></td>
+<td>No loop-derived promoter evidence found</td>
+</tr>
+</tbody>
+</table>
+<p>Multiple evidence types may be combined in one cell
+(semicolon-delimited).</p>
+<p><strong><code>Regulated_promoter_Fallback_Evidence</code></strong> —
+provenance when <code>Regulated_promoter_genes_Filled</code> used a
+linear fallback:</p>
+<table class="table">
+<colgroup>
+<col width="43%">
+<col width="56%">
+</colgroup>
+<thead><tr class="header">
+<th>Value</th>
+<th>Meaning</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>none</code></td>
+<td>Strict loop-derived promoter targets exist; no fallback needed</td>
+</tr>
+<tr class="even">
+<td><code>local_promoter</code></td>
+<td>Fallback gene overlaps a promoter region near the peak</td>
+</tr>
+<tr class="odd">
+<td><code>local_gene_body</code></td>
+<td>Fallback gene overlaps an exon/intron/UTR region</td>
+</tr>
+<tr class="even">
+<td><code>linear_nearest</code></td>
+<td>Fallback gene is the nearest gene by linear distance</td>
+</tr>
+<tr class="odd">
+<td><code>linear_fallback</code></td>
+<td>Fallback from annotation column with no location context</td>
+</tr>
+</tbody>
+</table>
+<p><strong><code>target_gene_links</code></strong> — per-link label
+reference:</p>
+<table class="table">
+<colgroup>
+<col width="32%">
+<col width="68%">
+</colgroup>
+<thead><tr class="header">
+<th>Column</th>
+<th>Possible values</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>source</code></td>
+<td>
+<code>loop_anchor</code>, <code>linear_annotation</code>
+</td>
+</tr>
+<tr class="even">
+<td><code>gene_role</code></td>
+<td>
+<code>promoter</code>, <code>gene_body</code>,
+<code>linear_annotation</code>
+</td>
+</tr>
+<tr class="odd">
+<td><code>evidence</code></td>
+<td>
+<code>local_promoter_overlap</code>,
+<code>direct_opposite_promoter</code>, <code>gene_body_context</code>,
+<code>expanded_promoter_loop</code>, <code>linear_annotation</code>,
+<code>linear_fallback</code>
+</td>
+</tr>
+<tr class="even">
+<td><code>anchor_role</code></td>
+<td>
+<code>local_anchor</code>, <code>opposite_anchor</code>,
+<code>expanded_anchor</code>, <code>linear_annotation</code>
+</td>
+</tr>
+<tr class="odd">
+<td><code>used_as_fallback</code></td>
+<td>
+<code>TRUE</code>, <code>FALSE</code>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Membership flags (<code>in_regulated_promoter</code>,
+<code>in_assigned_target</code>, <code>in_all_loop_connected</code>,
+<code>in_regulated_promoter_filled</code>,
+<code>in_assigned_target_filled</code>) indicate which target annotation
+column(s) contain the gene; refined links additionally carry
+<code>Mean_Expression</code> and
+<code>Passes_Expression_Filter</code>.</p>
+</div>
 </div>
 <div class="section level5">
 <h5 id="loop_annotation-3d-network-architecture">2. <code>loop_annotation</code> (3D Network Architecture)<a class="anchor" aria-label="anchor" href="#loop_annotation-3d-network-architecture"></a>
@@ -970,6 +1209,24 @@ gene at the Promoter anchor.</li>
 <strong><code>Cluster_All_Genes</code></strong>: All genes within
 the broader 3D cluster or clique in which the loop resides, reflecting
 the extended topological neighborhood.</li>
+<li>
+<strong>Coordinate columns</strong>
+(<code>chr1</code>/<code>start1</code>/<code>end1</code>,
+<code>chr2</code>/<code>start2</code>/<code>end2</code>): 1-based
+genomic coordinates of the two loop anchors.</li>
+<li>
+<strong><code>anchor1_gene</code> /
+<code>anchor2_gene</code></strong>: Gene symbols associated with each
+anchor after biotype-aware conflict resolution.</li>
+<li>
+<strong><code>anchor1_type</code> /
+<code>anchor2_type</code></strong>: Regulatory element classification of
+each anchor (<code>P</code> = promoter, <code>E</code> = enhancer-like,
+<code>G</code> = gene body; <code>eP</code>/<code>eG</code> after
+refinement).</li>
+<li>
+<strong><code>loop_ID</code></strong>: Unique loop identifier;
+<code>cluster_id</code>: connected-component membership.</li>
 </ul>
 </div>
 <div class="section level5">
@@ -1026,6 +1283,20 @@ distinct genes.</li>
 <li>
 <strong><code>Is_High_Connectivity_Distal_Element</code></strong>:
 Flags highly connected non-coding elements that may act as 3D hubs.</li>
+</ul>
+<p>After expression-aware refinement
+(<code>*_Refined_Results.xlsx</code>), the promoter-centric stats
+additionally contain:</p>
+<ul>
+<li>
+<strong><code>Is_Active_Gene</code></strong>: <code>"Yes"</code>
+when the gene’s mean expression meets or exceeds the
+<code>threshold</code>; <code>"No"</code> otherwise. This column
+distinguishes structurally connected genes from those that are also
+transcriptionally active in the current sample context.</li>
+<li>Hub classification columns (<code>Is_High_Connectivity_Gene</code>,
+<code>Is_High_Distal_Connectivity_Gene</code>) reflect the refined
+network topology, independent of expression status.</li>
 </ul>
 </div>
 </div>
@@ -1149,14 +1420,18 @@ layers for recolouring, theme adjustment, or annotation:</p>
 </h2>
 <p>Physical proximity is a structural prerequisite, but not a direct
 proxy for active transcriptional regulation. This module integrates
-quantitative transcriptome data to systematically filter out
-transcriptionally silent physical chromatin contacts, ensuring only
-functionally relevant 3D interactions are retained.</p>
+quantitative transcriptome data to annotate each loop with
+expression-aware functional status. All structural loops are preserved;
+the pipeline reclassifies silent anchors (P → eP, G → eG), flags which
+loops belong to the high-confidence functional subset
+(<code>Retained_In_Functional_Network</code>), and exposes
+<code>Refinement_Action</code> for transparent interpretation.</p>
 <div class="section level4">
 <h4 id="parameter-strategy-core-inputs-1">Parameter Strategy &amp; Core Inputs<a class="anchor" aria-label="anchor" href="#parameter-strategy-core-inputs-1"></a>
 </h4>
 <p>The <code>refine_loop_anchors_by_expression</code> function
-implements functional filtration via the following key parameters:</p>
+implements expression-aware refinement via the following key
+parameters:</p>
 <ul>
 <li>
 <strong><code>annotation_res</code></strong>: Foundational 3D
@@ -1170,9 +1445,9 @@ robust baseline expression profile.</li>
 <strong><code>threshold</code> &amp;
 <code>unit_type</code></strong>: Defines the quantitative expression
 cutoff (e.g., <code>threshold = 1</code>,
-<code>unit_type = "TPM"</code>) required to consider a gene biologically
-active. This parameter enables downward compatibility with various
-normalization methods.</li>
+<code>unit_type = "TPM"</code>); genes with expression &gt;=
+<code>threshold</code> are considered active. This parameter enables
+downward compatibility with various normalization methods.</li>
 <li>
 <strong><code>reclassify_by_expression</code></strong>: A
 transformative logical parameter (<code>TRUE</code>/<code>FALSE</code>).
@@ -1182,14 +1457,96 @@ reclassified as enhancer-like regulatory elements (<code>eP</code>,
 <code>eG</code>). This correction refines the regulatory topology (e.g.,
 reclassifying a functionally silent <code>P-P</code> loop into a curated
 <code>eP-P</code> loop).</li>
+<li>
+<strong><code>color_palette</code></strong>: RColorBrewer palette
+for loop-type colour assignments in refinement plots (default:
+<code>"Paired"</code>). Controls the rose, donut, and dumbbell chart
+colours; karyotype heatmaps use fixed red/purple palettes.</li>
+<li>
+<strong><code>hub_percentile</code></strong>: Node-degree quantile
+threshold for connectivity classification (default: <code>0.95</code>).
+The underlying structural hub classification is inherited from the
+annotation stage and is independent of expression status.</li>
+<li>
+<strong><code>karyo_bin_size</code></strong>: Genomic bin width for
+karyotype heatmaps (default: <code>1e5</code>).</li>
+<li>
+<strong><code>species</code></strong>: Genome assembly
+(<code>"hg38"</code>, <code>"hg19"</code>, <code>"mm10"</code>,
+<code>"mm9"</code>). Required for karyotype heatmap chromosome
+ideograms.</li>
 </ul>
+<p>The <code>eP</code> and <code>eG</code> labels capture
+expression-aware enhancer-like regulatory states in 3D chromatin space.
+When available, orthogonal chromatin evidence such as ATAC-seq
+accessibility, H3K27ac enrichment, or H3K27me3 depletion can further
+strengthen biological interpretation of these reclassified anchors.</p>
+</div>
+<div class="section level4">
+<h4 id="refinement-output-structure">Refinement Output Structure<a class="anchor" aria-label="anchor" href="#refinement-output-structure"></a>
+</h4>
+<p>The refined <code>loop_annotation</code> contains two target gene
+columns with distinct semantics:</p>
+<ul>
+<li>
+<strong><code>Active_Target_Genes</code></strong>:
+Expression-filtered active-only targets. Contains only genes that pass
+the expression threshold; no fallback genes are included. This column is
+used for <code>Has_Active_Target</code> and
+<code>Retained_In_Functional_Network</code> determination.</li>
+<li>
+<strong><code>Putative_Target_Genes</code></strong>: Display column
+that may include linear nearest-gene fallback when
+<code>Active_Target_Genes</code> is empty. This preserves backward
+compatibility with downstream modules.</li>
+</ul>
+<p>Each loop is annotated with a
+<strong><code>Refinement_Action</code></strong> status:</p>
+<table class="table">
+<colgroup>
+<col width="43%">
+<col width="56%">
+</colgroup>
+<thead><tr class="header">
+<th>Value</th>
+<th>Meaning</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>retained_active_target</code></td>
+<td>Loop has at least one active target gene</td>
+</tr>
+<tr class="even">
+<td><code>reclassified_silent_anchor</code></td>
+<td>Anchor was reclassified (P→eP or G→eG); no active targets
+remain</td>
+</tr>
+<tr class="odd">
+<td><code>expression_filtered_no_active_target</code></td>
+<td>Target genes were filtered by expression; no reclassification
+occurred</td>
+</tr>
+<tr class="even">
+<td><code>structural_only_no_active_target</code></td>
+<td>Loop had no target genes even before refinement</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>Has_Active_Target</code> and
+<code>Retained_In_Functional_Network</code> columns are always
+identical; both indicate whether the loop belongs to the high-confidence
+functional subset. To obtain the functional subset, filter on
+<code>Retained_In_Functional_Network == TRUE</code>. When writing to
+Excel, a dedicated <strong>Functional Loop Annotation</strong> sheet is
+always included (even if empty) for schema stability.</p>
 </div>
 <div class="section level3">
-<h3 id="example-a-standard-filtration-strict-removal">Example A: Standard Filtration (Strict Removal)<a class="anchor" aria-label="anchor" href="#example-a-standard-filtration-strict-removal"></a>
+<h3 id="example-a-standard-refinement-expression-filtering">Example A: Standard Refinement (Expression Filtering)<a class="anchor" aria-label="anchor" href="#example-a-standard-refinement-expression-filtering"></a>
 </h3>
-<p>In this scenario, a strict expression threshold eliminates loops
-where putative target genes are transcriptionally silent, without
-modifying the original structural classifications.</p>
+<p>In this scenario, a strict expression threshold identifies loops with
+transcriptionally active target genes. All structural loops are
+retained; the <code>Retained_In_Functional_Network</code> flag indicates
+which loops belong to the functional subset.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">rdata_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"analysis_results.RData"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/load.html" class="external-link">load</a></span><span class="op">(</span><span class="va">rdata_path</span><span class="op">)</span> <span class="co"># loads res_integrated into the environment</span></span>
@@ -1226,26 +1583,26 @@ regulatory element for a distant gene.</p>
 <span>  project_name <span class="op">=</span> <span class="st">"Example_Reclassified_Filter"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <div class="section level4">
-<h4 id="deep-dive-filtration-visualizations">Deep Dive: Filtration Visualizations<a class="anchor" aria-label="anchor" href="#deep-dive-filtration-visualizations"></a>
+<h4 id="deep-dive-refinement-visualizations">Deep Dive: Refinement Visualizations<a class="anchor" aria-label="anchor" href="#deep-dive-refinement-visualizations"></a>
 </h4>
 <p>This module automatically generates a specialized suite of visual
 diagnostics to quantify transcriptome-guided refinement efficacy and
-characterize the surviving functional network:</p>
+characterize the functional network:</p>
 <div class="section level5">
-<h5 id="global-filtration-profiling">1. Global Filtration Profiling<a class="anchor" aria-label="anchor" href="#global-filtration-profiling"></a>
+<h5 id="global-refinement-profiling">1. Global Refinement Profiling<a class="anchor" aria-label="anchor" href="#global-refinement-profiling"></a>
 </h5>
 <p><em>(Always Generated)</em></p>
 <ul>
-<li><p><strong>Filtration Effect Dumbbell</strong>
-(<code>*_Comparison_Dumbbell.pdf</code>): Quantifies the “cleaning
-power” of the expression threshold by visualizing the numerical contrast
-between original structural loops and surviving functional loops across
-all topological classes, highlighting the importance of removing
-untranscribed structural noise.</p></li>
+<li><p><strong>Refinement Effect Dumbbell</strong>
+(<code>*_Comparison_Dumbbell.pdf</code>): Quantifies the impact of
+expression-aware reclassification by visualizing the numerical contrast
+between original structural loops and refined loops across all
+topological classes, highlighting reclassification-driven changes in
+loop type composition.</p></li>
 <li><p><strong>Refined Loop Proportion Rose</strong>
 (<code>*_Rose.pdf</code>): Coxcomb chart illustrating the topological
 distribution (by count) of the interactome after expression-guided
-reclassification and filtration.</p></li>
+reclassification.</p></li>
 <li><p><strong>Refined Active Genes Karyotype</strong>
 (<code>*_Refined_Karyo_Active.pdf</code>): Genome-wide ideograms mapping
 the chromosomal density of transcriptionally active loop-associated
@@ -1253,7 +1610,7 @@ genes that passed the expression threshold.</p></li>
 </ul>
 </div>
 <div class="section level5">
-<h5 id="genomic-feature-to-3d-target-filtration-profiling">2. Genomic Feature-to-3D Target Filtration Profiling<a class="anchor" aria-label="anchor" href="#genomic-feature-to-3d-target-filtration-profiling"></a>
+<h5 id="genomic-feature-to-3d-target-annotation-profiling">2. Genomic Feature-to-3D Target Annotation Profiling<a class="anchor" aria-label="anchor" href="#genomic-feature-to-3d-target-annotation-profiling"></a>
 </h5>
 <p><em>(Generated only if <code>target_bed</code> was provided in Module
 2)</em></p>
@@ -1270,8 +1627,10 @@ functionally active genes. When generated through
 the same output directory as the main HTML report.</p></li>
 <li><p><strong>Refined Target Loop Donut</strong>
 (<code>*_Target_Loop_Donut.pdf</code>): Visualizes the topological
-distribution of functionally active loops that bridge user-defined
-genomic features.</p></li>
+distribution of refined structural loops whose anchors overlap
+user-defined genomic features. This shows the full refined network; for
+the functional subset, filter on
+<code>Retained_In_Functional_Network</code>.</p></li>
 <li><p><strong>Refined Target Genes Karyotype</strong>
 (<code>*_Refined_Karyo_TargetGenes.pdf</code>): Chromosomal density map
 of strictly refined putative target genes, facilitating visualization of
@@ -1377,18 +1736,32 @@ baseline reference for Control comparisons.</li>
 </h5>
 <ul>
 <li>
+<strong><code>loop_types</code></strong>: Character vector of loop
+types to include in the analysis (default:
+<code>c("E-P", "P-P")</code>). Used only when
+<code>target_source = "loops"</code>.</li>
+<li>
+<strong><code>stat_test</code></strong>: Statistical test for
+comparing target vs. background LFC distributions
+(<code>"wilcox.test"</code> or <code>"t.test"</code>; default:
+<code>"wilcox.test"</code>).</li>
+<li>
+<strong><code>org_db</code></strong>: Organism annotation database
+package name for GO and PPI analyses (default:
+<code>"org.Hs.eg.db"</code>).</li>
+<li>
 <strong><code>run_go</code></strong>: Executes Gene Ontology
-(Biological Process, BP) enrichment and generates Divergent Concept
-Networks.</li>
+enrichment and generates concept network plots (requires
+<code>clusterProfiler</code>).</li>
 <li>
 <strong><code>run_motif</code> &amp;
 <code>genome_id</code></strong>: Scans proximal and distal anchor
-sequences against JASPAR core motifs (requires
-<code>BSgenome</code>).</li>
+sequences against JASPAR core motifs (requires <code>BSgenome</code> and
+<code>motifmatchr</code>).</li>
 <li>
 <strong><code>run_ppi</code> &amp; <code>ppi_score</code></strong>:
 Constructs Protein-Protein Interaction (PPI) networks via the STRING
-database.</li>
+database (minimum combined score, default: <code>400</code>).</li>
 </ul>
 </div>
 </div>
@@ -1809,7 +2182,7 @@ New File → R Markdown → From Template → looplook Report</strong>.</p>
 <span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] looplook_0.99.13 dplyr_1.2.1      BiocStyle_2.40.0</span></span>
+<span><span class="co">#&gt; [1] looplook_0.99.14 dplyr_1.2.1      BiocStyle_2.40.0</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span><span class="co">#&gt;   [1] RColorBrewer_1.1-3          rstudioapi_0.18.0          </span></span>
@@ -1819,14 +2192,14 @@ New File → R Markdown → From Template → looplook Report</strong>.</p>
 <span><span class="co">#&gt;   [9] BiocIO_1.22.0               fields_17.3                </span></span>
 <span><span class="co">#&gt;  [11] ragg_1.5.2                  vctrs_0.7.3                </span></span>
 <span><span class="co">#&gt;  [13] memoise_2.0.1               Rsamtools_2.28.0           </span></span>
-<span><span class="co">#&gt;  [15] RCurl_1.98-1.18             base64enc_0.1-6            </span></span>
+<span><span class="co">#&gt;  [15] RCurl_1.98-1.19             base64enc_0.1-6            </span></span>
 <span><span class="co">#&gt;  [17] htmltools_0.5.9             S4Arrays_1.12.0            </span></span>
 <span><span class="co">#&gt;  [19] curl_7.1.0                  SparseArray_1.12.2         </span></span>
 <span><span class="co">#&gt;  [21] Formula_1.2-5               sass_0.4.10                </span></span>
 <span><span class="co">#&gt;  [23] bslib_0.11.0                htmlwidgets_1.6.4          </span></span>
 <span><span class="co">#&gt;  [25] desc_1.4.3                  plyr_1.8.9                 </span></span>
 <span><span class="co">#&gt;  [27] cachem_1.1.0                GenomicAlignments_1.48.0   </span></span>
-<span><span class="co">#&gt;  [29] igraph_2.3.1                lifecycle_1.0.5            </span></span>
+<span><span class="co">#&gt;  [29] igraph_2.3.2                lifecycle_1.0.5            </span></span>
 <span><span class="co">#&gt;  [31] pkgconfig_2.0.3             Matrix_1.7-5               </span></span>
 <span><span class="co">#&gt;  [33] R6_2.6.1                    fastmap_1.2.0              </span></span>
 <span><span class="co">#&gt;  [35] MatrixGenerics_1.24.0       digest_0.6.39              </span></span>
@@ -1840,47 +2213,47 @@ New File → R Markdown → From Template → looplook Report</strong>.</p>
 <span><span class="co">#&gt;  [51] withr_3.0.2                 htmlTable_2.5.0            </span></span>
 <span><span class="co">#&gt;  [53] S7_0.2.2                    backports_1.5.1            </span></span>
 <span><span class="co">#&gt;  [55] BiocParallel_1.46.0         DBI_1.3.0                  </span></span>
-<span><span class="co">#&gt;  [57] UpSetR_1.4.0                ggforce_0.5.0              </span></span>
+<span><span class="co">#&gt;  [57] UpSetR_1.4.1                ggforce_0.5.0              </span></span>
 <span><span class="co">#&gt;  [59] maps_3.4.3                  MASS_7.3-65                </span></span>
-<span><span class="co">#&gt;  [61] DelayedArray_0.38.1         rjson_0.2.23               </span></span>
+<span><span class="co">#&gt;  [61] DelayedArray_0.38.2         rjson_0.2.23               </span></span>
 <span><span class="co">#&gt;  [63] tools_4.6.0                 foreign_0.8-91             </span></span>
-<span><span class="co">#&gt;  [65] zip_2.3.3                   karyoploteR_1.38.0         </span></span>
-<span><span class="co">#&gt;  [67] nnet_7.3-20                 glue_1.8.1                 </span></span>
-<span><span class="co">#&gt;  [69] restfulr_0.0.16             InteractionSet_1.40.0      </span></span>
-<span><span class="co">#&gt;  [71] grid_4.6.0                  checkmate_2.3.4            </span></span>
-<span><span class="co">#&gt;  [73] cluster_2.1.8.2             generics_0.1.4             </span></span>
-<span><span class="co">#&gt;  [75] gtable_0.3.6                BSgenome_1.80.0            </span></span>
-<span><span class="co">#&gt;  [77] tidyr_1.3.2                 ensembldb_2.36.0           </span></span>
-<span><span class="co">#&gt;  [79] data.table_1.18.4           XVector_0.52.0             </span></span>
-<span><span class="co">#&gt;  [81] BiocGenerics_0.58.1         ggrepel_0.9.8              </span></span>
-<span><span class="co">#&gt;  [83] pillar_1.11.1               stringr_1.6.0              </span></span>
-<span><span class="co">#&gt;  [85] spam_2.11-3                 tweenr_2.0.3               </span></span>
-<span><span class="co">#&gt;  [87] lattice_0.22-9              rtracklayer_1.72.0         </span></span>
-<span><span class="co">#&gt;  [89] bit_4.6.0                   biovizBase_1.60.0          </span></span>
-<span><span class="co">#&gt;  [91] tidyselect_1.2.1            Biostrings_2.80.1          </span></span>
-<span><span class="co">#&gt;  [93] knitr_1.51                  gridExtra_2.3              </span></span>
-<span><span class="co">#&gt;  [95] bookdown_0.46               ProtGenerics_1.44.0        </span></span>
-<span><span class="co">#&gt;  [97] IRanges_2.46.0              Seqinfo_1.2.0              </span></span>
-<span><span class="co">#&gt;  [99] SummarizedExperiment_1.42.0 stats4_4.6.0               </span></span>
-<span><span class="co">#&gt; [101] xfun_0.57                   Biobase_2.72.0             </span></span>
-<span><span class="co">#&gt; [103] matrixStats_1.5.0           stringi_1.8.7              </span></span>
-<span><span class="co">#&gt; [105] UCSC.utils_1.8.0            lazyeval_0.2.3             </span></span>
-<span><span class="co">#&gt; [107] yaml_2.3.12                 evaluate_1.0.5             </span></span>
-<span><span class="co">#&gt; [109] codetools_0.2-20            cigarillo_1.2.0            </span></span>
-<span><span class="co">#&gt; [111] tibble_3.3.1                BiocManager_1.30.27        </span></span>
-<span><span class="co">#&gt; [113] cli_3.6.6                   rpart_4.1.27               </span></span>
-<span><span class="co">#&gt; [115] systemfonts_1.3.2           jquerylib_0.1.4            </span></span>
-<span><span class="co">#&gt; [117] dichromat_2.0-0.1           Rcpp_1.1.1-1.1             </span></span>
-<span><span class="co">#&gt; [119] GenomeInfoDb_1.48.0         png_0.1-9                  </span></span>
-<span><span class="co">#&gt; [121] XML_3.99-0.23               parallel_4.6.0             </span></span>
-<span><span class="co">#&gt; [123] pkgdown_2.2.0               ggplot2_4.0.3              </span></span>
-<span><span class="co">#&gt; [125] blob_1.3.0                  dotCall64_1.2              </span></span>
-<span><span class="co">#&gt; [127] AnnotationFilter_1.36.0     bitops_1.0-9               </span></span>
-<span><span class="co">#&gt; [129] viridisLite_0.4.3           VariantAnnotation_1.58.0   </span></span>
-<span><span class="co">#&gt; [131] scales_1.4.0                purrr_1.2.2                </span></span>
-<span><span class="co">#&gt; [133] openxlsx_4.2.8.1            crayon_1.5.3               </span></span>
-<span><span class="co">#&gt; [135] bamsignals_1.44.1           rlang_1.2.0                </span></span>
-<span><span class="co">#&gt; [137] KEGGREST_1.52.0</span></span></code></pre></div>
+<span><span class="co">#&gt;  [65] otel_0.2.0                  zip_2.3.3                  </span></span>
+<span><span class="co">#&gt;  [67] karyoploteR_1.38.0          nnet_7.3-20                </span></span>
+<span><span class="co">#&gt;  [69] glue_1.8.1                  restfulr_0.0.16            </span></span>
+<span><span class="co">#&gt;  [71] InteractionSet_1.40.0       grid_4.6.0                 </span></span>
+<span><span class="co">#&gt;  [73] checkmate_2.3.4             cluster_2.1.8.2            </span></span>
+<span><span class="co">#&gt;  [75] generics_0.1.4              gtable_0.3.6               </span></span>
+<span><span class="co">#&gt;  [77] BSgenome_1.80.0             tidyr_1.3.2                </span></span>
+<span><span class="co">#&gt;  [79] ensembldb_2.36.1            data.table_1.18.4          </span></span>
+<span><span class="co">#&gt;  [81] XVector_0.52.0              BiocGenerics_0.58.1        </span></span>
+<span><span class="co">#&gt;  [83] ggrepel_0.9.8               pillar_1.11.1              </span></span>
+<span><span class="co">#&gt;  [85] stringr_1.6.0               spam_2.11-4                </span></span>
+<span><span class="co">#&gt;  [87] tweenr_2.0.3                lattice_0.22-9             </span></span>
+<span><span class="co">#&gt;  [89] rtracklayer_1.72.0          bit_4.6.0                  </span></span>
+<span><span class="co">#&gt;  [91] biovizBase_1.60.0           tidyselect_1.2.1           </span></span>
+<span><span class="co">#&gt;  [93] Biostrings_2.80.1           knitr_1.51                 </span></span>
+<span><span class="co">#&gt;  [95] gridExtra_2.3               bookdown_0.46              </span></span>
+<span><span class="co">#&gt;  [97] ProtGenerics_1.44.0         IRanges_2.46.0             </span></span>
+<span><span class="co">#&gt;  [99] Seqinfo_1.2.0               SummarizedExperiment_1.42.0</span></span>
+<span><span class="co">#&gt; [101] stats4_4.6.0                xfun_0.58                  </span></span>
+<span><span class="co">#&gt; [103] Biobase_2.72.0              matrixStats_1.5.0          </span></span>
+<span><span class="co">#&gt; [105] stringi_1.8.7               UCSC.utils_1.8.0           </span></span>
+<span><span class="co">#&gt; [107] lazyeval_0.2.3              yaml_2.3.12                </span></span>
+<span><span class="co">#&gt; [109] evaluate_1.0.5              codetools_0.2-20           </span></span>
+<span><span class="co">#&gt; [111] cigarillo_1.2.0             tibble_3.3.1               </span></span>
+<span><span class="co">#&gt; [113] BiocManager_1.30.27         cli_3.6.6                  </span></span>
+<span><span class="co">#&gt; [115] rpart_4.1.27                systemfonts_1.3.2          </span></span>
+<span><span class="co">#&gt; [117] jquerylib_0.1.4             dichromat_2.0-0.1          </span></span>
+<span><span class="co">#&gt; [119] Rcpp_1.1.1-1.1              GenomeInfoDb_1.48.0        </span></span>
+<span><span class="co">#&gt; [121] png_0.1-9                   XML_3.99-0.23              </span></span>
+<span><span class="co">#&gt; [123] parallel_4.6.0              pkgdown_2.2.0              </span></span>
+<span><span class="co">#&gt; [125] ggplot2_4.0.3               blob_1.3.0                 </span></span>
+<span><span class="co">#&gt; [127] dotCall64_1.2               AnnotationFilter_1.36.0    </span></span>
+<span><span class="co">#&gt; [129] bitops_1.0-9                viridisLite_0.4.3          </span></span>
+<span><span class="co">#&gt; [131] VariantAnnotation_1.58.0    scales_1.4.0               </span></span>
+<span><span class="co">#&gt; [133] purrr_1.2.2                 openxlsx_4.2.8.1           </span></span>
+<span><span class="co">#&gt; [135] crayon_1.5.3                bamsignals_1.44.1          </span></span>
+<span><span class="co">#&gt; [137] rlang_1.2.0                 KEGGREST_1.52.0</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

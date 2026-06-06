@@ -25,6 +25,11 @@ The function supports three modes:
 - `"union"`: Retains all chromatin interactions across the entire
   cohort, ideal for exploratory pan-tissue analyses.
 
+**Connected-component chaining**: Graph-based clustering may
+transitively chain loci (A–B and B–C merge, pulling A and C into the
+same cluster even if they are far apart). Inspect `n_members` in the
+output and reduce `gap` if clusters appear inflated.
+
 It also supports a **two-stage filtering strategy** to maximize
 signal-to-noise ratio:
 
@@ -47,10 +52,12 @@ consolidate_chromatin_loops(
   gap = 1000,
   mode = c("consensus", "intersect", "union"),
   min_consensus = NULL,
+  score_col = NULL,
   min_raw_score = NULL,
   min_score = NULL,
   blacklist_species = NULL,
   region_of_interest = NULL,
+  roi_mode = c("any", "both"),
   out_file = NULL,
   write_output = TRUE,
   quiet = FALSE
@@ -86,11 +93,18 @@ consolidate_chromatin_loops(
   effective when `mode = "consensus"`). If `NULL` (default), the
   threshold is automatically calculated:
 
-  - For 2 replicates: Requires both (2/2).
+  - For 2–3 replicates: Requires all (100\\
 
-  - For \>2 replicates: Requires strict majority (\>75\\
+  - For \\N \ge 4\\: Requires \\\lfloor 0.75N \rfloor + 1\\ (e.g., 3 for
+    N=4, 4 for N=5, 7 for N=8).
 
-  - (e.g., 3 for N=3, 4 for N=4, 4 for N=5).
+- score_col:
+
+  Integer or `NULL`. Column index to use as interaction score when
+  reading BEDPE files. Passed to
+  [`bedpe_to_gi`](https://zying106.github.io/looplook/reference/bedpe_to_gi.md).
+  If `NULL` (default), auto-detection is used (see
+  [`bedpe_to_gi`](https://zying106.github.io/looplook/reference/bedpe_to_gi.md)).
 
 - min_raw_score:
 
@@ -124,8 +138,16 @@ consolidate_chromatin_loops(
 
 - region_of_interest:
 
-  Character. Path to BED file. Only loops overlapping these regions will
-  be kept.
+  Character. Path to BED file defining regions of interest (ROI). Only
+  loops overlapping these regions will be kept.
+
+- roi_mode:
+
+  Character. How loops must overlap `region_of_interest`. `"any"`
+  (default): keep loops where *either* anchor overlaps the ROI (suitable
+  for promoter-centric or enhancer-gene queries). `"both"`: keep loops
+  where *both* anchors overlap the ROI (suitable for TAD confinement or
+  domain-internal interaction queries).
 
 - out_file:
 
@@ -147,7 +169,24 @@ consolidate_chromatin_loops(
 
 A filtered
 [`GInteractions`](https://rdrr.io/pkg/InteractionSet/man/GInteractions-class.html)
-object.
+object with metadata columns:
+
+- `score`:
+
+  Replicate-balanced consensus score.
+
+- `n_members`:
+
+  Number of raw loops merged into this entry (1 for intersect mode where
+  no coordinate merging occurs).
+
+- `n_reps`:
+
+  Number of input files that support this entry.
+
+When `write_output = TRUE` and `out_file` is provided, an extended BEDPE
+file is written with the additional columns `n_members` and `n_reps`
+appended after the standard BEDPE fields.
 
 ## Examples
 
@@ -171,7 +210,7 @@ res_intersect <- consolidate_chromatin_loops(
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmpzLp4ZO/file9b0ab43ed4d.bedpe
+#> Finished! Saved to /tmp/RtmpjNEYlw/file9d2f383429c2.bedpe
 #> Finished! Final loops: 12
 
 # Example B: Consensus Mode (formerly Reproducible)
@@ -187,8 +226,8 @@ res_consensus <- consolidate_chromatin_loops(
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/RtmpzLp4ZO/file9b0a570d979a.bedpe
-#> Finished! Final loops: 11
+#> Finished! Saved to /tmp/RtmpjNEYlw/file9d2f46041b05.bedpe
+#> Finished! Final loops: 12
 
 # Example C: Union Mode
 # Merges all loops into a single map
@@ -203,8 +242,8 @@ res_union <- consolidate_chromatin_loops(
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Union mode: Keeping all clusters
-#> Finished! Saved to /tmp/RtmpzLp4ZO/file9b0a385d38bc.bedpe
-#> Finished! Final loops: 589
+#> Finished! Saved to /tmp/RtmpjNEYlw/file9d2f2ba638d8.bedpe
+#> Finished! Final loops: 586
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
 # 1. Pre-filter: Discard singletons (score < 2) to remove noise.
@@ -223,7 +262,7 @@ res_clean <- consolidate_chromatin_loops(
 #>     File 2: 100 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/RtmpzLp4ZO/file9b0aa14be0f.bedpe
+#> Finished! Saved to /tmp/RtmpjNEYlw/file9d2f2e4fcaed.bedpe
 #> Finished! Final loops: 4
 
 # Inspect results

@@ -83,7 +83,7 @@ protein-protein interaction (PPI) network construction."><meta property="og:imag
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.13</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.14</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -260,15 +260,40 @@ protein-protein interaction (PPI) network construction.</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An invisible nested list containing interactive plot objects, GO results, and gene sets.</p>
-    </div>
+    <p>An invisible nested list indexed by <code>target_source</code> (e.g., <code>"targets"</code>, <code>"loops"</code>).
+Each element contains:</p><dl><dt><code>go_results</code></dt>
+<dd><p>Data frame of GO enrichment results (if <code>run_go = TRUE</code>).</p></dd>
+
+<dt><code>target_gene_sets</code></dt>
+<dd><p>Named list of character vectors containing target gene symbols.</p></dd>
+
+<dt><code>plots</code></dt>
+<dd><p>Named list of ggplot objects (LFC_Violin, GSEA, Heatmap, Scatter, GO_Network, PPI_Network, etc.).</p></dd>
+
+<dt><code>warnings</code></dt>
+<dd><p>Character vector of warnings encountered during analysis.</p></dd>
+
+
+</dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Two analysis steps use R's random number generator: GSEA target-gene down-sampling
-(controlled by <code>gsea_nSample</code>) and motif background anchor sampling (class-matched,
-limited to 2 000 background regions per contrast). For fully reproducible results, call <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>
-before running this function. The <code>clusterProfiler::GSEA</code> call internally
+    <p>Two analysis steps use random sampling: GSEA target-gene down-sampling
+(controlled by <code>gsea_nSample</code>, via unweighted sampling without
+replacement to avoid enrichment bias) and motif background anchor sampling
+(GC-matched, limited to 2 000 background regions per contrast).
+GSEA tie-breaking for duplicate ranked values is deterministic
+(position-based offset). For fully reproducible results, call <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>
+before running this function. The <code><a href="https://rdrr.io/pkg/clusterProfiler/man/GSEA.html" class="external-link">clusterProfiler::GSEA</a></code> call internally
 uses <code>seed = TRUE</code> and is not affected by the global RNG state.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
+    <p>If any downstream analysis module fails (e.g. due to missing optional
+packages or network timeouts), the error propagates and stops the entire
+function. To obtain partial results when some modules are unavailable,
+disable problematic steps via <code>run_go = FALSE</code>, <code>run_ppi = FALSE</code>,
+or <code>run_motif = FALSE</code>, or call the corresponding internal functions
+individually.</p>
     </div>
 
     <div class="section level2">
@@ -299,22 +324,20 @@ uses <code>seed = TRUE</code> and is not affected by the global RNG state.</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Processing Source: [loops]</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: EP_Genes (Valid Genes: 13) ---</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA skipped: there is no package called 'clusterProfiler'</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Expression/connectivity plots skipped: there is no package called 'circlize'</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Distal connectivity plots skipped: there is no package called 'ggpointdensity'</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>ComplexHeatmap not installed; skipping heatmap.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: PP_Genes (Valid Genes: 67) ---</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA skipped: there is no package called 'clusterProfiler'</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Expression/connectivity plots skipped: there is no package called 'circlize'</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Distal connectivity plots skipped: there is no package called 'ggpointdensity'</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>ComplexHeatmap not installed; skipping heatmap.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ================================================================</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Processing Source: [targets]</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: Target_Genes (Valid Genes: 217) ---</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA skipped: there is no package called 'clusterProfiler'</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Expression/connectivity plots skipped: there is no package called 'circlize'</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Distal connectivity plots skipped: there is no package called 'ggpointdensity'</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>ComplexHeatmap not installed; skipping heatmap.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  All analysis complete.</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">profile_res</span><span class="op">)</span></span></span>

@@ -152,18 +152,48 @@ profile_target_genes(
 
 ## Value
 
-An invisible nested list containing interactive plot objects, GO
-results, and gene sets.
+An invisible nested list indexed by `target_source` (e.g., `"targets"`,
+`"loops"`). Each element contains:
+
+- `go_results`:
+
+  Data frame of GO enrichment results (if `run_go = TRUE`).
+
+- `target_gene_sets`:
+
+  Named list of character vectors containing target gene symbols.
+
+- `plots`:
+
+  Named list of ggplot objects (LFC_Violin, GSEA, Heatmap, Scatter,
+  GO_Network, PPI_Network, etc.).
+
+- `warnings`:
+
+  Character vector of warnings encountered during analysis.
 
 ## Details
 
-Two analysis steps use R's random number generator: GSEA target-gene
-down-sampling (controlled by `gsea_nSample`) and motif background anchor
-sampling (class-matched, limited to 2 000 background regions per
-contrast). For fully reproducible results, call
+Two analysis steps use random sampling: GSEA target-gene down-sampling
+(controlled by `gsea_nSample`, via unweighted sampling without
+replacement to avoid enrichment bias) and motif background anchor
+sampling (GC-matched, limited to 2 000 background regions per contrast).
+GSEA tie-breaking for duplicate ranked values is deterministic
+(position-based offset). For fully reproducible results, call
 [`set.seed()`](https://rdrr.io/r/base/Random.html) before running this
-function. The `clusterProfiler::GSEA` call internally uses `seed = TRUE`
-and is not affected by the global RNG state.
+function. The
+[`clusterProfiler::GSEA`](https://rdrr.io/pkg/clusterProfiler/man/GSEA.html)
+call internally uses `seed = TRUE` and is not affected by the global RNG
+state.
+
+## Note
+
+If any downstream analysis module fails (e.g. due to missing optional
+packages or network timeouts), the error propagates and stops the entire
+function. To obtain partial results when some modules are unavailable,
+disable problematic steps via `run_go = FALSE`, `run_ppi = FALSE`, or
+`run_motif = FALSE`, or call the corresponding internal functions
+individually.
 
 ## Examples
 
@@ -194,22 +224,20 @@ profile_res <- profile_target_genes(
 #> >>> Processing Source: [loops]
 #> 
 #> --- Task: EP_Genes (Valid Genes: 13) ---
-#> Warning: GSEA skipped: there is no package called 'clusterProfiler'
-#> Warning: Expression/connectivity plots skipped: there is no package called 'circlize'
-#> Warning: Distal connectivity plots skipped: there is no package called 'ggpointdensity'
+#> 
+#> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
+#> Warning: ComplexHeatmap not installed; skipping heatmap.
 #> 
 #> --- Task: PP_Genes (Valid Genes: 67) ---
-#> Warning: GSEA skipped: there is no package called 'clusterProfiler'
-#> Warning: Expression/connectivity plots skipped: there is no package called 'circlize'
-#> Warning: Distal connectivity plots skipped: there is no package called 'ggpointdensity'
+#> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
+#> Warning: ComplexHeatmap not installed; skipping heatmap.
 #> 
 #> ================================================================
 #> >>> Processing Source: [targets]
 #> 
 #> --- Task: Target_Genes (Valid Genes: 217) ---
-#> Warning: GSEA skipped: there is no package called 'clusterProfiler'
-#> Warning: Expression/connectivity plots skipped: there is no package called 'circlize'
-#> Warning: Distal connectivity plots skipped: there is no package called 'ggpointdensity'
+#> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
+#> Warning: ComplexHeatmap not installed; skipping heatmap.
 #> 
 #>  All analysis complete.
 names(profile_res)

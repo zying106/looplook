@@ -83,7 +83,7 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.13</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.14</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -132,6 +132,8 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
 <span>  karyo_bin_size <span class="op">=</span> <span class="fl">1e+05</span>,</span>
 <span>  neighbor_hop <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  hub_percentile <span class="op">=</span> <span class="fl">0.95</span>,</span>
+<span>  min_expr <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  conflict_strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"biotype_first"</span>, <span class="st">"expression_first"</span><span class="op">)</span>,</span>
 <span>  write_output <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -197,6 +199,23 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
 <dd><p>Numeric (0–1). Node-degree quantile for hub detection. Default: <code>0.95</code>.</p></dd>
 
 
+<dt id="arg-min-expr">min_expr<a class="anchor" aria-label="anchor" href="#arg-min-expr"></a></dt>
+<dd><p>Numeric. Minimum expression value for a gene to be considered
+active during anchor-level conflict resolution. Used only when
+<code>expr_matrix_file</code> is provided. Default: <code>0</code> (any detectable
+expression qualifies). Increase to <code>1</code> or higher to require stronger
+evidence. See <code><a href="refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></code> for the
+separate <code>threshold</code> parameter that controls promoter reclassification.</p></dd>
+
+
+<dt id="arg-conflict-strategy">conflict_strategy<a class="anchor" aria-label="anchor" href="#arg-conflict-strategy"></a></dt>
+<dd><p>Character. Conflict resolution order for
+overlapping gene assignments. <code>"biotype_first"</code> (default): select
+the best biotype tier first, then apply expression filtering within that
+tier. <code>"expression_first"</code>: apply expression filtering across all
+biotypes first, then pick the best biotype among expressed candidates.</p></dd>
+
+
 <dt id="arg-write-output">write_output<a class="anchor" aria-label="anchor" href="#arg-write-output"></a></dt>
 <dd><p>Logical. If <code>TRUE</code> (default), write the Excel workbook to <code>out_dir</code>. If <code>FALSE</code>, return results without creating directories or files.</p></dd>
 
@@ -207,7 +226,43 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An invisible named list:</p><ul><li><p><code>target_annotation</code> — Peak-to-gene assignments with <code>Assigned_Target_Genes_Filled</code> (3D-prioritised, falling back to nearest gene).</p></li>
+    <p>An invisible named list:</p><ul><li><p><code>target_annotation</code> — Target features (peaks) with gene assignments.
+Key columns include:</p><ul><li><p><code>All_Loop_Connected_Genes</code>: All genes from loop-connected anchors (P/G types).</p></li>
+<li><p><code>Regulated_promoter_genes</code>: Promoter genes supported by loop-anchor context.</p></li>
+<li><p><code>Assigned_Target_Genes</code>: Promoter-first 3D assignment (prioritises P &gt; G &gt; E).</p></li>
+<li><p><code>*_Filled</code> variants: Linear nearest-gene fallback when strict 3D assignments are empty.</p></li>
+<li><p><code>Regulated_promoter_Evidence</code>: Provenance of <code>Regulated_promoter_genes</code>
+(e.g., <code>local_promoter_overlap</code>, <code>direct_opposite_promoter</code>).
+<strong>Read with</strong> <code>Regulated_promoter_genes</code>; do not cross-reference
+with <code>Assigned_Target_Genes</code> or other columns.</p></li>
+<li><p><code>Regulated_promoter_Fallback_Evidence</code>: Provenance of
+<code>Regulated_promoter_genes_Filled</code>.
+<strong>Read with</strong> <code>Regulated_promoter_genes_Filled</code>; indicates
+which <code>*_Filled</code> column supplied the fallback gene.</p></li>
+</ul></li>
+<li><p><code>target_gene_links</code> — Long-format peak-gene provenance table.
+Each row records one peak-gene linkage with full provenance.
+<strong>Read</strong> <code>evidence</code>, <code>anchor_role</code>, and <code>gene_role</code>
+<strong>together as a group</strong> — they jointly describe how each gene was
+assigned to each peak; do not interpret any one column in isolation.</p><ul><li><p><code>input_id</code>, <code>loop_ID</code>, <code>anchor_id</code>: Identifiers.</p></li>
+<li><p><code>gene</code>: Linked gene symbol.</p></li>
+<li><p><code>gene_role</code>: <code>"promoter"</code>, <code>"gene_body"</code>, or <code>"linear_annotation"</code>.</p></li>
+<li><p><code>source</code>: <code>"loop_anchor"</code> (3D-derived) or <code>"linear_annotation"</code> (nearest gene).</p></li>
+<li><p><code>evidence</code>: Provenance label —
+<code>"local_promoter_overlap"</code> (peak overlaps anchor promoter),
+<code>"direct_opposite_promoter"</code> (opposite anchor is promoter),
+<code>"gene_body_context"</code> (gene body linkage),
+<code>"expanded_promoter_loop"</code> (via ego-network expansion),
+<code>"linear_annotation"</code> (direct nearest gene),
+or <code>"linear_fallback"</code> (filled when 3D assignment was empty).</p></li>
+<li><p><code>anchor_role</code>: <code>"local_anchor"</code>, <code>"opposite_anchor"</code>,
+<code>"expanded_anchor"</code>, or <code>"linear_annotation"</code>.</p></li>
+<li><p><code>used_as_fallback</code>: Logical. <code>TRUE</code> when this link was added
+via the <code>*_Filled</code> linear nearest-gene fallback mechanism.</p></li>
+<li><p><code>in_regulated_promoter</code> through <code>in_assigned_target_filled</code>:
+Logical membership flags indicating which target annotation column(s)
+this gene appears in.</p></li>
+</ul></li>
 <li><p><code>loop_annotation</code> — Annotated 3D interactome with <code>Putative_Target_Genes</code>.</p></li>
 <li><p><code>anchor_loci_annotation</code> — Non-redundant anchor-locus genomic classifications after within-cluster interval reduction.</p></li>
 <li><p><code>anchor_annotation</code> — Backward-compatible alias of <code>anchor_loci_annotation</code>.</p></li>
@@ -220,11 +275,18 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p><strong>Mapping Strategy and Fallback Mechanism</strong>
-The method prioritizes physical 3D chromatin contacts. If a genomic feature overlaps an anchor looping to a distal gene, the distal gene is assigned as the target. In the absence of spatial loop evidence, the function implements a linear proximity-based fallback to assign the nearest active local gene, ensuring continuous annotation coverage.</p>
+The method prioritizes physical 3D chromatin contacts while keeping strict
+and fallback semantics separate. <code>Regulated_promoter_genes</code> reports
+promoter genes supported by loop-anchor context, <code>Assigned_Target_Genes</code>
+preserves the historical promoter-first 3D assignment, and <code>*_Filled</code>
+columns add a linear nearest-gene fallback only when strict 3D assignments are
+empty. <code>Regulated_promoter_Evidence</code>,
+<code>Regulated_promoter_Fallback_Evidence</code>, and <code>target_gene_links</code>
+provide row-level provenance for these decisions.</p>
 <p><strong>Hierarchical Conflict Resolution</strong>
-To address complex loci where a single anchor overlaps multiple promoters (e.g., dense gene clusters or bidirectional promoters), the function executes a 3-step resolution:</p><ol><li><p><em>Expression Filter:</em> Excludes transcriptionally silent genes using a user-provided expression matrix.</p></li>
-<li><p><em>Biotype Prioritization:</em> Ranks remaining candidates by functional class: <code>Protein Coding &gt; small-ncRNA (miRNA, snoRNA, snRNA, rRNA, scaRNA) &gt; Antisense &gt; lncRNA/ncRNA &gt; Pseudogene</code>.</p></li>
-<li><p><em>Expression Tiebreaker:</em> Resolves remaining ambiguities by designating the gene with the highest transcriptional abundance as the primary target.</p></li>
+To address complex loci where a single anchor overlaps multiple promoters (e.g., dense gene clusters or bidirectional promoters), the function executes a 3-step resolution:</p><ol><li><p><em>Biotype Prioritization:</em> Selects the highest-priority candidates by functional class: <code>Protein Coding &gt; small-ncRNA (miRNA, snoRNA, snRNA, rRNA, scaRNA) &gt; Antisense &gt; lncRNA/ncRNA &gt; Pseudogene</code>.</p></li>
+<li><p><em>Expression Filter:</em> Within the selected biotype tier, excludes transcriptionally silent genes using a user-provided expression matrix. If no gene in the tier is expressed, all candidates in that tier are retained.</p></li>
+<li><p><em>Expression Tiebreaker:</em> Among remaining candidates of equal biotype priority, retains all genes whose expression is within one order of magnitude of the highest-expressing candidate (i.e., expression &gt;= 10\<!-- % of the group maximum). This co-dominant rule preserves functionally redundant candidates such as bidirectional promoter pairs. --></p></li>
 </ol><p><strong>Network Topology Analysis</strong></p><ul><li><p><strong>Ego-Network Expansion (<code>neighbor_hop</code>):</strong> Implements k-hop neighborhood expansion via <code><a href="https://r.igraph.org/reference/ego.html" class="external-link">igraph::ego()</a></code>. A value of <code>0</code> restricts to direct contacts, while <code>1</code> includes secondary contacts to capture broader regulatory cliques.</p></li>
 <li><p><strong>Hub Detection:</strong> Utilizes a node-degree quantile threshold (<code>hub_percentile</code>) to identify highly connected regulatory elements.</p></li>
 </ul></div>

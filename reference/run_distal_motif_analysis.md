@@ -13,7 +13,9 @@ run_distal_motif_analysis(
   current_proj_name,
   top_n = 5,
   jaspar_db = JASPAR2020::JASPAR2020,
-  jaspar_collection = "CORE"
+  jaspar_collection = "CORE",
+  motif_max_bg = 2000L,
+  motif_gc_bins = 5L
 )
 ```
 

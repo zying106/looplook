@@ -56,7 +56,10 @@ installation:
 
 ``` r
 
-# Installation from GitHub 
+# Installation from GitHub
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+BiocManager::install(c("TxDb.Hsapiens.UCSC.hg38.knownGene", "org.Hs.eg.db"))
+
 if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
 devtools::install_github("zying106/looplook")
 ```
@@ -147,7 +150,7 @@ Dominant Expression Tiebreaker.
 
 # Use pre-computed example annotation (or run annotate_peaks_and_loops with example data)
 rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
-load(rdata_path)  # loads res_integrated
+load(rdata_path) # loads res_integrated
 ```
 
 **Output Data Dictionary: The Comprehensive 3D Spatial Catalog**
@@ -157,11 +160,13 @@ The module systematically exports a multi-layered tabular catalog (e.g.,
 
 - **Integrative Target Mapping (`target_annotation`)** Delineates the
   spatial coverage of genomic variants/features inputted by the user. It
-  strictly differentiates `Assigned_Target_Genes` (target genes
-  identified exclusively via 3D physical chromatin loops) from
-  `*_Filled columns`, which implement a **“Smart Fallback”** algorithm
-  to assign nearest linear genes for unlooped loci, ensuring
-  comprehensive, gap-free annotation coverage.
+  separates strict loop-derived columns (`Regulated_promoter_genes`,
+  `Assigned_Target_Genes`) from `*_Filled` fallback columns, and records
+  provenance through `Regulated_promoter_Evidence`,
+  `Regulated_promoter_Fallback_Evidence`, and the long-format
+  `target_gene_links` table. This keeps promoter-supported loop targets,
+  historical assigned targets, and nearest-gene fallback choices
+  traceable rather than conflated.
 
 - **3D Network Architecture (`loop_annotation`)** Resolves the
   biological syntax of the structural interactome. It classifies
@@ -189,9 +194,12 @@ overlap analysis of the annotated 3D interactome.*
 
 Physical proximity is a structural prerequisite, but not a direct proxy
 for active **transcriptional regulation**. This module integrates
-quantitative transcriptome data to systematically filter out
-**transcriptionally silent physical chromatin contacts**, ensuring only
-functionally relevant 3D interactions are retained.
+quantitative transcriptome data to annotate each loop with
+expression-aware functional status. All structural loops are preserved;
+the pipeline reclassifies silent anchors (P → eP, G → eG), flags which
+loops belong to the high-confidence functional subset
+(`Retained_In_Functional_Network`), and exposes `Refinement_Action` for
+transparent interpretation.
 
 **Key Parameters:**
 
@@ -226,10 +234,11 @@ transcriptome integration, the refined tabular outputs represent a
 high-confidence, functionally active subset of the initial 3D chromatin
 interactome. The **key features** of these output are as follows:
 
-- **Expression-Aware Filtration**: The resulting catalog explicitly
-  excludes pure structural chromatin loops lacking functional
-  transcriptional output, yielding a rigorously curated, functionally
-  active regulatory network.
+- **Expression-Aware Refinement**: All structural loops are preserved.
+  The pipeline annotates each loop with expression-aware functional
+  status (`Has_Active_Target`, `Retained_In_Functional_Network`,
+  `Refinement_Action`) and provides a high-confidence functional subset
+  for downstream analysis, without discarding structural evidence.
 - **Dynamic Topological Reclassification**: The topological annotations
   within the `loop_type` are biologically recalibrated. By dynamically
   reclassifying transcriptionally silent promoters (**P**) as
@@ -237,6 +246,10 @@ interactome. The **key features** of these output are as follows:
   the spatial regulatory syntax (e.g., seamlessly transforming a
   transcriptionally silent **P-P** loop into a curated **eP-P**
   interaction axis).
+- **Filtered Target Gene Links**: The refined provenance sheet retains
+  only peak-gene links still used by the refined target columns and
+  appends `Mean_Expression` plus `Passes_Expression_Filter`, so inactive
+  Basic-stage links are not carried forward as active refined evidence.
 
 ![Refinement Results](reference/figures/g2_refine.jpg)
 
@@ -360,10 +373,10 @@ the outputs in a structured and accessible format.
 
 # One-click report (renders a standalone HTML via nested rmarkdown)
 looplook::looplook_report(
-  bedpe_file   = system.file("extdata", "example_loops_1.bedpe", package = "looplook"),
-  target_bed   = system.file("extdata", "example_peaks.bed", package = "looplook"),
+  bedpe_file = system.file("extdata", "example_loops_1.bedpe", package = "looplook"),
+  target_bed = system.file("extdata", "example_peaks.bed", package = "looplook"),
   expr_matrix_file = system.file("extdata", "example_tpm.txt", package = "looplook"),
-  diff_file    = system.file("extdata", "example_deg.txt", package = "looplook"),
+  diff_file = system.file("extdata", "example_deg.txt", package = "looplook"),
   metadata_file = system.file("extdata", "example_coldata.txt", package = "looplook"),
   project_name = "My HiChIP Study"
 )
@@ -425,145 +438,18 @@ following environment:
 ## Platform: aarch64-apple-darwin20
 ## Running under: macOS Sequoia 15.3
 ## 
-## Matrix products: default
-## BLAS:   /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib 
-## LAPACK: /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1
-## 
-## locale:
-## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
-## 
-## time zone: Asia/Singapore
-## tzcode source: internal
-## 
 ## attached base packages:
-## [1] stats4    stats     graphics  grDevices utils     datasets  methods   base     
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-##  [1] looplook_0.99.8      org.Hs.eg.db_3.21.0  AnnotationDbi_1.70.0 IRanges_2.42.0       S4Vectors_0.48.0    
-##  [6] Biobase_2.68.0       BiocGenerics_0.54.1  generics_0.1.4       scales_1.4.0         knitr_1.51          
-## [11] dplyr_1.1.4          ggplot2_4.0.0        BiocStyle_2.36.0    
+## [1] looplook_0.99.13
 ## 
 ## loaded via a namespace (and not attached):
-##   [1] R.methodsS3_1.8.2                        dichromat_2.0-0.1                       
-##   [3] ggseqlogo_0.2.2                          nnet_7.3-20                             
-##   [5] DT_0.34.0                                Biostrings_2.76.0                       
-##   [7] TxDb.Hsapiens.UCSC.hg38.knownGene_3.21.0 vctrs_0.7.2                             
-##   [9] ggtangle_0.0.7                           digest_0.6.37                           
-##  [11] png_0.1-9                                shape_1.4.6.1                           
-##  [13] BiocBaseUtils_1.10.0                     ggrepel_0.9.8                           
-##  [15] magick_2.9.0                             MASS_7.3-65                             
-##  [17] reshape2_1.4.4                           foreach_1.5.2                           
-##  [19] qvalue_2.40.0                            withr_3.0.2                             
-##  [21] xfun_0.55                                ggfun_0.2.0                             
-##  [23] ggpubr_0.6.2                             ellipsis_0.3.2                          
-##  [25] memoise_2.0.1                            commonmark_2.0.0                        
-##  [27] rcmdcheck_1.4.0                          clusterProfiler_4.16.0                  
-##  [29] gson_0.1.0                               bamsignals_1.40.0                       
-##  [31] tidytree_0.4.6                           networkD3_0.4.1                         
-##  [33] GlobalOptions_0.1.2                      gtools_3.9.5                            
-##  [35] ggdist_3.3.3                             R.oo_1.27.1                             
-##  [37] Formula_1.2-5                            sys_3.4.3                               
-##  [39] prettyunits_1.2.0                        KEGGREST_1.48.1                         
-##  [41] otel_0.2.0                               httr_1.4.7                              
-##  [43] rstatix_0.7.3                            restfulr_0.0.16                         
-##  [45] hash_2.2.6.3                             ps_1.9.1                                
-##  [47] rstudioapi_0.17.1                        UCSC.utils_1.4.0                        
-##  [49] DOSE_4.2.0                               base64enc_0.1-3                         
-##  [51] processx_3.8.6                           curl_7.0.0                              
-##  [53] fields_17.1                              zlibbioc_1.54.0                         
-##  [55] ggraph_2.2.2                             polyclip_1.10-7                         
-##  [57] GenomeInfoDbData_1.2.14                  SparseArray_1.8.1                       
-##  [59] xopen_1.0.1                              RBGL_1.84.0                             
-##  [61] stringr_1.5.2                            desc_1.4.3                              
-##  [63] doParallel_1.0.17                        evaluate_1.0.5                          
-##  [65] S4Arrays_1.8.1                           BiocFileCache_2.16.2                    
-##  [67] GenomicRanges_1.60.0                     bookdown_0.46                           
-##  [69] colorspace_2.1-2                         filelock_1.0.3                          
-##  [71] magrittr_2.0.4                           viridis_0.6.5                           
-##  [73] ggtree_3.16.3                            lattice_0.22-7                          
-##  [75] XML_3.99-0.19                            cowplot_1.2.0                           
-##  [77] matrixStats_1.5.0                        Hmisc_5.2-4                             
-##  [79] pillar_1.11.1                            nlme_3.1-168                            
-##  [81] pwalign_1.4.0                            iterators_1.0.14                        
-##  [83] caTools_1.18.3                           compiler_4.5.1                          
-##  [85] stringi_1.8.7                            SummarizedExperiment_1.38.1             
-##  [87] devtools_2.4.6                           GenomicAlignments_1.44.0                
-##  [89] plyr_1.8.9                               crayon_1.5.3                            
-##  [91] abind_1.4-8                              BiocIO_1.18.0                           
-##  [93] ggtext_0.1.2                             gridGraphics_0.5-1                      
-##  [95] chron_2.3-62                             graphlayouts_1.2.2                      
-##  [97] bit_4.6.0                                UpSetR_1.4.0                            
-##  [99] fastmatch_1.1-6                          codetools_0.2-20                        
-## [101] openssl_2.3.4                            crosstalk_1.2.2                         
-## [103] bslib_0.9.0                              TxDb.Hsapiens.UCSC.hg19.knownGene_3.2.2 
-## [105] biovizBase_1.56.0                        GetoptLong_1.1.0                        
-## [107] splines_4.5.1                            circlize_0.4.16                         
-## [109] Rcpp_1.1.0                               dbplyr_2.5.1                            
-## [111] BiocCheck_1.44.2                         gridtext_0.1.5                          
-## [113] blob_1.2.4                               seqLogo_1.74.0                          
-## [115] clue_0.3-66                              AnnotationFilter_1.32.0                 
-## [117] fs_1.6.6                                 checkmate_2.3.3                         
-## [119] pkgbuild_1.4.8                           openxlsx_4.2.8.1                        
-## [121] ggsignif_0.6.4                           ggplotify_0.1.3                         
-## [123] sqldf_0.4-11                             tibble_3.3.0                            
-## [125] Matrix_1.7-3                             callr_3.7.6                             
-## [127] tweenr_2.0.3                             pkgconfig_2.0.3                         
-## [129] tools_4.5.1                              cachem_1.1.0                            
-## [131] RSQLite_2.4.3                            viridisLite_0.4.2                       
-## [133] DBI_1.2.3                                fastmap_1.2.0                           
-## [135] rmarkdown_2.30                           grid_4.5.1                              
-## [137] credentials_2.0.3                        usethis_3.2.1                           
-## [139] Rsamtools_2.24.1                         broom_1.0.11                            
-## [141] sass_0.4.10                              patchwork_1.3.2                         
-## [143] BiocManager_1.30.26                      dotCall64_1.2                           
-## [145] VariantAnnotation_1.54.1                 graph_1.86.0                            
-## [147] carData_3.0-5                            rpart_4.1.24                            
-## [149] farver_2.1.2                             mgcv_1.9-3                              
-## [151] tidygraph_1.3.1                          gsubfn_0.7                              
-## [153] biocViews_1.76.0                         yaml_2.3.10                             
-## [155] roxygen2_7.3.3                           MatrixGenerics_1.20.0                   
-## [157] foreign_0.8-90                           rtracklayer_1.68.0                      
-## [159] cli_3.6.5                                purrr_1.2.1                             
-## [161] motifmatchr_1.30.0                       lifecycle_1.0.4                         
-## [163] askpass_1.2.1                            sessioninfo_1.2.3                       
-## [165] backports_1.5.0                          BSgenome.Hsapiens.UCSC.hg38_1.4.5       
-## [167] BiocParallel_1.42.2                      gtable_0.3.6                            
-## [169] rjson_0.2.23                             ChIPseeker_1.44.0                       
-## [171] parallel_4.5.1                           ape_5.8-1                               
-## [173] testthat_3.3.1                           jsonlite_2.0.0                          
-## [175] TFBSTools_1.46.0                         bitops_1.0-9                            
-## [177] bit64_4.6.0-1                            brio_1.1.5                              
-## [179] yulab.utils_0.2.1                        proto_1.0.0                             
-## [181] zip_2.3.3                                bezier_1.1.2                            
-## [183] jquerylib_0.1.4                          GOSemSim_2.34.0                         
-## [185] distributional_0.6.0                     R.utils_2.13.0                          
-## [187] lazyeval_0.2.2                           htmltools_0.5.8.1                       
-## [189] enrichplot_1.28.4                        GO.db_3.21.0                            
-## [191] rappdirs_0.3.3                           data.tree_1.2.0                         
-## [193] ensembldb_2.32.0                         tinytex_0.59                            
-## [195] glue_1.8.0                               STRINGdb_2.20.0                         
-## [197] TFMPvalue_1.0.0                          spam_2.11-1                             
-## [199] httr2_1.2.1                              XVector_0.48.0                          
-## [201] RCurl_1.98-1.17                          InteractionSet_1.36.1                   
-## [203] rprojroot_2.1.1                          treeio_1.32.0                           
-## [205] BSgenome_1.76.0                          gridExtra_2.3                           
-## [207] karyoploteR_1.34.2                       boot_1.3-31                             
-## [209] JASPAR2020_0.99.10                       igraph_2.2.0                            
-## [211] R6_2.6.1                                 tidyr_1.3.1                             
-## [213] gplots_3.2.0                             labeling_0.4.3                          
-## [215] ggpointdensity_0.2.1                     GenomicFeatures_1.60.0                  
-## [217] cluster_2.1.8.1                          pkgload_1.4.1                           
-## [219] regioneR_1.40.1                          stringdist_0.9.15                       
-## [221] aplot_0.2.9                              GenomeInfoDb_1.44.3                     
-## [223] DirichletMultinomial_1.50.0              DelayedArray_0.34.1                     
-## [225] tidyselect_1.2.1                         plotrix_3.8-4                           
-## [227] ProtGenerics_1.40.0                      htmlTable_2.4.3                         
-## [229] maps_3.4.3                               ggforce_0.5.0                           
-## [231] xml2_1.4.0                               car_3.1-3                               
-## [233] KernSmooth_2.23-26                       S7_0.2.0                                
-## [235] data.table_1.17.8                        htmlwidgets_1.6.4                       
-## [237] fgsea_1.34.2                             ComplexHeatmap_2.26.0                   
-## [239] RColorBrewer_1.1-3                       rlang_1.2.0                             
-## [241] gert_2.1.5                               remotes_2.5.0                           
-## [243] RUnit_0.4.33.1
+##   [1] dplyr_1.1.4         rlang_1.1.6         S4Vectors_0.48.0   
+##   [4] GenomicRanges_1.60.0 IRanges_2.42.0      GenomeInfoDb_1.44.0
+##   [7] BiocGenerics_0.54.1  AnnotationDbi_1.70.0 GenomicFeatures_1.60.0
+##  [10] ggplot2_4.0.0       openxlsx_4.2.8.1    data.table_1.17.8   
+##  [13] igraph_2.2.0        clusterProfiler_1.8.0
+## 
+## For the full session info, run `sessionInfo()` in R.
 ```
