@@ -210,7 +210,7 @@ res_intersect <- consolidate_chromatin_loops(
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmpjNEYlw/file9d2f383429c2.bedpe
+#> Finished! Saved to /tmp/RtmplvYgXV/file9cf4a2aec3d.bedpe
 #> Finished! Final loops: 12
 
 # Example B: Consensus Mode (formerly Reproducible)
@@ -226,7 +226,7 @@ res_consensus <- consolidate_chromatin_loops(
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/RtmpjNEYlw/file9d2f46041b05.bedpe
+#> Finished! Saved to /tmp/RtmplvYgXV/file9cf47c089d7c.bedpe
 #> Finished! Final loops: 12
 
 # Example C: Union Mode
@@ -242,7 +242,7 @@ res_union <- consolidate_chromatin_loops(
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Union mode: Keeping all clusters
-#> Finished! Saved to /tmp/RtmpjNEYlw/file9d2f2ba638d8.bedpe
+#> Finished! Saved to /tmp/RtmplvYgXV/file9cf43cc0270c.bedpe
 #> Finished! Final loops: 586
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -262,7 +262,7 @@ res_clean <- consolidate_chromatin_loops(
 #>     File 2: 100 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/RtmpjNEYlw/file9d2f2e4fcaed.bedpe
+#> Finished! Saved to /tmp/RtmplvYgXV/file9cf44760831a.bedpe
 #> Finished! Final loops: 4
 
 # Inspect results
