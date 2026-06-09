@@ -36,7 +36,8 @@ profile_target_genes(
   gsea_nSample = 99999,
   cnet_nSample = 50,
   stat_test = "wilcox.test",
-  cor_method = "pearson"
+  cor_method = "pearson",
+  seed = NULL
 )
 ```
 
@@ -150,6 +151,14 @@ profile_target_genes(
 
   Character. Method for sample correlation matrices.
 
+- seed:
+
+  Integer or NULL. Random seed for reproducible GSEA down-sampling and
+  motif GC-matched background sampling. When `NULL` (default), the
+  global RNG state is used; set to a positive integer for fully
+  reproducible results. The seed is recorded in the result object as
+  `attr(result, "seed")`.
+
 ## Value
 
 An invisible nested list indexed by `target_source` (e.g., `"targets"`,
@@ -157,7 +166,8 @@ An invisible nested list indexed by `target_source` (e.g., `"targets"`,
 
 - `go_results`:
 
-  Data frame of GO enrichment results (if `run_go = TRUE`).
+  Named list of data frames (one per gene set) containing GO enrichment
+  results (if `run_go = TRUE`).
 
 - `target_gene_sets`:
 
@@ -168,23 +178,22 @@ An invisible nested list indexed by `target_source` (e.g., `"targets"`,
   Named list of ggplot objects (LFC_Violin, GSEA, Heatmap, Scatter,
   GO_Network, PPI_Network, etc.).
 
-- `warnings`:
-
-  Character vector of warnings encountered during analysis.
-
 ## Details
 
 Two analysis steps use random sampling: GSEA target-gene down-sampling
 (controlled by `gsea_nSample`, via unweighted sampling without
-replacement to avoid enrichment bias) and motif background anchor
+replacement to reduce enrichment bias) and motif background anchor
 sampling (GC-matched, limited to 2 000 background regions per contrast).
 GSEA tie-breaking for duplicate ranked values is deterministic
-(position-based offset). For fully reproducible results, call
-[`set.seed()`](https://rdrr.io/r/base/Random.html) before running this
-function. The
-[`clusterProfiler::GSEA`](https://rdrr.io/pkg/clusterProfiler/man/GSEA.html)
-call internally uses `seed = TRUE` and is not affected by the global RNG
-state.
+(position-based offset). For fully reproducible results, set the `seed`
+parameter.
+
+**Exploratory modules:** The GO enrichment (`run_go`), motif scanning
+(`run_motif`), and PPI network (`run_ppi`) modules are *research-grade*
+analyses that depend on external databases and algorithms. Results
+should be treated as hypothesis-generating and validated with
+independent experimental approaches. All three modules are disabled by
+default.
 
 ## Note
 
@@ -206,16 +215,16 @@ tmp <- new.env()
 load(rdata_path, envir = tmp)
 res <- tmp[[ls(tmp)[1]]]
 profile_res <- profile_target_genes(
-  annotation_res = res,
-  diff_file = diff_path,
-  expr_matrix_file = expr_path,
-  metadata_file = meta_path,
-  run_go = FALSE,
-  run_ppi = FALSE,
-  run_motif = FALSE,
-  heatmap_nSample = 20,
-  gsea_nSample = 20,
-  cnet_nSample = 5
+    annotation_res = res,
+    diff_file = diff_path,
+    expr_matrix_file = expr_path,
+    metadata_file = meta_path,
+    run_go = FALSE,
+    run_ppi = FALSE,
+    run_motif = FALSE,
+    heatmap_nSample = 20,
+    gsea_nSample = 20,
+    cnet_nSample = 5
 )
 #> >>> Analysis Init | Root Project: Analysis
 #> --- Reading files...
@@ -226,18 +235,18 @@ profile_res <- profile_target_genes(
 #> --- Task: EP_Genes (Valid Genes: 13) ---
 #> 
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
-#> Warning: ComplexHeatmap not installed; skipping heatmap.
+#> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 
 #> --- Task: PP_Genes (Valid Genes: 67) ---
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
-#> Warning: ComplexHeatmap not installed; skipping heatmap.
+#> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 
 #> ================================================================
 #> >>> Processing Source: [targets]
 #> 
 #> --- Task: Target_Genes (Valid Genes: 217) ---
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
-#> Warning: ComplexHeatmap not installed; skipping heatmap.
+#> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 
 #>  All analysis complete.
 names(profile_res)

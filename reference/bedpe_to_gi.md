@@ -7,7 +7,7 @@ object.
 ## Usage
 
 ``` r
-bedpe_to_gi(bedpe_file, score_col = NULL)
+bedpe_to_gi(bedpe_file, score_col = NULL, quiet = FALSE)
 ```
 
 ## Arguments
@@ -30,6 +30,12 @@ bedpe_to_gi(bedpe_file, score_col = NULL)
   contains p-values or other metrics where *smaller is better*, convert
   it first (e.g. `-log10(p)`) or filter manually after consolidation.
 
+- quiet:
+
+  Logical. If `TRUE`, suppress data-quality warnings (e.g., unusually
+  narrow/wide anchors, p-value-like scores). Errors are never
+  suppressed. Default: `FALSE`.
+
 ## Value
 
 A
@@ -46,7 +52,9 @@ second (e.g., chr1 \< chr2), ensuring compatibility with
 **Score Detection:** The function attempts to automatically detect a
 numeric score column. It checks the 8th column first (standard for many
 tools); if not numeric, it falls back to the 7th column. Non-numeric
-values are treated as 0.
+values are treated as 0. When `score_col` is specified explicitly, the
+function requires that column to contain predominantly numeric values
+(\>=50\\ otherwise.
 
 ## Examples
 

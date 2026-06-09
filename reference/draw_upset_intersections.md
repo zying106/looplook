@@ -26,7 +26,7 @@ draw_upset_intersections(
 
 - group_colors:
 
-  Optional mapped color schemes.
+  Reserved for future use. Currently ignored.
 
 ## Value
 
@@ -36,12 +36,12 @@ Invisibly returns the `grob` object.
 
 ``` r
 gene_sets <- list(
-  Upregulated = c("TP53", "BRCA1", "MYC", "EGFR"),
-  Downregulated = c("BRCA1", "MYC", "CDKN1A", "BAX"),
-  Bound_by_TF = c("MYC", "EGFR", "CDKN1A", "KRAS")
+    Upregulated = c("TP53", "BRCA1", "MYC", "EGFR"),
+    Downregulated = c("BRCA1", "MYC", "CDKN1A", "BAX"),
+    Bound_by_TF = c("MYC", "EGFR", "CDKN1A", "KRAS")
 )
 draw_upset_intersections(
-  gene_lists = gene_sets,
-  project_name = "Transcriptional Regulation"
+    gene_lists = gene_sets,
+    project_name = "Transcriptional Regulation"
 )
 ```

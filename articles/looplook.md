@@ -186,11 +186,23 @@ experimental evidence.
   for 2–3 replicates, and ⌊0.75N⌋ + 1 for N ≥ 4.
 - **`gap`**: Defines the maximum allowable spatial distance (in base
   pairs) between loop anchors for them to be considered as part of the
-  same physical cluster (default: `1000`).
+  same physical cluster (default: `1000`). When `quiet = FALSE`
+  (default), the function prints a pre-clustering gap diagnosis and a
+  post-clustering cluster-span diagnosis, including data-driven gap
+  recommendations and chaining risk assessment. If loop anchors are
+  narrow (e.g., TF HiChIP, 200–400 bp), the diagnosis may suggest
+  reducing `gap` to avoid over-merging independent regulatory events.
+  - **How to choose `gap`**: As a rule of thumb, `gap` should be
+    comparable to (not much larger than) the median loop anchor width in
+    your data. For histone-mark HiChIP (H3K27ac, ~1–3 kb anchors),
+    `1000` is appropriate. For TF HiChIP or ChIA-PET (100–500 bp
+    anchors), consider `100–200`. For Hi-C bins (5–50 kb), `1000` is
+    conservative. The automatic diagnosis will guide you if the chosen
+    `gap` is inappropriate for your data.
 - **`min_raw_score` vs. `min_score` (The Dual-Filter)**:
   - `min_raw_score` acts as a pre-filter applied to individual BEDPE
     files before clustering (e.g., removing singleton noise where PET
-    count \< 2) to substantially reduce computational memory overhead.
+    count \< 2) to help reduce computational memory overhead.
   - `min_score` serves as a post-filter applied to the final merged
     chromatin interactome to ensure high-confidence interactions. In
     `"consensus"` and `"union"` modes, this representative score is
@@ -202,15 +214,16 @@ experimental evidence.
   for specified species (e.g., `"hg38"`, `"mm10"`).
 - **`region_of_interest`**: Accepts an auxiliary BED file (e.g., a
   specific disease-associated locus or ChIP-seq peak set) to capture
-  only loops with physical connectivity to the target genomic region.
+  only loops with physical connectivity to the target genomic region of
+  interest (ROI).
 - **`roi_mode`**: Controls how strictly loops must overlap the ROI:
-  - `"both"` *(Default)*: Both loop anchors must overlap the ROI.
-    Suitable for TAD confinement, domain-internal interaction queries,
-    or when filtering with a ChIP-seq peak set (e.g., keep only loops
-    where both anchors fall in H3K27ac-marked regions).
-  - `"any"`: Either anchor may overlap the ROI. Suitable for
+  - `"any"` *(Default)*: Either anchor may overlap the ROI. Suitable for
     promoter-centric queries (e.g., find all distal interactions
     involving a specific gene locus).
+  - `"both"`: Both loop anchors must overlap the ROI. Suitable for TAD
+    confinement, domain-internal interaction queries, or when filtering
+    with a ChIP-seq peak set (e.g., keep only loops where both anchors
+    fall in H3K27ac-marked regions).
 - **`score_col`**: Integer column index for the interaction score (e.g.,
   PET count) when BEDPE files follow a non-standard column layout. If
   `NULL` (default), columns 8 and 7 are auto-detected by checking the
@@ -230,7 +243,7 @@ by replication evidence.
 
 ### Example 1: Building a Global Consensus Interactome
 
-This represents the standard workflow for generating a high-confidence,
+This represents the standard workflow for generating a consolidated
 whole-genome 3D chromatin interaction dataset via integration of
 biological replicates and removal of blacklist-associated artifacts.
 
@@ -289,11 +302,9 @@ typically supported by the spatial co-localization of H3K27ac (marking
 active chromatin) and RNA polymerase II (indicative of transcriptional
 machinery engagement). By utilizing the `"consensus"` mode to intersect
 independent loop datasets, `looplook` facilitates the identification of
-chromatin interactions supported by multi-source evidence. This rigorous
-intersection strategy effectively mitigates assay-specific technical
-biases and artifacts, yielding a refined set of topological hubs that
-couple physical chromatin architecture with active transcriptional
-regulation.
+chromatin interactions supported by multi-source evidence. This
+conservative intersection strategy may reduce assay-specific technical
+artifacts, yielding a refined set of loops supported by multiple assays.
 
 ``` r
 
@@ -335,10 +346,12 @@ implements a rigorous three-step hierarchical annotation pipeline:
     annotations due to low expression.
 3.  **Co-Dominant Expression Tiebreaker**: Among remaining candidates,
     retains all genes with expression \>= 10% of the highest-expressing
-    candidate in the group (i.e., within one order of magnitude). This
-    rule preserves functionally redundant candidates (e.g.,
-    bidirectional promoter pairs) rather than forcing a single-gene
-    assignment.
+    candidate in the group (i.e., within one order of magnitude;
+    ~3.3-fold in log2 space). This rule preserves functionally redundant
+    candidates (e.g., bidirectional promoter pairs, which are typically
+    co-expressed within 2–3 fold) rather than forcing a single-gene
+    assignment. The 10% threshold is a fixed convention for
+    co-expression and is not user-tunable.
 
 #### Parameter Strategy & Core Inputs
 
@@ -351,14 +364,15 @@ This multi-omic integration relies on several key parameters:
   spatial target assignment.
 - **`expr_matrix_file` & `sample_columns`**: Optional but strongly
   recommended. An expression matrix (e.g., RNA-seq) enables the
-  Expression Pre-filter and Tiebreaker logic, substantially reducing
-  false-positive gene assignments.
+  Expression Pre-filter and Tiebreaker logic, which can help reduce
+  false-positive gene assignments in dense genomic loci.
 - **`min_expr`**: Minimum expression value for a gene to be considered
-  “active” during anchor-level conflict resolution (default: `0`). Any
-  gene with expression \>= `min_expr` is eligible to compete for target
-  assignment. Increase to `1` or higher for stricter filtering. Note
-  this is distinct from Module 3’s **`threshold`** parameter, which
-  controls promoter reclassification during expression-aware refinement.
+  “active” during anchor-level conflict resolution (default: `0`). At
+  the default, any non-zero expression (TPM \> 0) qualifies; truly
+  undetected genes (TPM = 0) are excluded. When set to `1` or higher,
+  genes with expression `>= min_expr` are considered active. Note this
+  is distinct from Module 3’s **`threshold`** parameter, which controls
+  promoter reclassification during expression-aware refinement.
 - **`neighbor_hop`**: An advanced topological parameter for network
   traversal. Note: target gene assignment searches one additional graph
   step (`neighbor_hop + 1`) to capture genes at the opposite anchor of
@@ -368,6 +382,21 @@ This multi-omic integration relies on several key parameters:
     genes searched within 1-hop.
   - `1` *(Hub Mode)*: Loop topology includes secondary contacts; target
     genes searched within 2-hop.
+- **`anchor_gap`** (integer, default `0`): Maximum gap (bp) allowed
+  between a target peak and a loop anchor for them to be considered
+  overlapping. `0` (default) requires physical contact — appropriate
+  when peaks and loops are from the same experiment. Increase to
+  `200–500` for cross-experiment integration (e.g., ATAC-seq peaks with
+  HiChIP loops).
+- **`anchor_min_overlap`** (integer, default `1`): Minimum overlap in
+  base pairs required between a peak and an anchor. `1` (default) means
+  any touch is sufficient. Increase to `10–100` to filter out spurious
+  boundary overlaps. Applied after `anchor_gap` as a post-filter.
+- **`anchor_min_frac`** (numeric, 0–1, default `0`): Minimum overlap as
+  a fraction of the peak width. `0` accepts any fractional overlap. Set
+  to `0.1–0.5` when peaks are broad (e.g., H3K27ac domains) and a 1 bp
+  overlap would be artefactual. Not recommended for point features such
+  as SNPs.
 - **`tss_region`**: Defines the genomic window surrounding the
   transcription start site (TSS) used to define promoter regions
   (default: `c(-2000, 2000)` bp).
@@ -387,6 +416,17 @@ This multi-omic integration relies on several key parameters:
   assignments in annotation plots (default: `"Set2"`).
 - **`karyo_bin_size`**: Genomic bin width in base pairs for karyotype
   heatmaps (default: `1e5`).
+
+##### Quick Reference: Choosing Anchor Overlap Parameters
+
+| Experimental design | `anchor_gap` | `anchor_min_overlap` | `anchor_min_frac` |
+|----|:--:|:--:|:--:|
+| Same-experiment HiChIP / ChIA-PET (default) | `0` | `1` | `0` |
+| Cross-experiment (ATAC-seq peaks × HiChIP loops) | `200–500` | `10` | `0` |
+| Broad histone-mark peaks (H3K27ac, 2–5 kb) | `0` | `100` | `0.1` |
+| Super-enhancers / wide domains (20–80 kb) | `0` | `500` | `0.05` |
+| Point features (GWAS SNPs, eQTLs) | `0` | `1` | `0` |
+| High-confidence only (stringent) | `0` | `100` | `0.5` |
 
 ### Example A: Integrative Analysis (Loops + Genomic Features + RNA-seq)
 
@@ -410,6 +450,10 @@ if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
     species = "hg38",
     neighbor_hop = 0, # Focus on direct physical contacts
     hub_percentile = 0.95, # Top 5% nodes defined as hubs
+    # Peak-anchor overlap: same-experiment defaults (peaks and loops from same assay)
+    anchor_gap = 0L,            # require physical overlap
+    anchor_min_overlap = 1L,    # any 1 bp touch counts
+    anchor_min_frac = 0,        # any fraction of peak is accepted
     out_dir = out_dir,
     project_name = "Example_HiChIP_Integrative"
   )
@@ -553,9 +597,11 @@ contain the gene; refined links additionally carry `Mean_Expression` and
   anchors.
 - **`anchor1_gene` / `anchor2_gene`**: Gene symbols associated with each
   anchor after biotype-aware conflict resolution.
-- **`anchor1_type` / `anchor2_type`**: Regulatory element classification
-  of each anchor (`P` = promoter, `E` = enhancer-like, `G` = gene body;
-  `eP`/`eG` after refinement).
+- **`anchor1_type` / `anchor2_type`**: Positional classification of each
+  anchor relative to gene annotations (`P` = promoter, `E` =
+  distal/intergenic — positional, not functional enhancer, `G` = gene
+  body; `eP`/`eG` after refinement indicate expression-filtered silent
+  P/G anchors).
 - **`loop_ID`**: Unique loop identifier; `cluster_id`:
   connected-component membership.
 
@@ -581,7 +627,10 @@ regulatory hubs from complementary perspectives:
   `n_Linked_Promoters` may indicate possible participation in multi-gene
   transcription.
 - **`Dominant_Interaction`**: The predominant topological class
-  governing the gene (e.g., E-P vs. P-P).
+  governing the gene (e.g., E-P vs. P-P). When multiple loop types tie
+  for the highest frequency, the first in alphabetical order is selected
+  (e.g., E-P before P-P). This tie-breaking is deterministic but
+  arbitrary; inspect raw counts when ties are likely (small datasets).
 - **`Is_High_Connectivity_Gene`** *(and Distal variant)*: Binary flags
   defined by the `hub_percentile` to prioritize putative 3D regulatory
   hubs.
@@ -865,6 +914,16 @@ multi-omics analysis pipeline. It integrates 3D genomic interactions
 with transcriptomic data to systematically characterize the functional
 landscape and regulatory mechanisms underlying the identified target
 genes.
+
+The GO enrichment, motif scanning, and PPI network modules are designed
+as (hypothesis-generating) analyses. Statistical tests (Wilcoxon/t-test
+p-values, GSEA) are reported per-module without global multiple-testing
+correction across loop types or analysis branches. GSEA uses random
+down-sampling of target genes controlled by , introducing stochasticity.
+Motif enrichment uses GC-matched background sampling with Fisher’s exact
+test. All exploratory results should be validated with independent
+experimental approaches before drawing definitive biological
+conclusions.
 
 #### Parameter Strategy: A Highly Modular Pipeline
 
@@ -1177,6 +1236,11 @@ library(looplook)
 #   bedpe_file         Chromatin loops in BEDPE format
 # ── Required for annotation ───────────────────────────────────
 #   target_bed         Genomic features (ATAC-seq peaks, etc.)
+# ── Optional annotation tuning ─────────────────────────────────
+#   anchor_gap = 0L          Peak-anchor max gap (0 = must touch)
+#   anchor_min_overlap = 1L  Min overlap in bp (1 = any touch)
+#   anchor_min_frac = 0      Min overlap as fraction of peak width
+#   neighbor_hop = 0         k-hop ego-network expansion
 # ── Required for refinement + profiling ───────────────────────
 #   expr_matrix_file   Normalised expression matrix (TPM/FPKM)
 #   diff_file          Differential expression table (CSV/TSV)

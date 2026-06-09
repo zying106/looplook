@@ -12,7 +12,7 @@ run_distal_motif_analysis(
   pval_thresh,
   current_proj_name,
   top_n = 5,
-  jaspar_db = JASPAR2020::JASPAR2020,
+  jaspar_db = NULL,
   jaspar_collection = "CORE",
   motif_max_bg = 2000L,
   motif_gc_bins = 5L
@@ -24,7 +24,8 @@ run_distal_motif_analysis(
 - jaspar_db:
 
   A JASPAR database object (e.g., `JASPAR2020::JASPAR2020` or
-  `JASPAR2024::JASPAR2024`). Default: `JASPAR2020::JASPAR2020`.
+  `JASPAR2024::JASPAR2024`). Default: `NULL` (auto-resolves to
+  `JASPAR2020::JASPAR2020` if installed).
 
 - jaspar_collection:
 

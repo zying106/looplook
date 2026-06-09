@@ -8,7 +8,7 @@ object. Additional columns are ignored.
 ## Usage
 
 ``` r
-read_simple_bed(bed_file)
+read_simple_bed(bed_file, quiet = FALSE)
 ```
 
 ## Arguments
@@ -16,6 +16,11 @@ read_simple_bed(bed_file)
 - bed_file:
 
   Character. Path to a BED file (must be tab-delimited).
+
+- quiet:
+
+  Logical. If `TRUE`, suppress data-quality warnings (e.g., unusually
+  narrow/wide intervals). Errors are never suppressed. Default: `FALSE`.
 
 ## Value
 

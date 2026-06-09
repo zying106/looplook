@@ -1,6 +1,6 @@
-# Generate Expression Heatmap and Connectivity Raincloud Plots
+# Generate Expression Heatmap and Connectivity Plots
 
-Generate Expression Heatmap and Connectivity Raincloud Plots
+Generate Expression Heatmap and Connectivity Plots
 
 ## Usage
 
@@ -22,4 +22,5 @@ run_heatmap_and_connectivity(
 
 ## Value
 
-A named list of plot objects (Heatmap, Raincloud, Scatter).
+A named list of plot objects (Heatmap, Scatter, Raincloud_LFC,
+Raincloud_Expr).

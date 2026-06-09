@@ -111,7 +111,7 @@ GRanges object. Additional columns are ignored."><meta property="og:image" conte
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">read_simple_bed</span><span class="op">(</span><span class="va">bed_file</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">read_simple_bed</span><span class="op">(</span><span class="va">bed_file</span>, quiet <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -120,6 +120,12 @@ GRanges object. Additional columns are ignored."><meta property="og:image" conte
 
 <dl><dt id="arg-bed-file">bed_file<a class="anchor" aria-label="anchor" href="#arg-bed-file"></a></dt>
 <dd><p>Character. Path to a BED file (must be tab-delimited).</p></dd>
+
+
+<dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, suppress data-quality warnings
+(e.g., unusually narrow/wide intervals).
+Errors are never suppressed. Default: <code>FALSE</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -37,7 +37,7 @@ refine_loop_anchors_by_expression(
 
 - expr_matrix_file:
 
-  Path to a normalised expression matrix (TPM/FPKM, genes × samples).
+  Path to a normalised expression matrix (TPM/FPKM, genes x samples).
   Required for refinement. Default: `NULL`.
 
 - sample_columns:
@@ -86,7 +86,7 @@ refine_loop_anchors_by_expression(
 
 - hub_percentile:
 
-  Numeric (0–1). Node-degree quantile for hub detection. Default:
+  Numeric (0-1). Node-degree quantile for hub detection. Default:
   `0.95`.
 
 - write_output:
@@ -104,7 +104,7 @@ refine_loop_anchors_by_expression(
 
 An invisible named list:
 
-- `loop_annotation` — Full refined 3D network with updated `loop_type`
+- `loop_annotation` – Full refined 3D network with updated `loop_type`
   (e.g., eP-P) and two target gene columns:
 
   - `Active_Target_Genes`: Expression-filtered active-only targets (no
@@ -121,17 +121,17 @@ An invisible named list:
   preserved; filter on `Retained_In_Functional_Network` for the
   high-confidence active subset.
 
-- `anchor_loci_annotation` — Filtered non-redundant anchor-locus
+- `anchor_loci_annotation` – Filtered non-redundant anchor-locus
   annotations with expressed targets.
 
-- `anchor_annotation` — Backward-compatible alias of
+- `anchor_annotation` – Backward-compatible alias of
   `anchor_loci_annotation`.
 
-- `promoter_centric_stats` — Gene-level connectivity statistics.
+- `promoter_centric_stats` – Gene-level connectivity statistics.
 
-- `distal_element_stats` — Distal-element connectivity statistics.
+- `distal_element_stats` – Distal-element connectivity statistics.
 
-- `target_annotation` — Target features (peaks) with gene assignments.
+- `target_annotation` – Target features (peaks) with gene assignments.
   Key columns include:
 
   - `All_Loop_Connected_Genes`: All genes from loop-connected anchors
@@ -157,9 +157,9 @@ An invisible named list:
     `Regulated_promoter_genes_Filled`; indicates which `*_Filled` column
     supplied the fallback gene.
 
-- `target_gene_links` — Long-format peak-gene provenance table. Each row
+- `target_gene_links` – Long-format peak-gene provenance table. Each row
   records one peak-gene linkage with full provenance. **Read**
-  `evidence`, `anchor_role`, and `gene_role` **together as a group** —
+  `evidence`, `anchor_role`, and `gene_role` **together as a group** –
   they jointly describe how each gene was assigned to each peak; do not
   interpret any one column in isolation.
 
@@ -172,7 +172,7 @@ An invisible named list:
   - `source`: `"loop_anchor"` (3D-derived) or `"linear_annotation"`
     (nearest gene).
 
-  - `evidence`: Provenance label — `"local_promoter_overlap"` (peak
+  - `evidence`: Provenance label – `"local_promoter_overlap"` (peak
     overlaps anchor promoter), `"direct_opposite_promoter"` (opposite
     anchor is promoter), `"gene_body_context"` (gene body linkage),
     `"expanded_promoter_loop"` (via ego-network expansion),
@@ -195,9 +195,9 @@ An invisible named list:
   - (Refine only) `Passes_Expression_Filter`: Logical. `TRUE` if
     `Mean_Expression >= threshold`.
 
-- `plots` — Named list of ggplot objects (dumbbell, rose, karyotype).
+- `plots` – Named list of ggplot objects (dumbbell, rose, karyotype).
 
-- `plot_list` — Backward-compatible alias of `plots`.
+- `plot_list` – Backward-compatible alias of `plots`.
 
 If `write_output = TRUE`, also writes `_Refined_Results.xlsx` to
 `out_dir`. The workbook contains a *Functional Loop Annotation* sheet
@@ -272,18 +272,19 @@ raw_annotation$promoter_centric_stats <- head(raw_annotation$promoter_centric_st
 raw_annotation$distal_element_stats <- head(raw_annotation$distal_element_stats, 6)
 
 res_reclassified <- refine_loop_anchors_by_expression(
-  annotation_res = raw_annotation,
-  expr_matrix_file = expr_path,
-  sample_columns = "con1",
-  threshold = 1.0,
-  unit_type = "TPM",
-  species = "hg38",
-  out_dir = tempdir(),
-  project_name = "Example_Reclassified",
-  reclassify_by_expression = TRUE,
-  write_output = FALSE,
-  quiet = TRUE
+    annotation_res = raw_annotation,
+    expr_matrix_file = expr_path,
+    sample_columns = "con1",
+    threshold = 1.0,
+    unit_type = "TPM",
+    species = "hg38",
+    out_dir = tempdir(),
+    project_name = "Example_Reclassified",
+    reclassify_by_expression = TRUE,
+    write_output = FALSE,
+    quiet = TRUE
 )
+#> Warning: 100% of P/G anchors were reclassified to eP/eG. eP/eG labels indicate expression-aware enhancer-like states. Validate with orthogonal chromatin data (ATAC-seq, H3K27ac) before interpreting eP/eG anchors as functional enhancers.
 print(table(res_reclassified$loop_annotation$loop_type))
 #> 
 #>   E-E  E-eP  G-eP  P-eG eP-eP 

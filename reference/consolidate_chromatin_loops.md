@@ -19,18 +19,22 @@ The function supports three modes:
   cluster spatially proximal anchors across samples. Only retains
   clusters detected in \>= min_consensus biological replicates.
 
-- `"intersect"`: Enforces strict reference-based filtering, retaining
-  loops that show full genomic overlap with the reference file (File 1).
+- `"intersect"`: Reference-based filtering. Retains loops in File 1
+  whose anchors overlap with loops in every other file within the
+  specified `gap` tolerance. Coordinates and scores are inherited from
+  File 1 without merging.
 
 - `"union"`: Retains all chromatin interactions across the entire
   cohort, ideal for exploratory pan-tissue analyses.
 
 **Connected-component chaining**: Graph-based clustering may
-transitively chain loci (A–B and B–C merge, pulling A and C into the
-same cluster even if they are far apart). Inspect `n_members` in the
-output and reduce `gap` if clusters appear inflated.
+transitively chain loci (A-B and B-C merge, pulling A and C into the
+same cluster even if they are far apart). By default, a warning is
+emitted when any cluster span exceeds the chaining threshold
+(`max(3xgap, 5xmedian_anchor_width)`). Use `chaining_policy` to control
+this behavior (`"warn"`, `"none"`, `"drop"`, or `"error"`).
 
-It also supports a **two-stage filtering strategy** to maximize
+It also supports a **two-stage filtering strategy** to improve
 signal-to-noise ratio:
 
 - **Pre-filtering** (`min_raw_score`): Removes low-confidence noise
@@ -55,6 +59,7 @@ consolidate_chromatin_loops(
   score_col = NULL,
   min_raw_score = NULL,
   min_score = NULL,
+  chaining_policy = c("warn", "none", "drop", "error"),
   blacklist_species = NULL,
   region_of_interest = NULL,
   roi_mode = c("any", "both"),
@@ -93,7 +98,7 @@ consolidate_chromatin_loops(
   effective when `mode = "consensus"`). If `NULL` (default), the
   threshold is automatically calculated:
 
-  - For 2–3 replicates: Requires all (100\\
+  - For 2-3 replicates: Requires all (100\\
 
   - For \\N \ge 4\\: Requires \\\lfloor 0.75N \rfloor + 1\\ (e.g., 3 for
     N=4, 4 for N=5, 7 for N=8).
@@ -130,6 +135,15 @@ consolidate_chromatin_loops(
     their original score.
 
   - Default: `NULL` (no post-filtering).
+
+- chaining_policy:
+
+  Character. Controls behaviour when connected-component chaining
+  produces clusters with span exceeding the chaining threshold
+  (`max(3xgap, 5xmedian_anchor_width)`). `"warn"` (default): emit a
+  warning and retain all clusters. `"none"`: silently accept all
+  clusters. `"drop"`: remove clusters exceeding the threshold.
+  `"error"`: stop with an error.
 
 - blacklist_species:
 
@@ -184,6 +198,10 @@ object with metadata columns:
 
   Number of input files that support this entry.
 
+- `cluster_id`:
+
+  Connected-component cluster identifier.
+
 When `write_output = TRUE` and `out_file` is provided, an extended BEDPE
 file is written with the additional columns `n_members` and `n_reps`
 appended after the standard BEDPE fields.
@@ -199,10 +217,10 @@ f2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
 # Example A: Intersect Mode
 # Only keeps loops present in f1 that are also supported by f2
 res_intersect <- consolidate_chromatin_loops(
-  files = c(f1, f2),
-  mode = "intersect",
-  gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+    files = c(f1, f2),
+    mode = "intersect",
+    gap = 1000,
+    out_file = tempfile(fileext = ".bedpe")
 )
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops
@@ -210,39 +228,78 @@ res_intersect <- consolidate_chromatin_loops(
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmplvYgXV/file9cf4a2aec3d.bedpe
+#> Finished! Saved to /tmp/RtmpIMxOzr/file9d85dac4220.bedpe
 #> Finished! Final loops: 12
 
 # Example B: Consensus Mode (formerly Reproducible)
 # Finds consensus loops supported by both replicates (default for N=2)
 res_consensus <- consolidate_chromatin_loops(
-  files = c(f1, f2),
-  mode = "consensus",
-  gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+    files = c(f1, f2),
+    mode = "consensus",
+    gap = 1000,
+    out_file = tempfile(fileext = ".bedpe")
 )
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
+#> --- Gap Diagnosis ---
+#>   Anchor width: median = 4,859 bp  (IQR: 3,433.25 - 7,146.25 bp)
+#>   Adjacent-anchor gap: median = 12,989 bp  (35% within current gap = 1,000 bp)
+#>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)
+#>   Gap appears appropriate for the anchor width distribution.
+#> --- End Gap Diagnosis ---
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/RtmplvYgXV/file9cf47c089d7c.bedpe
+#> --- Post-Clustering Diagnosis ---
+#>   Clusters formed: 12  (from 24 loops surviving consensus)
+#>   Members per cluster: median = 2, IQR = 2-2, max = 2
+#>   Consensus retention: 24 / 600 input loops (4.0%)
+#>   [i]  Low retention -- many loops failed consensus. Gap may be too small for reproducible calls across replicates.
+#>   Cluster span: median = 6,260  |  max = 26,481  |  threshold = 5xmed_width(4,859) = 24,295 bp
+#>   Largest cluster spans:
+#>     #1: max_span = 26,481 bp, n_members = 2, n_reps = 2 [!]
+#>     #3: max_span = 22,248 bp, n_members = 2, n_reps = 2
+#>     #4: max_span = 11,840 bp, n_members = 2, n_reps = 2
+#>   [!]  Chaining: 1/12 (8%) above threshold -- MODERATE. Inspect flagged clusters above.
+#> --- End Post-Clustering Diagnosis ---
+#> Warning: 1 cluster(s) have max_span > chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.
+#> Finished! Saved to /tmp/RtmpIMxOzr/file9d8516b40556.bedpe
 #> Finished! Final loops: 12
 
 # Example C: Union Mode
 # Merges all loops into a single map
 res_union <- consolidate_chromatin_loops(
-  files = c(f1, f2),
-  mode = "union",
-  gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+    files = c(f1, f2),
+    mode = "union",
+    gap = 1000,
+    out_file = tempfile(fileext = ".bedpe")
 )
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops
 #>     File 2: 300 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
+#> --- Gap Diagnosis ---
+#>   Anchor width: median = 4,859 bp  (IQR: 3,433.25 - 7,146.25 bp)
+#>   Adjacent-anchor gap: median = 12,989 bp  (35% within current gap = 1,000 bp)
+#>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)
+#>   Gap appears appropriate for the anchor width distribution.
+#> --- End Gap Diagnosis ---
 #> >>> Union mode: Keeping all clusters
-#> Finished! Saved to /tmp/RtmplvYgXV/file9cf43cc0270c.bedpe
+#> --- Post-Clustering Diagnosis ---
+#>   Clusters formed: 586  (from 600 loops surviving consensus)
+#>   Members per cluster: median = 1, IQR = 1-1, max = 2
+#>   Consensus retention: 600 / 600 input loops (100.0%)
+#>   Cluster span: median = 6,739  |  max = 27,921  |  threshold = 5xmed_width(4,859) = 24,295 bp
+#>   Largest cluster spans:
+#>     #397: max_span = 27,921 bp, n_members = 1, n_reps = 1 [!]
+#>     #463: max_span = 27,921 bp, n_members = 1, n_reps = 1 [!]
+#>     #427: max_span = 26,620 bp, n_members = 1, n_reps = 1 [!]
+#>     #24: max_span = 26,481 bp, n_members = 2, n_reps = 2 [!]
+#>     #29: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]
+#>   Chaining: 15/586 (3%) above threshold -- minimal, acceptable.
+#> --- End Post-Clustering Diagnosis ---
+#> Warning: 15 cluster(s) have max_span > chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.
+#> Finished! Saved to /tmp/RtmpIMxOzr/file9d859d4e2ce.bedpe
 #> Finished! Final loops: 586
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -250,19 +307,38 @@ res_union <- consolidate_chromatin_loops(
 # 2. Merge: Find loops present in both replicates.
 # 3. Post-filter: Keep only strong consensus loops (score > 5).
 res_clean <- consolidate_chromatin_loops(
-  files = c(f1, f2),
-  mode = "consensus",
-  min_raw_score = 2, # Pre-filter (remove noise)
-  min_score = 5, # Post-filter (keep strong loops)
-  gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+    files = c(f1, f2),
+    mode = "consensus",
+    min_raw_score = 2, # Pre-filter (remove noise)
+    min_score = 5, # Post-filter (keep strong loops)
+    gap = 1000,
+    out_file = tempfile(fileext = ".bedpe")
 )
 #> >>> Reading BEDPE files
 #>     File 1: 115 loops
 #>     File 2: 100 loops
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
+#> --- Gap Diagnosis ---
+#>   Anchor width: median = 5,403 bp  (IQR: 3,921.5 - 8,977 bp)
+#>   Adjacent-anchor gap: median = 38,938 bp  (25% within current gap = 1,000 bp)
+#>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)
+#>   Gap appears appropriate for the anchor width distribution.
+#>   [i]  Wide loop anchors -- typical of Hi-C bins, Capture Hi-C baits, or super-enhancer-anchored loops.
+#> --- End Gap Diagnosis ---
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
-#> Finished! Saved to /tmp/RtmplvYgXV/file9cf44760831a.bedpe
+#> --- Post-Clustering Diagnosis ---
+#>   Clusters formed: 7  (from 14 loops surviving consensus)
+#>   Members per cluster: median = 2, IQR = 2-2, max = 2
+#>   Consensus retention: 14 / 215 input loops (6.5%)
+#>   [i]  Low retention -- many loops failed consensus. Gap may be too small for reproducible calls across replicates.
+#>   Cluster span: median = 5,672  |  max = 22,248  |  threshold = 5xmed_width(5,403) = 27,015 bp
+#>   Largest cluster spans:
+#>     #2: max_span = 22,248 bp, n_members = 2, n_reps = 2
+#>     #3: max_span = 11,840 bp, n_members = 2, n_reps = 2
+#>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2
+#>   Chaining: 0/7 above threshold -- PASS.
+#> --- End Post-Clustering Diagnosis ---
+#> Finished! Saved to /tmp/RtmpIMxOzr/file9d854d6dc4eb.bedpe
 #> Finished! Final loops: 4
 
 # Inspect results

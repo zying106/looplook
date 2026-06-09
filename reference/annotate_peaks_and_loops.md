@@ -1,16 +1,19 @@
 # Spatial mapping of 1D genomic features to 3D chromatin interaction targets
 
-A dual-purpose analytical framework designed to integrate 1D genomic
-features with 3D chromatin architecture.
+A function for loop annotation and target mapping, designed to integrate
+1D genomic features with 3D chromatin architecture.
 
 1.  **Loop Annotation:** Classifies 3D spatial interactions (e.g.,
-    Enhancer-Promoter, Promoter-Promoter) using a defined structural
-    hierarchy.
+    distal-to-promoter, promoter-to-promoter) using positional anchor
+    labels relative to gene annotations. **Important:** anchor type
+    `"E"` denotes a *positional* distal/intergenic classification — it
+    does **not** imply functional enhancer activity. Orthogonal
+    chromatin data are required for functional interpretation.
 
 2.  **Feature-to-Target Mapping:** Links 1D genomic features (e.g., GWAS
     risk SNPs, ATAC-seq peaks, ChIP-seq binding sites) to putative
-    target genes via 3D chromatin contacts, providing a spatial
-    complement to linear proximity-based assignments.
+    target genes via 3D chromatin contacts, providing a loop-based
+    alternative to linear proximity-based assignments.
 
 ## Usage
 
@@ -32,6 +35,9 @@ annotate_peaks_and_loops(
   hub_percentile = 0.95,
   min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
+  anchor_gap = 0L,
+  anchor_min_overlap = 1L,
+  anchor_min_frac = 0,
   write_output = TRUE,
   quiet = FALSE
 )
@@ -42,7 +48,8 @@ annotate_peaks_and_loops(
 - bedpe_file:
 
   Character. Path to a BEDPE file (at least 6 columns: chr1, start1,
-  end1, chr2, start2, end2).
+  end1, chr2, start2, end2). Additional columns beyond 6 are retained in
+  the output; anchor swapping only affects columns 1-6.
 
 - target_bed:
 
@@ -78,7 +85,7 @@ annotate_peaks_and_loops(
 
 - expr_matrix_file:
 
-  Optional path to a normalised expression matrix (TPM/FPKM, genes ×
+  Optional path to a normalised expression matrix (TPM/FPKM, genes x
   samples). Enables expression-aware conflict resolution. Default:
   `NULL`.
 
@@ -104,20 +111,26 @@ annotate_peaks_and_loops(
 
   Integer. k-hop ego-network expansion order via
   [`igraph::ego()`](https://r.igraph.org/reference/ego.html). `0`
-  restricts to direct contacts. Default: `0`.
+  restricts to direct contacts. Default: `0`. Target gene assignment
+  searches one additional hop (`neighbor_hop + 1`) to capture genes at
+  the opposite anchor of directly connected loops.
 
 - hub_percentile:
 
-  Numeric (0–1). Node-degree quantile for hub detection. Default:
-  `0.95`.
+  Numeric (0-1). Loop-count quantile for hub detection. Default: `0.95`.
+  Genes or distal elements with connectivity at or above this quantile
+  are flagged as hubs. A minimum floor of 3 (promoter-centric) or 2
+  (distal) is applied to avoid false hubs in small datasets.
 
 - min_expr:
 
   Numeric. Minimum expression value for a gene to be considered active
   during anchor-level conflict resolution. Used only when
-  `expr_matrix_file` is provided. Default: `0` (any detectable
-  expression qualifies). Increase to `1` or higher to require stronger
-  evidence. See
+  `expr_matrix_file` is provided. Default: `0` (any non-zero expression,
+  i.e. TPM \> 0). Increase to `1` or higher to require stronger
+  evidence. Note: when `min_expr = 0`, the code uses a strict
+  greater-than comparison (`> 0`) to exclude truly undetected genes;
+  when `min_expr >= 1`, it uses `>= min_expr`. See
   [`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
   for the separate `threshold` parameter that controls promoter
   reclassification.
@@ -129,6 +142,34 @@ annotate_peaks_and_loops(
   apply expression filtering within that tier. `"expression_first"`:
   apply expression filtering across all biotypes first, then pick the
   best biotype among expressed candidates.
+
+- anchor_gap:
+
+  Integer. Maximum gap (bp) allowed between a target peak and a loop
+  anchor for them to be considered overlapping. `0` (default) requires
+  physical contact – appropriate when peaks and loops are called from
+  the same experiment (e.g. HiChIP). Increase to 100-500 for
+  cross-experiment integration (e.g. ATAC-seq peaks with HiChIP loops)
+  where boundaries may differ slightly. See Details for a table of
+  recommended settings.
+
+- anchor_min_overlap:
+
+  Integer. Minimum overlap in base pairs required between a peak and an
+  anchor. Default: `1L` (any 1 bp touch is sufficient). Increase to
+  filter out spurious boundary-level overlaps (e.g. 10-100 bp for noisy
+  data). Applied after `anchor_gap` as a post-filter on actual physical
+  overlap. See Details for recommended settings.
+
+- anchor_min_frac:
+
+  Numeric (0-1). Minimum overlap as a fraction of the *peak* width.
+  Default: `0` (any fractional overlap accepted). Set to `0.1-0.5` to
+  require that a meaningful portion of the peak overlaps the anchor.
+  Useful when peaks are broad (e.g. H3K27ac domains, 2-5 kb) and a 1 bp
+  overlap would be artefactual. Not recommended for point features
+  (SNPs, eQTLs). Applied after the preceding two filters. See Details
+  for recommended settings.
 
 - write_output:
 
@@ -144,7 +185,7 @@ annotate_peaks_and_loops(
 
 An invisible named list:
 
-- `target_annotation` — Target features (peaks) with gene assignments.
+- `target_annotation` – Target features (peaks) with gene assignments.
   Key columns include:
 
   - `All_Loop_Connected_Genes`: All genes from loop-connected anchors
@@ -170,9 +211,9 @@ An invisible named list:
     `Regulated_promoter_genes_Filled`; indicates which `*_Filled` column
     supplied the fallback gene.
 
-- `target_gene_links` — Long-format peak-gene provenance table. Each row
+- `target_gene_links` – Long-format peak-gene provenance table. Each row
   records one peak-gene linkage with full provenance. **Read**
-  `evidence`, `anchor_role`, and `gene_role` **together as a group** —
+  `evidence`, `anchor_role`, and `gene_role` **together as a group** –
   they jointly describe how each gene was assigned to each peak; do not
   interpret any one column in isolation.
 
@@ -185,7 +226,7 @@ An invisible named list:
   - `source`: `"loop_anchor"` (3D-derived) or `"linear_annotation"`
     (nearest gene).
 
-  - `evidence`: Provenance label — `"local_promoter_overlap"` (peak
+  - `evidence`: Provenance label – `"local_promoter_overlap"` (peak
     overlaps anchor promoter), `"direct_opposite_promoter"` (opposite
     anchor is promoter), `"gene_body_context"` (gene body linkage),
     `"expanded_promoter_loop"` (via ego-network expansion),
@@ -202,23 +243,29 @@ An invisible named list:
     membership flags indicating which target annotation column(s) this
     gene appears in.
 
-- `loop_annotation` — Annotated 3D interactome with
+- `loop_annotation` – Annotated 3D interactome with
   `Putative_Target_Genes`.
 
-- `anchor_loci_annotation` — Non-redundant anchor-locus genomic
+- `anchor_loci_annotation` – Non-redundant anchor-locus genomic
   classifications after within-cluster interval reduction.
 
-- `anchor_annotation` — Backward-compatible alias of
+- `anchor_annotation` – Backward-compatible alias of
   `anchor_loci_annotation`.
 
-- `promoter_centric_stats` — Gene-level connectivity statistics.
+- `promoter_centric_stats` – Gene-level connectivity statistics.
 
-- `distal_element_stats` — Distal-element connectivity statistics.
+- `distal_element_stats` – Distal-element connectivity statistics.
 
-- `plots` — Named list of ggplot objects (donut, karyotype, rose,
-  flower).
+- `plots` – Named list of ggplot/grob objects: `Basic_Donut`,
+  `Basic_Circular`, `Basic_Flower`, `Karyo_LoopGenes`, `Karyo_Anchors`,
+  `Anchor_Genomic_Distribution`, and (when `target_bed` is provided)
+  `Karyo_TargetGenes`, `Target_Rose`, `Target_Genomic_Distribution`,
+  `Target_Loop_Genomic_Distribution`.
 
-- `plot_list` — Backward-compatible alias of `plots`.
+- `plot_list` – Backward-compatible alias of `plots`.
+
+- `metadata` – Internal metadata list (parameters, versions). Not
+  intended for direct use.
 
 If `write_output = TRUE`, also writes a multi-sheet Excel workbook to
 `out_dir`.
@@ -264,30 +311,58 @@ bidirectional promoters), the function executes a 3-step resolution:
 - **Hub Detection:** Utilizes a node-degree quantile threshold
   (`hub_percentile`) to identify highly connected regulatory elements.
 
+**Peak-Anchor Overlap Control** When `target_bed` is provided, three
+parameters control how target peaks are matched to loop anchors. They
+act as a cascade of increasingly stringent filters:
+
+1.  `anchor_gap` – expands the search radius around each anchor.
+
+2.  `anchor_min_overlap` – requires a minimum physical overlap in bp.
+
+3.  `anchor_min_frac` – requires the overlap to cover a minimum fraction
+    of the peak.
+
+The table below summarises recommended settings for common experimental
+designs.
+
+|  |  |  |  |
+|----|----|----|----|
+| **Experimental design** | `anchor_gap` | `anchor_min_overlap` | `anchor_min_frac` |
+| Same-experiment HiChIP / ChIA-PET (default) | `0` | `1` | `0` |
+| Cross-experiment (e.g. ATAC-seq peaks x HiChIP loops) | `200-500` | `10` | `0` |
+| Broad histone-mark peaks (H3K27ac, 2-5 kb) | `0` | `100` | `0.1` |
+| Super-enhancers / wide domains (20-80 kb) | `0` | `500` | `0.05` |
+| Point features (GWAS SNPs, eQTLs, 1 bp) | `0` | `1` | `0` |
+| Stringent (high-confidence only) | `0` | `100` | `0.5` |
+
+When `quiet = FALSE` (default), the function prints a diagnostic line
+reporting how many peaks overlapped loop anchors after filtering,
+helping you tune these thresholds for your data.
+
 ## Examples
 
 ``` r
 # Minimal runnable example for package checks
 if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-  txdb_example <- AnnotationDbi::loadDb(
-    system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")
-  )
-  bedpe_path <- tempfile(fileext = ".bedpe")
-  writeLines(
-    "chr6\t10412000\t10412600\tchr6\t10415000\t10415600",
-    bedpe_path
-  )
+    txdb_example <- AnnotationDbi::loadDb(
+        system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")
+    )
+    bedpe_path <- tempfile(fileext = ".bedpe")
+    writeLines(
+        "chr6\t10412000\t10412600\tchr6\t10415000\t10415600",
+        bedpe_path
+    )
 
-  res <- annotate_peaks_and_loops(
-    bedpe_file = bedpe_path,
-    txdb = txdb_example,
-    org_db = "org.Hs.eg.db",
-    species = "hg19",
-    out_dir = tempdir(),
-    project_name = "Quick_Example",
-    write_output = FALSE,
-    quiet = TRUE
-  )
-  head(res$loop_annotation, 1)
+    res <- annotate_peaks_and_loops(
+        bedpe_file = bedpe_path,
+        txdb = txdb_example,
+        org_db = "org.Hs.eg.db",
+        species = "hg19",
+        out_dir = tempdir(),
+        project_name = "Quick_Example",
+        write_output = FALSE,
+        quiet = TRUE
+    )
+    head(res$loop_annotation, 1)
 }
 ```

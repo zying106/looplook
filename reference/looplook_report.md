@@ -47,6 +47,7 @@ looplook_report(
   precomputed_res = NULL,
   output_file = NULL,
   quiet = FALSE,
+  seed = NULL,
   ...
 )
 ```
@@ -101,7 +102,8 @@ looplook_report(
 
 - neighbor_hop:
 
-  Integer. Neighbourhood extension for fragment overlap. Default `0`.
+  Integer. k-hop ego-network expansion order for loop connectivity
+  analysis. Default `0`.
 
 - hub_percentile:
 
@@ -215,6 +217,12 @@ looplook_report(
 
   Logical. Suppress rendering output. Default `FALSE`.
 
+- seed:
+
+  Integer or NULL. Passed to
+  [`profile_target_genes`](https://zying106.github.io/looplook/reference/profile_target_genes.md)
+  for reproducible GSEA and motif sampling. Default `NULL`.
+
 - ...:
 
   Additional arguments passed to
@@ -235,36 +243,36 @@ Call [`set.seed()`](https://rdrr.io/r/base/Random.html) before
 
 ``` r
 if (requireNamespace("rmarkdown", quietly = TRUE) &&
-  requireNamespace("knitr", quietly = TRUE)) {
-  temp_env <- new.env()
-  load(system.file("extdata", "analysis_results.RData", package = "looplook"), envir = temp_env)
-  precomputed_res <- temp_env[[ls(temp_env)[1]]]
-  precomputed_res$loop_annotation <- head(precomputed_res$loop_annotation, 6)
-  precomputed_res$target_annotation <- head(precomputed_res$target_annotation, 3)
-  precomputed_res$promoter_centric_stats <- head(precomputed_res$promoter_centric_stats, 6)
-  precomputed_res$distal_element_stats <- head(precomputed_res$distal_element_stats, 6)
+    requireNamespace("knitr", quietly = TRUE)) {
+    temp_env <- new.env()
+    load(system.file("extdata", "analysis_results.RData", package = "looplook"), envir = temp_env)
+    precomputed_res <- temp_env[[ls(temp_env)[1]]]
+    precomputed_res$loop_annotation <- head(precomputed_res$loop_annotation, 6)
+    precomputed_res$target_annotation <- head(precomputed_res$target_annotation, 3)
+    precomputed_res$promoter_centric_stats <- head(precomputed_res$promoter_centric_stats, 6)
+    precomputed_res$distal_element_stats <- head(precomputed_res$distal_element_stats, 6)
 
-  report_path <- looplook_report(
-    precomputed_res = precomputed_res,
-    project_name = "Example",
-    out_dir = tempdir(),
-    output_file = "looplook-example-report.html",
-    quiet = TRUE,
-    run_go = FALSE,
-    run_ppi = FALSE,
-    run_motif = FALSE
-  )
-  file.exists(report_path)
+    report_path <- looplook_report(
+        precomputed_res = precomputed_res,
+        project_name = "Example",
+        out_dir = tempdir(),
+        output_file = "looplook-example-report.html",
+        quiet = TRUE,
+        run_go = FALSE,
+        run_ppi = FALSE,
+        run_motif = FALSE
+    )
+    file.exists(report_path)
 }
-#> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
-#> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
-#> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
-#> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
-#> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
 #> [1] TRUE
 ```

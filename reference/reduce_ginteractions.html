@@ -138,7 +138,7 @@ Each resulting cluster is represented by the <strong>union genomic range (min st
 <dd><p>Integer vector indicating cluster assignment for each input loop.</p></dd>
 
 
-</dl><p>Metadata columns include <code>cluster_id</code>, <code>n_members</code>, and averaged <code>score</code>.</p>
+</dl><p>Metadata columns include <code>cluster_id</code>, <code>n_members</code>, <code>n_reps</code>, and averaged <code>score</code>.</p>
     </div>
 
     <div class="section level2">
@@ -150,6 +150,25 @@ Each resulting cluster is represented by the <strong>union genomic range (min st
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># 2. Run clustering</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">reduce_ginteractions</span><span class="op">(</span><span class="va">gi_raw</span>, gap <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Gap Diagnosis ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Anchor width: median = 4,970.5 bp  (IQR: 3,544.75 - 7,232.5 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Adjacent-anchor gap: median = 30,538 bp  (24% within current gap = 1,000 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap appears appropriate for the anchor width distribution.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Gap Diagnosis ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Post-Clustering Diagnosis ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Clusters formed: 299  (from 300 loops surviving consensus)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Members per cluster: median = 1, IQR = 1-1, max = 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Consensus retention: 300 / 300 input loops (100.0%)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Cluster span: median = 6,781  |  max = 26,481  |  threshold = 5xmed_width(4,970.5) = 24,852 bp</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Largest cluster spans:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #24: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #29: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #128: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #192: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #231: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 10/299 (3%) above threshold -- minimal, acceptable.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># 3. Inspect results</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">gi</span><span class="op">)</span></span></span>

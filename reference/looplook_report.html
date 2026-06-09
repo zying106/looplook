@@ -153,6 +153,7 @@ interpretation-ready HTML document suitable for sharing with collaborators.</p>
 <span>  precomputed_res <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  output_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -206,7 +207,7 @@ interpretation-ready HTML document suitable for sharing with collaborators.</p>
 
 
 <dt id="arg-neighbor-hop">neighbor_hop<a class="anchor" aria-label="anchor" href="#arg-neighbor-hop"></a></dt>
-<dd><p>Integer. Neighbourhood extension for fragment overlap. Default <code>0</code>.</p></dd>
+<dd><p>Integer. k-hop ego-network expansion order for loop connectivity analysis. Default <code>0</code>.</p></dd>
 
 
 <dt id="arg-hub-percentile">hub_percentile<a class="anchor" aria-label="anchor" href="#arg-hub-percentile"></a></dt>
@@ -315,6 +316,11 @@ When provided, annotation is skipped and refinement starts from this object.</p>
 <dd><p>Logical. Suppress rendering output. Default <code>FALSE</code>.</p></dd>
 
 
+<dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
+<dd><p>Integer or NULL. Passed to <code><a href="profile_target_genes.html">profile_target_genes</a></code> for
+reproducible GSEA and motif sampling. Default <code>NULL</code>.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments passed to <code><a href="https://pkgs.rstudio.com/rmarkdown/reference/render.html" class="external-link">rmarkdown::render</a></code>.</p></dd>
 
@@ -334,37 +340,37 @@ results.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"rmarkdown"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"knitr"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span>  <span class="va">temp_env</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/load.html" class="external-link">load</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"analysis_results.RData"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>, envir <span class="op">=</span> <span class="va">temp_env</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">precomputed_res</span> <span class="op">&lt;-</span> <span class="va">temp_env</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="va">temp_env</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">]</span></span></span>
-<span class="r-in"><span>  <span class="va">precomputed_res</span><span class="op">$</span><span class="va">loop_annotation</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">precomputed_res</span><span class="op">$</span><span class="va">loop_annotation</span>, <span class="fl">6</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">precomputed_res</span><span class="op">$</span><span class="va">target_annotation</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">precomputed_res</span><span class="op">$</span><span class="va">target_annotation</span>, <span class="fl">3</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">precomputed_res</span><span class="op">$</span><span class="va">promoter_centric_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">precomputed_res</span><span class="op">$</span><span class="va">promoter_centric_stats</span>, <span class="fl">6</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="va">precomputed_res</span><span class="op">$</span><span class="va">distal_element_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">precomputed_res</span><span class="op">$</span><span class="va">distal_element_stats</span>, <span class="fl">6</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"knitr"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="va">temp_env</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/load.html" class="external-link">load</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"analysis_results.RData"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>, envir <span class="op">=</span> <span class="va">temp_env</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">precomputed_res</span> <span class="op">&lt;-</span> <span class="va">temp_env</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="va">temp_env</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">]</span></span></span>
+<span class="r-in"><span>    <span class="va">precomputed_res</span><span class="op">$</span><span class="va">loop_annotation</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">precomputed_res</span><span class="op">$</span><span class="va">loop_annotation</span>, <span class="fl">6</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">precomputed_res</span><span class="op">$</span><span class="va">target_annotation</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">precomputed_res</span><span class="op">$</span><span class="va">target_annotation</span>, <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">precomputed_res</span><span class="op">$</span><span class="va">promoter_centric_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">precomputed_res</span><span class="op">$</span><span class="va">promoter_centric_stats</span>, <span class="fl">6</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">precomputed_res</span><span class="op">$</span><span class="va">distal_element_stats</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">precomputed_res</span><span class="op">$</span><span class="va">distal_element_stats</span>, <span class="fl">6</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="va">report_path</span> <span class="op">&lt;-</span> <span class="fu">looplook_report</span><span class="op">(</span></span></span>
-<span class="r-in"><span>    precomputed_res <span class="op">=</span> <span class="va">precomputed_res</span>,</span></span>
-<span class="r-in"><span>    project_name <span class="op">=</span> <span class="st">"Example"</span>,</span></span>
-<span class="r-in"><span>    out_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    output_file <span class="op">=</span> <span class="st">"looplook-example-report.html"</span>,</span></span>
-<span class="r-in"><span>    quiet <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
-<span class="r-in"><span>    run_go <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>    run_ppi <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>    run_motif <span class="op">=</span> <span class="cn">FALSE</span></span></span>
-<span class="r-in"><span>  <span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">report_path</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">report_path</span> <span class="op">&lt;-</span> <span class="fu">looplook_report</span><span class="op">(</span></span></span>
+<span class="r-in"><span>        precomputed_res <span class="op">=</span> <span class="va">precomputed_res</span>,</span></span>
+<span class="r-in"><span>        project_name <span class="op">=</span> <span class="st">"Example"</span>,</span></span>
+<span class="r-in"><span>        out_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>        output_file <span class="op">=</span> <span class="st">"looplook-example-report.html"</span>,</span></span>
+<span class="r-in"><span>        quiet <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
+<span class="r-in"><span>        run_go <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>        run_ppi <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>        run_motif <span class="op">=</span> <span class="cn">FALSE</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">report_path</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmplvYgXV/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpIMxOzr/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
 </code></pre></div>
     </div>

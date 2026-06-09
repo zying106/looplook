@@ -39,8 +39,8 @@ A list with two elements:
 
   Integer vector indicating cluster assignment for each input loop.
 
-Metadata columns include `cluster_id`, `n_members`, and averaged
-`score`.
+Metadata columns include `cluster_id`, `n_members`, `n_reps`, and
+averaged `score`.
 
 ## Examples
 
@@ -52,6 +52,25 @@ gi_raw <- bedpe_to_gi(bedpe_path)
 
 # 2. Run clustering
 res <- reduce_ginteractions(gi_raw, gap = 1000)
+#> --- Gap Diagnosis ---
+#>   Anchor width: median = 4,970.5 bp  (IQR: 3,544.75 - 7,232.5 bp)
+#>   Adjacent-anchor gap: median = 30,538 bp  (24% within current gap = 1,000 bp)
+#>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)
+#>   Gap appears appropriate for the anchor width distribution.
+#> --- End Gap Diagnosis ---
+#> --- Post-Clustering Diagnosis ---
+#>   Clusters formed: 299  (from 300 loops surviving consensus)
+#>   Members per cluster: median = 1, IQR = 1-1, max = 2
+#>   Consensus retention: 300 / 300 input loops (100.0%)
+#>   Cluster span: median = 6,781  |  max = 26,481  |  threshold = 5xmed_width(4,970.5) = 24,852 bp
+#>   Largest cluster spans:
+#>     #24: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]
+#>     #29: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]
+#>     #128: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]
+#>     #192: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]
+#>     #231: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]
+#>   Chaining: 10/299 (3%) above threshold -- minimal, acceptable.
+#> --- End Post-Clustering Diagnosis ---
 
 # 3. Inspect results
 print(res$gi)

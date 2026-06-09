@@ -679,7 +679,24 @@ and ⌊0.75N⌋ + 1 for N ≥ 4.</li>
 <strong><code>gap</code></strong>: Defines the maximum allowable
 spatial distance (in base pairs) between loop anchors for them to be
 considered as part of the same physical cluster (default:
-<code>1000</code>).</li>
+<code>1000</code>). When <code>quiet = FALSE</code> (default), the
+function prints a pre-clustering gap diagnosis and a post-clustering
+cluster-span diagnosis, including data-driven gap recommendations and
+chaining risk assessment. If loop anchors are narrow (e.g., TF HiChIP,
+200–400 bp), the diagnosis may suggest reducing <code>gap</code> to
+avoid over-merging independent regulatory events.
+<ul>
+<li>
+<strong>How to choose <code>gap</code></strong>: As a rule of thumb,
+<code>gap</code> should be comparable to (not much larger than) the
+median loop anchor width in your data. For histone-mark HiChIP (H3K27ac,
+~1–3 kb anchors), <code>1000</code> is appropriate. For TF HiChIP or
+ChIA-PET (100–500 bp anchors), consider <code>100–200</code>. For Hi-C
+bins (5–50 kb), <code>1000</code> is conservative. The automatic
+diagnosis will guide you if the chosen <code>gap</code> is inappropriate
+for your data.</li>
+</ul>
+</li>
 <li>
 <strong><code>min_raw_score</code> vs. <code>min_score</code> (The
 Dual-Filter)</strong>:
@@ -687,7 +704,7 @@ Dual-Filter)</strong>:
 <li>
 <code>min_raw_score</code> acts as a pre-filter applied to
 individual BEDPE files before clustering (e.g., removing singleton noise
-where PET count &lt; 2) to substantially reduce computational memory
+where PET count &lt; 2) to help reduce computational memory
 overhead.</li>
 <li>
 <code>min_score</code> serves as a post-filter applied to the final
@@ -708,20 +725,20 @@ official ENCODE blacklist for specified species (e.g.,
 <strong><code>region_of_interest</code></strong>: Accepts an
 auxiliary BED file (e.g., a specific disease-associated locus or
 ChIP-seq peak set) to capture only loops with physical connectivity to
-the target genomic region.</li>
+the target genomic region of interest (ROI).</li>
 <li>
 <strong><code>roi_mode</code></strong>: Controls how strictly loops
 must overlap the ROI:
 <ul>
 <li>
-<code>"both"</code> <em>(Default)</em>: Both loop anchors must
-overlap the ROI. Suitable for TAD confinement, domain-internal
-interaction queries, or when filtering with a ChIP-seq peak set (e.g.,
-keep only loops where both anchors fall in H3K27ac-marked regions).</li>
+<code>"any"</code> <em>(Default)</em>: Either anchor may overlap the
+ROI. Suitable for promoter-centric queries (e.g., find all distal
+interactions involving a specific gene locus).</li>
 <li>
-<code>"any"</code>: Either anchor may overlap the ROI. Suitable for
-promoter-centric queries (e.g., find all distal interactions involving a
-specific gene locus).</li>
+<code>"both"</code>: Both loop anchors must overlap the ROI.
+Suitable for TAD confinement, domain-internal interaction queries, or
+when filtering with a ChIP-seq peak set (e.g., keep only loops where
+both anchors fall in H3K27ac-marked regions).</li>
 </ul>
 </li>
 <li>
@@ -749,10 +766,9 @@ filtering by replication evidence.</p>
 <div class="section level3">
 <h3 id="example-1-building-a-global-consensus-interactome">Example 1: Building a Global Consensus Interactome<a class="anchor" aria-label="anchor" href="#example-1-building-a-global-consensus-interactome"></a>
 </h3>
-<p>This represents the standard workflow for generating a
-high-confidence, whole-genome 3D chromatin interaction dataset via
-integration of biological replicates and removal of blacklist-associated
-artifacts.</p>
+<p>This represents the standard workflow for generating a consolidated
+whole-genome 3D chromatin interaction dataset via integration of
+biological replicates and removal of blacklist-associated artifacts.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Locate example BEDPE replicates</span></span>
 <span><span class="va">f1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_loops_1.bedpe"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
@@ -805,10 +821,9 @@ active chromatin) and RNA polymerase II (indicative of transcriptional
 machinery engagement). By utilizing the <code>"consensus"</code> mode to
 intersect independent loop datasets, <code>looplook</code> facilitates
 the identification of chromatin interactions supported by multi-source
-evidence. This rigorous intersection strategy effectively mitigates
-assay-specific technical biases and artifacts, yielding a refined set of
-topological hubs that couple physical chromatin architecture with active
-transcriptional regulation.</p>
+evidence. This conservative intersection strategy may reduce
+assay-specific technical artifacts, yielding a refined set of loops
+supported by multiple assays.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">loop_k27ac</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_loops_H3K27ac.bedpe"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span><span class="va">loop_pol2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_loops_pol2.bedpe"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
@@ -851,9 +866,11 @@ avoid losing correct annotations due to low expression.</li>
 <strong>Co-Dominant Expression Tiebreaker</strong>: Among remaining
 candidates, retains all genes with expression &gt;= 10% of the
 highest-expressing candidate in the group (i.e., within one order of
-magnitude). This rule preserves functionally redundant candidates (e.g.,
-bidirectional promoter pairs) rather than forcing a single-gene
-assignment.</li>
+magnitude; ~3.3-fold in log2 space). This rule preserves functionally
+redundant candidates (e.g., bidirectional promoter pairs, which are
+typically co-expressed within 2–3 fold) rather than forcing a
+single-gene assignment. The 10% threshold is a fixed convention for
+co-expression and is not user-tunable.</li>
 </ol>
 </div>
 <div class="section level4">
@@ -873,17 +890,18 @@ ChIP-seq peaks) awaiting spatial target assignment.</li>
 <strong><code>expr_matrix_file</code> &amp;
 <code>sample_columns</code></strong>: Optional but strongly recommended.
 An expression matrix (e.g., RNA-seq) enables the Expression Pre-filter
-and Tiebreaker logic, substantially reducing false-positive gene
-assignments.</li>
+and Tiebreaker logic, which can help reduce false-positive gene
+assignments in dense genomic loci.</li>
 <li>
 <strong><code>min_expr</code></strong>: Minimum expression value for
 a gene to be considered “active” during anchor-level conflict resolution
-(default: <code>0</code>). Any gene with expression &gt;=
-<code>min_expr</code> is eligible to compete for target assignment.
-Increase to <code>1</code> or higher for stricter filtering. Note this
-is distinct from Module 3’s <strong><code>threshold</code></strong>
-parameter, which controls promoter reclassification during
-expression-aware refinement.</li>
+(default: <code>0</code>). At the default, any non-zero expression (TPM
+&gt; 0) qualifies; truly undetected genes (TPM = 0) are excluded. When
+set to <code>1</code> or higher, genes with expression
+<code>&gt;= min_expr</code> are considered active. Note this is distinct
+from Module 3’s <strong><code>threshold</code></strong> parameter, which
+controls promoter reclassification during expression-aware
+refinement.</li>
 <li>
 <strong><code>neighbor_hop</code></strong>: An advanced topological
 parameter for network traversal. Note: target gene assignment searches
@@ -899,6 +917,27 @@ direct contacts; target genes searched within 1-hop.</li>
 contacts; target genes searched within 2-hop.</li>
 </ul>
 </li>
+<li>
+<strong><code>anchor_gap</code></strong> (integer, default
+<code>0</code>): Maximum gap (bp) allowed between a target peak and a
+loop anchor for them to be considered overlapping. <code>0</code>
+(default) requires physical contact — appropriate when peaks and loops
+are from the same experiment. Increase to <code>200–500</code> for
+cross-experiment integration (e.g., ATAC-seq peaks with HiChIP
+loops).</li>
+<li>
+<strong><code>anchor_min_overlap</code></strong> (integer, default
+<code>1</code>): Minimum overlap in base pairs required between a peak
+and an anchor. <code>1</code> (default) means any touch is sufficient.
+Increase to <code>10–100</code> to filter out spurious boundary
+overlaps. Applied after <code>anchor_gap</code> as a post-filter.</li>
+<li>
+<strong><code>anchor_min_frac</code></strong> (numeric, 0–1, default
+<code>0</code>): Minimum overlap as a fraction of the peak width.
+<code>0</code> accepts any fractional overlap. Set to
+<code>0.1–0.5</code> when peaks are broad (e.g., H3K27ac domains) and a
+1 bp overlap would be artefactual. Not recommended for point features
+such as SNPs.</li>
 <li>
 <strong><code>tss_region</code></strong>: Defines the genomic window
 surrounding the transcription start site (TSS) used to define promoter
@@ -928,6 +967,62 @@ for loop-type colour assignments in annotation plots (default:
 <strong><code>karyo_bin_size</code></strong>: Genomic bin width in
 base pairs for karyotype heatmaps (default: <code>1e5</code>).</li>
 </ul>
+<div class="section level5">
+<h5 id="quick-reference-choosing-anchor-overlap-parameters">Quick Reference: Choosing Anchor Overlap Parameters<a class="anchor" aria-label="anchor" href="#quick-reference-choosing-anchor-overlap-parameters"></a>
+</h5>
+<table class="table">
+<colgroup>
+<col width="58%">
+<col width="13%">
+<col width="13%">
+<col width="13%">
+</colgroup>
+<thead><tr class="header">
+<th>Experimental design</th>
+<th align="center"><code>anchor_gap</code></th>
+<th align="center"><code>anchor_min_overlap</code></th>
+<th align="center"><code>anchor_min_frac</code></th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Same-experiment HiChIP / ChIA-PET (default)</td>
+<td align="center"><code>0</code></td>
+<td align="center"><code>1</code></td>
+<td align="center"><code>0</code></td>
+</tr>
+<tr class="even">
+<td>Cross-experiment (ATAC-seq peaks × HiChIP loops)</td>
+<td align="center"><code>200–500</code></td>
+<td align="center"><code>10</code></td>
+<td align="center"><code>0</code></td>
+</tr>
+<tr class="odd">
+<td>Broad histone-mark peaks (H3K27ac, 2–5 kb)</td>
+<td align="center"><code>0</code></td>
+<td align="center"><code>100</code></td>
+<td align="center"><code>0.1</code></td>
+</tr>
+<tr class="even">
+<td>Super-enhancers / wide domains (20–80 kb)</td>
+<td align="center"><code>0</code></td>
+<td align="center"><code>500</code></td>
+<td align="center"><code>0.05</code></td>
+</tr>
+<tr class="odd">
+<td>Point features (GWAS SNPs, eQTLs)</td>
+<td align="center"><code>0</code></td>
+<td align="center"><code>1</code></td>
+<td align="center"><code>0</code></td>
+</tr>
+<tr class="even">
+<td>High-confidence only (stringent)</td>
+<td align="center"><code>0</code></td>
+<td align="center"><code>100</code></td>
+<td align="center"><code>0.5</code></td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 </div>
 <div class="section level3">
@@ -952,6 +1047,10 @@ regions by weighing gene expression.</p>
 <span>    species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
 <span>    neighbor_hop <span class="op">=</span> <span class="fl">0</span>, <span class="co"># Focus on direct physical contacts</span></span>
 <span>    hub_percentile <span class="op">=</span> <span class="fl">0.95</span>, <span class="co"># Top 5% nodes defined as hubs</span></span>
+<span>    <span class="co"># Peak-anchor overlap: same-experiment defaults (peaks and loops from same assay)</span></span>
+<span>    anchor_gap <span class="op">=</span> <span class="fl">0L</span>,            <span class="co"># require physical overlap</span></span>
+<span>    anchor_min_overlap <span class="op">=</span> <span class="fl">1L</span>,    <span class="co"># any 1 bp touch counts</span></span>
+<span>    anchor_min_frac <span class="op">=</span> <span class="fl">0</span>,        <span class="co"># any fraction of peak is accepted</span></span>
 <span>    out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
 <span>    project_name <span class="op">=</span> <span class="st">"Example_HiChIP_Integrative"</span></span>
 <span>  <span class="op">)</span></span>
@@ -1220,10 +1319,11 @@ genomic coordinates of the two loop anchors.</li>
 anchor after biotype-aware conflict resolution.</li>
 <li>
 <strong><code>anchor1_type</code> /
-<code>anchor2_type</code></strong>: Regulatory element classification of
-each anchor (<code>P</code> = promoter, <code>E</code> = enhancer-like,
-<code>G</code> = gene body; <code>eP</code>/<code>eG</code> after
-refinement).</li>
+<code>anchor2_type</code></strong>: Positional classification of each
+anchor relative to gene annotations (<code>P</code> = promoter,
+<code>E</code> = distal/intergenic — positional, not functional
+enhancer, <code>G</code> = gene body; <code>eP</code>/<code>eG</code>
+after refinement indicate expression-filtered silent P/G anchors).</li>
 <li>
 <strong><code>loop_ID</code></strong>: Unique loop identifier;
 <code>cluster_id</code>: connected-component membership.</li>
@@ -1263,7 +1363,11 @@ regulation by enhancer clusters, whereas high
 multi-gene transcription.</li>
 <li>
 <strong><code>Dominant_Interaction</code></strong>: The predominant
-topological class governing the gene (e.g., E-P vs. P-P).</li>
+topological class governing the gene (e.g., E-P vs. P-P). When multiple
+loop types tie for the highest frequency, the first in alphabetical
+order is selected (e.g., E-P before P-P). This tie-breaking is
+deterministic but arbitrary; inspect raw counts when ties are likely
+(small datasets).</li>
 <li>
 <strong><code>Is_High_Connectivity_Gene</code></strong> <em>(and
 Distal variant)</em>: Binary flags defined by the
@@ -1649,6 +1753,15 @@ multi-omics analysis pipeline. It integrates 3D genomic interactions
 with transcriptomic data to systematically characterize the functional
 landscape and regulatory mechanisms underlying the identified target
 genes.</p>
+<p> The GO enrichment, motif scanning, and PPI network modules are
+designed as (hypothesis-generating) analyses. Statistical tests
+(Wilcoxon/t-test p-values, GSEA) are reported per-module without global
+multiple-testing correction across loop types or analysis branches. GSEA
+uses random down-sampling of target genes controlled by , introducing
+stochasticity. Motif enrichment uses GC-matched background sampling with
+Fisher’s exact test. All exploratory results should be validated with
+independent experimental approaches before drawing definitive biological
+conclusions.</p>
 <div class="section level4">
 <h4 id="parameter-strategy-a-highly-modular-pipeline">Parameter Strategy: A Highly Modular Pipeline<a class="anchor" aria-label="anchor" href="#parameter-strategy-a-highly-modular-pipeline"></a>
 </h4>
@@ -2090,6 +2203,11 @@ sections:</p>
 <span><span class="co">#   bedpe_file         Chromatin loops in BEDPE format</span></span>
 <span><span class="co"># ── Required for annotation ───────────────────────────────────</span></span>
 <span><span class="co">#   target_bed         Genomic features (ATAC-seq peaks, etc.)</span></span>
+<span><span class="co"># ── Optional annotation tuning ─────────────────────────────────</span></span>
+<span><span class="co">#   anchor_gap = 0L          Peak-anchor max gap (0 = must touch)</span></span>
+<span><span class="co">#   anchor_min_overlap = 1L  Min overlap in bp (1 = any touch)</span></span>
+<span><span class="co">#   anchor_min_frac = 0      Min overlap as fraction of peak width</span></span>
+<span><span class="co">#   neighbor_hop = 0         k-hop ego-network expansion</span></span>
 <span><span class="co"># ── Required for refinement + profiling ───────────────────────</span></span>
 <span><span class="co">#   expr_matrix_file   Normalised expression matrix (TPM/FPKM)</span></span>
 <span><span class="co">#   diff_file          Differential expression table (CSV/TSV)</span></span>

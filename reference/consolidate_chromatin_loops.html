@@ -6,15 +6,18 @@ Multi-Omics Integration: The framework can be used to identify multi-source cons
 
 The function supports three modes:
 "consensus": Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in &amp;gt;= min_consensus biological replicates.
-"intersect": Enforces strict reference-based filtering, retaining loops that show full genomic overlap with the reference file (File 1).
+"intersect": Reference-based filtering. Retains loops in File 1 whose anchors overlap with loops in every other file within the specified gap tolerance. Coordinates and scores are inherited from File 1 without merging.
 "union": Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.
 
 
 Connected-component chaining: Graph-based clustering may
-transitively chain loci (A–B and B–C merge, pulling A and C into the same
-cluster even if they are far apart). Inspect n_members in the
-output and reduce gap if clusters appear inflated.
-It also supports a two-stage filtering strategy to maximize signal-to-noise ratio:
+transitively chain loci (A-B and B-C merge, pulling A and C into the same
+cluster even if they are far apart). By default, a warning is emitted when
+any cluster span exceeds the chaining threshold
+(max(3xgap, 5xmedian_anchor_width)). Use chaining_policy to
+control this behavior ("warn", "none", "drop", or
+"error").
+It also supports a two-stage filtering strategy to improve signal-to-noise ratio:
 Pre-filtering (min_raw_score): Removes low-confidence noise (e.g., singleton reads) from raw files before merging.
 Post-filtering (min_score): Filters the final consensus loops based on their aggregated score.
 Replicate-Balanced Aggregation: In "consensus" and "union" modes, each cluster score is computed as the mean of per-source mean scores, so one replicate with many fragmented calls cannot dominate the final representative score.
@@ -26,15 +29,18 @@ Multi-Omics Integration: The framework can be used to identify multi-source cons
 
 The function supports three modes:
 "consensus": Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in &amp;gt;= min_consensus biological replicates.
-"intersect": Enforces strict reference-based filtering, retaining loops that show full genomic overlap with the reference file (File 1).
+"intersect": Reference-based filtering. Retains loops in File 1 whose anchors overlap with loops in every other file within the specified gap tolerance. Coordinates and scores are inherited from File 1 without merging.
 "union": Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.
 
 
 Connected-component chaining: Graph-based clustering may
-transitively chain loci (A–B and B–C merge, pulling A and C into the same
-cluster even if they are far apart). Inspect n_members in the
-output and reduce gap if clusters appear inflated.
-It also supports a two-stage filtering strategy to maximize signal-to-noise ratio:
+transitively chain loci (A-B and B-C merge, pulling A and C into the same
+cluster even if they are far apart). By default, a warning is emitted when
+any cluster span exceeds the chaining threshold
+(max(3xgap, 5xmedian_anchor_width)). Use chaining_policy to
+control this behavior ("warn", "none", "drop", or
+"error").
+It also supports a two-stage filtering strategy to improve signal-to-noise ratio:
 Pre-filtering (min_raw_score): Removes low-confidence noise (e.g., singleton reads) from raw files before merging.
 Post-filtering (min_score): Filters the final consensus loops based on their aggregated score.
 Replicate-Balanced Aggregation: In "consensus" and "union" modes, each cluster score is computed as the mean of per-source mean scores, so one replicate with many fragmented calls cannot dominate the final representative score.
@@ -146,13 +152,16 @@ Replicate-Balanced Aggregation: In "consensus" and "union" modes, each cluster s
     <p>This function consolidates chromatin loops from multiple BEDPE files. It is designed for two main purposes:</p><ol><li><p><strong>Replicate Consolidation</strong>: Merging biological or technical replicates to identify high-confidence, reproducible loops (e.g., 3 replicates of H3K27ac HiChIP).</p></li>
 <li><p><strong>Multi-Omics Integration</strong>: The framework can be used to identify multi-source consensus by integrating datasets from various experimental designs, such as HiChIP assays targeting different factors (e.g., integrating <strong>H3K27ac</strong> and <strong>H3K4me3</strong>, or overlapping Hi-C with ChIA-PET).</p></li>
 </ol><p>The function supports three modes:</p><ul><li><p><code>"consensus"</code>: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in &gt;= min_consensus biological replicates.</p></li>
-<li><p><code>"intersect"</code>: Enforces strict reference-based filtering, retaining loops that show full genomic overlap with the reference file (File 1).</p></li>
+<li><p><code>"intersect"</code>: Reference-based filtering. Retains loops in File 1 whose anchors overlap with loops in every other file within the specified <code>gap</code> tolerance. Coordinates and scores are inherited from File 1 without merging.</p></li>
 <li><p><code>"union"</code>: Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.</p></li>
 </ul><p><strong>Connected-component chaining</strong>: Graph-based clustering may
-transitively chain loci (A–B and B–C merge, pulling A and C into the same
-cluster even if they are far apart). Inspect <code>n_members</code> in the
-output and reduce <code>gap</code> if clusters appear inflated.</p>
-<p>It also supports a <strong>two-stage filtering strategy</strong> to maximize signal-to-noise ratio:</p><ul><li><p><strong>Pre-filtering</strong> (<code>min_raw_score</code>): Removes low-confidence noise (e.g., singleton reads) from raw files <em>before</em> merging.</p></li>
+transitively chain loci (A-B and B-C merge, pulling A and C into the same
+cluster even if they are far apart). By default, a warning is emitted when
+any cluster span exceeds the chaining threshold
+(<code>max(3xgap, 5xmedian_anchor_width)</code>). Use <code>chaining_policy</code> to
+control this behavior (<code>"warn"</code>, <code>"none"</code>, <code>"drop"</code>, or
+<code>"error"</code>).</p>
+<p>It also supports a <strong>two-stage filtering strategy</strong> to improve signal-to-noise ratio:</p><ul><li><p><strong>Pre-filtering</strong> (<code>min_raw_score</code>): Removes low-confidence noise (e.g., singleton reads) from raw files <em>before</em> merging.</p></li>
 <li><p><strong>Post-filtering</strong> (<code>min_score</code>): Filters the final consensus loops based on their aggregated score.</p></li>
 <li><p><strong>Replicate-Balanced Aggregation</strong>: In <code>"consensus"</code> and <code>"union"</code> modes, each cluster score is computed as the mean of per-source mean scores, so one replicate with many fragmented calls cannot dominate the final representative score.</p></li>
 </ul></div>
@@ -167,6 +176,7 @@ output and reduce <code>gap</code> if clusters appear inflated.</p>
 <span>  score_col <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  min_raw_score <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  min_score <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  chaining_policy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"none"</span>, <span class="st">"drop"</span>, <span class="st">"error"</span><span class="op">)</span>,</span>
 <span>  blacklist_species <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  region_of_interest <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  roi_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"any"</span>, <span class="st">"both"</span><span class="op">)</span>,</span>
@@ -198,7 +208,7 @@ output and reduce <code>gap</code> if clusters appear inflated.</p>
 <dt id="arg-min-consensus">min_consensus<a class="anchor" aria-label="anchor" href="#arg-min-consensus"></a></dt>
 <dd><p>Integer. Minimum number of replicates a loop must appear in
 (only effective when <code>mode = "consensus"</code>).
-If <code>NULL</code> (default), the threshold is automatically calculated:</p><ul><li><p>For 2–3 replicates: Requires all (100\<!-- %). --></p></li>
+If <code>NULL</code> (default), the threshold is automatically calculated:</p><ul><li><p>For 2-3 replicates: Requires all (100\<!-- %). --></p></li>
 <li><p>For \(N \ge 4\): Requires \(\lfloor 0.75N \rfloor + 1\)
 (e.g., 3 for N=4, 4 for N=5, 7 for N=8).</p></li>
 </ul></dd>
@@ -221,6 +231,16 @@ If <code>NULL</code> (default), auto-detection is used (see <code><a href="bedpe
 <li><p>For <code>"intersect"</code> mode, this filters the retained File 1 loops by their original score.</p></li>
 <li><p>Default: <code>NULL</code> (no post-filtering).</p></li>
 </ul></dd>
+
+
+<dt id="arg-chaining-policy">chaining_policy<a class="anchor" aria-label="anchor" href="#arg-chaining-policy"></a></dt>
+<dd><p>Character. Controls behaviour when connected-component
+chaining produces clusters with span exceeding the chaining threshold
+(<code>max(3xgap, 5xmedian_anchor_width)</code>).
+<code>"warn"</code> (default): emit a warning and retain all clusters.
+<code>"none"</code>: silently accept all clusters.
+<code>"drop"</code>: remove clusters exceeding the threshold.
+<code>"error"</code>: stop with an error.</p></dd>
 
 
 <dt id="arg-blacklist-species">blacklist_species<a class="anchor" aria-label="anchor" href="#arg-blacklist-species"></a></dt>
@@ -264,6 +284,9 @@ If <code>NULL</code> (default), auto-detection is used (see <code><a href="bedpe
 <dt><code>n_reps</code></dt>
 <dd><p>Number of input files that support this entry.</p></dd>
 
+<dt><code>cluster_id</code></dt>
+<dd><p>Connected-component cluster identifier.</p></dd>
+
 
 </dl><p>When <code>write_output = TRUE</code> and <code>out_file</code> is provided, an extended
 BEDPE file is written with the additional columns <code>n_members</code> and
@@ -280,10 +303,10 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-in"><span><span class="co"># Example A: Intersect Mode</span></span></span>
 <span class="r-in"><span><span class="co"># Only keeps loops present in f1 that are also supported by f2</span></span></span>
 <span class="r-in"><span><span class="va">res_intersect</span> <span class="op">&lt;-</span> <span class="fu">consolidate_chromatin_loops</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  mode <span class="op">=</span> <span class="st">"intersect"</span>,</span></span>
-<span class="r-in"><span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
-<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    mode <span class="op">=</span> <span class="st">"intersect"</span>,</span></span>
+<span class="r-in"><span>    gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
+<span class="r-in"><span>    out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 300 loops</span>
@@ -291,39 +314,78 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Intersect mode: Reference-based filtering (No Coordinate Merging)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Base: File 1. Criterion: Must overlap with ALL other files.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Intersecting with File 2...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmplvYgXV/file9cf4a2aec3d.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpIMxOzr/file9d85dac4220.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example B: Consensus Mode (formerly Reproducible)</span></span></span>
 <span class="r-in"><span><span class="co"># Finds consensus loops supported by both replicates (default for N=2)</span></span></span>
 <span class="r-in"><span><span class="va">res_consensus</span> <span class="op">&lt;-</span> <span class="fu">consolidate_chromatin_loops</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  mode <span class="op">=</span> <span class="st">"consensus"</span>,</span></span>
-<span class="r-in"><span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
-<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    mode <span class="op">=</span> <span class="st">"consensus"</span>,</span></span>
+<span class="r-in"><span>    gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
+<span class="r-in"><span>    out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Gap Diagnosis ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Anchor width: median = 4,859 bp  (IQR: 3,433.25 - 7,146.25 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Adjacent-anchor gap: median = 12,989 bp  (35% within current gap = 1,000 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap appears appropriate for the anchor width distribution.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Gap Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Consensus mode: Keeping clusters in &gt;= 2 replicates</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmplvYgXV/file9cf47c089d7c.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Post-Clustering Diagnosis ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Clusters formed: 12  (from 24 loops surviving consensus)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Members per cluster: median = 2, IQR = 2-2, max = 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Consensus retention: 24 / 600 input loops (4.0%)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   [i]  Low retention -- many loops failed consensus. Gap may be too small for reproducible calls across replicates.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Cluster span: median = 6,260  |  max = 26,481  |  threshold = 5xmed_width(4,859) = 24,295 bp</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Largest cluster spans:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #1: max_span = 26,481 bp, n_members = 2, n_reps = 2 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #3: max_span = 22,248 bp, n_members = 2, n_reps = 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #4: max_span = 11,840 bp, n_members = 2, n_reps = 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   [!]  Chaining: 1/12 (8%) above threshold -- MODERATE. Inspect flagged clusters above.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>1 cluster(s) have max_span &gt; chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpIMxOzr/file9d8516b40556.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example C: Union Mode</span></span></span>
 <span class="r-in"><span><span class="co"># Merges all loops into a single map</span></span></span>
 <span class="r-in"><span><span class="va">res_union</span> <span class="op">&lt;-</span> <span class="fu">consolidate_chromatin_loops</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  mode <span class="op">=</span> <span class="st">"union"</span>,</span></span>
-<span class="r-in"><span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
-<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    mode <span class="op">=</span> <span class="st">"union"</span>,</span></span>
+<span class="r-in"><span>    gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
+<span class="r-in"><span>    out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 300 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Gap Diagnosis ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Anchor width: median = 4,859 bp  (IQR: 3,433.25 - 7,146.25 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Adjacent-anchor gap: median = 12,989 bp  (35% within current gap = 1,000 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap appears appropriate for the anchor width distribution.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Gap Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Union mode: Keeping all clusters</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmplvYgXV/file9cf43cc0270c.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Post-Clustering Diagnosis ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Clusters formed: 586  (from 600 loops surviving consensus)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Members per cluster: median = 1, IQR = 1-1, max = 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Consensus retention: 600 / 600 input loops (100.0%)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Cluster span: median = 6,739  |  max = 27,921  |  threshold = 5xmed_width(4,859) = 24,295 bp</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Largest cluster spans:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #397: max_span = 27,921 bp, n_members = 1, n_reps = 1 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #463: max_span = 27,921 bp, n_members = 1, n_reps = 1 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #427: max_span = 26,620 bp, n_members = 1, n_reps = 1 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #24: max_span = 26,481 bp, n_members = 2, n_reps = 2 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #29: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 15/586 (3%) above threshold -- minimal, acceptable.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>15 cluster(s) have max_span &gt; chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpIMxOzr/file9d859d4e2ce.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 586</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example D: Dual Filtering Strategy (Recommended for HiChIP)</span></span></span>
@@ -331,19 +393,38 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-in"><span><span class="co"># 2. Merge: Find loops present in both replicates.</span></span></span>
 <span class="r-in"><span><span class="co"># 3. Post-filter: Keep only strong consensus loops (score &gt; 5).</span></span></span>
 <span class="r-in"><span><span class="va">res_clean</span> <span class="op">&lt;-</span> <span class="fu">consolidate_chromatin_loops</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  mode <span class="op">=</span> <span class="st">"consensus"</span>,</span></span>
-<span class="r-in"><span>  min_raw_score <span class="op">=</span> <span class="fl">2</span>, <span class="co"># Pre-filter (remove noise)</span></span></span>
-<span class="r-in"><span>  min_score <span class="op">=</span> <span class="fl">5</span>, <span class="co"># Post-filter (keep strong loops)</span></span></span>
-<span class="r-in"><span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
-<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    mode <span class="op">=</span> <span class="st">"consensus"</span>,</span></span>
+<span class="r-in"><span>    min_raw_score <span class="op">=</span> <span class="fl">2</span>, <span class="co"># Pre-filter (remove noise)</span></span></span>
+<span class="r-in"><span>    min_score <span class="op">=</span> <span class="fl">5</span>, <span class="co"># Post-filter (keep strong loops)</span></span></span>
+<span class="r-in"><span>    gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
+<span class="r-in"><span>    out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 115 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 2: 100 loops</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Gap Diagnosis ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Anchor width: median = 5,403 bp  (IQR: 3,921.5 - 8,977 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Adjacent-anchor gap: median = 38,938 bp  (25% within current gap = 1,000 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap appears appropriate for the anchor width distribution.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   [i]  Wide loop anchors -- typical of Hi-C bins, Capture Hi-C baits, or super-enhancer-anchored loops.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Gap Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Consensus mode: Keeping clusters in &gt;= 2 replicates</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmplvYgXV/file9cf44760831a.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Post-Clustering Diagnosis ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Clusters formed: 7  (from 14 loops surviving consensus)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Members per cluster: median = 2, IQR = 2-2, max = 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Consensus retention: 14 / 215 input loops (6.5%)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   [i]  Low retention -- many loops failed consensus. Gap may be too small for reproducible calls across replicates.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Cluster span: median = 5,672  |  max = 22,248  |  threshold = 5xmed_width(5,403) = 27,015 bp</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Largest cluster spans:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #2: max_span = 22,248 bp, n_members = 2, n_reps = 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #3: max_span = 11,840 bp, n_members = 2, n_reps = 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/7 above threshold -- PASS.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpIMxOzr/file9d854d6dc4eb.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 4</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Inspect results</span></span></span>
