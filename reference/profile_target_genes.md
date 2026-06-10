@@ -71,7 +71,8 @@ profile_target_genes(
 
 - target_mapping_mode:
 
-  Character. Specifies the mapping strategy for target genes.
+  Character. Mapping strategy: `"all"` (any anchor-gene connection) or
+  `"promoter"` (require direct promoter contact).
 
 - loop_types:
 
@@ -178,6 +179,11 @@ An invisible nested list indexed by `target_source` (e.g., `"targets"`,
   Named list of ggplot objects (LFC_Violin, GSEA, Heatmap, Scatter,
   GO_Network, PPI_Network, etc.).
 
+- `warnings`:
+
+  Character vector of module-level warnings (e.g., "AnnotationDbi::GO
+  failed: ..."). Empty if all modules succeeded.
+
 ## Details
 
 Two analysis steps use random sampling: GSEA target-gene down-sampling
@@ -238,6 +244,7 @@ profile_res <- profile_target_genes(
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 
 #> --- Task: PP_Genes (Valid Genes: 67) ---
+#> Warning: GSEA: down-sampling 20 of 67 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis.
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 
@@ -245,6 +252,7 @@ profile_res <- profile_target_genes(
 #> >>> Processing Source: [targets]
 #> 
 #> --- Task: Target_Genes (Valid Genes: 217) ---
+#> Warning: GSEA: down-sampling 20 of 217 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis.
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 

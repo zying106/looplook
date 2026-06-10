@@ -139,7 +139,8 @@ of the group maximum are retained (collapsed with ";").</p>
 <span>  <span class="va">tss_region</span>,</span>
 <span>  <span class="va">gene_expr_map</span>,</span>
 <span>  min_expr <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  conflict_strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"biotype_first"</span>, <span class="st">"expression_first"</span><span class="op">)</span></span>
+<span>  conflict_strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"biotype_first"</span>, <span class="st">"expression_first"</span><span class="op">)</span>,</span>
+<span>  co_dominance_ratio <span class="op">=</span> <span class="fl">0.1</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -179,7 +180,7 @@ considered active during conflict resolution. Default: <code>0</code>.</p></dd>
 <dd><p>Character. Conflict resolution order.
 <code>"biotype_first"</code> (default): select the best biotype tier first,
 then apply expression filtering within that tier. This is the more
-conservative default — a silent protein-coding gene is preferred over
+conservative default – a silent protein-coding gene is preferred over
 a highly expressed lncRNA at the same locus.
 <code>"expression_first"</code>: apply expression filtering across all
 biotypes first, then pick the best biotype among expressed candidates.</p></dd>

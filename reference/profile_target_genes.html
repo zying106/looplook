@@ -180,7 +180,7 @@ protein-protein interaction (PPI) network construction.</p>
 
 
 <dt id="arg-target-mapping-mode">target_mapping_mode<a class="anchor" aria-label="anchor" href="#arg-target-mapping-mode"></a></dt>
-<dd><p>Character. Specifies the mapping strategy for target genes.</p></dd>
+<dd><p>Character. Mapping strategy: <code>"all"</code> (any anchor-gene connection) or <code>"promoter"</code> (require direct promoter contact).</p></dd>
 
 
 <dt id="arg-loop-types">loop_types<a class="anchor" aria-label="anchor" href="#arg-loop-types"></a></dt>
@@ -279,6 +279,9 @@ Each element contains:</p><dl><dt><code>go_results</code></dt>
 <dt><code>plots</code></dt>
 <dd><p>Named list of ggplot objects (LFC_Violin, GSEA, Heatmap, Scatter, GO_Network, PPI_Network, etc.).</p></dd>
 
+<dt><code>warnings</code></dt>
+<dd><p>Character vector of module-level warnings (e.g., "AnnotationDbi::GO failed: ..."). Empty if all modules succeeded.</p></dd>
+
 
 </dl></div>
     <div class="section level2">
@@ -339,6 +342,7 @@ individually.</p>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>ComplexHeatmap/circlize not installed; skipping heatmap.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: PP_Genes (Valid Genes: 67) ---</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA: down-sampling 20 of 67 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>ComplexHeatmap/circlize not installed; skipping heatmap.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
@@ -346,6 +350,7 @@ individually.</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Processing Source: [targets]</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: Target_Genes (Valid Genes: 217) ---</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA: down-sampling 20 of 217 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis.</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>ComplexHeatmap/circlize not installed; skipping heatmap.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>

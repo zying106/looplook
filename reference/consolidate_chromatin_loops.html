@@ -209,8 +209,8 @@ control this behavior (<code>"warn"</code>, <code>"none"</code>, <code>"drop"</c
 <dd><p>Integer. Minimum number of replicates a loop must appear in
 (only effective when <code>mode = "consensus"</code>).
 If <code>NULL</code> (default), the threshold is automatically calculated:</p><ul><li><p>For 2-3 replicates: Requires all (100\<!-- %). --></p></li>
-<li><p>For \(N \ge 4\): Requires \(\lfloor 0.75N \rfloor + 1\)
-(e.g., 3 for N=4, 4 for N=5, 7 for N=8).</p></li>
+<li><p>For \(N \ge 4\): Requires \(\ge 75\%\) of replicates
+(<code>ceiling(0.75 * n_reps)</code>; e.g., 3 for N=4, 4 for N=5, 6 for N=8).</p></li>
 </ul></dd>
 
 
@@ -244,8 +244,10 @@ chaining produces clusters with span exceeding the chaining threshold
 
 
 <dt id="arg-blacklist-species">blacklist_species<a class="anchor" aria-label="anchor" href="#arg-blacklist-species"></a></dt>
-<dd><p>Character. Species/build for built-in blacklist
-(e.g., "hg38", "hg19", "mm10", "mm9"), or a path to a custom BED file.</p></dd>
+<dd><p>Character. Species/build for built-in ENCODE
+blacklist (<code>"hg38"</code>, <code>"hg19"</code>, <code>"mm10"</code>, <code>"mm9"</code>),
+or a path to a custom BED file. When a species name is recognised, the
+bundled blacklist is used; otherwise the value is treated as a file path.</p></dd>
 
 
 <dt id="arg-region-of-interest">region_of_interest<a class="anchor" aria-label="anchor" href="#arg-region-of-interest"></a></dt>
@@ -288,7 +290,10 @@ chaining produces clusters with span exceeding the chaining threshold
 <dd><p>Connected-component cluster identifier.</p></dd>
 
 
-</dl><p>When <code>write_output = TRUE</code> and <code>out_file</code> is provided, an extended
+</dl><p>The returned object carries a <code>looplook_metadata</code> attribute (access via
+<code>attr(x, "looplook_metadata")</code>) with package version, call parameters,
+diagnostics, and database versions.
+When <code>write_output = TRUE</code> and <code>out_file</code> is provided, an extended
 BEDPE file is written with the additional columns <code>n_members</code> and
 <code>n_reps</code> appended after the standard BEDPE fields.</p>
     </div>
@@ -314,7 +319,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Intersect mode: Reference-based filtering (No Coordinate Merging)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Base: File 1. Criterion: Must overlap with ALL other files.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Intersecting with File 2...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpIMxOzr/file9d85dac4220.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpuCtzuT/file9d56691c3bd8.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example B: Consensus Mode (formerly Reproducible)</span></span></span>
@@ -349,7 +354,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   [!]  Chaining: 1/12 (8%) above threshold -- MODERATE. Inspect flagged clusters above.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>1 cluster(s) have max_span &gt; chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpIMxOzr/file9d8516b40556.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpuCtzuT/file9d5666e0c827.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example C: Union Mode</span></span></span>
@@ -385,7 +390,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 15/586 (3%) above threshold -- minimal, acceptable.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>15 cluster(s) have max_span &gt; chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpIMxOzr/file9d859d4e2ce.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpuCtzuT/file9d56587e836e.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 586</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example D: Dual Filtering Strategy (Recommended for HiChIP)</span></span></span>
@@ -424,7 +429,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/7 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpIMxOzr/file9d854d6dc4eb.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpuCtzuT/file9d56afe1e45.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 4</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Inspect results</span></span></span>

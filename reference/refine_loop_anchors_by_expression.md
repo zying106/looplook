@@ -23,6 +23,7 @@ refine_loop_anchors_by_expression(
   karyo_bin_size = 1e+05,
   reclassify_by_expression = TRUE,
   hub_percentile = 0.95,
+  chromatin_beds = list(),
   write_output = TRUE,
   quiet = FALSE
 )
@@ -58,7 +59,8 @@ refine_loop_anchors_by_expression(
 - species:
 
   Character. Genome assembly. One of `"hg38"`, `"hg19"`, `"mm10"`,
-  `"mm9"`. Default: `"hg38"`.
+  `"mm9"`. Default: `"hg38"`. Extensible to other species via
+  `species_txdb_pkg()` and related helpers.
 
 - out_dir:
 
@@ -88,6 +90,14 @@ refine_loop_anchors_by_expression(
 
   Numeric (0-1). Node-degree quantile for hub detection. Default:
   `0.95`.
+
+- chromatin_beds:
+
+  Named list of BED file paths for orthogonal chromatin mark validation
+  of eP/eG anchors. When non-empty, a *Chromatin Validation* sheet is
+  added to the Excel workbook (see
+  [`validate_epeG_by_chromatin`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)).
+  Default: [`list()`](https://rdrr.io/r/base/list.html) (skip).
 
 - write_output:
 
@@ -195,12 +205,21 @@ An invisible named list:
   - (Refine only) `Passes_Expression_Filter`: Logical. `TRUE` if
     `Mean_Expression >= threshold`.
 
+- `chromatin_validation` – Data frame from
+  [`validate_epeG_by_chromatin`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)
+  with confidence levels and evidence strings for each eP/eG anchor.
+  `NULL` when `chromatin_beds` is empty.
+
 - `plots` – Named list of ggplot objects (dumbbell, rose, karyotype).
 
 - `plot_list` – Backward-compatible alias of `plots`.
 
+- `metadata` – Internal metadata list (parameters, versions, database
+  versions). Not intended for direct use.
+
 If `write_output = TRUE`, also writes `_Refined_Results.xlsx` to
-`out_dir`. The workbook contains a *Functional Loop Annotation* sheet
+`out_dir`. The workbook contains a *Chromatin Validation* sheet (when
+`chromatin_beds` is provided) and a *Functional Loop Annotation* sheet
 with only loops where `Retained_In_Functional_Network == TRUE`.
 
 ## Details
@@ -214,9 +233,13 @@ with only loops where `Retained_In_Functional_Network == TRUE`.
 
 - **Biological Reclassification:** Reclassifies physically annotated
   promoters (`P`) and gene bodies (`G`) lacking active transcription as
-  enhancer-like regulatory elements (`eP`, `eG`). This adjusts the
-  regulatory syntax to reflect functional states (e.g., reannotating a
-  silent `P-P` loop to an `eP-P` interaction).
+  *expression-filtered silent* regulatory elements (`eP`, `eG`).
+  **Important:** `eP`/`eG` labels indicate transcriptional silence at
+  the reference gene – they do **not** constitute evidence of enhancer
+  activity. Orthogonal chromatin data (ATAC-seq, H3K27ac, H3K4me1) are
+  required for functional enhancer interpretation. The labels are
+  retained for backward compatibility; interpret them as "inactive-P" /
+  "inactive-G" rather than "enhancer-P" / "enhancer-G".
 
 - **Expression-Aware Connectivity Statistics:** Recomputes
   promoter-centric and distal-element connectivity after
@@ -245,15 +268,16 @@ retained with refinement status columns, and a high-confidence
 functional subset is provided via `Retained_In_Functional_Network` and
 the *Functional Loop Annotation* Excel sheet.
 
-**Interpretation of eP/eG labels:** The `eP` and `eG` labels capture
-expression-aware enhancer-like regulatory states, enabling `looplook` to
-distinguish transcriptionally silent reference promoters or gene bodies
-from putative regulatory anchors in 3D chromatin space. Orthogonal
-chromatin evidence, including ATAC-seq accessibility, H3K27ac
-enrichment, or H3K27me3 depletion, can further strengthen biological
-interpretation when available. Users holding matched ATAC-seq or
-ChIP-seq data may overlay eP/eG loci with these tracks to confirm
-residual regulatory activity at transcriptionally silent promoters.
+**Interpretation of eP/eG labels:** `eP` and `eG` are
+**expression-filtered silent states**, not functional enhancer
+classifications. Bulk RNA-seq silence can arise from cell-type
+proportions, time-point effects, sequencing depth, or promoter pausing –
+none of which imply the locus has gained enhancer activity. These labels
+should be read as "transcriptionally inactive P/G" and treated as
+hypotheses requiring orthogonal validation (ATAC-seq, H3K27ac, H3K4me1,
+or H3K27me3 depletion). Users with matched chromatin data should overlay
+eP/eG loci against these tracks before interpreting them as putative
+regulatory elements.
 
 ## Examples
 

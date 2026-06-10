@@ -21,7 +21,8 @@ resolve_gene_conflicts(
   tss_region,
   gene_expr_map,
   min_expr = 0,
-  conflict_strategy = c("biotype_first", "expression_first")
+  conflict_strategy = c("biotype_first", "expression_first"),
+  co_dominance_ratio = 0.1
 )
 ```
 
@@ -59,7 +60,7 @@ resolve_gene_conflicts(
 
   Character. Conflict resolution order. `"biotype_first"` (default):
   select the best biotype tier first, then apply expression filtering
-  within that tier. This is the more conservative default — a silent
+  within that tier. This is the more conservative default – a silent
   protein-coding gene is preferred over a highly expressed lncRNA at the
   same locus. `"expression_first"`: apply expression filtering across
   all biotypes first, then pick the best biotype among expressed

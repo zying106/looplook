@@ -133,6 +133,7 @@ loops belong to the high-confidence active subset.</p>
 <span>  karyo_bin_size <span class="op">=</span> <span class="fl">1e+05</span>,</span>
 <span>  reclassify_by_expression <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  hub_percentile <span class="op">=</span> <span class="fl">0.95</span>,</span>
+<span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  write_output <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -163,7 +164,7 @@ loops belong to the high-confidence active subset.</p>
 
 
 <dt id="arg-species">species<a class="anchor" aria-label="anchor" href="#arg-species"></a></dt>
-<dd><p>Character. Genome assembly. One of <code>"hg38"</code>, <code>"hg19"</code>, <code>"mm10"</code>, <code>"mm9"</code>. Default: <code>"hg38"</code>.</p></dd>
+<dd><p>Character. Genome assembly. One of <code>"hg38"</code>, <code>"hg19"</code>, <code>"mm10"</code>, <code>"mm9"</code>. Default: <code>"hg38"</code>. Extensible to other species via <code>species_txdb_pkg()</code> and related helpers.</p></dd>
 
 
 <dt id="arg-out-dir">out_dir<a class="anchor" aria-label="anchor" href="#arg-out-dir"></a></dt>
@@ -188,6 +189,13 @@ loops belong to the high-confidence active subset.</p>
 
 <dt id="arg-hub-percentile">hub_percentile<a class="anchor" aria-label="anchor" href="#arg-hub-percentile"></a></dt>
 <dd><p>Numeric (0-1). Node-degree quantile for hub detection. Default: <code>0.95</code>.</p></dd>
+
+
+<dt id="arg-chromatin-beds">chromatin_beds<a class="anchor" aria-label="anchor" href="#arg-chromatin-beds"></a></dt>
+<dd><p>Named list of BED file paths for orthogonal chromatin
+mark validation of eP/eG anchors. When non-empty, a <em>Chromatin
+Validation</em> sheet is added to the Excel workbook (see
+<code><a href="validate_epeG_by_chromatin.html">validate_epeG_by_chromatin</a></code>). Default: <code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code> (skip).</p></dd>
 
 
 <dt id="arg-write-output">write_output<a class="anchor" aria-label="anchor" href="#arg-write-output"></a></dt>
@@ -255,16 +263,22 @@ this gene appears in. A gene may appear in multiple columns simultaneously.</p><
 <li><p>(Refine only) <code>Passes_Expression_Filter</code>: Logical. <code>TRUE</code> if
 <code>Mean_Expression &gt;= threshold</code>.</p></li>
 </ul></li>
+<li><p><code>chromatin_validation</code> – Data frame from
+<code><a href="validate_epeG_by_chromatin.html">validate_epeG_by_chromatin</a></code> with confidence levels and
+evidence strings for each eP/eG anchor. <code>NULL</code> when
+<code>chromatin_beds</code> is empty.</p></li>
 <li><p><code>plots</code> – Named list of ggplot objects (dumbbell, rose, karyotype).</p></li>
 <li><p><code>plot_list</code> – Backward-compatible alias of <code>plots</code>.</p></li>
+<li><p><code>metadata</code> – Internal metadata list (parameters, versions, database versions). Not intended for direct use.</p></li>
 </ul><p>If <code>write_output = TRUE</code>, also writes <code>_Refined_Results.xlsx</code> to <code>out_dir</code>.
-The workbook contains a <em>Functional Loop Annotation</em> sheet with only
-loops where <code>Retained_In_Functional_Network == TRUE</code>.</p>
+The workbook contains a <em>Chromatin Validation</em> sheet (when
+<code>chromatin_beds</code> is provided) and a <em>Functional Loop Annotation</em>
+sheet with only loops where <code>Retained_In_Functional_Network == TRUE</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p><strong>Algorithmic Framework:</strong></p><ul><li><p><strong>Target Filtration:</strong> Parses merged gene assignments (e.g., <code>"GeneA;GeneB"</code>), evaluates individual genes against a defined expression threshold, and retains only transcriptionally active targets.</p></li>
-<li><p><strong>Biological Reclassification:</strong> Reclassifies physically annotated promoters (<code>P</code>) and gene bodies (<code>G</code>) lacking active transcription as enhancer-like regulatory elements (<code>eP</code>, <code>eG</code>). This adjusts the regulatory syntax to reflect functional states (e.g., reannotating a silent <code>P-P</code> loop to an <code>eP-P</code> interaction).</p></li>
+<li><p><strong>Biological Reclassification:</strong> Reclassifies physically annotated promoters (<code>P</code>) and gene bodies (<code>G</code>) lacking active transcription as <em>expression-filtered silent</em> regulatory elements (<code>eP</code>, <code>eG</code>). <strong>Important:</strong> <code>eP</code>/<code>eG</code> labels indicate transcriptional silence at the reference gene – they do <strong>not</strong> constitute evidence of enhancer activity. Orthogonal chromatin data (ATAC-seq, H3K27ac, H3K4me1) are required for functional enhancer interpretation. The labels are retained for backward compatibility; interpret them as "inactive-P" / "inactive-G" rather than "enhancer-P" / "enhancer-G".</p></li>
 <li><p><strong>Expression-Aware Connectivity Statistics:</strong> Recomputes promoter-centric and distal-element connectivity after expression-aware anchor refinement, while preserving all structural loops in the refined loop annotation. This separates the complete physical contact map from the high-confidence active subset.</p></li>
 <li><p><strong>External Target Refinement:</strong> Filters auxiliary target mapping columns (e.g., <code>Assigned_Target_Genes_Filled</code>) based on expression criteria, ensuring that mapped 1D genomic features are exclusively linked to active genes.</p></li>
 <li><p><strong>Target Provenance Preservation:</strong> Recomputes <code>*_Filled</code>
@@ -283,14 +297,15 @@ high-confidence functional subset is provided via
 <code>Retained_In_Functional_Network</code> and the <em>Functional Loop Annotation</em>
 Excel sheet.</p>
 <p><strong>Interpretation of eP/eG labels:</strong>
-The <code>eP</code> and <code>eG</code> labels capture expression-aware enhancer-like
-regulatory states, enabling <code>looplook</code> to distinguish transcriptionally
-silent reference promoters or gene bodies from putative regulatory anchors in
-3D chromatin space. Orthogonal chromatin evidence, including ATAC-seq
-accessibility, H3K27ac enrichment, or H3K27me3 depletion, can further
-strengthen biological interpretation when available. Users holding matched
-ATAC-seq or ChIP-seq data may overlay eP/eG loci with these tracks to
-confirm residual regulatory activity at transcriptionally silent promoters.</p>
+<code>eP</code> and <code>eG</code> are <strong>expression-filtered silent states</strong>, not
+functional enhancer classifications. Bulk RNA-seq silence can arise from
+cell-type proportions, time-point effects, sequencing depth, or promoter
+pausing – none of which imply the locus has gained enhancer activity.
+These labels should be read as "transcriptionally inactive P/G" and
+treated as hypotheses requiring orthogonal validation (ATAC-seq, H3K27ac,
+H3K4me1, or H3K27me3 depletion). Users with matched chromatin data should
+overlay eP/eG loci against these tracks before interpreting them as
+putative regulatory elements.</p>
     </div>
 
     <div class="section level2">

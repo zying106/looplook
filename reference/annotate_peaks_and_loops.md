@@ -6,7 +6,7 @@ A function for loop annotation and target mapping, designed to integrate
 1.  **Loop Annotation:** Classifies 3D spatial interactions (e.g.,
     distal-to-promoter, promoter-to-promoter) using positional anchor
     labels relative to gene annotations. **Important:** anchor type
-    `"E"` denotes a *positional* distal/intergenic classification — it
+    `"E"` denotes a *positional* distal/intergenic classification – it
     does **not** imply functional enhancer activity. Orthogonal
     chromatin data are required for functional interpretation.
 
@@ -35,7 +35,8 @@ annotate_peaks_and_loops(
   hub_percentile = 0.95,
   min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
-  anchor_gap = 0L,
+  co_dominance_ratio = 0.1,
+  anchor_gap = -1L,
   anchor_min_overlap = 1L,
   anchor_min_frac = 0,
   write_output = TRUE,
@@ -71,12 +72,18 @@ annotate_peaks_and_loops(
 - species:
 
   Character. Genome assembly used when `txdb` and `org_db` are `NULL`.
-  One of `"hg38"`, `"hg19"`, `"mm10"`, `"mm9"`. Default: `"hg38"`.
+  One of `"hg38"`, `"hg19"`, `"mm10"`, `"mm9"`. Default: `"hg38"`. The
+  package is currently tested on human and mouse; the architecture
+  supports extension to other species by adding entries to
+  `species_txdb_pkg()`, `species_orgdb_pkg()`, and
+  `species_bsgenome_pkg()`.
 
 - tss_region:
 
   Numeric vector of length 2. Promoter window around the TSS in bp.
-  Default: `c(-2000, 2000)`.
+  Default: `c(-2000, 2000)` (typical for mammalian protein-coding genes;
+  may need widening for broad domains like HOX clusters, or narrowing
+  for compact genomes).
 
 - out_dir:
 
@@ -143,33 +150,43 @@ annotate_peaks_and_loops(
   apply expression filtering across all biotypes first, then pick the
   best biotype among expressed candidates.
 
+- co_dominance_ratio:
+
+  Numeric (0-1). In the expression tiebreaker step, genes with
+  expression \>= `co_dominance_ratio x max(expression)` in the group are
+  retained together. Default: `0.1` (i.e. within one order of
+  magnitude). Lower values (e.g. `0.01`) retain more co-dominant
+  candidates; higher values (e.g. `0.5`) are more stringent.
+
 - anchor_gap:
 
-  Integer. Maximum gap (bp) allowed between a target peak and a loop
-  anchor for them to be considered overlapping. `0` (default) requires
-  physical contact – appropriate when peaks and loops are called from
-  the same experiment (e.g. HiChIP). Increase to 100-500 for
-  cross-experiment integration (e.g. ATAC-seq peaks with HiChIP loops)
-  where boundaries may differ slightly. See Details for a table of
-  recommended settings.
+  Integer. Search radius: how far apart (bp) can a peak and loop anchor
+  be for the peak to be considered "near" the anchor? `-1L` (default):
+  strict physical overlap required (GenomicRanges default – peak and
+  anchor must share at least 1 bp). `0L`: adjacent intervals (peak end
+  == anchor start) also count. `>0`: explicit gap tolerance (e.g. `200`
+  for cross-experiment integration). When `>= 0`, the result includes
+  both physically overlapping pairs AND proximity-only pairs (within gap
+  but no actual overlap). Use `anchor_min_overlap > 1` to require actual
+  physical overlap among these candidates.
 
 - anchor_min_overlap:
 
-  Integer. Minimum overlap in base pairs required between a peak and an
-  anchor. Default: `1L` (any 1 bp touch is sufficient). Increase to
-  filter out spurious boundary-level overlaps (e.g. 10-100 bp for noisy
-  data). Applied after `anchor_gap` as a post-filter on actual physical
-  overlap. See Details for recommended settings.
+  Integer. After candidate pairs are found (via `anchor_gap`), how many
+  base pairs of actual physical overlap are required? Default `1L`: any
+  touch counts (including proximity-only hits when `anchor_gap >= 0`).
+  Increase to `10-100` to filter out spurious boundary overlaps. Setting
+  this `> 1` with `anchor_gap >= 0` ensures that even with gap
+  tolerance, only pairs with genuine physical overlap are retained.
 
 - anchor_min_frac:
 
-  Numeric (0-1). Minimum overlap as a fraction of the *peak* width.
-  Default: `0` (any fractional overlap accepted). Set to `0.1-0.5` to
-  require that a meaningful portion of the peak overlaps the anchor.
-  Useful when peaks are broad (e.g. H3K27ac domains, 2-5 kb) and a 1 bp
-  overlap would be artefactual. Not recommended for point features
-  (SNPs, eQTLs). Applied after the preceding two filters. See Details
-  for recommended settings.
+  Numeric (0-1). After the first two filters, what fraction of the
+  *peak* width must physically overlap the anchor? Default `0`: any
+  fraction accepted. Set to `0.1-0.5` when peaks are broad (e.g. H3K27ac
+  domains, 2-5 kb) so a 1 bp overlap does not link the entire broad
+  peak. Ignored for point features (SNPs, eQTLs). Applied last, only to
+  pairs that passed `anchor_gap` and `anchor_min_overlap`.
 
 - write_output:
 
@@ -296,9 +313,15 @@ bidirectional promoters), the function executes a 3-step resolution:
     tier are retained.
 
 3.  *Expression Tiebreaker:* Among remaining candidates of equal biotype
-    priority, retains all genes whose expression is within one order of
-    magnitude of the highest-expressing candidate (i.e., expression \>=
-    10\\
+    priority, retains all genes whose expression \>=
+    `co_dominance_ratio` x the group maximum. Default `0.1` (one order
+    of magnitude; ~3.3-fold in log2 space). This co-dominant rule
+    preserves functionally redundant candidates such as bidirectional
+    promoter pairs, where co-expressed partners typically fall within
+    2-3 fold of each other. Edge case: when all candidates in the best
+    biotype tier have TPM = 0, all are retained (the tiebreaker cannot
+    distinguish them), which may produce multi-gene assignments at
+    transcriptionally silent loci.
 
 **Network Topology Analysis**
 
@@ -322,7 +345,7 @@ act as a cascade of increasingly stringent filters:
 3.  `anchor_min_frac` – requires the overlap to cover a minimum fraction
     of the peak.
 
-The table below summarises recommended settings for common experimental
+The table below lists suggested starting points for common experimental
 designs.
 
 |  |  |  |  |

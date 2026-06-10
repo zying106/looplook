@@ -29,6 +29,8 @@ RNA-seq data.
 
 - [`refine_loop_anchors_by_expression()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
   : Expression-Aware refinement of loop anchors and target linkages
+- [`validate_epeG_by_chromatin()`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)
+  : Orthogonal validation of eP/eG reclassification by chromatin marks
 
 ## Module 4: Automated Functional Profiling
 

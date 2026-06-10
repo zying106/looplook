@@ -100,8 +100,8 @@ consolidate_chromatin_loops(
 
   - For 2-3 replicates: Requires all (100\\
 
-  - For \\N \ge 4\\: Requires \\\lfloor 0.75N \rfloor + 1\\ (e.g., 3 for
-    N=4, 4 for N=5, 7 for N=8).
+  - For \\N \ge 4\\: Requires \\\ge 75\\\\ of replicates
+    (`ceiling(0.75 * n_reps)`; e.g., 3 for N=4, 4 for N=5, 6 for N=8).
 
 - score_col:
 
@@ -147,8 +147,10 @@ consolidate_chromatin_loops(
 
 - blacklist_species:
 
-  Character. Species/build for built-in blacklist (e.g., "hg38", "hg19",
-  "mm10", "mm9"), or a path to a custom BED file.
+  Character. Species/build for built-in ENCODE blacklist (`"hg38"`,
+  `"hg19"`, `"mm10"`, `"mm9"`), or a path to a custom BED file. When a
+  species name is recognised, the bundled blacklist is used; otherwise
+  the value is treated as a file path.
 
 - region_of_interest:
 
@@ -202,9 +204,12 @@ object with metadata columns:
 
   Connected-component cluster identifier.
 
-When `write_output = TRUE` and `out_file` is provided, an extended BEDPE
-file is written with the additional columns `n_members` and `n_reps`
-appended after the standard BEDPE fields.
+The returned object carries a `looplook_metadata` attribute (access via
+`attr(x, "looplook_metadata")`) with package version, call parameters,
+diagnostics, and database versions. When `write_output = TRUE` and
+`out_file` is provided, an extended BEDPE file is written with the
+additional columns `n_members` and `n_reps` appended after the standard
+BEDPE fields.
 
 ## Examples
 
@@ -228,7 +233,7 @@ res_intersect <- consolidate_chromatin_loops(
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmpIMxOzr/file9d85dac4220.bedpe
+#> Finished! Saved to /tmp/RtmpuCtzuT/file9d56691c3bd8.bedpe
 #> Finished! Final loops: 12
 
 # Example B: Consensus Mode (formerly Reproducible)
@@ -263,7 +268,7 @@ res_consensus <- consolidate_chromatin_loops(
 #>   [!]  Chaining: 1/12 (8%) above threshold -- MODERATE. Inspect flagged clusters above.
 #> --- End Post-Clustering Diagnosis ---
 #> Warning: 1 cluster(s) have max_span > chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.
-#> Finished! Saved to /tmp/RtmpIMxOzr/file9d8516b40556.bedpe
+#> Finished! Saved to /tmp/RtmpuCtzuT/file9d5666e0c827.bedpe
 #> Finished! Final loops: 12
 
 # Example C: Union Mode
@@ -299,7 +304,7 @@ res_union <- consolidate_chromatin_loops(
 #>   Chaining: 15/586 (3%) above threshold -- minimal, acceptable.
 #> --- End Post-Clustering Diagnosis ---
 #> Warning: 15 cluster(s) have max_span > chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.
-#> Finished! Saved to /tmp/RtmpIMxOzr/file9d859d4e2ce.bedpe
+#> Finished! Saved to /tmp/RtmpuCtzuT/file9d56587e836e.bedpe
 #> Finished! Final loops: 586
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -338,7 +343,7 @@ res_clean <- consolidate_chromatin_loops(
 #>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2
 #>   Chaining: 0/7 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpIMxOzr/file9d854d6dc4eb.bedpe
+#> Finished! Saved to /tmp/RtmpuCtzuT/file9d56afe1e45.bedpe
 #> Finished! Final loops: 4
 
 # Inspect results

@@ -4,7 +4,7 @@ Creates a circular "flower" diagram where each petal represents a gene
 set, showing the number of genes unique to that set. The center displays
 the size of the core intersection (genes shared by all sets). Designed
 for intuitive comparison of shared vs. condition-specific genes across
-2–6 groups.
+2-6 groups.
 
 ## Usage
 
