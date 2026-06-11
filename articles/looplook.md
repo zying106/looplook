@@ -1511,7 +1511,7 @@ sessionInfo()
 #> [127] checkmate_2.3.4             curl_7.1.0                 
 #> [129] cachem_1.1.0                stringr_1.6.0              
 #> [131] parallel_4.6.0              foreign_0.8-91             
-#> [133] AnnotationDbi_1.74.0        restfulr_0.0.16            
+#> [133] AnnotationDbi_1.74.0        restfulr_0.0.17            
 #> [135] desc_1.4.3                  pillar_1.11.1              
 #> [137] grid_4.6.0                  vctrs_0.7.3                
 #> [139] tidydr_0.0.6                cluster_2.1.8.2            
