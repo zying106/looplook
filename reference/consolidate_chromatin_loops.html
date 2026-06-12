@@ -14,7 +14,7 @@ Connected-component chaining: Graph-based clustering may
 transitively chain loci (A-B and B-C merge, pulling A and C into the same
 cluster even if they are far apart). By default, a warning is emitted when
 any cluster span exceeds the chaining threshold
-(max(3xgap, 5xmedian_anchor_width)). Use chaining_policy to
+(max(3*gap, 5*med_width*gap/1000)). Use chaining_policy to
 control this behavior ("warn", "none", "drop", or
 "error").
 It also supports a two-stage filtering strategy to improve signal-to-noise ratio:
@@ -37,7 +37,7 @@ Connected-component chaining: Graph-based clustering may
 transitively chain loci (A-B and B-C merge, pulling A and C into the same
 cluster even if they are far apart). By default, a warning is emitted when
 any cluster span exceeds the chaining threshold
-(max(3xgap, 5xmedian_anchor_width)). Use chaining_policy to
+(max(3*gap, 5*med_width*gap/1000)). Use chaining_policy to
 control this behavior ("warn", "none", "drop", or
 "error").
 It also supports a two-stage filtering strategy to improve signal-to-noise ratio:
@@ -158,7 +158,7 @@ Replicate-Balanced Aggregation: In "consensus" and "union" modes, each cluster s
 transitively chain loci (A-B and B-C merge, pulling A and C into the same
 cluster even if they are far apart). By default, a warning is emitted when
 any cluster span exceeds the chaining threshold
-(<code>max(3xgap, 5xmedian_anchor_width)</code>). Use <code>chaining_policy</code> to
+(<code>max(3*gap, 5*med_width*gap/1000)</code>). Use <code>chaining_policy</code> to
 control this behavior (<code>"warn"</code>, <code>"none"</code>, <code>"drop"</code>, or
 <code>"error"</code>).</p>
 <p>It also supports a <strong>two-stage filtering strategy</strong> to improve signal-to-noise ratio:</p><ul><li><p><strong>Pre-filtering</strong> (<code>min_raw_score</code>): Removes low-confidence noise (e.g., singleton reads) from raw files <em>before</em> merging.</p></li>
@@ -236,7 +236,7 @@ If <code>NULL</code> (default), auto-detection is used (see <code><a href="bedpe
 <dt id="arg-chaining-policy">chaining_policy<a class="anchor" aria-label="anchor" href="#arg-chaining-policy"></a></dt>
 <dd><p>Character. Controls behaviour when connected-component
 chaining produces clusters with span exceeding the chaining threshold
-(<code>max(3xgap, 5xmedian_anchor_width)</code>).
+(<code>max(3*gap, 5*med_width*gap/1000)</code>).
 <code>"warn"</code> (default): emit a warning and retain all clusters.
 <code>"none"</code>: silently accept all clusters.
 <code>"drop"</code>: remove clusters exceeding the threshold.
@@ -319,7 +319,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Intersect mode: Reference-based filtering (No Coordinate Merging)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Base: File 1. Criterion: Must overlap with ALL other files.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Intersecting with File 2...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpdrT0Fg/file9d6a322c59de.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp1axNiG/file9c302da576c2.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example B: Consensus Mode (formerly Reproducible)</span></span></span>
@@ -336,9 +336,10 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Gap Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Anchor width: median = 4,859 bp  (IQR: 3,433.25 - 7,146.25 bp)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Adjacent-anchor gap: median = 12,989 bp  (35% within current gap = 1,000 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Adjacent-anchor gap: median = 0 bp  (57% within current gap = 1,000 bp)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap appears appropriate for the anchor width distribution.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   [i]  Super-enhancer-like anchors -- very broad regulatory domains.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Gap Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Consensus mode: Keeping clusters in &gt;= 2 replicates</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Post-Clustering Diagnosis ---</span>
@@ -346,15 +347,15 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Members per cluster: median = 2, IQR = 2-2, max = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Consensus retention: 24 / 600 input loops (4.0%)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   [i]  Low retention -- many loops failed consensus. Gap may be too small for reproducible calls across replicates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Cluster span: median = 6,260  |  max = 26,481  |  threshold = 5xmed_width(4,859) = 24,295 bp</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Cluster span: median = 6,260  |  max = 26,481  |  threshold = 5xmed_width(4,859) x gap/1000 = 24,295 bp</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Largest cluster spans:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     #1: max_span = 26,481 bp, n_members = 2, n_reps = 2 [!]</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #1: max_span = 26,481 bp, n_members = 2, n_reps = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     #3: max_span = 22,248 bp, n_members = 2, n_reps = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     #4: max_span = 11,840 bp, n_members = 2, n_reps = 2</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   [!]  Chaining: 1/12 (8%) above threshold -- MODERATE. Inspect flagged clusters above.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/12 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>1 cluster(s) have max_span &gt; chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpdrT0Fg/file9d6a37f07c58.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp1axNiG/file9c3031e5ae6b.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example C: Union Mode</span></span></span>
@@ -371,26 +372,25 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Gap Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Anchor width: median = 4,859 bp  (IQR: 3,433.25 - 7,146.25 bp)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Adjacent-anchor gap: median = 12,989 bp  (35% within current gap = 1,000 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Adjacent-anchor gap: median = 0 bp  (57% within current gap = 1,000 bp)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap appears appropriate for the anchor width distribution.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   [i]  Super-enhancer-like anchors -- very broad regulatory domains.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Gap Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Union mode: Keeping all clusters</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Post-Clustering Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Clusters formed: 586  (from 600 loops surviving consensus)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Members per cluster: median = 1, IQR = 1-1, max = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Consensus retention: 600 / 600 input loops (100.0%)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Cluster span: median = 6,739  |  max = 27,921  |  threshold = 5xmed_width(4,859) = 24,295 bp</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Cluster span: median = 6,739  |  max = 27,921  |  threshold = 5xmed_width(4,859) x gap/1000 = 24,295 bp</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Largest cluster spans:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     #397: max_span = 27,921 bp, n_members = 1, n_reps = 1 [!]</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     #463: max_span = 27,921 bp, n_members = 1, n_reps = 1 [!]</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     #427: max_span = 26,620 bp, n_members = 1, n_reps = 1 [!]</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     #24: max_span = 26,481 bp, n_members = 2, n_reps = 2 [!]</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>     #29: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 15/586 (3%) above threshold -- minimal, acceptable.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #397: max_span = 27,921 bp, n_members = 1, n_reps = 1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #463: max_span = 27,921 bp, n_members = 1, n_reps = 1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>     #427: max_span = 26,620 bp, n_members = 1, n_reps = 1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/586 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>15 cluster(s) have max_span &gt; chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpdrT0Fg/file9d6a4486ee43.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp1axNiG/file9c307e20ffca.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 586</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example D: Dual Filtering Strategy (Recommended for HiChIP)</span></span></span>
@@ -411,10 +411,10 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Clustering mode (Union/Consensus): Merging coordinates via Graph</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Gap Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Anchor width: median = 5,403 bp  (IQR: 3,921.5 - 8,977 bp)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Adjacent-anchor gap: median = 38,938 bp  (25% within current gap = 1,000 bp)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Adjacent-anchor gap: median = 7,161.5 bp  (43% within current gap = 1,000 bp)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Gap appears appropriate for the anchor width distribution.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   [i]  Wide loop anchors -- typical of Hi-C bins, Capture Hi-C baits, or super-enhancer-anchored loops.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   [i]  Super-enhancer-like anchors -- very broad regulatory domains.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Gap Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Consensus mode: Keeping clusters in &gt;= 2 replicates</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Post-Clustering Diagnosis ---</span>
@@ -422,14 +422,14 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Members per cluster: median = 2, IQR = 2-2, max = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Consensus retention: 14 / 215 input loops (6.5%)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   [i]  Low retention -- many loops failed consensus. Gap may be too small for reproducible calls across replicates.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>   Cluster span: median = 5,672  |  max = 22,248  |  threshold = 5xmed_width(5,403) = 27,015 bp</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>   Cluster span: median = 5,672  |  max = 22,248  |  threshold = 5xmed_width(5,403) x gap/1000 = 27,015 bp</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Largest cluster spans:</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     #2: max_span = 22,248 bp, n_members = 2, n_reps = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     #3: max_span = 11,840 bp, n_members = 2, n_reps = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/7 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpdrT0Fg/file9d6a5f238ace.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp1axNiG/file9c3024ce4d05.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 4</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Inspect results</span></span></span>

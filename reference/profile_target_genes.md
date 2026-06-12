@@ -203,12 +203,11 @@ default.
 
 ## Note
 
-If any downstream analysis module fails (e.g. due to missing optional
-packages or network timeouts), the error propagates and stops the entire
-function. To obtain partial results when some modules are unavailable,
-disable problematic steps via `run_go = FALSE`, `run_ppi = FALSE`, or
-`run_motif = FALSE`, or call the corresponding internal functions
-individually.
+Downstream modules are run in a fail-soft mode. Module-level failures
+(e.g. due to missing optional packages or network timeouts) are captured
+as warnings and stored in the returned `warnings` element, allowing
+other modules to complete. To proactively disable specific modules, set
+`run_go = FALSE`, `run_ppi = FALSE`, or `run_motif = FALSE`.
 
 ## Examples
 

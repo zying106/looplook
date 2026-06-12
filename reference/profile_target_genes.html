@@ -301,12 +301,11 @@ independent experimental approaches. All three modules are disabled by default.<
     </div>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
-    <p>If any downstream analysis module fails (e.g. due to missing optional
-packages or network timeouts), the error propagates and stops the entire
-function. To obtain partial results when some modules are unavailable,
-disable problematic steps via <code>run_go = FALSE</code>, <code>run_ppi = FALSE</code>,
-or <code>run_motif = FALSE</code>, or call the corresponding internal functions
-individually.</p>
+    <p>Downstream modules are run in a fail-soft mode. Module-level failures
+(e.g. due to missing optional packages or network timeouts) are captured as
+warnings and stored in the returned <code>warnings</code> element, allowing other
+modules to complete. To proactively disable specific modules, set
+<code>run_go = FALSE</code>, <code>run_ppi = FALSE</code>, or <code>run_motif = FALSE</code>.</p>
     </div>
 
     <div class="section level2">

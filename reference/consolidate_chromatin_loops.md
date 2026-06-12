@@ -31,7 +31,7 @@ The function supports three modes:
 transitively chain loci (A-B and B-C merge, pulling A and C into the
 same cluster even if they are far apart). By default, a warning is
 emitted when any cluster span exceeds the chaining threshold
-(`max(3xgap, 5xmedian_anchor_width)`). Use `chaining_policy` to control
+(`max(3*gap, 5*med_width*gap/1000)`). Use `chaining_policy` to control
 this behavior (`"warn"`, `"none"`, `"drop"`, or `"error"`).
 
 It also supports a **two-stage filtering strategy** to improve
@@ -140,7 +140,7 @@ consolidate_chromatin_loops(
 
   Character. Controls behaviour when connected-component chaining
   produces clusters with span exceeding the chaining threshold
-  (`max(3xgap, 5xmedian_anchor_width)`). `"warn"` (default): emit a
+  (`max(3*gap, 5*med_width*gap/1000)`). `"warn"` (default): emit a
   warning and retain all clusters. `"none"`: silently accept all
   clusters. `"drop"`: remove clusters exceeding the threshold.
   `"error"`: stop with an error.
@@ -233,7 +233,7 @@ res_intersect <- consolidate_chromatin_loops(
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmpdrT0Fg/file9d6a322c59de.bedpe
+#> Finished! Saved to /tmp/Rtmp1axNiG/file9c302da576c2.bedpe
 #> Finished! Final loops: 12
 
 # Example B: Consensus Mode (formerly Reproducible)
@@ -250,9 +250,10 @@ res_consensus <- consolidate_chromatin_loops(
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> --- Gap Diagnosis ---
 #>   Anchor width: median = 4,859 bp  (IQR: 3,433.25 - 7,146.25 bp)
-#>   Adjacent-anchor gap: median = 12,989 bp  (35% within current gap = 1,000 bp)
+#>   Adjacent-anchor gap: median = 0 bp  (57% within current gap = 1,000 bp)
 #>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)
 #>   Gap appears appropriate for the anchor width distribution.
+#>   [i]  Super-enhancer-like anchors -- very broad regulatory domains.
 #> --- End Gap Diagnosis ---
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
 #> --- Post-Clustering Diagnosis ---
@@ -260,15 +261,15 @@ res_consensus <- consolidate_chromatin_loops(
 #>   Members per cluster: median = 2, IQR = 2-2, max = 2
 #>   Consensus retention: 24 / 600 input loops (4.0%)
 #>   [i]  Low retention -- many loops failed consensus. Gap may be too small for reproducible calls across replicates.
-#>   Cluster span: median = 6,260  |  max = 26,481  |  threshold = 5xmed_width(4,859) = 24,295 bp
+#>   Cluster span: median = 6,260  |  max = 26,481  |  threshold = 5xmed_width(4,859) x gap/1000 = 24,295 bp
 #>   Largest cluster spans:
-#>     #1: max_span = 26,481 bp, n_members = 2, n_reps = 2 [!]
+#>     #1: max_span = 26,481 bp, n_members = 2, n_reps = 2
 #>     #3: max_span = 22,248 bp, n_members = 2, n_reps = 2
 #>     #4: max_span = 11,840 bp, n_members = 2, n_reps = 2
-#>   [!]  Chaining: 1/12 (8%) above threshold -- MODERATE. Inspect flagged clusters above.
+#>   Chaining: 0/12 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Warning: 1 cluster(s) have max_span > chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.
-#> Finished! Saved to /tmp/RtmpdrT0Fg/file9d6a37f07c58.bedpe
+#> Finished! Saved to /tmp/Rtmp1axNiG/file9c3031e5ae6b.bedpe
 #> Finished! Final loops: 12
 
 # Example C: Union Mode
@@ -285,26 +286,25 @@ res_union <- consolidate_chromatin_loops(
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> --- Gap Diagnosis ---
 #>   Anchor width: median = 4,859 bp  (IQR: 3,433.25 - 7,146.25 bp)
-#>   Adjacent-anchor gap: median = 12,989 bp  (35% within current gap = 1,000 bp)
+#>   Adjacent-anchor gap: median = 0 bp  (57% within current gap = 1,000 bp)
 #>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)
 #>   Gap appears appropriate for the anchor width distribution.
+#>   [i]  Super-enhancer-like anchors -- very broad regulatory domains.
 #> --- End Gap Diagnosis ---
 #> >>> Union mode: Keeping all clusters
 #> --- Post-Clustering Diagnosis ---
 #>   Clusters formed: 586  (from 600 loops surviving consensus)
 #>   Members per cluster: median = 1, IQR = 1-1, max = 2
 #>   Consensus retention: 600 / 600 input loops (100.0%)
-#>   Cluster span: median = 6,739  |  max = 27,921  |  threshold = 5xmed_width(4,859) = 24,295 bp
+#>   Cluster span: median = 6,739  |  max = 27,921  |  threshold = 5xmed_width(4,859) x gap/1000 = 24,295 bp
 #>   Largest cluster spans:
-#>     #397: max_span = 27,921 bp, n_members = 1, n_reps = 1 [!]
-#>     #463: max_span = 27,921 bp, n_members = 1, n_reps = 1 [!]
-#>     #427: max_span = 26,620 bp, n_members = 1, n_reps = 1 [!]
-#>     #24: max_span = 26,481 bp, n_members = 2, n_reps = 2 [!]
-#>     #29: max_span = 26,481 bp, n_members = 1, n_reps = 1 [!]
-#>   Chaining: 15/586 (3%) above threshold -- minimal, acceptable.
+#>     #397: max_span = 27,921 bp, n_members = 1, n_reps = 1
+#>     #463: max_span = 27,921 bp, n_members = 1, n_reps = 1
+#>     #427: max_span = 26,620 bp, n_members = 1, n_reps = 1
+#>   Chaining: 0/586 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Warning: 15 cluster(s) have max_span > chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.
-#> Finished! Saved to /tmp/RtmpdrT0Fg/file9d6a4486ee43.bedpe
+#> Finished! Saved to /tmp/Rtmp1axNiG/file9c307e20ffca.bedpe
 #> Finished! Final loops: 586
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -325,10 +325,10 @@ res_clean <- consolidate_chromatin_loops(
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> --- Gap Diagnosis ---
 #>   Anchor width: median = 5,403 bp  (IQR: 3,921.5 - 8,977 bp)
-#>   Adjacent-anchor gap: median = 38,938 bp  (25% within current gap = 1,000 bp)
+#>   Adjacent-anchor gap: median = 7,161.5 bp  (43% within current gap = 1,000 bp)
 #>   Gap / median_anchor_width ratio: 0.2x  (effective width expansion: 1.4x)
 #>   Gap appears appropriate for the anchor width distribution.
-#>   [i]  Wide loop anchors -- typical of Hi-C bins, Capture Hi-C baits, or super-enhancer-anchored loops.
+#>   [i]  Super-enhancer-like anchors -- very broad regulatory domains.
 #> --- End Gap Diagnosis ---
 #> >>> Consensus mode: Keeping clusters in >= 2 replicates
 #> --- Post-Clustering Diagnosis ---
@@ -336,14 +336,14 @@ res_clean <- consolidate_chromatin_loops(
 #>   Members per cluster: median = 2, IQR = 2-2, max = 2
 #>   Consensus retention: 14 / 215 input loops (6.5%)
 #>   [i]  Low retention -- many loops failed consensus. Gap may be too small for reproducible calls across replicates.
-#>   Cluster span: median = 5,672  |  max = 22,248  |  threshold = 5xmed_width(5,403) = 27,015 bp
+#>   Cluster span: median = 5,672  |  max = 22,248  |  threshold = 5xmed_width(5,403) x gap/1000 = 27,015 bp
 #>   Largest cluster spans:
 #>     #2: max_span = 22,248 bp, n_members = 2, n_reps = 2
 #>     #3: max_span = 11,840 bp, n_members = 2, n_reps = 2
 #>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2
 #>   Chaining: 0/7 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpdrT0Fg/file9d6a5f238ace.bedpe
+#> Finished! Saved to /tmp/Rtmp1axNiG/file9c3024ce4d05.bedpe
 #> Finished! Final loops: 4
 
 # Inspect results
