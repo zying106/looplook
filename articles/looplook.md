@@ -126,8 +126,9 @@ over-merging.
 
 ``` r
 
-# From Bioconductor
-BiocManager::install("looplook")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("zying106/looplook")
 ```
 
 ``` r
@@ -1506,7 +1507,7 @@ sessionInfo()
 #> [117] ProtGenerics_1.44.0         scales_1.4.0               
 #> [119] Biobase_2.72.0              png_0.1-9                  
 #> [121] ggfun_0.2.0                 knitr_1.51                 
-#> [123] rstudioapi_0.18.0           reshape2_1.4.5             
+#> [123] rstudioapi_0.19.0           reshape2_1.4.5             
 #> [125] rjson_0.2.23                nlme_3.1-169               
 #> [127] checkmate_2.3.4             curl_7.1.0                 
 #> [129] cachem_1.1.0                stringr_1.6.0              

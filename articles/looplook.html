@@ -610,8 +610,9 @@ without over-merging.</p>
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># From Bioconductor</span></span>
-<span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"looplook"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"BiocManager"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"BiocManager"</span><span class="op">)</span></span>
+<span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"zying106/looplook"</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/zying106/looplook" class="external-link">looplook</a></span><span class="op">)</span></span>
 <span><span class="co"># Create a temporary directory to store all output plots and Excel files</span></span>
@@ -2534,7 +2535,7 @@ New File → R Markdown → From Template → looplook Report</strong>.</p>
 <span><span class="co">#&gt; [117] ProtGenerics_1.44.0         scales_1.4.0               </span></span>
 <span><span class="co">#&gt; [119] Biobase_2.72.0              png_0.1-9                  </span></span>
 <span><span class="co">#&gt; [121] ggfun_0.2.0                 knitr_1.51                 </span></span>
-<span><span class="co">#&gt; [123] rstudioapi_0.18.0           reshape2_1.4.5             </span></span>
+<span><span class="co">#&gt; [123] rstudioapi_0.19.0           reshape2_1.4.5             </span></span>
 <span><span class="co">#&gt; [125] rjson_0.2.23                nlme_3.1-169               </span></span>
 <span><span class="co">#&gt; [127] checkmate_2.3.4             curl_7.1.0                 </span></span>
 <span><span class="co">#&gt; [129] cachem_1.1.0                stringr_1.6.0              </span></span>

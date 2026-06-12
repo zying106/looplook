@@ -57,8 +57,8 @@ installation:
 ``` r
 
 # Installation from GitHub
-if (!requireNamespace("devtools", quietly = TRUE)) install.packages("devtools")
-devtools::install_github("zying106/looplook")
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager")
+BiocManager::install("zying106/looplook")
 ```
 
 ------------------------------------------------------------------------
@@ -473,7 +473,7 @@ For reproducibility, `looplook` is developed and tested under the
 following environment:
 
 ``` R
-## ─ Session info ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ─ Session info ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ##  setting  value
 ##  version  R version 4.5.1 (2025-06-13)
 ##  os       macOS Sequoia 15.3
@@ -483,26 +483,32 @@ following environment:
 ##  collate  en_US.UTF-8
 ##  ctype    en_US.UTF-8
 ##  tz       Asia/Singapore
-##  date     2026-06-10
+##  date     2026-06-12
 ##  rstudio  2025.05.1+513 Mariposa Orchid (desktop)
 ##  pandoc   3.9.0.2 @ /opt/homebrew/bin/ (via rmarkdown)
 ##  quarto   1.6.42 @ /Applications/RStudio.app/Contents/Resources/app/quarto/bin/quarto
 ## 
-## ─ Packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ─ Packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ##  ! package                           * version   date (UTC) lib source
 ##    abind                               1.4-8     2024-09-12 [1] CRAN (R 4.5.0)
 ##    AnnotationDbi                     * 1.70.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    AnnotationFilter                    1.32.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    ape                                 5.8-1     2024-12-16 [1] CRAN (R 4.5.0)
 ##    aplot                               0.2.9     2025-09-12 [1] CRAN (R 4.5.0)
+##    askpass                             1.2.1     2024-10-04 [1] CRAN (R 4.5.0)
 ##    backports                           1.5.0     2024-05-23 [1] CRAN (R 4.5.0)
 ##    bamsignals                          1.40.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    base64enc                           0.1-3     2015-07-28 [1] CRAN (R 4.5.0)
 ##    bezier                              1.1.2     2018-12-14 [1] CRAN (R 4.5.0)
 ##    Biobase                           * 2.68.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
+##    BiocBaseUtils                       1.10.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
+##    BiocCheck                           1.44.2    2025-05-19 [1] Bioconductor 3.21 (R 4.5.0)
+##    BiocFileCache                       2.16.2    2025-08-28 [1] Bioconductor 3.21 (R 4.5.1)
 ##    BiocGenerics                      * 0.54.1    2025-10-09 [1] Bioconductor 3.21 (R 4.5.1)
 ##    BiocIO                              1.18.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
+##    BiocManager                         1.30.26   2025-06-05 [1] CRAN (R 4.5.0)
 ##    BiocParallel                        1.42.2    2025-09-11 [1] Bioconductor 3.21 (R 4.5.1)
+##    biocViews                           1.76.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    Biostrings                          2.76.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    biovizBase                          1.56.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    bit                                 4.6.0     2025-03-06 [1] CRAN (R 4.5.0)
@@ -514,7 +520,9 @@ following environment:
 ##    broom                               1.0.11    2025-12-04 [1] CRAN (R 4.5.2)
 ##    BSgenome                            1.76.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    BSgenome.Hsapiens.UCSC.hg38         1.4.5     2026-02-15 [1] Bioconductor
+##    bslib                               0.9.0     2025-01-30 [1] CRAN (R 4.5.0)
 ##    cachem                              1.1.0     2024-05-16 [1] CRAN (R 4.5.0)
+##    callr                               3.7.6     2024-03-25 [1] CRAN (R 4.5.0)
 ##    car                                 3.1-3     2024-09-27 [1] CRAN (R 4.5.0)
 ##    carData                             3.0-5     2022-01-06 [1] CRAN (R 4.5.0)
 ##    caTools                             1.18.3    2024-09-04 [1] CRAN (R 4.5.0)
@@ -528,13 +536,18 @@ following environment:
 ##    clusterProfiler                     4.16.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    codetools                           0.2-20    2024-03-31 [1] CRAN (R 4.5.1)
 ##    colorspace                          2.1-2     2025-09-22 [1] CRAN (R 4.5.0)
+##    commonmark                          2.0.0     2025-07-07 [1] CRAN (R 4.5.0)
 ##    ComplexHeatmap                      2.26.0    2025-10-29 [1] Bioconductor 3.22 (R 4.5.1)
+##    covr                                3.6.5     2025-11-09 [1] CRAN (R 4.5.0)
 ##    cowplot                             1.2.0     2025-07-07 [1] CRAN (R 4.5.0)
 ##    crayon                              1.5.3     2024-06-20 [1] CRAN (R 4.5.0)
+##    credentials                         2.0.3     2025-09-12 [1] CRAN (R 4.5.0)
+##    crosstalk                           1.2.2     2025-08-26 [1] CRAN (R 4.5.0)
 ##    curl                                7.0.0     2025-08-19 [1] CRAN (R 4.5.0)
 ##    data.table                          1.17.8    2025-07-10 [1] CRAN (R 4.5.0)
 ##    data.tree                           1.2.0     2025-08-25 [1] CRAN (R 4.5.0)
 ##    DBI                                 1.2.3     2024-06-02 [1] CRAN (R 4.5.0)
+##    dbplyr                              2.5.1     2025-09-10 [1] CRAN (R 4.5.0)
 ##    DelayedArray                        0.34.1    2025-04-17 [1] Bioconductor 3.21 (R 4.5.0)
 ##    desc                                1.4.3     2023-12-10 [1] CRAN (R 4.5.0)
 ##    devtools                            2.4.6     2025-10-03 [1] CRAN (R 4.5.0)
@@ -546,6 +559,7 @@ following environment:
 ##    DOSE                                4.2.0     2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    dotCall64                           1.2       2024-10-04 [1] CRAN (R 4.5.0)
 ##    dplyr                               1.1.4     2023-11-17 [1] CRAN (R 4.5.0)
+##    DT                                  0.34.0    2025-09-02 [1] CRAN (R 4.5.0)
 ##    ellipsis                            0.3.2     2021-04-29 [1] CRAN (R 4.5.0)
 ##    enrichplot                          1.28.4    2025-07-14 [1] Bioconductor 3.21 (R 4.5.1)
 ##    ensembldb                           2.32.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
@@ -555,6 +569,7 @@ following environment:
 ##    fastmatch                           1.1-6     2024-12-23 [1] CRAN (R 4.5.0)
 ##    fgsea                               1.34.2    2025-07-10 [1] Bioconductor 3.21 (R 4.5.1)
 ##    fields                              17.1      2025-09-08 [1] CRAN (R 4.5.0)
+##    filelock                            1.0.3     2023-12-11 [1] CRAN (R 4.5.0)
 ##    foreach                             1.5.2     2022-02-02 [1] CRAN (R 4.5.0)
 ##    foreign                             0.8-90    2025-03-31 [1] CRAN (R 4.5.1)
 ##    Formula                             1.2-5     2023-02-24 [1] CRAN (R 4.5.0)
@@ -565,6 +580,7 @@ following environment:
 ##    GenomicAlignments                   1.44.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    GenomicFeatures                     1.60.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    GenomicRanges                       1.60.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
+##    gert                                2.1.5     2025-03-25 [1] CRAN (R 4.5.0)
 ##    GetoptLong                          1.1.0     2025-11-28 [1] CRAN (R 4.5.2)
 ##    ggdist                              3.3.3     2025-04-23 [1] CRAN (R 4.5.0)
 ##    ggforce                             0.5.0     2025-06-18 [1] CRAN (R 4.5.0)
@@ -582,6 +598,7 @@ following environment:
 ##    GO.db                               3.21.0    2025-10-19 [1] Bioconductor
 ##    GOSemSim                            2.34.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    gplots                              3.2.0     2024-10-05 [1] CRAN (R 4.5.0)
+##    graph                               1.86.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    gridExtra                           2.3       2017-09-09 [1] CRAN (R 4.5.0)
 ##    gridGraphics                        0.5-1     2020-12-13 [1] CRAN (R 4.5.0)
 ##    gson                                0.1.0     2023-03-07 [1] CRAN (R 4.5.0)
@@ -594,11 +611,13 @@ following environment:
 ##    htmltools                           0.5.8.1   2024-04-04 [1] CRAN (R 4.5.0)
 ##    htmlwidgets                         1.6.4     2023-12-06 [1] CRAN (R 4.5.0)
 ##    httr                                1.4.7     2023-08-15 [1] CRAN (R 4.5.0)
+##    httr2                               1.2.1     2025-07-22 [1] CRAN (R 4.5.0)
 ##    igraph                              2.2.0     2025-10-13 [1] CRAN (R 4.5.0)
 ##    InteractionSet                      1.36.1    2025-05-08 [1] Bioconductor 3.21 (R 4.5.0)
 ##    IRanges                           * 2.42.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    iterators                           1.0.14    2022-02-05 [1] CRAN (R 4.5.0)
 ##    JASPAR2020                          0.99.10   2026-02-15 [1] Bioconductor
+##    jquerylib                           0.1.4     2021-04-26 [1] CRAN (R 4.5.0)
 ##    jsonlite                            2.0.0     2025-03-27 [1] CRAN (R 4.5.0)
 ##    karyoploteR                         1.34.2    2025-06-09 [1] Bioconductor 3.21 (R 4.5.0)
 ##    KEGGREST                            1.48.1    2025-06-19 [1] Bioconductor 3.21 (R 4.5.1)
@@ -607,7 +626,7 @@ following environment:
 ##    lattice                             0.22-7    2025-04-02 [1] CRAN (R 4.5.1)
 ##    lazyeval                            0.2.2     2019-03-15 [1] CRAN (R 4.5.0)
 ##    lifecycle                           1.0.4     2023-11-07 [1] CRAN (R 4.5.0)
-##  P looplook                          * 0.99.14   2026-06-10 [?] Bioconductor
+##  P looplook                          * 0.99.14   2026-06-11 [?] Bioconductor
 ##    magick                              2.9.0     2025-09-08 [1] CRAN (R 4.5.0)
 ##    magrittr                            2.0.4     2025-09-12 [1] CRAN (R 4.5.0)
 ##    maps                                3.4.3     2025-05-26 [1] CRAN (R 4.5.0)
@@ -620,6 +639,7 @@ following environment:
 ##    networkD3                           0.4.1     2025-04-14 [1] CRAN (R 4.5.0)
 ##    nlme                                3.1-168   2025-03-31 [1] CRAN (R 4.5.1)
 ##    nnet                                7.3-20    2025-01-01 [1] CRAN (R 4.5.1)
+##    openssl                             2.3.4     2025-09-30 [1] CRAN (R 4.5.0)
 ##    openxlsx                            4.2.8.1   2025-10-31 [1] CRAN (R 4.5.0)
 ##    org.Hs.eg.db                      * 3.21.0    2025-10-20 [1] Bioconductor
 ##    otel                                0.2.0     2025-08-29 [1] CRAN (R 4.5.0)
@@ -632,8 +652,11 @@ following environment:
 ##    plyr                                1.8.9     2023-10-02 [1] CRAN (R 4.5.0)
 ##    png                                 0.1-9     2026-03-15 [1] CRAN (R 4.5.2)
 ##    polyclip                            1.10-7    2024-07-23 [1] CRAN (R 4.5.0)
+##    prettyunits                         1.2.0     2023-09-24 [1] CRAN (R 4.5.0)
+##    processx                            3.8.6     2025-02-21 [1] CRAN (R 4.5.0)
 ##    ProtGenerics                        1.40.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    proto                               1.0.0     2016-10-29 [1] CRAN (R 4.5.0)
+##    ps                                  1.9.1     2025-04-12 [1] CRAN (R 4.5.0)
 ##    purrr                               1.2.1     2026-01-09 [1] CRAN (R 4.5.2)
 ##    pwalign                             1.4.0     2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    qvalue                              2.40.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
@@ -642,6 +665,8 @@ following environment:
 ##    R.utils                             2.13.0    2025-02-24 [1] CRAN (R 4.5.0)
 ##    R6                                  2.6.1     2025-02-15 [1] CRAN (R 4.5.0)
 ##    rappdirs                            0.3.3     2021-01-31 [1] CRAN (R 4.5.0)
+##    RBGL                                1.84.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
+##    rcmdcheck                           1.4.0     2021-09-27 [1] CRAN (R 4.5.0)
 ##    RColorBrewer                        1.1-3     2022-04-03 [1] CRAN (R 4.5.0)
 ##    Rcpp                                1.1.0     2025-07-02 [1] CRAN (R 4.5.0)
 ##    RCurl                               1.98-1.17 2025-03-22 [1] CRAN (R 4.5.0)
@@ -649,9 +674,11 @@ following environment:
 ##    remotes                             2.5.0     2024-03-17 [1] CRAN (R 4.5.0)
 ##    reshape2                            1.4.4     2020-04-09 [1] CRAN (R 4.5.0)
 ##    restfulr                            0.0.16    2025-06-27 [1] CRAN (R 4.5.0)
+##    rex                                 1.2.1     2021-11-26 [1] CRAN (R 4.5.0)
 ##    rjson                               0.2.23    2024-09-16 [1] CRAN (R 4.5.0)
 ##    rlang                               1.2.0     2026-04-06 [1] CRAN (R 4.5.2)
 ##    rmarkdown                           2.30      2025-09-28 [1] CRAN (R 4.5.0)
+##    roxygen2                            7.3.3     2025-09-03 [1] CRAN (R 4.5.0)
 ##    rpart                               4.1.24    2025-01-07 [1] CRAN (R 4.5.1)
 ##    rprojroot                           2.1.1     2025-08-26 [1] CRAN (R 4.5.0)
 ##    Rsamtools                           2.24.1    2025-09-04 [1] Bioconductor 3.21 (R 4.5.1)
@@ -659,9 +686,11 @@ following environment:
 ##    rstatix                             0.7.3     2025-10-18 [1] CRAN (R 4.5.0)
 ##    rstudioapi                          0.17.1    2024-10-22 [1] CRAN (R 4.5.0)
 ##    rtracklayer                         1.68.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
+##    RUnit                               0.4.33.1  2025-06-17 [1] CRAN (R 4.5.0)
 ##    S4Arrays                            1.8.1     2025-05-29 [1] Bioconductor 3.21 (R 4.5.0)
 ##    S4Vectors                         * 0.48.0    2025-10-29 [1] Bioconductor 3.22 (R 4.5.1)
 ##    S7                                  0.2.0     2024-11-07 [1] CRAN (R 4.5.0)
+##    sass                                0.4.10    2025-04-11 [1] CRAN (R 4.5.0)
 ##    scales                              1.4.0     2025-04-24 [1] CRAN (R 4.5.0)
 ##    seqLogo                             1.74.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    sessioninfo                         1.2.3     2025-02-05 [1] CRAN (R 4.5.0)
@@ -670,9 +699,11 @@ following environment:
 ##    SparseArray                         1.8.1     2025-07-21 [1] Bioconductor 3.21 (R 4.5.1)
 ##    sqldf                               0.4-11    2017-06-28 [1] CRAN (R 4.5.0)
 ##    STRINGdb                            2.20.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
+##    stringdist                          0.9.15    2025-01-10 [1] CRAN (R 4.5.0)
 ##    stringi                             1.8.7     2025-03-27 [1] CRAN (R 4.5.0)
 ##    stringr                             1.5.2     2025-09-08 [1] CRAN (R 4.5.0)
 ##    SummarizedExperiment                1.38.1    2025-04-28 [1] Bioconductor 3.21 (R 4.5.0)
+##    sys                                 3.4.3     2024-10-04 [1] CRAN (R 4.5.0)
 ##    testthat                          * 3.3.1     2025-11-25 [1] CRAN (R 4.5.2)
 ##    TFBSTools                           1.46.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    TFMPvalue                           1.0.0     2026-01-19 [1] CRAN (R 4.5.2)
@@ -694,6 +725,8 @@ following environment:
 ##    withr                               3.0.2     2024-10-28 [1] CRAN (R 4.5.0)
 ##    xfun                                0.55      2025-12-16 [1] CRAN (R 4.5.2)
 ##    XML                                 3.99-0.19 2025-08-22 [1] CRAN (R 4.5.0)
+##    xml2                                1.4.0     2025-08-20 [1] CRAN (R 4.5.0)
+##    xopen                               1.0.1     2024-04-25 [1] CRAN (R 4.5.0)
 ##    XVector                             0.48.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)
 ##    yaml                                2.3.10    2024-07-26 [1] CRAN (R 4.5.0)
 ##    yulab.utils                         0.2.1     2025-08-19 [1] CRAN (R 4.5.0)
@@ -705,5 +738,5 @@ following environment:
 ##  * ── Packages attached to the search path.
 ##  P ── Loaded and on-disk path mismatch.
 ## 
-## ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+## ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 ```
