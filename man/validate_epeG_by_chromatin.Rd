@@ -9,6 +9,7 @@ validate_epeG_by_chromatin(
   chromatin_beds = list(),
   anchor_gap = 200,
   anchor_min_overlap = 100,
+  candidate_types = NULL,
   species = "hg38",
   quiet = FALSE
 )
@@ -18,9 +19,11 @@ validate_epeG_by_chromatin(
 \code{\link{annotate_peaks_and_loops}} or
 \code{\link{refine_loop_anchors_by_expression}}.
 When the refined output is provided, all anchors classified as
-\code{eP} or \code{eG} are validated (regardless of
-\code{Retained_In_Functional_Network} status). When the raw annotation
-is provided, all anchors
+\code{eP} or \code{eG} are validated. When the raw annotation
+is provided, all \code{P}, \code{G}, and \code{E} anchors are
+evaluated (chromatin evidence may reclassify E to P or dual).
+Anchors are tested for overlap with chromatin mark BED files and
+assigned confidence levels based on ENCODE active-enhancer criteria.
 annotated as P or G are tested.}
 
 \item{chromatin_beds}{Named list of BED file paths. Names must be
@@ -33,6 +36,11 @@ chromatin peak for them to be considered overlapping. Default: \code{200}.}
 
 \item{anchor_min_overlap}{Integer. Minimum overlap (bp) required.
 Default: \code{100}.}
+
+\item{candidate_types}{Character vector or \code{NULL}. Candidate anchor
+types to validate. \code{NULL} (default): \code{c("eP","eG")} for refined
+input, \code{c("P","G","E")} for raw.  Set to \code{c("P","G","E","eP","eG")}
+to cover all positional categories.}
 
 \item{species}{Character. Genome assembly for seqlevel harmonization.
 Default: \code{"hg38"}.}

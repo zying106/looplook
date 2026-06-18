@@ -39,6 +39,12 @@ conservative default -- a silent protein-coding gene is preferred over
 a highly expressed lncRNA at the same locus.
 \code{"expression_first"}: apply expression filtering across all
 biotypes first, then pick the best biotype among expressed candidates.}
+
+\item{co_dominance_ratio}{Numeric (0-1). In the expression tiebreaker step,
+genes with expression >= \code{co_dominance_ratio * max(expression)} in the
+group are retained together. Default: \code{0.1} (i.e. within one order of
+magnitude). Lower values (e.g. \code{0.01}) retain more co-dominant
+candidates; higher values (e.g. \code{0.5}) are more stringent.}
 }
 \value{
 The input data frame with \code{SYMBOL} and \code{annotation}
@@ -55,4 +61,3 @@ are kept. When multiple candidates share the same biotype rank, a
 co-dominant expression rule is applied: all genes with expression >= 10\\%
 of the group maximum are retained (collapsed with ";").
 }
-\keyword{internal}

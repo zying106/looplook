@@ -563,6 +563,8 @@ run_gsea_analysis <- function(target_genes, global_glist, gsea_nSample, current_
         stringsAsFactors = FALSE
     )
     gsea_res <- tryCatch(
+        # GSEA in profile_target_genes is exploratory: pvalueCutoff=1.1 and
+        # minGSSize=2 ensure permissive enrichment, even for small loop-gene sets.
         clusterProfiler::GSEA(curr_glist, TERM2GENE = term_df,
             pvalueCutoff = 1.1, minGSSize = 2, maxGSSize = 50000,
             verbose = FALSE, seed = TRUE),
@@ -1236,12 +1238,12 @@ run_heatmap_and_connectivity <- function(target_genes, tpm_mat_raw, meta_raw, lo
 
 .is_promoter_anchor_type <- function(anchor_type) {
     anchor_type <- trimws(as.character(anchor_type))
-    !is.na(anchor_type) & anchor_type == "P"
+    !is.na(anchor_type) & .is_promoter_like(anchor_type)
 }
 
 .is_enhancer_like_anchor_type <- function(anchor_type) {
     anchor_type <- trimws(as.character(anchor_type))
-    !is.na(anchor_type) & anchor_type %in% c("E", "eP", "eG")
+    !is.na(anchor_type) & .is_distal_like(anchor_type)
 }
 
 .empty_anchor_df <- function() {

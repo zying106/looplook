@@ -57,7 +57,8 @@ if (getRversion() >= "2.15.1") {
         "opposite_anchor_id", "local_anchor_id", "Mean_Expression",
         "Passes_Expression_Filter", "retained_after_refinement",
         "H3K4me1", "H3K27ac", "ATAC", "H3K27me3", "H3K4me3",
-        "anchor_type", "anchor_gene", "confidence", "evidence"
+        "anchor_type", "anchor_gene", "confidence", "evidence",
+        "priority"
     ))
 }
 
@@ -403,6 +404,52 @@ clean_gene_names <- function(x, split = NULL) {
 }
 
 
+#' Internal: Update Anchor State After Expression Refinement
+#'
+#' Synchronises \code{anchor_state$map_info$type_code} with the expression-refined
+#' anchor types in \code{loop_df} so that downstream chromatin-aware target
+#' recomputation uses the updated eP/eG classifications.
+#'
+#' @param anchor_state The \code{looplook_anchor_state} attribute from
+#'   \code{\link{annotate_peaks_and_loops}} output.
+#' @param loop_df Refined loop annotation data frame with \code{a1_id},
+#'   \code{a2_id}, \code{anchor1_type}, \code{anchor2_type} columns.
+#' @return The \code{anchor_state} list with \code{map_info$type_code} updated.
+#' @keywords internal
+#' @noRd
+.update_anchor_state_from_loop_df <- function(anchor_state, loop_df) {
+    if (is.null(anchor_state) || !"map_info" %in% names(anchor_state)) {
+        return(anchor_state)
+    }
+    required_cols <- c("a1_id", "a2_id", "anchor1_type", "anchor2_type")
+    if (!all(required_cols %in% colnames(loop_df))) {
+        return(anchor_state)
+    }
+
+    type_map <- dplyr::bind_rows(
+        loop_df %>%
+            dplyr::transmute(
+                anchor_id = as.character(.data$a1_id),
+                type_code_new = as.character(.data$anchor1_type)
+            ),
+        loop_df %>%
+            dplyr::transmute(
+                anchor_id = as.character(.data$a2_id),
+                type_code_new = as.character(.data$anchor2_type)
+            )
+    ) %>%
+        dplyr::filter(!is.na(.data$anchor_id), .data$anchor_id != "") %>%
+        dplyr::distinct(.data$anchor_id, .keep_all = TRUE)
+
+    map_info <- anchor_state$map_info
+    idx <- match(map_info$anchor_id, type_map$anchor_id)
+    hit <- !is.na(idx)
+    map_info$type_code[hit] <- type_map$type_code_new[idx[hit]]
+
+    anchor_state$map_info <- map_info
+    anchor_state
+}
+
 #' Internal: Collapse Delimited Gene String
 #'
 #' Splits a semicolon-delimited gene string, removes duplicates and NAs,
@@ -506,12 +553,17 @@ species_bsgenome_pkg <- function(species) {
 #'   a highly expressed lncRNA at the same locus.
 #'   \code{"expression_first"}: apply expression filtering across all
 #'   biotypes first, then pick the best biotype among expressed candidates.
+#' @param co_dominance_ratio Numeric (0-1). In the expression tiebreaker step,
+#'   genes with expression >= \code{co_dominance_ratio * max(expression)} in the
+#'   group are retained together. Default: \code{0.1} (i.e. within one order of
+#'   magnitude). Lower values (e.g. \code{0.01}) retain more co-dominant
+#'   candidates; higher values (e.g. \code{0.5}) are more stringent.
 #' @return The input data frame with \code{SYMBOL} and \code{annotation}
 #'   columns resolved.
 #' @importFrom GenomicRanges makeGRangesFromDataFrame findOverlaps
 #' @importFrom GenomicFeatures genes promoters
 #' @importFrom S4Vectors queryHits subjectHits
-#' @keywords internal
+#' @export
 resolve_gene_conflicts <- function(
   current_anno_df, txdb_obj, org_db_pkg,
   tss_region, gene_expr_map, min_expr = 0,
@@ -689,6 +741,21 @@ resolve_gene_conflicts <- function(
 }
 
 
+#' Internal: Check if anchor type is promoter-like (P or dual)
+#' @keywords internal
+#' @noRd
+.is_promoter_like <- function(t) t %in% c("P", "dual")
+
+#' Internal: Check if anchor type is distal/reenhancer-like (E, eP, eG, dual)
+#' @keywords internal
+#' @noRd
+.is_distal_like <- function(t) t %in% c("E", "eP", "eG", "dual")
+
+#' Internal: Check if anchor type is gene-body-like (G or eG)
+#' @keywords internal
+#' @noRd
+.is_gene_body_like <- function(t) t %in% c("G", "eG")
+
 #' Internal: Reclassify Anchor by Expression
 #'
 #' Given an anchor's gene symbol and type, filters to active genes (present in
@@ -769,12 +836,12 @@ clean_anchor <- function(g, t, allow, down) {
 #' @noRd
 .compute_raw_promoter_stats <- function(loop_df) {
     raw_stats_df <- dplyr::bind_rows(
-        loop_df %>% dplyr::filter(anchor1_type == "P" & !is.na(anchor1_gene)) %>%
+        loop_df %>% dplyr::filter(.is_promoter_like(anchor1_type) & !is.na(anchor1_gene)) %>%
             dplyr::select(
                 Gene = anchor1_gene, Neighbor_Type = anchor2_type,
                 Loop_Type = loop_type
             ) %>% dplyr::mutate(Gene = as.character(Gene)),
-        loop_df %>% dplyr::filter(anchor2_type == "P" & !is.na(anchor2_gene)) %>%
+        loop_df %>% dplyr::filter(.is_promoter_like(anchor2_type) & !is.na(anchor2_gene)) %>%
             dplyr::select(
                 Gene = anchor2_gene, Neighbor_Type = anchor1_type,
                 Loop_Type = loop_type
@@ -786,9 +853,9 @@ clean_anchor <- function(g, t, allow, down) {
         dplyr::group_by(Gene) %>%
         dplyr::summarise(
             Total_Loops_Filtered = dplyr::n(),
-            n_Linked_Promoters_Filtered = sum(Neighbor_Type == "P", na.rm = TRUE),
+            n_Linked_Promoters_Filtered = sum(.is_promoter_like(Neighbor_Type), na.rm = TRUE),
             n_Linked_Distal_Filtered = sum(
-                Neighbor_Type %in% c("E", "eP", "eG", "G"),
+                (.is_distal_like(Neighbor_Type) | .is_gene_body_like(Neighbor_Type)),
                 na.rm = TRUE
             ),
             Dominant_Interaction_Filtered = .get_dom(Loop_Type),
@@ -911,12 +978,12 @@ clean_anchor <- function(g, t, allow, down) {
         return(NULL)
     }
     distal_raw_df <- dplyr::bind_rows(
-        loop_df %>% dplyr::filter(anchor1_type %in% c("E", "eP", "eG", "G")) %>%
+        loop_df %>% dplyr::filter((.is_distal_like(anchor1_type) | .is_gene_body_like(anchor1_type))) %>%
             dplyr::select(
                 Distal_Anchor_ID = a1_id, Neighbor_Type = anchor2_type,
                 Loop_Type = loop_type, Neighbor_Gene = anchor2_gene
             ),
-        loop_df %>% dplyr::filter(anchor2_type %in% c("E", "eP", "eG", "G")) %>%
+        loop_df %>% dplyr::filter((.is_distal_like(anchor2_type) | .is_gene_body_like(anchor2_type))) %>%
             dplyr::select(
                 Distal_Anchor_ID = a2_id, Neighbor_Type = anchor1_type,
                 Loop_Type = loop_type, Neighbor_Gene = anchor1_gene
@@ -926,13 +993,13 @@ clean_anchor <- function(g, t, allow, down) {
         dplyr::summarise(
             Total_Loops_Filtered = dplyr::n(),
             n_Linked_Distal_Filtered = sum(
-                Neighbor_Type %in% c("E", "eP", "eG", "G"),
+                (.is_distal_like(Neighbor_Type) | .is_gene_body_like(Neighbor_Type)),
                 na.rm = TRUE
             ),
-            n_Linked_Promoters_Filtered = sum(Neighbor_Type == "P", na.rm = TRUE),
+            n_Linked_Promoters_Filtered = sum(.is_promoter_like(Neighbor_Type), na.rm = TRUE),
             Dominant_Interaction_Filtered = .get_dom(Loop_Type),
             Target_Genes_Filtered = extract_genes(
-                Neighbor_Gene[Neighbor_Type == "P"]
+                Neighbor_Gene[.is_promoter_like(Neighbor_Type)]
             ),
             .groups = "drop"
         )

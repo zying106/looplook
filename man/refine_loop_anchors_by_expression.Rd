@@ -29,7 +29,12 @@ refine_loop_anchors_by_expression(
 
 \item{sample_columns}{Character vector or integer indices. Columns in \code{expr_matrix_file} to average. Default: \code{NULL}.}
 
-\item{threshold}{Numeric. Minimum expression (e.g. TPM >= 1) for a gene to be considered active. Default: \code{1}.}
+\item{threshold}{Numeric. Minimum expression (e.g. TPM >= 1) for a gene to be considered active. Default: \code{1}.
+\strong{Gene name matching is case-sensitive.} Ensure gene identifiers in
+\code{expr_matrix_file} use the same case as the symbols returned by your
+OrgDb (typically all-uppercase for human and mouse, e.g. \code{"TP53"},
+not \code{"Tp53"}). Mismatched case will cause expressed genes to be
+misclassified as silent (eP/eG).}
 
 \item{unit_type}{Character. Expression unit for plot labels (e.g., \code{"TPM"}). Default: \code{"TPM"}.}
 
@@ -50,7 +55,10 @@ refine_loop_anchors_by_expression(
 \item{chromatin_beds}{Named list of BED file paths for orthogonal chromatin
 mark validation of eP/eG anchors. When non-empty, a \emph{Chromatin
 Validation} sheet is added to the Excel workbook (see
-\code{\link{validate_epeG_by_chromatin}}). Default: \code{list()} (skip).}
+\code{\link{validate_epeG_by_chromatin}}). Default: \code{list()} (skip).
+Note: if you plan to use \code{\link{refine_loop_anchors_by_chromatin}},
+the chromatin validation and reclassification are handled there; you can
+skip this parameter to avoid redundant BED file reads.}
 
 \item{write_output}{Logical. If \code{TRUE} (default), write the refined Excel workbook to \code{out_dir}. If \code{FALSE}, return results without creating directories or files.}
 
@@ -124,7 +132,7 @@ this gene appears in. A gene may appear in multiple columns simultaneously.
 \item \code{chromatin_validation} -- Data frame from
 \code{\link{validate_epeG_by_chromatin}} with confidence levels and
 evidence strings for each eP/eG anchor. \code{NULL} when
-\code{chromatin_beds} is empty.
+\code{chromatin_beds} is not provided or is empty (default).
 \item \code{plots} -- Named list of ggplot objects (dumbbell, rose, karyotype).
 \item \code{plot_list} -- Backward-compatible alias of \code{plots}.
 \item \code{metadata} -- Internal metadata list (parameters, versions, database versions). Not intended for direct use.

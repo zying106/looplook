@@ -144,3 +144,69 @@ test_that(".prepare_motif_anchor_sets deduplicates anchors and matches classes",
   expect_equal(sort(names(motif_sets$proximal_bg)), c("E", "G", "I"))
   expect_equal(sort(names(motif_sets$distal_bg)), c("F", "J"))
 })
+
+# --- GSEA seed reproducibility ---
+test_that("profile_target_genes with fixed seed produces reproducible output", {
+  rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
+  diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
+  expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
+  meta_path <- system.file("extdata", "example_coldata.txt", package = "looplook")
+  skip_if(rdata_path == "" || diff_path == "" || expr_path == "" || meta_path == "",
+    "Example data not available")
+
+  tmp <- new.env()
+  load(rdata_path, envir = tmp)
+  res <- tmp[[ls(tmp)[1]]]
+
+  run_with_seed <- function(s) {
+    looplook::profile_target_genes(
+      annotation_res = res,
+      diff_file = diff_path,
+      expr_matrix_file = expr_path,
+      metadata_file = meta_path,
+      run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
+      gsea_nSample = 20, seed = s
+    )
+  }
+
+  set.seed(42)
+  run1 <- run_with_seed(123)
+  set.seed(99)
+  run2 <- run_with_seed(123)
+
+  expect_equal(
+    run1$targets$target_gene_sets,
+    run2$targets$target_gene_sets,
+    info = "Same seed must produce identical gene sets"
+  )
+  expect_equal(
+    attr(run1, "seed"),
+    attr(run2, "seed"),
+    info = "Run metadata must record the same seed"
+  )
+})
+
+test_that("profile_target_genes with NULL seed has NULL in metadata", {
+  rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
+  diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
+  expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
+  meta_path <- system.file("extdata", "example_coldata.txt", package = "looplook")
+  skip_if(rdata_path == "" || diff_path == "" || expr_path == "" || meta_path == "",
+    "Example data not available")
+
+  tmp <- new.env()
+  load(rdata_path, envir = tmp)
+  res <- tmp[[ls(tmp)[1]]]
+
+  out <- profile_target_genes(
+    annotation_res = res,
+    diff_file = diff_path,
+    expr_matrix_file = expr_path,
+    metadata_file = meta_path,
+    run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
+    gsea_nSample = 20
+  )
+
+  expect_null(attr(out, "seed"),
+    info = "No seed argument should record NULL in result metadata")
+})

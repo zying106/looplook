@@ -1,5 +1,5 @@
 ^looplook\.Rproj$
-^\.Rproj\.user$
+^\.Rproj\.user
 ^LICENSE\.md$
 ^\.github$
 ^README\.Rmd$
@@ -28,4 +28,5 @@
 ^reviewer-response\.md$
 ^Outputs$
 ^Library$
+^looplook_algorithm.*\.(md|docx)$
 coverage

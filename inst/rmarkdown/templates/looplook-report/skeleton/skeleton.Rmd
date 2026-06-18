@@ -493,6 +493,29 @@ if (has_expr) {
     }
   )
 }
+
+# Chromatin-guided anchor reclassification (optional)
+chromatin_refined <- NULL
+chromatin_error <- NULL
+has_chromatin <- length(params$chromatin_beds) > 0
+if (has_chromatin && !is.null(refined)) {
+  chromatin_refined <- tryCatch(
+    refine_loop_anchors_by_chromatin(
+      annotation_res = refined,
+      chromatin_beds = params$chromatin_beds,
+      species = params$species,
+      write_output = FALSE,
+      quiet = TRUE
+    ),
+    error = function(e) {
+      chromatin_error <<- conditionMessage(e)
+      NULL
+    }
+  )
+  if (!is.null(chromatin_refined)) {
+    refined <- chromatin_refined
+  }
+}
 elapsed <- round(difftime(Sys.time(), t0, units="mins"), 1)
 if (!is.null(refined) && !is.null(refined$loop_annotation)) {
   n_refined_types <- length(unique(refined$loop_annotation$loop_type))
@@ -643,6 +666,24 @@ if (has_expr && !is.null(refined)) {
   } else {
     cat("<strong>No expression data provided.</strong> Skipping expression-aware refinement and reclassification.")
   }
+  cat('</div>')
+}
+if (has_chromatin && !is.null(chromatin_refined)) {
+  n_dual <- sum(chromatin_refined$loop_annotation$loop_type == "dual" |
+                grepl("dual", chromatin_refined$loop_annotation$loop_type))
+  n_reclass <- sum(grepl("Reclassified", names(table(chromatin_refined$chromatin_validation$confidence))))
+  cv_summary <- table(chromatin_refined$chromatin_validation$confidence)
+  cat('<div class="status-box status-info">')
+  cat(sprintf("<strong>Chromatin refinement complete.</strong> "))
+  if (n_dual > 0) cat(sprintf("<strong>%s</strong> anchors flagged as dual-function. ", comma(n_dual)))
+  cat(sprintf("Confidence: gold=%s, high=%s, supported=%s, weak=%s, uncertain=%s.",
+      comma(cv_summary["gold_standard"]), comma(cv_summary["high_confidence"]),
+      comma(cv_summary["supported"]), comma(cv_summary["weak"]),
+      comma(cv_summary["uncertain"])))
+  cat('</div>')
+} else if (has_chromatin && !is.null(chromatin_error)) {
+  cat('<div class="status-box status-warning">')
+  cat(sprintf("<strong>Chromatin refinement skipped.</strong> %s", html_escape(chromatin_error)))
   cat('</div>')
 }
 ```

@@ -57,6 +57,24 @@
     df
 }
 
+#' Internal: Compute Numeric Fraction of a Column
+#'
+#' Returns the fraction of non-empty, non-NA values that can be parsed as
+#' numeric.  Used for auto-detecting score columns in BEDPE/BED input.
+#'
+#' @param x A vector (typically a column from a data frame).
+#' @return A numeric value between 0 and 1.
+#' @keywords internal
+#' @noRd
+.numeric_ratio <- function(x) {
+    x <- as.character(x)
+    x <- x[!is.na(x) & trimws(x) != ""]
+    if (length(x) == 0) {
+        return(0)
+    }
+    mean(!is.na(suppressWarnings(as.numeric(x))))
+}
+
 #' Read BEDPE File into a GInteractions Object
 #'
 #' Reads a standard BEDPE file and converts it into a Bioconductor
@@ -121,14 +139,6 @@ bedpe_to_gi <- function(bedpe_file, score_col = NULL, quiet = FALSE) {
     df <- .validate_bedpe_df(df, quiet = quiet)
 
     # Score detection
-    .numeric_ratio <- function(x) {
-        x <- as.character(x)
-        x <- x[!is.na(x) & trimws(x) != ""]
-        if (length(x) == 0) {
-            return(0)
-        }
-        mean(!is.na(suppressWarnings(as.numeric(x))))
-    }
     .is_pvalue_like <- function(x) {
         nums <- suppressWarnings(as.numeric(as.character(x)))
         nums <- nums[!is.na(nums) & trimws(as.character(x)) != ""]
@@ -256,6 +266,8 @@ reduce_ginteractions <- function(gi, gap = 1000) {
 #' \code{\link[GenomicRanges]{GRanges}} object. Additional columns are ignored.
 #'
 #' @param bed_file Character. Path to a BED file (must be tab-delimited).
+#'   ENCODE narrowPeak and broadPeak formats are also accepted (the first three
+#'   columns are chr, start, end in all three formats).
 #' @param quiet Logical. If \code{TRUE}, suppress data-quality warnings
 #'   (e.g., unusually narrow/wide intervals).
 #'   Errors are never suppressed. Default: \code{FALSE}.
@@ -654,6 +666,7 @@ consolidate_chromatin_loops <- function(
     }
     S4Vectors::mcols(current_gi)$n_reps <- n_reps
     S4Vectors::mcols(current_gi)$n_members <- 1L
+    S4Vectors::mcols(current_gi)$cluster_id <- as.character(seq_along(current_gi))
     current_gi
 }
 
@@ -992,7 +1005,10 @@ dt_to_gi <- function(dt) {
 #' @keywords internal
 #' @noRd
 .diagnose_gap <- function(dt, gap, log_message) {
-    if (nrow(dt) < 10) return(invisible(NULL))
+    if (nrow(dt) < 10) {
+        log_message("  [i]  Too few loops (< 10) for gap diagnosis; skipping.")
+        return(invisible(NULL))
+    }
 
     # Anchor width in bp (1-based closed: end - start + 1)
     w1 <- dt$end1 - dt$start1 + 1L

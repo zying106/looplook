@@ -24,6 +24,8 @@ Description: Provides a versatile suite for target assignment and functional
     to prioritize biologically relevant chromatin loops. The pipeline also
     supports multi-omics data integration, functional annotation (GO, GSEA,
     motif, PPI), and publication-ready visualization.
+Author: Ying ZHANG
+Maintainer: Ying ZHANG <12207129@zju.edu.cn>
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

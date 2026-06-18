@@ -93,8 +93,7 @@
 #' @keywords internal
 #' @noRd
 .is_numeric_like_col <- function(x) {
-    nums <- as.numeric(x)
-    sum(!is.na(nums)) / length(nums) > 0.9 && !all(is.na(nums))
+    .numeric_ratio(x) > 0.9 && !all(is.na(x))
 }
 
 #' Internal: Apply Score-Scaled Alpha to a Base Colour
@@ -118,28 +117,26 @@
 #' @keywords internal
 #' @noRd
 .read_track_bedpe <- function(bedpe_file, min_score = NULL) {
+    # Reuse shared BEDPE validation from data_processing.R
     loops_raw <- as.data.frame(data.table::fread(bedpe_file, header = FALSE))
     colnames(loops_raw)[seq_len(6)] <- c(
-        "chr1", "start1", "end1", "chr2",
-        "start2", "end2"
+        "chr1", "start1", "end1", "chr2", "start2", "end2"
     )
-    loops_raw$start1 <- loops_raw$start1 + 1
-    loops_raw$start2 <- loops_raw$start2 + 1
+    loops <- .validate_bedpe_df(loops_raw, quiet = TRUE)
 
     has_score <- FALSE
-    if (ncol(loops_raw) >= 7) {
-        if (ncol(loops_raw) >= 8 && .is_numeric_like_col(loops_raw[[8]])) {
-            colnames(loops_raw)[8] <- "score"
+    if (ncol(loops) >= 7) {
+        if (ncol(loops) >= 8 && .is_numeric_like_col(loops[[8]])) {
+            colnames(loops)[8] <- "score"
             has_score <- TRUE
-        } else if (.is_numeric_like_col(loops_raw[[7]])) {
-            colnames(loops_raw)[7] <- "score"
+        } else if (.is_numeric_like_col(loops[[7]])) {
+            colnames(loops)[7] <- "score"
             has_score <- TRUE
         }
     }
 
-    loops <- loops_raw %>%
+    loops <- loops %>%
         dplyr::mutate(
-            dplyr::across(c(start1, end1, start2, end2), as.numeric),
             chr1 = as.character(chr1), chr2 = as.character(chr2)
         )
     if (has_score) {
@@ -443,7 +440,7 @@ prepare_track_data <- function(
 #' Generates an integrative genomic track plot displaying chromatin loops as arcs,
 #' loop anchors as rectangles, optional overlapping features (e.g., ChIP-seq peaks),
 #' and annotated genes. Loop arcs can be colored or sized by interaction score
-#' (7th column in BEDPE).
+#' (8th column in BEDPE; falls back to 7th if 8th is not numeric).
 #'
 #' @param bedpe_file Character. Path to a BEDPE file (at least 6 columns).
 #'   If an 8th column is present and numeric, it is used as the interaction

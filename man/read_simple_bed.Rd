@@ -7,7 +7,9 @@
 read_simple_bed(bed_file, quiet = FALSE)
 }
 \arguments{
-\item{bed_file}{Character. Path to a BED file (must be tab-delimited).}
+\item{bed_file}{Character. Path to a BED file (must be tab-delimited).
+ENCODE narrowPeak and broadPeak formats are also accepted (the first three
+columns are chr, start, end in all three formats).}
 
 \item{quiet}{Logical. If \code{TRUE}, suppress data-quality warnings
 (e.g., unusually narrow/wide intervals).
