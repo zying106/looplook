@@ -335,7 +335,18 @@ implements a rigorous three-step hierarchical annotation pipeline:
 1.  **Functional Biotype Prioritization**: Selects the highest-priority
     candidates by functional class: Protein Coding \> small-ncRNA
     (miRNA, snoRNA, snRNA, rRNA, scaRNA) \> Antisense \> lncRNA/ncRNA \>
-    Pseudogene.
+    Pseudogene. This default hierarchy can be customised via the
+    `biotype_order` parameter in
+    [`resolve_gene_conflicts()`](https://zying106.github.io/looplook/reference/resolve_gene_conflicts.md).
+    The five biotype keywords are `"protein"` (protein-coding),
+    `"small_ncRNA"` (miRNA, snoRNA, snRNA, rRNA, scaRNA), `"antisense"`,
+    `"lncRNA"` (lncRNA and other ncRNA), and `"pseudogene"`. The order
+    of listed keywords determines priority (first = highest); unlisted
+    categories keep their default relative order and are appended after
+    the listed ones. For example,
+    `biotype_order = c("lncRNA", "protein")` elevates lncRNAs above
+    protein-coding genes while keeping the remaining three categories
+    (small_ncRNA \> antisense \> pseudogene) in their default order.
 2.  **Expression Filter**: Within the selected biotype tier, excludes
     transcriptionally silent genes (expression \< `min_expr`) if at
     least one candidate in the tier is expressed. If no gene in that
@@ -413,7 +424,12 @@ candidate set further.
   highly connected regulatory elements (default: `0.95`, i.e. top 5%).
 - **`species`**: Genome assembly (`"hg38"`, `"hg19"`, `"mm10"`, or
   `"mm9"`). Auto-resolves the corresponding `TxDb` and `OrgDb`
-  annotation packages.
+  annotation packages. **For other species**, pass `txdb` and `org_db`
+  as objects or package name strings directly (e.g.,
+  `txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene`,
+  `org_db = "org.Dm.eg.db"`). When both `txdb` and `org_db` are
+  provided, `species` is only used for karyotype chromosome ideograms
+  and can be left as the default.
 - **`color_palette`**: RColorBrewer palette for loop-type colour
   assignments in annotation plots (default: `"Set2"`).
 - **`karyo_bin_size`**: Genomic bin width in base pairs for karyotype
@@ -755,12 +771,22 @@ expression-aware refinement via the following key parameters:
   cutoff (e.g., `threshold = 1`, `unit_type = "TPM"`); genes with
   expression \>= `threshold` are considered active. This parameter
   enables downward compatibility with various normalization methods.
+- **`threshold_mode`** (new): Controls how `threshold` is interpreted.
+  `"absolute"` (default): `threshold` is a direct expression cutoff
+  (e.g., TPM \>= 1). `"quantile"`: `threshold` is interpreted as a
+  quantile of the expression distribution (e.g., `0.75` selects the top
+  25% most highly expressed genes). Quantile mode is dataset-adaptive
+  and robust across experiments with different sequencing depths.
 - **`reclassify_by_expression`**: A transformative logical parameter
   (`TRUE`/`FALSE`). When enabled, transcriptionally silent Promoters
   (`P`) and Gene Bodies (`G`) are not simply discarded; instead, they
   are reclassified as enhancer-like regulatory elements (`eP`, `eG`).
   This correction refines the regulatory topology (e.g., reclassifying a
   functionally silent `P-P` loop into a curated `eP-P` loop).
+  **Important:** `eP`/`eG` labels indicate transcriptional silence at
+  the reference gene — they do **not** constitute evidence of enhancer
+  activity. Orthogonal chromatin data (ATAC-seq, H3K27ac, H3K4me1) are
+  required for functional enhancer interpretation.
 - **`color_palette`**: RColorBrewer palette for loop-type colour
   assignments in refinement plots (default: `"Paired"`). Controls the
   rose, donut, and dumbbell chart colours; karyotype heatmaps use fixed
@@ -785,6 +811,11 @@ mark BED files (see the Orthogonal Validation section below), or the
 `chromatin_beds` parameter in
 [`refine_loop_anchors_by_expression()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
 to run validation automatically and add results to the Excel workbook.
+[`refine_loop_anchors_by_chromatin()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
+provides a complementary chromatin-guided reclassification that updates
+anchor types and loop topologies; if you plan to use both, skip
+`chromatin_beds` in the expression refinement step to avoid redundant
+file reads.
 
 #### Refinement Output Structure
 
@@ -823,9 +854,6 @@ retained; the `Retained_In_Functional_Network` flag indicates which
 loops belong to the functional subset.
 
 ``` r
-
-rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
-load(rdata_path) # loads res_integrated into the environment
 
 res_basic <- refine_loop_anchors_by_expression(
   annotation_res = res_integrated,
@@ -1011,6 +1039,85 @@ missing data is never treated as negative evidence.
 | `confidence` | Factor: `gold_standard` \> `high_confidence` \> `supported` \> `weak` \> `uncertain` |
 | `evidence` | Human-readable string (e.g. `"H3K4me1+; H3K27ac+; H3K27me3-"`) |
 
+#### Chromatin-Guided Anchor Reclassification
+
+While
+[`validate_epeG_by_chromatin()`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)
+provides a confidence score for each eP/eG anchor independently,
+[`refine_loop_anchors_by_chromatin()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
+applies chromatin-mark evidence to systematically **reclassify** anchors
+and update loop topologies. This function can be called on raw
+annotation output (`annotate_peaks_and_loops`) to test P/G/E anchors, or
+on expression-refined output to test eP/eG anchors.
+
+Reclassification rules (minimum input: H3K4me1 + H3K4me3):
+
+- **P + H3K4me1⁺ H3K4me3⁺ → `dual`**: Promoter-enhancer dual-function
+  element
+- **P + H3K4me1⁺ H3K4me3⁻ + (H3K27ac⁺ or ATAC⁺) → `E`**: Conservative
+  reclassification requiring active-mark confirmation
+- **E + H3K4me3⁺ H3K4me1⁻ → `P`**: Unannotated promoter or ncRNA gene
+- **E + H3K4me1⁺ H3K4me3⁺ → `dual`**: Dual-function locus in distal
+  region
+- **G + H3K4me1⁺ H3K4me3⁺ → `dual`** / **G + H3K4me3⁺ H3K4me1⁻ → `P`**:
+  Gene-body enhancer or internal promoter
+- **eP/eG + promoter_like → `P`/`G`**: Revert to active promoter/gene
+  body
+- **eP/eG + dual_like → `dual`**: Confirm dual-function
+- Anchor types not matching any rule remain unchanged.
+
+The chromatin state of each anchor is also inferred (highest-priority
+match first): `conflicting_marks` \> `dual_like` \>
+`active_enhancer_like` \> `primed_enhancer_like` \> `weak_enhancer_like`
+\> `promoter_like` \> `repressed` \> `uncertain` \> `no_data`.
+
+Rules that test for H3K4me3 *absence* (e.g., P→E, G→E) require H3K4me3
+to be provided in `chromatin_beds`. When H3K4me3 is omitted, its value
+is `NA` for all anchors, and these rules are skipped conservatively — no
+reclassification without explicit data. Include H3K4me3 (and optionally
+H3K27me3) to enable the full set of reclassification rules.
+
+``` r
+
+# Run on expression-refined output (tests eP/eG anchors)
+cr <- refine_loop_anchors_by_chromatin(
+  annotation_res = refined_res,
+  chromatin_beds = list(
+    H3K4me1  = "H3K4me1_peaks.bed",
+    H3K4me3  = "H3K4me3_peaks.bed",
+    H3K27ac  = "H3K27ac_peaks.bed",
+    ATAC     = "atac_peaks.bed",
+    H3K27me3 = "H3K27me3_peaks.bed"   # optional
+  ),
+  anchor_gap = 200,
+  anchor_min_overlap = 100,
+  recompute_targets = TRUE,  # Rebuild target links with updated types
+  species = "hg38",
+  project_name = "Chromatin_Refined"
+)
+
+# Summary of reclassification
+cr$qc_summary
+
+# Updated loop types reflect chromatin evidence
+table(cr$loop_annotation$loop_type)
+
+# Chromatin provenance columns in target links
+head(cr$target_gene_links[, c("gene", "anchor_type_before_chromatin",
+  "anchor_type_after_chromatin", "chromatin_target_action")])
+```
+
+The output `chromatin_validation` table records, for each candidate
+anchor, the overlap with every provided mark (`TRUE`/`FALSE`/`NA`), its
+confidence level, chromatin state, and the reclassification decision
+(positional type vs. final type). When `recompute_targets = TRUE`,
+target gene links carry `anchor_type_before_chromatin`,
+`anchor_type_after_chromatin`, and `chromatin_target_action` columns for
+full auditability. When `recompute_targets = FALSE` (default),
+`target_annotation` and `target_gene_links` are `NULL` — use
+`profile_target_genes(target_source = "loops")` for chromatin-aware
+downstream profiling.
+
 ------------------------------------------------------------------------
 
 ### Module 4: Automated Functional Profiling
@@ -1093,6 +1200,19 @@ the biological scope and stringency of downstream analyses:
   `"wilcox.test"`).
 - **`org_db`**: Organism annotation database package name for GO and PPI
   analyses (default: `"org.Hs.eg.db"`).
+- **`gsea_nSample`** (numeric, default `99999`): Maximum number of
+  target genes to sample for GSEA. The high default effectively disables
+  down-sampling. When the gene set is large (hundreds to thousands),
+  reduce to e.g. `20–50` to limit enrichment bias introduced by
+  oversized gene sets. Set to `NULL` to always use the full set.
+- **`heatmap_nSample`** (numeric, default `99999`): Maximum number of
+  target genes to display in the expression heatmap (top by variance).
+  Reduce to e.g. `20–50` for readable heatmaps.
+- **`cnet_nSample`** (numeric, default `50`): Number of top GO terms to
+  display in the concept network plot.
+- **`seed`** (integer or `NULL`, default `NULL`): Random seed for
+  reproducible GSEA down-sampling and motif GC-matched background
+  sampling. Set to a positive integer for fully deterministic results.
 - **`run_go`**: Executes Gene Ontology enrichment and generates concept
   network plots (requires `clusterProfiler`).
 - **`run_motif` & `genome_id`**: Scans proximal and distal anchor
@@ -1446,91 +1566,73 @@ sessionInfo()
 #> [1] looplook_0.99.14 dplyr_1.2.1      BiocStyle_2.40.0
 #> 
 #> loaded via a namespace (and not attached):
-#>   [1] splines_4.6.0               BiocIO_1.22.0              
-#>   [3] ggplotify_0.1.3             bitops_1.0-9               
-#>   [5] fields_17.3                 tibble_3.3.1               
-#>   [7] polyclip_1.10-7             enrichit_0.1.4             
-#>   [9] XML_3.99-0.23               rpart_4.1.27               
-#>  [11] karyoploteR_1.38.0          lifecycle_1.0.5            
-#>  [13] httr2_1.2.2                 processx_3.9.0             
-#>  [15] lattice_0.22-9              ensembldb_2.36.1           
-#>  [17] MASS_7.3-65                 backports_1.5.1            
-#>  [19] magrittr_2.0.5              openxlsx_4.2.8.1           
-#>  [21] Hmisc_5.2-5                 sass_0.4.10                
-#>  [23] rmarkdown_2.31              jquerylib_0.1.4            
-#>  [25] yaml_2.3.12                 ggtangle_0.1.2             
-#>  [27] otel_0.2.0                  spam_2.11-4                
-#>  [29] zip_3.0.0                   DBI_1.3.0                  
-#>  [31] RColorBrewer_1.1-3          maps_3.4.3                 
-#>  [33] abind_1.4-8                 GenomicRanges_1.64.0       
-#>  [35] purrr_1.2.2                 AnnotationFilter_1.36.0    
-#>  [37] biovizBase_1.60.0           BiocGenerics_0.58.1        
-#>  [39] RCurl_1.98-1.19             yulab.utils_0.2.4          
-#>  [41] nnet_7.3-20                 VariantAnnotation_1.58.0   
-#>  [43] tweenr_2.0.3                rappdirs_0.3.4             
-#>  [45] aisdk_1.4.12                gdtools_0.5.1              
-#>  [47] IRanges_2.46.0              S4Vectors_0.50.1           
-#>  [49] enrichplot_1.32.0           ggrepel_0.9.8              
-#>  [51] tidytree_0.4.7              pkgdown_2.2.0              
-#>  [53] codetools_0.2-20            DelayedArray_0.38.2        
-#>  [55] DOSE_4.6.0                  ggforce_0.5.0              
-#>  [57] tidyselect_1.2.1            aplot_0.2.9                
-#>  [59] UCSC.utils_1.8.0            farver_2.1.2               
-#>  [61] matrixStats_1.5.0           stats4_4.6.0               
-#>  [63] base64enc_0.1-6             Seqinfo_1.2.0              
-#>  [65] bamsignals_1.44.1           GenomicAlignments_1.48.0   
-#>  [67] jsonlite_2.0.0              Formula_1.2-5              
-#>  [69] systemfonts_1.3.2           ggnewscale_0.5.2           
-#>  [71] tools_4.6.0                 treeio_1.36.1              
-#>  [73] ragg_1.5.2                  Rcpp_1.1.1-1.1             
-#>  [75] glue_1.8.1                  gridExtra_2.3              
-#>  [77] SparseArray_1.12.2          xfun_0.58                  
-#>  [79] qvalue_2.44.0               MatrixGenerics_1.24.0      
-#>  [81] GenomeInfoDb_1.48.0         withr_3.0.2                
-#>  [83] BiocManager_1.30.27         fastmap_1.2.0              
-#>  [85] callr_3.8.0                 digest_0.6.39              
-#>  [87] gridGraphics_0.5-1          R6_2.6.1                   
-#>  [89] textshaping_1.0.5           colorspace_2.1-2           
-#>  [91] GO.db_3.23.1                dichromat_2.0-0.1          
-#>  [93] RSQLite_3.53.1              cigarillo_1.2.0            
-#>  [95] UpSetR_1.4.1                tidyr_1.3.2                
-#>  [97] generics_0.1.4              fontLiberation_0.1.0       
-#>  [99] data.table_1.18.4           rtracklayer_1.72.0         
-#> [101] InteractionSet_1.40.0       httr_1.4.8                 
-#> [103] htmlwidgets_1.6.4           S4Arrays_1.12.0            
-#> [105] scatterpie_0.2.6            regioneR_1.44.0            
-#> [107] pkgconfig_2.0.3             gtable_0.3.6               
-#> [109] blob_1.3.0                  S7_0.2.2                   
-#> [111] XVector_0.52.0              clusterProfiler_4.20.0     
-#> [113] htmltools_0.5.9             fontBitstreamVera_0.1.1    
-#> [115] dotCall64_1.2               bookdown_0.46              
-#> [117] ProtGenerics_1.44.0         scales_1.4.0               
-#> [119] Biobase_2.72.0              png_0.1-9                  
-#> [121] ggfun_0.2.0                 knitr_1.51                 
-#> [123] rstudioapi_0.19.0           reshape2_1.4.5             
-#> [125] rjson_0.2.23                nlme_3.1-169               
-#> [127] checkmate_2.3.4             curl_7.1.0                 
-#> [129] cachem_1.1.0                stringr_1.6.0              
-#> [131] parallel_4.6.0              foreign_0.8-91             
-#> [133] AnnotationDbi_1.74.0        restfulr_0.0.17            
-#> [135] desc_1.4.3                  pillar_1.11.1              
-#> [137] grid_4.6.0                  vctrs_0.7.3                
-#> [139] tidydr_0.0.6                cluster_2.1.8.2            
-#> [141] htmlTable_2.5.0             evaluate_1.0.5             
-#> [143] GenomicFeatures_1.64.0      cli_3.6.6                  
-#> [145] compiler_4.6.0              bezier_1.1.2               
-#> [147] Rsamtools_2.28.0            rlang_1.2.0                
-#> [149] crayon_1.5.3                ps_1.9.3                   
-#> [151] plyr_1.8.9                  fs_2.1.0                   
-#> [153] ggiraph_0.9.6               stringi_1.8.7              
-#> [155] viridisLite_0.4.3           BiocParallel_1.46.0        
-#> [157] Biostrings_2.80.1           lazyeval_0.2.3             
-#> [159] fontquiver_0.2.1            GOSemSim_2.38.0            
-#> [161] Matrix_1.7-5                BSgenome_1.80.0            
-#> [163] patchwork_1.3.2             bit64_4.8.2                
-#> [165] ggplot2_4.0.3               KEGGREST_1.52.0            
-#> [167] SummarizedExperiment_1.42.0 igraph_2.3.2               
-#> [169] memoise_2.0.1               bslib_0.11.0               
-#> [171] ggtree_4.2.0                bit_4.6.0                  
-#> [173] gson_0.1.0                  ape_5.8-1
+#>   [1] RColorBrewer_1.1-3          rstudioapi_0.19.0          
+#>   [3] jsonlite_2.0.0              magrittr_2.0.5             
+#>   [5] GenomicFeatures_1.64.0      farver_2.1.2               
+#>   [7] rmarkdown_2.31              fs_2.1.0                   
+#>   [9] BiocIO_1.22.0               fields_17.3                
+#>  [11] ragg_1.5.2                  vctrs_0.7.3                
+#>  [13] memoise_2.0.1               Rsamtools_2.28.0           
+#>  [15] RCurl_1.98-1.19             base64enc_0.1-6            
+#>  [17] htmltools_0.5.9             S4Arrays_1.12.0            
+#>  [19] curl_7.1.0                  SparseArray_1.12.2         
+#>  [21] Formula_1.2-5               sass_0.4.10                
+#>  [23] bslib_0.11.0                htmlwidgets_1.6.4          
+#>  [25] desc_1.4.3                  plyr_1.8.9                 
+#>  [27] cachem_1.1.0                GenomicAlignments_1.48.0   
+#>  [29] igraph_2.3.2                lifecycle_1.0.5            
+#>  [31] pkgconfig_2.0.3             Matrix_1.7-5               
+#>  [33] R6_2.6.1                    fastmap_1.2.0              
+#>  [35] MatrixGenerics_1.24.0       digest_0.6.39              
+#>  [37] colorspace_2.1-2            AnnotationDbi_1.74.0       
+#>  [39] S4Vectors_0.50.1            regioneR_1.44.0            
+#>  [41] bezier_1.1.2                textshaping_1.0.5          
+#>  [43] Hmisc_5.2-5                 GenomicRanges_1.64.0       
+#>  [45] RSQLite_3.53.2              httr_1.4.8                 
+#>  [47] polyclip_1.10-7             abind_1.4-8                
+#>  [49] compiler_4.6.0              bit64_4.8.2                
+#>  [51] withr_3.0.2                 htmlTable_2.5.0            
+#>  [53] S7_0.2.2                    backports_1.5.1            
+#>  [55] BiocParallel_1.46.0         DBI_1.3.0                  
+#>  [57] UpSetR_1.4.1                ggforce_0.5.0              
+#>  [59] maps_3.4.3                  MASS_7.3-65                
+#>  [61] DelayedArray_0.38.2         rjson_0.2.23               
+#>  [63] tools_4.6.0                 foreign_0.8-91             
+#>  [65] otel_0.2.0                  zip_3.0.0                  
+#>  [67] karyoploteR_1.38.0          nnet_7.3-20                
+#>  [69] glue_1.8.1                  restfulr_0.0.17            
+#>  [71] InteractionSet_1.40.0       grid_4.6.0                 
+#>  [73] checkmate_2.3.4             cluster_2.1.8.2            
+#>  [75] generics_0.1.4              gtable_0.3.6               
+#>  [77] BSgenome_1.80.0             tidyr_1.3.2                
+#>  [79] ensembldb_2.36.1            data.table_1.18.4          
+#>  [81] XVector_0.52.0              BiocGenerics_0.58.1        
+#>  [83] ggrepel_0.9.8               pillar_1.11.1              
+#>  [85] stringr_1.6.0               spam_2.11-4                
+#>  [87] tweenr_2.0.3                lattice_0.22-9             
+#>  [89] rtracklayer_1.72.0          bit_4.6.0                  
+#>  [91] biovizBase_1.60.0           tidyselect_1.2.1           
+#>  [93] Biostrings_2.80.1           knitr_1.51                 
+#>  [95] gridExtra_2.3               bookdown_0.47              
+#>  [97] ProtGenerics_1.44.0         IRanges_2.46.0             
+#>  [99] Seqinfo_1.2.0               SummarizedExperiment_1.42.0
+#> [101] stats4_4.6.0                xfun_0.58                  
+#> [103] Biobase_2.72.0              matrixStats_1.5.0          
+#> [105] stringi_1.8.7               UCSC.utils_1.8.0           
+#> [107] lazyeval_0.2.3              yaml_2.3.12                
+#> [109] evaluate_1.0.5              codetools_0.2-20           
+#> [111] cigarillo_1.2.0             tibble_3.3.1               
+#> [113] BiocManager_1.30.27         cli_3.6.6                  
+#> [115] rpart_4.1.27                systemfonts_1.3.2          
+#> [117] jquerylib_0.1.4             dichromat_2.0-0.1          
+#> [119] Rcpp_1.1.1-1.1              GenomeInfoDb_1.48.0        
+#> [121] png_0.1-9                   XML_3.99-0.23              
+#> [123] parallel_4.6.0              pkgdown_2.2.0              
+#> [125] ggplot2_4.0.3               blob_1.3.0                 
+#> [127] dotCall64_1.2               AnnotationFilter_1.36.0    
+#> [129] bitops_1.0-9                viridisLite_0.4.3          
+#> [131] VariantAnnotation_1.58.0    scales_1.4.0               
+#> [133] purrr_1.2.2                 openxlsx_4.2.8.1           
+#> [135] crayon_1.5.3                bamsignals_1.44.1          
+#> [137] rlang_1.2.0                 KEGGREST_1.52.0
 ```

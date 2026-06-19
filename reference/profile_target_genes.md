@@ -134,11 +134,15 @@ profile_target_genes(
 
 - heatmap_nSample:
 
-  Numeric. Maximum number of genes to plot in heatmap.
+  Numeric. Maximum number of genes to plot in heatmap. Default `99999`
+  (effectively no limit). Reduce to `20-50` for readable heatmaps.
 
 - gsea_nSample:
 
-  Numeric. Maximum number of target genes to sample for GSEA.
+  Numeric. Maximum number of target genes to sample for GSEA. Default
+  `99999` (effectively no down-sampling; all target genes are used).
+  When the gene set is large, set to a smaller value (e.g. `20`) to
+  reduce enrichment bias. Set to `NULL` to always use the full set.
 
 - cnet_nSample:
 
@@ -242,16 +246,16 @@ profile_res <- profile_target_genes(
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 
-#> --- Task: PP_Genes (Valid Genes: 67) ---
-#> Warning: GSEA: down-sampling 20 of 67 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis.
+#> --- Task: PP_Genes (Valid Genes: 66) ---
+#> Warning: GSEA: down-sampling 20 of 66 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 
 #> ================================================================
 #> >>> Processing Source: [targets]
 #> 
-#> --- Task: Target_Genes (Valid Genes: 217) ---
-#> Warning: GSEA: down-sampling 20 of 217 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis.
+#> --- Task: Target_Genes (Valid Genes: 216) ---
+#> Warning: GSEA: down-sampling 20 of 216 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 

@@ -125,6 +125,7 @@ loops belong to the high-confidence active subset.</p>
 <span>  expr_matrix_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sample_columns <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  threshold <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  threshold_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"absolute"</span>, <span class="st">"quantile"</span><span class="op">)</span>,</span>
 <span>  unit_type <span class="op">=</span> <span class="st">"TPM"</span>,</span>
 <span>  species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
 <span>  out_dir <span class="op">=</span> <span class="st">"./results/filtered"</span>,</span>
@@ -156,7 +157,22 @@ loops belong to the high-confidence active subset.</p>
 
 
 <dt id="arg-threshold">threshold<a class="anchor" aria-label="anchor" href="#arg-threshold"></a></dt>
-<dd><p>Numeric. Minimum expression (e.g. TPM &gt;= 1) for a gene to be considered active. Default: <code>1</code>.</p></dd>
+<dd><p>Numeric. Minimum expression (e.g. TPM &gt;= 1) for a gene to be considered active. Default: <code>1</code>.
+<strong>Gene name matching is case-sensitive.</strong> Ensure gene identifiers in
+<code>expr_matrix_file</code> use the same case as the symbols returned by your
+OrgDb (typically all-uppercase for human and mouse, e.g. <code>"TP53"</code>,
+not <code>"Tp53"</code>). Mismatched case will cause expressed genes to be
+misclassified as silent (eP/eG).</p></dd>
+
+
+<dt id="arg-threshold-mode">threshold_mode<a class="anchor" aria-label="anchor" href="#arg-threshold-mode"></a></dt>
+<dd><p>Character. How to interpret the <code>threshold</code>
+value. <code>"absolute"</code> (default): <code>threshold</code> is a direct expression
+cutoff (e.g., TPM &gt;= 1). <code>"quantile"</code>: <code>threshold</code> is a quantile
+of the expression distribution (e.g., <code>0.75</code> means the top 25\<!-- % most -->
+highly expressed genes are considered active). Quantile mode is
+dataset-adaptive and may be more robust across experiments with different
+sequencing depths. The effective expression cutoff is reported in the log.</p></dd>
 
 
 <dt id="arg-unit-type">unit_type<a class="anchor" aria-label="anchor" href="#arg-unit-type"></a></dt>
@@ -195,7 +211,10 @@ loops belong to the high-confidence active subset.</p>
 <dd><p>Named list of BED file paths for orthogonal chromatin
 mark validation of eP/eG anchors. When non-empty, a <em>Chromatin
 Validation</em> sheet is added to the Excel workbook (see
-<code><a href="validate_epeG_by_chromatin.html">validate_epeG_by_chromatin</a></code>). Default: <code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code> (skip).</p></dd>
+<code><a href="validate_epeG_by_chromatin.html">validate_epeG_by_chromatin</a></code>). Default: <code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code> (skip).
+Note: if you plan to use <code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></code>,
+the chromatin validation and reclassification are handled there; you can
+skip this parameter to avoid redundant BED file reads.</p></dd>
 
 
 <dt id="arg-write-output">write_output<a class="anchor" aria-label="anchor" href="#arg-write-output"></a></dt>
@@ -266,7 +285,7 @@ this gene appears in. A gene may appear in multiple columns simultaneously.</p><
 <li><p><code>chromatin_validation</code> – Data frame from
 <code><a href="validate_epeG_by_chromatin.html">validate_epeG_by_chromatin</a></code> with confidence levels and
 evidence strings for each eP/eG anchor. <code>NULL</code> when
-<code>chromatin_beds</code> is empty.</p></li>
+<code>chromatin_beds</code> is not provided or is empty (default).</p></li>
 <li><p><code>plots</code> – Named list of ggplot objects (dumbbell, rose, karyotype).</p></li>
 <li><p><code>plot_list</code> – Backward-compatible alias of <code>plots</code>.</p></li>
 <li><p><code>metadata</code> – Internal metadata list (parameters, versions, database versions). Not intended for direct use.</p></li>
@@ -336,7 +355,7 @@ putative regulatory elements.</p>
 <span class="r-in"><span>    write_output <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
 <span class="r-in"><span>    quiet <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>100% of P/G anchors were reclassified to eP/eG. eP/eG labels indicate expression-aware enhancer-like states. Validate with orthogonal chromatin data (ATAC-seq, H3K27ac) before interpreting eP/eG anchors as functional enhancers.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>100% of P/G anchors were reclassified to eP/eG. eP/eG labels indicate transcriptionally inactive promoter/gene-body states; enhancer activity requires orthogonal chromatin evidence. Validate with orthogonal chromatin data (ATAC-seq, H3K27ac) before interpreting eP/eG anchors as functional enhancers.</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">res_reclassified</span><span class="op">$</span><span class="va">loop_annotation</span><span class="op">$</span><span class="va">loop_type</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   E-E  E-eP  G-eP  P-eG eP-eP </span>

@@ -146,10 +146,17 @@
 
         </dt>
         <dd>Spatial mapping of 1D genomic features to 3D chromatin interaction targets</dd>
-      </dl></div><div class="section level2">
-      <h2 id="module-expression-aware-refinement">Module 3: Expression-Aware Refinement<a class="anchor" aria-label="anchor" href="#module-expression-aware-refinement"></a></h2>
 
-      <div class="section-desc"><p>Advanced logic for eliminating transcriptionally silent contacts using RNA-seq data.</p></div>
+        <dt>
+
+          <code><a href="resolve_gene_conflicts.html">resolve_gene_conflicts()</a></code>
+
+        </dt>
+        <dd>Internal: Resolve Gene Conflicts via Biotype Priority Then Expression</dd>
+      </dl></div><div class="section level2">
+      <h2 id="module-expression-aware-chromatin-guided-refinement">Module 3: Expression-Aware &amp; Chromatin-Guided Refinement<a class="anchor" aria-label="anchor" href="#module-expression-aware-chromatin-guided-refinement"></a></h2>
+
+      <div class="section-desc"><p>Advanced logic for eliminating transcriptionally silent contacts and validating regulatory elements.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -162,6 +169,13 @@
 
         </dt>
         <dd>Expression-Aware refinement of loop anchors and target linkages</dd>
+
+        <dt>
+
+          <code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin()</a></code>
+
+        </dt>
+        <dd>Chromatin-guided refinement of loop anchor classification</dd>
 
         <dt>
 

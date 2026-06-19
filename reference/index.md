@@ -21,14 +21,19 @@ assignments.
 - [`annotate_peaks_and_loops()`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
   : Spatial mapping of 1D genomic features to 3D chromatin interaction
   targets
+- [`resolve_gene_conflicts()`](https://zying106.github.io/looplook/reference/resolve_gene_conflicts.md)
+  : Internal: Resolve Gene Conflicts via Biotype Priority Then
+  Expression
 
-## Module 3: Expression-Aware Refinement
+## Module 3: Expression-Aware & Chromatin-Guided Refinement
 
-Advanced logic for eliminating transcriptionally silent contacts using
-RNA-seq data.
+Advanced logic for eliminating transcriptionally silent contacts and
+validating regulatory elements.
 
 - [`refine_loop_anchors_by_expression()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
   : Expression-Aware refinement of loop anchors and target linkages
+- [`refine_loop_anchors_by_chromatin()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
+  : Chromatin-guided refinement of loop anchor classification
 - [`validate_epeG_by_chromatin()`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)
   : Orthogonal validation of eP/eG reclassification by chromatin marks
 

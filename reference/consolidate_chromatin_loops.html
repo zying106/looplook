@@ -16,7 +16,13 @@ cluster even if they are far apart). By default, a warning is emitted when
 any cluster span exceeds the chaining threshold
 (max(3*gap, 5*med_width*gap/1000)). Use chaining_policy to
 control this behavior ("warn", "none", "drop", or
-"error").
+"error"). Note: the default "warn" policy does
+not remove affected clusters — their inflated coordinates (from
+min(start) to max(end) across all chained members) flow
+into downstream analyses unchanged. When chaining is a concern for
+downstream overlapping operations, use chaining_policy = "drop"
+to exclude wide clusters, or reduce gap to prevent chaining
+from forming.
 It also supports a two-stage filtering strategy to improve signal-to-noise ratio:
 Pre-filtering (min_raw_score): Removes low-confidence noise (e.g., singleton reads) from raw files before merging.
 Post-filtering (min_score): Filters the final consensus loops based on their aggregated score.
@@ -39,7 +45,13 @@ cluster even if they are far apart). By default, a warning is emitted when
 any cluster span exceeds the chaining threshold
 (max(3*gap, 5*med_width*gap/1000)). Use chaining_policy to
 control this behavior ("warn", "none", "drop", or
-"error").
+"error"). Note: the default "warn" policy does
+not remove affected clusters — their inflated coordinates (from
+min(start) to max(end) across all chained members) flow
+into downstream analyses unchanged. When chaining is a concern for
+downstream overlapping operations, use chaining_policy = "drop"
+to exclude wide clusters, or reduce gap to prevent chaining
+from forming.
 It also supports a two-stage filtering strategy to improve signal-to-noise ratio:
 Pre-filtering (min_raw_score): Removes low-confidence noise (e.g., singleton reads) from raw files before merging.
 Post-filtering (min_score): Filters the final consensus loops based on their aggregated score.
@@ -160,7 +172,13 @@ cluster even if they are far apart). By default, a warning is emitted when
 any cluster span exceeds the chaining threshold
 (<code>max(3*gap, 5*med_width*gap/1000)</code>). Use <code>chaining_policy</code> to
 control this behavior (<code>"warn"</code>, <code>"none"</code>, <code>"drop"</code>, or
-<code>"error"</code>).</p>
+<code>"error"</code>). <strong>Note:</strong> the default <code>"warn"</code> policy does
+<em>not</em> remove affected clusters — their inflated coordinates (from
+<code>min(start)</code> to <code>max(end)</code> across all chained members) flow
+into downstream analyses unchanged. When chaining is a concern for
+downstream overlapping operations, use <code>chaining_policy = "drop"</code>
+to exclude wide clusters, or reduce <code>gap</code> to prevent chaining
+from forming.</p>
 <p>It also supports a <strong>two-stage filtering strategy</strong> to improve signal-to-noise ratio:</p><ul><li><p><strong>Pre-filtering</strong> (<code>min_raw_score</code>): Removes low-confidence noise (e.g., singleton reads) from raw files <em>before</em> merging.</p></li>
 <li><p><strong>Post-filtering</strong> (<code>min_score</code>): Filters the final consensus loops based on their aggregated score.</p></li>
 <li><p><strong>Replicate-Balanced Aggregation</strong>: In <code>"consensus"</code> and <code>"union"</code> modes, each cluster score is computed as the mean of per-source mean scores, so one replicate with many fragmented calls cannot dominate the final representative score.</p></li>
@@ -199,9 +217,9 @@ control this behavior (<code>"warn"</code>, <code>"none"</code>, <code>"drop"</c
 
 
 <dt id="arg-mode">mode<a class="anchor" aria-label="anchor" href="#arg-mode"></a></dt>
-<dd><p>Character. Choose one of the following: "consensus", "intersect", "union". Merge strategy:</p><ul><li><p><code>"intersect"</code>: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files).</p></li>
+<dd><p>Character. Choose one of the following: "consensus", "intersect", "union". Merge strategy:</p><ul><li><p><code>"consensus"</code>: Graph-based clustering to find a consensus set supported by a majority of samples (default). Formerly "reproducible".</p></li>
+<li><p><code>"intersect"</code>: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files).</p></li>
 <li><p><code>"union"</code>: Merges all detected loops into a comprehensive map.</p></li>
-<li><p><code>"consensus"</code>: Graph-based clustering to find a consensus set supported by a majority of samples. (Formerly "reproducible").</p></li>
 </ul></dd>
 
 
@@ -237,9 +255,11 @@ If <code>NULL</code> (default), auto-detection is used (see <code><a href="bedpe
 <dd><p>Character. Controls behaviour when connected-component
 chaining produces clusters with span exceeding the chaining threshold
 (<code>max(3*gap, 5*med_width*gap/1000)</code>).
-<code>"warn"</code> (default): emit a warning and retain all clusters.
+<code>"warn"</code> (default): emit a warning and retain all clusters
+<em>unchanged</em>, including their potentially inflated coordinates.
 <code>"none"</code>: silently accept all clusters.
-<code>"drop"</code>: remove clusters exceeding the threshold.
+<code>"drop"</code>: remove clusters exceeding the threshold (safe for
+downstream overlapping analyses that may be affected by inflated spans).
 <code>"error"</code>: stop with an error.</p></dd>
 
 
@@ -319,7 +339,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Intersect mode: Reference-based filtering (No Coordinate Merging)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Base: File 1. Criterion: Must overlap with ALL other files.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Intersecting with File 2...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmphsY9pd/file9d7d229ade86.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp5A7AVT/file9d6938879588.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example B: Consensus Mode (formerly Reproducible)</span></span></span>
@@ -355,7 +375,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/12 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>1 cluster(s) have max_span &gt; chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmphsY9pd/file9d7d7f68d0bc.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp5A7AVT/file9d69628b7e22.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example C: Union Mode</span></span></span>
@@ -390,7 +410,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/586 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>15 cluster(s) have max_span &gt; chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmphsY9pd/file9d7d3323c121.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp5A7AVT/file9d692e6a0033.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 586</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example D: Dual Filtering Strategy (Recommended for HiChIP)</span></span></span>
@@ -429,7 +449,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/7 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmphsY9pd/file9d7d7b837b36.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/Rtmp5A7AVT/file9d695c216d83.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 4</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Inspect results</span></span></span>

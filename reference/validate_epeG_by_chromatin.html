@@ -125,6 +125,7 @@ ENCODE active-enhancer signature.</p>
 <span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  anchor_gap <span class="op">=</span> <span class="fl">200</span>,</span>
 <span>  anchor_min_overlap <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  candidate_types <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -139,10 +140,11 @@ ENCODE active-enhancer signature.</p>
 <code><a href="annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></code> or
 <code><a href="refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></code>.
 When the refined output is provided, all anchors classified as
-<code>eP</code> or <code>eG</code> are validated (regardless of
-<code>Retained_In_Functional_Network</code> status). When the raw annotation
-is provided, all anchors
-annotated as P or G are tested.</p></dd>
+<code>eP</code> or <code>eG</code> are validated. When the raw annotation
+is provided, all <code>P</code>, <code>G</code>, and <code>E</code> anchors are
+evaluated (chromatin evidence may reclassify E to P or dual).
+Anchors are tested for overlap with chromatin mark BED files and
+assigned confidence levels based on ENCODE active-enhancer criteria.</p></dd>
 
 
 <dt id="arg-chromatin-beds">chromatin_beds<a class="anchor" aria-label="anchor" href="#arg-chromatin-beds"></a></dt>
@@ -160,6 +162,13 @@ chromatin peak for them to be considered overlapping. Default: <code>200</code>.
 <dt id="arg-anchor-min-overlap">anchor_min_overlap<a class="anchor" aria-label="anchor" href="#arg-anchor-min-overlap"></a></dt>
 <dd><p>Integer. Minimum overlap (bp) required.
 Default: <code>100</code>.</p></dd>
+
+
+<dt id="arg-candidate-types">candidate_types<a class="anchor" aria-label="anchor" href="#arg-candidate-types"></a></dt>
+<dd><p>Character vector or <code>NULL</code>. Candidate anchor
+types to validate. <code>NULL</code> (default): <code>c("eP","eG")</code> for refined
+input, <code>c("P","G","E")</code> for raw.  Set to <code>c("P","G","E","eP","eG")</code>
+to cover all positional categories.</p></dd>
 
 
 <dt id="arg-species">species<a class="anchor" aria-label="anchor" href="#arg-species"></a></dt>
@@ -257,7 +266,7 @@ detected.</p></li>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">confidence</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   gold_standard high_confidence       supported            weak       uncertain </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>               0               0               0               0             349 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>               0               0               0               0             385 </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

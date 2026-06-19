@@ -32,7 +32,13 @@ transitively chain loci (A-B and B-C merge, pulling A and C into the
 same cluster even if they are far apart). By default, a warning is
 emitted when any cluster span exceeds the chaining threshold
 (`max(3*gap, 5*med_width*gap/1000)`). Use `chaining_policy` to control
-this behavior (`"warn"`, `"none"`, `"drop"`, or `"error"`).
+this behavior (`"warn"`, `"none"`, `"drop"`, or `"error"`). **Note:**
+the default `"warn"` policy does *not* remove affected clusters — their
+inflated coordinates (from `min(start)` to `max(end)` across all chained
+members) flow into downstream analyses unchanged. When chaining is a
+concern for downstream overlapping operations, use
+`chaining_policy = "drop"` to exclude wide clusters, or reduce `gap` to
+prevent chaining from forming.
 
 It also supports a **two-stage filtering strategy** to improve
 signal-to-noise ratio:
@@ -84,13 +90,14 @@ consolidate_chromatin_loops(
   Character. Choose one of the following: "consensus", "intersect",
   "union". Merge strategy:
 
+  - `"consensus"`: Graph-based clustering to find a consensus set
+    supported by a majority of samples (default). Formerly
+    "reproducible".
+
   - `"intersect"`: Strict reference-based filtering (keeps loops in File
     1 supported by ALL other files).
 
   - `"union"`: Merges all detected loops into a comprehensive map.
-
-  - `"consensus"`: Graph-based clustering to find a consensus set
-    supported by a majority of samples. (Formerly "reproducible").
 
 - min_consensus:
 
@@ -141,9 +148,11 @@ consolidate_chromatin_loops(
   Character. Controls behaviour when connected-component chaining
   produces clusters with span exceeding the chaining threshold
   (`max(3*gap, 5*med_width*gap/1000)`). `"warn"` (default): emit a
-  warning and retain all clusters. `"none"`: silently accept all
-  clusters. `"drop"`: remove clusters exceeding the threshold.
-  `"error"`: stop with an error.
+  warning and retain all clusters *unchanged*, including their
+  potentially inflated coordinates. `"none"`: silently accept all
+  clusters. `"drop"`: remove clusters exceeding the threshold (safe for
+  downstream overlapping analyses that may be affected by inflated
+  spans). `"error"`: stop with an error.
 
 - blacklist_species:
 
@@ -233,7 +242,7 @@ res_intersect <- consolidate_chromatin_loops(
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmphsY9pd/file9d7d229ade86.bedpe
+#> Finished! Saved to /tmp/Rtmp5A7AVT/file9d6938879588.bedpe
 #> Finished! Final loops: 12
 
 # Example B: Consensus Mode (formerly Reproducible)
@@ -269,7 +278,7 @@ res_consensus <- consolidate_chromatin_loops(
 #>   Chaining: 0/12 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Warning: 1 cluster(s) have max_span > chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.
-#> Finished! Saved to /tmp/RtmphsY9pd/file9d7d7f68d0bc.bedpe
+#> Finished! Saved to /tmp/Rtmp5A7AVT/file9d69628b7e22.bedpe
 #> Finished! Final loops: 12
 
 # Example C: Union Mode
@@ -304,7 +313,7 @@ res_union <- consolidate_chromatin_loops(
 #>   Chaining: 0/586 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Warning: 15 cluster(s) have max_span > chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.
-#> Finished! Saved to /tmp/RtmphsY9pd/file9d7d3323c121.bedpe
+#> Finished! Saved to /tmp/Rtmp5A7AVT/file9d692e6a0033.bedpe
 #> Finished! Final loops: 586
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -343,7 +352,7 @@ res_clean <- consolidate_chromatin_loops(
 #>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2
 #>   Chaining: 0/7 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmphsY9pd/file9d7d7b837b36.bedpe
+#> Finished! Saved to /tmp/Rtmp5A7AVT/file9d695c216d83.bedpe
 #> Finished! Final loops: 4
 
 # Inspect results

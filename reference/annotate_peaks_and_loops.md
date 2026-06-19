@@ -36,6 +36,7 @@ annotate_peaks_and_loops(
   min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
   co_dominance_ratio = 0.1,
+  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene"),
   anchor_gap = -1L,
   anchor_min_overlap = 1L,
   anchor_min_frac = 0,
@@ -72,11 +73,11 @@ annotate_peaks_and_loops(
 - species:
 
   Character. Genome assembly used when `txdb` and `org_db` are `NULL`.
-  One of `"hg38"`, `"hg19"`, `"mm10"`, `"mm9"`. Default: `"hg38"`. The
-  package is currently tested on human and mouse; the architecture
-  supports extension to other species by adding entries to
-  `species_txdb_pkg()`, `species_orgdb_pkg()`, and
-  `species_bsgenome_pkg()`.
+  One of `"hg38"`, `"hg19"`, `"mm10"`, `"mm9"`. Default: `"hg38"`. For
+  other species, pass `txdb` and `org_db` as objects or package name
+  strings directly (e.g. `txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene`,
+  `org_db = "org.Dm.eg.db"`); `species` is then only used for karyotype
+  ideograms.
 
 - tss_region:
 
@@ -157,6 +158,17 @@ annotate_peaks_and_loops(
   retained together. Default: `0.1` (i.e. within one order of
   magnitude). Lower values (e.g. `0.01`) retain more co-dominant
   candidates; higher values (e.g. `0.5`) are more stringent.
+
+- biotype_order:
+
+  Character vector. Custom ordering of biotype categories for gene
+  conflict resolution (passed to
+  [`resolve_gene_conflicts`](https://zying106.github.io/looplook/reference/resolve_gene_conflicts.md)).
+  Five keywords: `"protein"`, `"small_ncRNA"`, `"antisense"`,
+  `"lncRNA"`, `"pseudogene"`. Listed categories get top priority;
+  unlisted keep their default relative order appended at the bottom.
+  Default:
+  `c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")`.
 
 - anchor_gap:
 
@@ -284,8 +296,12 @@ An invisible named list:
 - `metadata` – Internal metadata list (parameters, versions). Not
   intended for direct use.
 
-If `write_output = TRUE`, also writes a multi-sheet Excel workbook to
-`out_dir`.
+The returned object carries a `looplook_anchor_state` attribute (access
+via `attr(result, "looplook_anchor_state")`) containing internal anchor
+topology data required by
+[`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
+with `recompute_targets = TRUE`. If `write_output = TRUE`, also writes a
+multi-sheet Excel workbook to `out_dir`.
 
 ## Details
 

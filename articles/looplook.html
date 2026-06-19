@@ -851,7 +851,19 @@ implements a rigorous three-step hierarchical annotation pipeline:</p>
 <strong>Functional Biotype Prioritization</strong>: Selects the
 highest-priority candidates by functional class: Protein Coding &gt;
 small-ncRNA (miRNA, snoRNA, snRNA, rRNA, scaRNA) &gt; Antisense &gt;
-lncRNA/ncRNA &gt; Pseudogene.</li>
+lncRNA/ncRNA &gt; Pseudogene. This default hierarchy can be customised
+via the <code>biotype_order</code> parameter in
+<code><a href="../reference/resolve_gene_conflicts.html">resolve_gene_conflicts()</a></code>. The five biotype keywords are
+<code>"protein"</code> (protein-coding), <code>"small_ncRNA"</code>
+(miRNA, snoRNA, snRNA, rRNA, scaRNA), <code>"antisense"</code>,
+<code>"lncRNA"</code> (lncRNA and other ncRNA), and
+<code>"pseudogene"</code>. The order of listed keywords determines
+priority (first = highest); unlisted categories keep their default
+relative order and are appended after the listed ones. For example,
+<code>biotype_order = c("lncRNA", "protein")</code> elevates lncRNAs
+above protein-coding genes while keeping the remaining three categories
+(small_ncRNA &gt; antisense &gt; pseudogene) in their default
+order.</li>
 <li>
 <strong>Expression Filter</strong>: Within the selected biotype
 tier, excludes transcriptionally silent genes (expression &lt;
@@ -961,7 +973,13 @@ threshold for identifying highly connected regulatory elements (default:
 <strong><code>species</code></strong>: Genome assembly
 (<code>"hg38"</code>, <code>"hg19"</code>, <code>"mm10"</code>, or
 <code>"mm9"</code>). Auto-resolves the corresponding <code>TxDb</code>
-and <code>OrgDb</code> annotation packages.</li>
+and <code>OrgDb</code> annotation packages. <strong>For other
+species</strong>, pass <code>txdb</code> and <code>org_db</code> as
+objects or package name strings directly (e.g.,
+<code>txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene</code>,
+<code>org_db = "org.Dm.eg.db"</code>). When both <code>txdb</code> and
+<code>org_db</code> are provided, <code>species</code> is only used for
+karyotype chromosome ideograms and can be left as the default.</li>
 <li>
 <strong><code>color_palette</code></strong>: RColorBrewer palette
 for loop-type colour assignments in annotation plots (default:
@@ -1556,6 +1574,15 @@ cutoff (e.g., <code>threshold = 1</code>,
 <code>threshold</code> are considered active. This parameter enables
 downward compatibility with various normalization methods.</li>
 <li>
+<strong><code>threshold_mode</code></strong> (new): Controls how
+<code>threshold</code> is interpreted. <code>"absolute"</code>
+(default): <code>threshold</code> is a direct expression cutoff (e.g.,
+TPM &gt;= 1). <code>"quantile"</code>: <code>threshold</code> is
+interpreted as a quantile of the expression distribution (e.g.,
+<code>0.75</code> selects the top 25% most highly expressed genes).
+Quantile mode is dataset-adaptive and robust across experiments with
+different sequencing depths.</li>
+<li>
 <strong><code>reclassify_by_expression</code></strong>: A
 transformative logical parameter (<code>TRUE</code>/<code>FALSE</code>).
 When enabled, transcriptionally silent Promoters (<code>P</code>) and
@@ -1563,7 +1590,11 @@ Gene Bodies (<code>G</code>) are not simply discarded; instead, they are
 reclassified as enhancer-like regulatory elements (<code>eP</code>,
 <code>eG</code>). This correction refines the regulatory topology (e.g.,
 reclassifying a functionally silent <code>P-P</code> loop into a curated
-<code>eP-P</code> loop).</li>
+<code>eP-P</code> loop). <strong>Important:</strong>
+<code>eP</code>/<code>eG</code> labels indicate transcriptional silence
+at the reference gene — they do <strong>not</strong> constitute evidence
+of enhancer activity. Orthogonal chromatin data (ATAC-seq, H3K27ac,
+H3K4me1) are required for functional enhancer interpretation.</li>
 <li>
 <strong><code>color_palette</code></strong>: RColorBrewer palette
 for loop-type colour assignments in refinement plots (default:
@@ -1593,7 +1624,11 @@ for systematic testing of eP/eG anchors against user-supplied chromatin
 mark BED files (see the Orthogonal Validation section below), or the
 <code>chromatin_beds</code> parameter in
 <code><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression()</a></code> to run validation
-automatically and add results to the Excel workbook.</p>
+automatically and add results to the Excel workbook.
+<code><a href="../reference/refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin()</a></code> provides a complementary
+chromatin-guided reclassification that updates anchor types and loop
+topologies; if you plan to use both, skip <code>chromatin_beds</code> in
+the expression refinement step to avoid redundant file reads.</p>
 </div>
 <div class="section level4">
 <h4 id="refinement-output-structure">Refinement Output Structure<a class="anchor" aria-label="anchor" href="#refinement-output-structure"></a>
@@ -1661,10 +1696,7 @@ transcriptionally active target genes. All structural loops are
 retained; the <code>Retained_In_Functional_Network</code> flag indicates
 which loops belong to the functional subset.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">rdata_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"analysis_results.RData"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/load.html" class="external-link">load</a></span><span class="op">(</span><span class="va">rdata_path</span><span class="op">)</span> <span class="co"># loads res_integrated into the environment</span></span>
-<span></span>
-<span><span class="va">res_basic</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">res_basic</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
 <span>  annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
 <span>  expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span>
 <span>  sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span>
@@ -1911,8 +1943,99 @@ evidence.</p>
 </tr>
 </tbody>
 </table>
-<hr>
 </div>
+</div>
+<div class="section level4">
+<h4 id="chromatin-guided-anchor-reclassification">Chromatin-Guided Anchor Reclassification<a class="anchor" aria-label="anchor" href="#chromatin-guided-anchor-reclassification"></a>
+</h4>
+<p>While <code><a href="../reference/validate_epeG_by_chromatin.html">validate_epeG_by_chromatin()</a></code> provides a confidence
+score for each eP/eG anchor independently,
+<code><a href="../reference/refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin()</a></code> applies chromatin-mark
+evidence to systematically <strong>reclassify</strong> anchors and
+update loop topologies. This function can be called on raw annotation
+output (<code>annotate_peaks_and_loops</code>) to test P/G/E anchors, or
+on expression-refined output to test eP/eG anchors.</p>
+<p>Reclassification rules (minimum input: H3K4me1 + H3K4me3):</p>
+<ul>
+<li>
+<strong>P + H3K4me1⁺ H3K4me3⁺ → <code>dual</code></strong>:
+Promoter-enhancer dual-function element</li>
+<li>
+<strong>P + H3K4me1⁺ H3K4me3⁻ + (H3K27ac⁺ or ATAC⁺) →
+<code>E</code></strong>: Conservative reclassification requiring
+active-mark confirmation</li>
+<li>
+<strong>E + H3K4me3⁺ H3K4me1⁻ → <code>P</code></strong>: Unannotated
+promoter or ncRNA gene</li>
+<li>
+<strong>E + H3K4me1⁺ H3K4me3⁺ → <code>dual</code></strong>:
+Dual-function locus in distal region</li>
+<li>
+<strong>G + H3K4me1⁺ H3K4me3⁺ → <code>dual</code></strong> /
+<strong>G + H3K4me3⁺ H3K4me1⁻ → <code>P</code></strong>: Gene-body
+enhancer or internal promoter</li>
+<li>
+<strong>eP/eG + promoter_like →
+<code>P</code>/<code>G</code></strong>: Revert to active promoter/gene
+body</li>
+<li>
+<strong>eP/eG + dual_like → <code>dual</code></strong>: Confirm
+dual-function</li>
+<li>Anchor types not matching any rule remain unchanged.</li>
+</ul>
+<p>The chromatin state of each anchor is also inferred (highest-priority
+match first): <code>conflicting_marks</code> &gt; <code>dual_like</code>
+&gt; <code>active_enhancer_like</code> &gt;
+<code>primed_enhancer_like</code> &gt; <code>weak_enhancer_like</code>
+&gt; <code>promoter_like</code> &gt; <code>repressed</code> &gt;
+<code>uncertain</code> &gt; <code>no_data</code>.</p>
+<p> Rules that test for H3K4me3 <em>absence</em> (e.g., P→E, G→E)
+require H3K4me3 to be provided in <code>chromatin_beds</code>. When
+H3K4me3 is omitted, its value is <code>NA</code> for all anchors, and
+these rules are skipped conservatively — no reclassification without
+explicit data. Include H3K4me3 (and optionally H3K27me3) to enable the
+full set of reclassification rules.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Run on expression-refined output (tests eP/eG anchors)</span></span>
+<span><span class="va">cr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></span><span class="op">(</span></span>
+<span>  annotation_res <span class="op">=</span> <span class="va">refined_res</span>,</span>
+<span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    H3K4me1  <span class="op">=</span> <span class="st">"H3K4me1_peaks.bed"</span>,</span>
+<span>    H3K4me3  <span class="op">=</span> <span class="st">"H3K4me3_peaks.bed"</span>,</span>
+<span>    H3K27ac  <span class="op">=</span> <span class="st">"H3K27ac_peaks.bed"</span>,</span>
+<span>    ATAC     <span class="op">=</span> <span class="st">"atac_peaks.bed"</span>,</span>
+<span>    H3K27me3 <span class="op">=</span> <span class="st">"H3K27me3_peaks.bed"</span>   <span class="co"># optional</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  anchor_gap <span class="op">=</span> <span class="fl">200</span>,</span>
+<span>  anchor_min_overlap <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  recompute_targets <span class="op">=</span> <span class="cn">TRUE</span>,  <span class="co"># Rebuild target links with updated types</span></span>
+<span>  species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
+<span>  project_name <span class="op">=</span> <span class="st">"Chromatin_Refined"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Summary of reclassification</span></span>
+<span><span class="va">cr</span><span class="op">$</span><span class="va">qc_summary</span></span>
+<span></span>
+<span><span class="co"># Updated loop types reflect chromatin evidence</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">cr</span><span class="op">$</span><span class="va">loop_annotation</span><span class="op">$</span><span class="va">loop_type</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Chromatin provenance columns in target links</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">cr</span><span class="op">$</span><span class="va">target_gene_links</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gene"</span>, <span class="st">"anchor_type_before_chromatin"</span>,</span>
+<span>  <span class="st">"anchor_type_after_chromatin"</span>, <span class="st">"chromatin_target_action"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
+<p>The output <code>chromatin_validation</code> table records, for each
+candidate anchor, the overlap with every provided mark
+(<code>TRUE</code>/<code>FALSE</code>/<code>NA</code>), its confidence
+level, chromatin state, and the reclassification decision (positional
+type vs. final type). When <code>recompute_targets = TRUE</code>, target
+gene links carry <code>anchor_type_before_chromatin</code>,
+<code>anchor_type_after_chromatin</code>, and
+<code>chromatin_target_action</code> columns for full auditability. When
+<code>recompute_targets = FALSE</code> (default),
+<code>target_annotation</code> and <code>target_gene_links</code> are
+<code>NULL</code> — use
+<code>profile_target_genes(target_source = "loops")</code> for
+chromatin-aware downstream profiling.</p>
+<hr>
 </div>
 </div>
 <div class="section level3">
@@ -2034,6 +2157,27 @@ comparing target vs. background LFC distributions
 package name for GO and PPI analyses (default:
 <code>"org.Hs.eg.db"</code>).</li>
 <li>
+<strong><code>gsea_nSample</code></strong> (numeric, default
+<code>99999</code>): Maximum number of target genes to sample for GSEA.
+The high default effectively disables down-sampling. When the gene set
+is large (hundreds to thousands), reduce to e.g. <code>20–50</code> to
+limit enrichment bias introduced by oversized gene sets. Set to
+<code>NULL</code> to always use the full set.</li>
+<li>
+<strong><code>heatmap_nSample</code></strong> (numeric, default
+<code>99999</code>): Maximum number of target genes to display in the
+expression heatmap (top by variance). Reduce to e.g. <code>20–50</code>
+for readable heatmaps.</li>
+<li>
+<strong><code>cnet_nSample</code></strong> (numeric, default
+<code>50</code>): Number of top GO terms to display in the concept
+network plot.</li>
+<li>
+<strong><code>seed</code></strong> (integer or <code>NULL</code>,
+default <code>NULL</code>): Random seed for reproducible GSEA
+down-sampling and motif GC-matched background sampling. Set to a
+positive integer for fully deterministic results.</li>
+<li>
 <strong><code>run_go</code></strong>: Executes Gene Ontology
 enrichment and generates concept network plots (requires
 <code>clusterProfiler</code>).</li>
@@ -2056,7 +2200,7 @@ database (minimum combined score, default: <code>400</code>).</li>
 <p>Ideal for complete multi-omics integration (e.g., HiChIP + ATAC-seq).
 This mode comprehensively maps and profiles target genes of
 interest.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">diff_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_deg.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span><span class="va">meta_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_coldata.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span></span>
@@ -2091,7 +2235,7 @@ directly contact canonical or reference promoters (i.e., strict
 <code>E-P</code> or <code>P-P</code> loops), excluding more permissive
 connections such as enhancer-gene body (<code>E-G</code>)
 interactions.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_B</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/profile_target_genes.html">profile_target_genes</a></span><span class="op">(</span></span>
 <span>  annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
 <span>  diff_file <span class="op">=</span> <span class="va">diff_path</span>,</span>
@@ -2117,7 +2261,7 @@ exclusively to their nearest neighboring gene. It serves as a
 conventional “baseline control.” Comparing results against Example A or
 B enables rigorous demonstration of the novel functional insights gained
 from 3D chromatin looping analyses relative to conventional method.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_C</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/profile_target_genes.html">profile_target_genes</a></span><span class="op">(</span></span>
 <span>  annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
 <span>  diff_file <span class="op">=</span> <span class="va">diff_path</span>,</span>
@@ -2141,7 +2285,7 @@ from 3D chromatin looping analyses relative to conventional method.</p>
 <code>"targets"</code>). Each element contains <code>plots</code>
 (ggplot objects), <code>target_gene_sets</code> (character vectors), and
 <code>go_results</code> (data frames).</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Accessing results from a profiling run</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_profile</span><span class="op">)</span> <span class="co"># one element per target_source ("loops", "targets")</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_profile</span><span class="op">$</span><span class="va">loops</span><span class="op">)</span> <span class="co"># "go_results" "target_gene_sets" "plots"</span></span>
@@ -2340,7 +2484,7 @@ tracks.</li>
 Specifies the output file path and format (e.g., <code>".pdf"</code>)
 for exporting the final ggplot object.</li>
 </ul>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggplot2"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"TxDb.Hsapiens.UCSC.hg38.knownGene"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
@@ -2367,7 +2511,7 @@ for exporting the final ggplot object.</li>
 can be generated with a single function call. The template automatically
 detects which pipeline stages are configured and hides unavailable
 sections:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/zying106/looplook" class="external-link">looplook</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># ── Required ──────────────────────────────────────────────────</span></span>
@@ -2448,7 +2592,7 @@ New File → R Markdown → From Template → looplook Report</strong>.</p>
 <div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
@@ -2474,93 +2618,75 @@ New File → R Markdown → From Template → looplook Report</strong>.</p>
 <span><span class="co">#&gt; [1] looplook_0.99.14 dplyr_1.2.1      BiocStyle_2.40.0</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
-<span><span class="co">#&gt;   [1] splines_4.6.0               BiocIO_1.22.0              </span></span>
-<span><span class="co">#&gt;   [3] ggplotify_0.1.3             bitops_1.0-9               </span></span>
-<span><span class="co">#&gt;   [5] fields_17.3                 tibble_3.3.1               </span></span>
-<span><span class="co">#&gt;   [7] polyclip_1.10-7             enrichit_0.1.4             </span></span>
-<span><span class="co">#&gt;   [9] XML_3.99-0.23               rpart_4.1.27               </span></span>
-<span><span class="co">#&gt;  [11] karyoploteR_1.38.0          lifecycle_1.0.5            </span></span>
-<span><span class="co">#&gt;  [13] httr2_1.2.2                 processx_3.9.0             </span></span>
-<span><span class="co">#&gt;  [15] lattice_0.22-9              ensembldb_2.36.1           </span></span>
-<span><span class="co">#&gt;  [17] MASS_7.3-65                 backports_1.5.1            </span></span>
-<span><span class="co">#&gt;  [19] magrittr_2.0.5              openxlsx_4.2.8.1           </span></span>
-<span><span class="co">#&gt;  [21] Hmisc_5.2-5                 sass_0.4.10                </span></span>
-<span><span class="co">#&gt;  [23] rmarkdown_2.31              jquerylib_0.1.4            </span></span>
-<span><span class="co">#&gt;  [25] yaml_2.3.12                 ggtangle_0.1.2             </span></span>
-<span><span class="co">#&gt;  [27] otel_0.2.0                  spam_2.11-4                </span></span>
-<span><span class="co">#&gt;  [29] zip_3.0.0                   DBI_1.3.0                  </span></span>
-<span><span class="co">#&gt;  [31] RColorBrewer_1.1-3          maps_3.4.3                 </span></span>
-<span><span class="co">#&gt;  [33] abind_1.4-8                 GenomicRanges_1.64.0       </span></span>
-<span><span class="co">#&gt;  [35] purrr_1.2.2                 AnnotationFilter_1.36.0    </span></span>
-<span><span class="co">#&gt;  [37] biovizBase_1.60.0           BiocGenerics_0.58.1        </span></span>
-<span><span class="co">#&gt;  [39] RCurl_1.98-1.19             yulab.utils_0.2.4          </span></span>
-<span><span class="co">#&gt;  [41] nnet_7.3-20                 VariantAnnotation_1.58.0   </span></span>
-<span><span class="co">#&gt;  [43] tweenr_2.0.3                rappdirs_0.3.4             </span></span>
-<span><span class="co">#&gt;  [45] aisdk_1.4.12                gdtools_0.5.1              </span></span>
-<span><span class="co">#&gt;  [47] IRanges_2.46.0              S4Vectors_0.50.1           </span></span>
-<span><span class="co">#&gt;  [49] enrichplot_1.32.0           ggrepel_0.9.8              </span></span>
-<span><span class="co">#&gt;  [51] tidytree_0.4.7              pkgdown_2.2.0              </span></span>
-<span><span class="co">#&gt;  [53] codetools_0.2-20            DelayedArray_0.38.2        </span></span>
-<span><span class="co">#&gt;  [55] DOSE_4.6.0                  ggforce_0.5.0              </span></span>
-<span><span class="co">#&gt;  [57] tidyselect_1.2.1            aplot_0.2.9                </span></span>
-<span><span class="co">#&gt;  [59] UCSC.utils_1.8.0            farver_2.1.2               </span></span>
-<span><span class="co">#&gt;  [61] matrixStats_1.5.0           stats4_4.6.0               </span></span>
-<span><span class="co">#&gt;  [63] base64enc_0.1-6             Seqinfo_1.2.0              </span></span>
-<span><span class="co">#&gt;  [65] bamsignals_1.44.1           GenomicAlignments_1.48.0   </span></span>
-<span><span class="co">#&gt;  [67] jsonlite_2.0.0              Formula_1.2-5              </span></span>
-<span><span class="co">#&gt;  [69] systemfonts_1.3.2           ggnewscale_0.5.2           </span></span>
-<span><span class="co">#&gt;  [71] tools_4.6.0                 treeio_1.36.1              </span></span>
-<span><span class="co">#&gt;  [73] ragg_1.5.2                  Rcpp_1.1.1-1.1             </span></span>
-<span><span class="co">#&gt;  [75] glue_1.8.1                  gridExtra_2.3              </span></span>
-<span><span class="co">#&gt;  [77] SparseArray_1.12.2          xfun_0.58                  </span></span>
-<span><span class="co">#&gt;  [79] qvalue_2.44.0               MatrixGenerics_1.24.0      </span></span>
-<span><span class="co">#&gt;  [81] GenomeInfoDb_1.48.0         withr_3.0.2                </span></span>
-<span><span class="co">#&gt;  [83] BiocManager_1.30.27         fastmap_1.2.0              </span></span>
-<span><span class="co">#&gt;  [85] callr_3.8.0                 digest_0.6.39              </span></span>
-<span><span class="co">#&gt;  [87] gridGraphics_0.5-1          R6_2.6.1                   </span></span>
-<span><span class="co">#&gt;  [89] textshaping_1.0.5           colorspace_2.1-2           </span></span>
-<span><span class="co">#&gt;  [91] GO.db_3.23.1                dichromat_2.0-0.1          </span></span>
-<span><span class="co">#&gt;  [93] RSQLite_3.53.1              cigarillo_1.2.0            </span></span>
-<span><span class="co">#&gt;  [95] UpSetR_1.4.1                tidyr_1.3.2                </span></span>
-<span><span class="co">#&gt;  [97] generics_0.1.4              fontLiberation_0.1.0       </span></span>
-<span><span class="co">#&gt;  [99] data.table_1.18.4           rtracklayer_1.72.0         </span></span>
-<span><span class="co">#&gt; [101] InteractionSet_1.40.0       httr_1.4.8                 </span></span>
-<span><span class="co">#&gt; [103] htmlwidgets_1.6.4           S4Arrays_1.12.0            </span></span>
-<span><span class="co">#&gt; [105] scatterpie_0.2.6            regioneR_1.44.0            </span></span>
-<span><span class="co">#&gt; [107] pkgconfig_2.0.3             gtable_0.3.6               </span></span>
-<span><span class="co">#&gt; [109] blob_1.3.0                  S7_0.2.2                   </span></span>
-<span><span class="co">#&gt; [111] XVector_0.52.0              clusterProfiler_4.20.0     </span></span>
-<span><span class="co">#&gt; [113] htmltools_0.5.9             fontBitstreamVera_0.1.1    </span></span>
-<span><span class="co">#&gt; [115] dotCall64_1.2               bookdown_0.46              </span></span>
-<span><span class="co">#&gt; [117] ProtGenerics_1.44.0         scales_1.4.0               </span></span>
-<span><span class="co">#&gt; [119] Biobase_2.72.0              png_0.1-9                  </span></span>
-<span><span class="co">#&gt; [121] ggfun_0.2.0                 knitr_1.51                 </span></span>
-<span><span class="co">#&gt; [123] rstudioapi_0.19.0           reshape2_1.4.5             </span></span>
-<span><span class="co">#&gt; [125] rjson_0.2.23                nlme_3.1-169               </span></span>
-<span><span class="co">#&gt; [127] checkmate_2.3.4             curl_7.1.0                 </span></span>
-<span><span class="co">#&gt; [129] cachem_1.1.0                stringr_1.6.0              </span></span>
-<span><span class="co">#&gt; [131] parallel_4.6.0              foreign_0.8-91             </span></span>
-<span><span class="co">#&gt; [133] AnnotationDbi_1.74.0        restfulr_0.0.17            </span></span>
-<span><span class="co">#&gt; [135] desc_1.4.3                  pillar_1.11.1              </span></span>
-<span><span class="co">#&gt; [137] grid_4.6.0                  vctrs_0.7.3                </span></span>
-<span><span class="co">#&gt; [139] tidydr_0.0.6                cluster_2.1.8.2            </span></span>
-<span><span class="co">#&gt; [141] htmlTable_2.5.0             evaluate_1.0.5             </span></span>
-<span><span class="co">#&gt; [143] GenomicFeatures_1.64.0      cli_3.6.6                  </span></span>
-<span><span class="co">#&gt; [145] compiler_4.6.0              bezier_1.1.2               </span></span>
-<span><span class="co">#&gt; [147] Rsamtools_2.28.0            rlang_1.2.0                </span></span>
-<span><span class="co">#&gt; [149] crayon_1.5.3                ps_1.9.3                   </span></span>
-<span><span class="co">#&gt; [151] plyr_1.8.9                  fs_2.1.0                   </span></span>
-<span><span class="co">#&gt; [153] ggiraph_0.9.6               stringi_1.8.7              </span></span>
-<span><span class="co">#&gt; [155] viridisLite_0.4.3           BiocParallel_1.46.0        </span></span>
-<span><span class="co">#&gt; [157] Biostrings_2.80.1           lazyeval_0.2.3             </span></span>
-<span><span class="co">#&gt; [159] fontquiver_0.2.1            GOSemSim_2.38.0            </span></span>
-<span><span class="co">#&gt; [161] Matrix_1.7-5                BSgenome_1.80.0            </span></span>
-<span><span class="co">#&gt; [163] patchwork_1.3.2             bit64_4.8.2                </span></span>
-<span><span class="co">#&gt; [165] ggplot2_4.0.3               KEGGREST_1.52.0            </span></span>
-<span><span class="co">#&gt; [167] SummarizedExperiment_1.42.0 igraph_2.3.2               </span></span>
-<span><span class="co">#&gt; [169] memoise_2.0.1               bslib_0.11.0               </span></span>
-<span><span class="co">#&gt; [171] ggtree_4.2.0                bit_4.6.0                  </span></span>
-<span><span class="co">#&gt; [173] gson_0.1.0                  ape_5.8-1</span></span></code></pre></div>
+<span><span class="co">#&gt;   [1] RColorBrewer_1.1-3          rstudioapi_0.19.0          </span></span>
+<span><span class="co">#&gt;   [3] jsonlite_2.0.0              magrittr_2.0.5             </span></span>
+<span><span class="co">#&gt;   [5] GenomicFeatures_1.64.0      farver_2.1.2               </span></span>
+<span><span class="co">#&gt;   [7] rmarkdown_2.31              fs_2.1.0                   </span></span>
+<span><span class="co">#&gt;   [9] BiocIO_1.22.0               fields_17.3                </span></span>
+<span><span class="co">#&gt;  [11] ragg_1.5.2                  vctrs_0.7.3                </span></span>
+<span><span class="co">#&gt;  [13] memoise_2.0.1               Rsamtools_2.28.0           </span></span>
+<span><span class="co">#&gt;  [15] RCurl_1.98-1.19             base64enc_0.1-6            </span></span>
+<span><span class="co">#&gt;  [17] htmltools_0.5.9             S4Arrays_1.12.0            </span></span>
+<span><span class="co">#&gt;  [19] curl_7.1.0                  SparseArray_1.12.2         </span></span>
+<span><span class="co">#&gt;  [21] Formula_1.2-5               sass_0.4.10                </span></span>
+<span><span class="co">#&gt;  [23] bslib_0.11.0                htmlwidgets_1.6.4          </span></span>
+<span><span class="co">#&gt;  [25] desc_1.4.3                  plyr_1.8.9                 </span></span>
+<span><span class="co">#&gt;  [27] cachem_1.1.0                GenomicAlignments_1.48.0   </span></span>
+<span><span class="co">#&gt;  [29] igraph_2.3.2                lifecycle_1.0.5            </span></span>
+<span><span class="co">#&gt;  [31] pkgconfig_2.0.3             Matrix_1.7-5               </span></span>
+<span><span class="co">#&gt;  [33] R6_2.6.1                    fastmap_1.2.0              </span></span>
+<span><span class="co">#&gt;  [35] MatrixGenerics_1.24.0       digest_0.6.39              </span></span>
+<span><span class="co">#&gt;  [37] colorspace_2.1-2            AnnotationDbi_1.74.0       </span></span>
+<span><span class="co">#&gt;  [39] S4Vectors_0.50.1            regioneR_1.44.0            </span></span>
+<span><span class="co">#&gt;  [41] bezier_1.1.2                textshaping_1.0.5          </span></span>
+<span><span class="co">#&gt;  [43] Hmisc_5.2-5                 GenomicRanges_1.64.0       </span></span>
+<span><span class="co">#&gt;  [45] RSQLite_3.53.2              httr_1.4.8                 </span></span>
+<span><span class="co">#&gt;  [47] polyclip_1.10-7             abind_1.4-8                </span></span>
+<span><span class="co">#&gt;  [49] compiler_4.6.0              bit64_4.8.2                </span></span>
+<span><span class="co">#&gt;  [51] withr_3.0.2                 htmlTable_2.5.0            </span></span>
+<span><span class="co">#&gt;  [53] S7_0.2.2                    backports_1.5.1            </span></span>
+<span><span class="co">#&gt;  [55] BiocParallel_1.46.0         DBI_1.3.0                  </span></span>
+<span><span class="co">#&gt;  [57] UpSetR_1.4.1                ggforce_0.5.0              </span></span>
+<span><span class="co">#&gt;  [59] maps_3.4.3                  MASS_7.3-65                </span></span>
+<span><span class="co">#&gt;  [61] DelayedArray_0.38.2         rjson_0.2.23               </span></span>
+<span><span class="co">#&gt;  [63] tools_4.6.0                 foreign_0.8-91             </span></span>
+<span><span class="co">#&gt;  [65] otel_0.2.0                  zip_3.0.0                  </span></span>
+<span><span class="co">#&gt;  [67] karyoploteR_1.38.0          nnet_7.3-20                </span></span>
+<span><span class="co">#&gt;  [69] glue_1.8.1                  restfulr_0.0.17            </span></span>
+<span><span class="co">#&gt;  [71] InteractionSet_1.40.0       grid_4.6.0                 </span></span>
+<span><span class="co">#&gt;  [73] checkmate_2.3.4             cluster_2.1.8.2            </span></span>
+<span><span class="co">#&gt;  [75] generics_0.1.4              gtable_0.3.6               </span></span>
+<span><span class="co">#&gt;  [77] BSgenome_1.80.0             tidyr_1.3.2                </span></span>
+<span><span class="co">#&gt;  [79] ensembldb_2.36.1            data.table_1.18.4          </span></span>
+<span><span class="co">#&gt;  [81] XVector_0.52.0              BiocGenerics_0.58.1        </span></span>
+<span><span class="co">#&gt;  [83] ggrepel_0.9.8               pillar_1.11.1              </span></span>
+<span><span class="co">#&gt;  [85] stringr_1.6.0               spam_2.11-4                </span></span>
+<span><span class="co">#&gt;  [87] tweenr_2.0.3                lattice_0.22-9             </span></span>
+<span><span class="co">#&gt;  [89] rtracklayer_1.72.0          bit_4.6.0                  </span></span>
+<span><span class="co">#&gt;  [91] biovizBase_1.60.0           tidyselect_1.2.1           </span></span>
+<span><span class="co">#&gt;  [93] Biostrings_2.80.1           knitr_1.51                 </span></span>
+<span><span class="co">#&gt;  [95] gridExtra_2.3               bookdown_0.47              </span></span>
+<span><span class="co">#&gt;  [97] ProtGenerics_1.44.0         IRanges_2.46.0             </span></span>
+<span><span class="co">#&gt;  [99] Seqinfo_1.2.0               SummarizedExperiment_1.42.0</span></span>
+<span><span class="co">#&gt; [101] stats4_4.6.0                xfun_0.58                  </span></span>
+<span><span class="co">#&gt; [103] Biobase_2.72.0              matrixStats_1.5.0          </span></span>
+<span><span class="co">#&gt; [105] stringi_1.8.7               UCSC.utils_1.8.0           </span></span>
+<span><span class="co">#&gt; [107] lazyeval_0.2.3              yaml_2.3.12                </span></span>
+<span><span class="co">#&gt; [109] evaluate_1.0.5              codetools_0.2-20           </span></span>
+<span><span class="co">#&gt; [111] cigarillo_1.2.0             tibble_3.3.1               </span></span>
+<span><span class="co">#&gt; [113] BiocManager_1.30.27         cli_3.6.6                  </span></span>
+<span><span class="co">#&gt; [115] rpart_4.1.27                systemfonts_1.3.2          </span></span>
+<span><span class="co">#&gt; [117] jquerylib_0.1.4             dichromat_2.0-0.1          </span></span>
+<span><span class="co">#&gt; [119] Rcpp_1.1.1-1.1              GenomeInfoDb_1.48.0        </span></span>
+<span><span class="co">#&gt; [121] png_0.1-9                   XML_3.99-0.23              </span></span>
+<span><span class="co">#&gt; [123] parallel_4.6.0              pkgdown_2.2.0              </span></span>
+<span><span class="co">#&gt; [125] ggplot2_4.0.3               blob_1.3.0                 </span></span>
+<span><span class="co">#&gt; [127] dotCall64_1.2               AnnotationFilter_1.36.0    </span></span>
+<span><span class="co">#&gt; [129] bitops_1.0-9                viridisLite_0.4.3          </span></span>
+<span><span class="co">#&gt; [131] VariantAnnotation_1.58.0    scales_1.4.0               </span></span>
+<span><span class="co">#&gt; [133] purrr_1.2.2                 openxlsx_4.2.8.1           </span></span>
+<span><span class="co">#&gt; [135] crayon_1.5.3                bamsignals_1.44.1          </span></span>
+<span><span class="co">#&gt; [137] rlang_1.2.0                 KEGGREST_1.52.0</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

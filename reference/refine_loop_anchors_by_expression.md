@@ -15,6 +15,7 @@ refine_loop_anchors_by_expression(
   expr_matrix_file = NULL,
   sample_columns = NULL,
   threshold = 1,
+  threshold_mode = c("absolute", "quantile"),
   unit_type = "TPM",
   species = "hg38",
   out_dir = "./results/filtered",
@@ -49,7 +50,22 @@ refine_loop_anchors_by_expression(
 - threshold:
 
   Numeric. Minimum expression (e.g. TPM \>= 1) for a gene to be
-  considered active. Default: `1`.
+  considered active. Default: `1`. **Gene name matching is
+  case-sensitive.** Ensure gene identifiers in `expr_matrix_file` use
+  the same case as the symbols returned by your OrgDb (typically
+  all-uppercase for human and mouse, e.g. `"TP53"`, not `"Tp53"`).
+  Mismatched case will cause expressed genes to be misclassified as
+  silent (eP/eG).
+
+- threshold_mode:
+
+  Character. How to interpret the `threshold` value. `"absolute"`
+  (default): `threshold` is a direct expression cutoff (e.g., TPM \>=
+  1). `"quantile"`: `threshold` is a quantile of the expression
+  distribution (e.g., `0.75` means the top 25\\ highly expressed genes
+  are considered active). Quantile mode is dataset-adaptive and may be
+  more robust across experiments with different sequencing depths. The
+  effective expression cutoff is reported in the log.
 
 - unit_type:
 
@@ -97,7 +113,11 @@ refine_loop_anchors_by_expression(
   of eP/eG anchors. When non-empty, a *Chromatin Validation* sheet is
   added to the Excel workbook (see
   [`validate_epeG_by_chromatin`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)).
-  Default: [`list()`](https://rdrr.io/r/base/list.html) (skip).
+  Default: [`list()`](https://rdrr.io/r/base/list.html) (skip). Note: if
+  you plan to use
+  [`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md),
+  the chromatin validation and reclassification are handled there; you
+  can skip this parameter to avoid redundant BED file reads.
 
 - write_output:
 
@@ -208,7 +228,7 @@ An invisible named list:
 - `chromatin_validation` – Data frame from
   [`validate_epeG_by_chromatin`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)
   with confidence levels and evidence strings for each eP/eG anchor.
-  `NULL` when `chromatin_beds` is empty.
+  `NULL` when `chromatin_beds` is not provided or is empty (default).
 
 - `plots` – Named list of ggplot objects (dumbbell, rose, karyotype).
 
@@ -308,7 +328,7 @@ res_reclassified <- refine_loop_anchors_by_expression(
     write_output = FALSE,
     quiet = TRUE
 )
-#> Warning: 100% of P/G anchors were reclassified to eP/eG. eP/eG labels indicate expression-aware enhancer-like states. Validate with orthogonal chromatin data (ATAC-seq, H3K27ac) before interpreting eP/eG anchors as functional enhancers.
+#> Warning: 100% of P/G anchors were reclassified to eP/eG. eP/eG labels indicate transcriptionally inactive promoter/gene-body states; enhancer activity requires orthogonal chromatin evidence. Validate with orthogonal chromatin data (ATAC-seq, H3K27ac) before interpreting eP/eG anchors as functional enhancers.
 print(table(res_reclassified$loop_annotation$loop_type))
 #> 
 #>   E-E  E-eP  G-eP  P-eG eP-eP 

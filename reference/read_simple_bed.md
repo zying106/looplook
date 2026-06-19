@@ -15,7 +15,9 @@ read_simple_bed(bed_file, quiet = FALSE)
 
 - bed_file:
 
-  Character. Path to a BED file (must be tab-delimited).
+  Character. Path to a BED file (must be tab-delimited). ENCODE
+  narrowPeak and broadPeak formats are also accepted (the first three
+  columns are chr, start, end in all three formats).
 
 - quiet:
 

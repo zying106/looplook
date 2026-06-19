@@ -240,11 +240,16 @@ protein-protein interaction (PPI) network construction.</p>
 
 
 <dt id="arg-heatmap-nsample">heatmap_nSample<a class="anchor" aria-label="anchor" href="#arg-heatmap-nsample"></a></dt>
-<dd><p>Numeric. Maximum number of genes to plot in heatmap.</p></dd>
+<dd><p>Numeric. Maximum number of genes to plot in heatmap.
+Default <code>99999</code> (effectively no limit). Reduce to <code>20-50</code> for
+readable heatmaps.</p></dd>
 
 
 <dt id="arg-gsea-nsample">gsea_nSample<a class="anchor" aria-label="anchor" href="#arg-gsea-nsample"></a></dt>
-<dd><p>Numeric. Maximum number of target genes to sample for GSEA.</p></dd>
+<dd><p>Numeric. Maximum number of target genes to sample for GSEA.
+Default <code>99999</code> (effectively no down-sampling; all target genes are
+used). When the gene set is large, set to a smaller value (e.g. <code>20</code>)
+to reduce enrichment bias. Set to <code>NULL</code> to always use the full set.</p></dd>
 
 
 <dt id="arg-cnet-nsample">cnet_nSample<a class="anchor" aria-label="anchor" href="#arg-cnet-nsample"></a></dt>
@@ -340,16 +345,16 @@ modules to complete. To proactively disable specific modules, set
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>ComplexHeatmap/circlize not installed; skipping heatmap.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: PP_Genes (Valid Genes: 67) ---</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA: down-sampling 20 of 67 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: PP_Genes (Valid Genes: 66) ---</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA: down-sampling 20 of 66 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>ComplexHeatmap/circlize not installed; skipping heatmap.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ================================================================</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Processing Source: [targets]</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: Target_Genes (Valid Genes: 217) ---</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA: down-sampling 20 of 217 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: Target_Genes (Valid Genes: 216) ---</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA: down-sampling 20 of 216 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>ComplexHeatmap/circlize not installed; skipping heatmap.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>

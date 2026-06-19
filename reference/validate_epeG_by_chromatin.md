@@ -14,6 +14,7 @@ validate_epeG_by_chromatin(
   chromatin_beds = list(),
   anchor_gap = 200,
   anchor_min_overlap = 100,
+  candidate_types = NULL,
   species = "hg38",
   quiet = FALSE
 )
@@ -28,9 +29,11 @@ validate_epeG_by_chromatin(
   or
   [`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md).
   When the refined output is provided, all anchors classified as `eP` or
-  `eG` are validated (regardless of `Retained_In_Functional_Network`
-  status). When the raw annotation is provided, all anchors annotated as
-  P or G are tested.
+  `eG` are validated. When the raw annotation is provided, all `P`, `G`,
+  and `E` anchors are evaluated (chromatin evidence may reclassify E to
+  P or dual). Anchors are tested for overlap with chromatin mark BED
+  files and assigned confidence levels based on ENCODE active-enhancer
+  criteria.
 
 - chromatin_beds:
 
@@ -46,6 +49,12 @@ validate_epeG_by_chromatin(
 - anchor_min_overlap:
 
   Integer. Minimum overlap (bp) required. Default: `100`.
+
+- candidate_types:
+
+  Character vector or `NULL`. Candidate anchor types to validate. `NULL`
+  (default): `c("eP","eG")` for refined input, `c("P","G","E")` for raw.
+  Set to `c("P","G","E","eP","eG")` to cover all positional categories.
 
 - species:
 
@@ -156,5 +165,5 @@ result <- validate_epeG_by_chromatin(
 table(result$confidence)
 #> 
 #>   gold_standard high_confidence       supported            weak       uncertain 
-#>               0               0               0               0             349 
+#>               0               0               0               0             385 
 ```

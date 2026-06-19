@@ -3,7 +3,8 @@
 Generates an integrative genomic track plot displaying chromatin loops
 as arcs, loop anchors as rectangles, optional overlapping features
 (e.g., ChIP-seq peaks), and annotated genes. Loop arcs can be colored or
-sized by interaction score (7th column in BEDPE).
+sized by interaction score (8th column in BEDPE; falls back to 7th if
+8th is not numeric).
 
 ## Usage
 

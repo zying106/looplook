@@ -135,6 +135,7 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
 <span>  min_expr <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  conflict_strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"biotype_first"</span>, <span class="st">"expression_first"</span><span class="op">)</span>,</span>
 <span>  co_dominance_ratio <span class="op">=</span> <span class="fl">0.1</span>,</span>
+<span>  biotype_order <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"protein"</span>, <span class="st">"small_ncRNA"</span>, <span class="st">"antisense"</span>, <span class="st">"lncRNA"</span>, <span class="st">"pseudogene"</span><span class="op">)</span>,</span>
 <span>  anchor_gap <span class="op">=</span> <span class="op">-</span><span class="fl">1L</span>,</span>
 <span>  anchor_min_overlap <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  anchor_min_frac <span class="op">=</span> <span class="fl">0</span>,</span>
@@ -165,7 +166,7 @@ Additional columns beyond 6 are retained in the output; anchor swapping only aff
 
 
 <dt id="arg-species">species<a class="anchor" aria-label="anchor" href="#arg-species"></a></dt>
-<dd><p>Character. Genome assembly used when <code>txdb</code> and <code>org_db</code> are <code>NULL</code>. One of <code>"hg38"</code>, <code>"hg19"</code>, <code>"mm10"</code>, <code>"mm9"</code>. Default: <code>"hg38"</code>. The package is currently tested on human and mouse; the architecture supports extension to other species by adding entries to <code>species_txdb_pkg()</code>, <code>species_orgdb_pkg()</code>, and <code>species_bsgenome_pkg()</code>.</p></dd>
+<dd><p>Character. Genome assembly used when <code>txdb</code> and <code>org_db</code> are <code>NULL</code>. One of <code>"hg38"</code>, <code>"hg19"</code>, <code>"mm10"</code>, <code>"mm9"</code>. Default: <code>"hg38"</code>. For other species, pass <code>txdb</code> and <code>org_db</code> as objects or package name strings directly (e.g. <code>txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene</code>, <code>org_db = "org.Dm.eg.db"</code>); <code>species</code> is then only used for karyotype ideograms.</p></dd>
 
 
 <dt id="arg-tss-region">tss_region<a class="anchor" aria-label="anchor" href="#arg-tss-region"></a></dt>
@@ -230,6 +231,15 @@ genes with expression &gt;= <code>co_dominance_ratio x max(expression)</code> in
 group are retained together. Default: <code>0.1</code> (i.e. within one order of
 magnitude). Lower values (e.g. <code>0.01</code>) retain more co-dominant
 candidates; higher values (e.g. <code>0.5</code>) are more stringent.</p></dd>
+
+
+<dt id="arg-biotype-order">biotype_order<a class="anchor" aria-label="anchor" href="#arg-biotype-order"></a></dt>
+<dd><p>Character vector. Custom ordering of biotype categories
+for gene conflict resolution (passed to <code><a href="resolve_gene_conflicts.html">resolve_gene_conflicts</a></code>).
+Five keywords: <code>"protein"</code>, <code>"small_ncRNA"</code>, <code>"antisense"</code>,
+<code>"lncRNA"</code>, <code>"pseudogene"</code>. Listed categories get top priority;
+unlisted keep their default relative order appended at the bottom.
+Default: <code>c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")</code>.</p></dd>
 
 
 <dt id="arg-anchor-gap">anchor_gap<a class="anchor" aria-label="anchor" href="#arg-anchor-gap"></a></dt>
@@ -304,7 +314,11 @@ provided) <code>Karyo_TargetGenes</code>, <code>Target_Rose</code>,
 <code>Target_Genomic_Distribution</code>, <code>Target_Loop_Genomic_Distribution</code>.</p></li>
 <li><p><code>plot_list</code> – Backward-compatible alias of <code>plots</code>.</p></li>
 <li><p><code>metadata</code> – Internal metadata list (parameters, versions). Not intended for direct use.</p></li>
-</ul><p>If <code>write_output = TRUE</code>, also writes a multi-sheet Excel workbook to <code>out_dir</code>.</p>
+</ul><p>The returned object carries a <code>looplook_anchor_state</code> attribute (access via
+<code>attr(result, "looplook_anchor_state")</code>) containing internal anchor
+topology data required by <code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></code>
+with <code>recompute_targets = TRUE</code>.
+If <code>write_output = TRUE</code>, also writes a multi-sheet Excel workbook to <code>out_dir</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
