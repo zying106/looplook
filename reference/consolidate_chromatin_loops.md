@@ -242,7 +242,7 @@ res_intersect <- consolidate_chromatin_loops(
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmpqlOofz/file9d4b6b79823.bedpe
+#> Finished! Saved to /tmp/RtmpUyzjL0/file9d55734d1506.bedpe
 #> Finished! Final loops: 12
 
 # Example B: Consensus Mode (formerly Reproducible)
@@ -278,7 +278,7 @@ res_consensus <- consolidate_chromatin_loops(
 #>   Chaining: 0/12 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Warning: 1 cluster(s) have max_span > chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.
-#> Finished! Saved to /tmp/RtmpqlOofz/file9d4b1ba1f5b0.bedpe
+#> Finished! Saved to /tmp/RtmpUyzjL0/file9d55fcbfc94.bedpe
 #> Finished! Final loops: 12
 
 # Example C: Union Mode
@@ -313,7 +313,7 @@ res_union <- consolidate_chromatin_loops(
 #>   Chaining: 0/586 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Warning: 15 cluster(s) have max_span > chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.
-#> Finished! Saved to /tmp/RtmpqlOofz/file9d4b822a4e4.bedpe
+#> Finished! Saved to /tmp/RtmpUyzjL0/file9d55e1815de.bedpe
 #> Finished! Final loops: 586
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -352,7 +352,7 @@ res_clean <- consolidate_chromatin_loops(
 #>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2
 #>   Chaining: 0/7 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpqlOofz/file9d4b280552ba.bedpe
+#> Finished! Saved to /tmp/RtmpUyzjL0/file9d551e0c8dc9.bedpe
 #> Finished! Final loops: 4
 
 # Inspect results
