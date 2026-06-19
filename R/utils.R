@@ -13,7 +13,7 @@ if (getRversion() >= "2.15.1") {
         "CleanLoopType", "Conn_Group", "Count", "Degree", "Description",
         "Description_unique", "Distal_Anchor_ID", "Dominant_Interaction",
         "Dominant_Interaction_Filtered", "Expression", "Expression_Status", "FDR",
-        "Feature", "Filtered", "Fraction", "GENENAME", "Gene",
+        "Feature", "Filtered", "Fraction", "GENENAME", "GENETYPE", "Gene",
         "Genomic_Distribution", "Group", "High_Connectivity_Gene",
         "Is_Active_Gene", "Is_High_Connectivity_Distal_Element",
         "Is_High_Connectivity_Gene", "Is_High_Distal_Connectivity_Gene", "L1_Raw",

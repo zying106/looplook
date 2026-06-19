@@ -22,4 +22,5 @@ tests/testthat/testthat-problems.rds
 coverage-report.html
 README.html
 vignettes/*.html
+figure/
 lib/

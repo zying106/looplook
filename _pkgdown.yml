@@ -98,11 +98,13 @@ reference:
     desc: "The core mapping engine for resolving 1D-to-3D spatial target assignments."
     contents:
       - annotate_peaks_and_loops
+      - resolve_gene_conflicts
 
-  - title: "Module 3: Expression-Aware Refinement"
-    desc: "Advanced logic for eliminating transcriptionally silent contacts using RNA-seq data."
+  - title: "Module 3: Expression-Aware & Chromatin-Guided Refinement"
+    desc: "Advanced logic for eliminating transcriptionally silent contacts and validating regulatory elements."
     contents:
       - refine_loop_anchors_by_expression
+      - refine_loop_anchors_by_chromatin
       - validate_epeG_by_chromatin
 
   - title: "Module 4: Automated Functional Profiling"
