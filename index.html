@@ -181,19 +181,22 @@
 <span>  files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span>
 <span>  mode <span class="op">=</span> <span class="st">"consensus"</span>,</span>
 <span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span>
-<span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">out_dir</span>, <span class="st">"consensus_loops.bedpe"</span><span class="op">)</span></span>
+<span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">out_dir</span>, <span class="st">"consensus_loops.bedpe"</span><span class="op">)</span>,</span>
+<span>  quiet <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="module-2-3d-guided-peak-annotation--mapping">Module 2: 3D-Guided Peak Annotation &amp; Mapping<a class="anchor" aria-label="anchor" href="#module-2-3d-guided-peak-annotation--mapping"></a>
 </h3>
-<p>This module serves as the <strong>core target mapping engine</strong>. It resolves locus assignment conflicts through a rigorous hierarchical pipeline: Functional Biotype Prioritization → Expression Filtering (within selected tier) → Co-Dominant Expression Tiebreaker (retains all genes within 10% of max expression).</p>
+<p>This module serves as the <strong>core target mapping engine</strong>. It resolves locus assignment conflicts through a rigorous hierarchical pipeline: Functional Biotype Prioritization → Expression Filtering (within selected tier) → Co-Dominant Expression Tiebreaker (retains all genes within 10% of max expression). The biotype priority order can be customised via the <code>biotype_order</code> parameter (five keywords: <code>protein</code>, <code>small_ncRNA</code>, <code>antisense</code>, <code>lncRNA</code>, <code>pseudogene</code>). For advanced control, <code><a href="reference/resolve_gene_conflicts.html">resolve_gene_conflicts()</a></code> exposes the full conflict-resolution logic as a standalone function.</p>
 <p><strong>Key Parameters:</strong></p>
 <ul>
 <li>
-<strong><code>target_bed</code></strong>: pecifies the <strong>auxiliary genomic features of interest</strong> (e.g., GWAS SNPs, ATAC-seq peaks, or transcription factor binding sites) that require spatial target gene assignment.</li>
+<strong><code>target_bed</code></strong>: Specifies the <strong>auxiliary genomic features of interest</strong> (e.g., GWAS SNPs, ATAC-seq peaks, or transcription factor binding sites) that require spatial target gene assignment.</li>
 <li>
 <strong><code>expr_matrix_file</code> &amp; <code>sample_columns</code></strong>: Providing an RNA-seq matrix allows the engine to activate the Expression Pre-filter and Tiebreaker logic, drastically reducing false-positive gene assignments in <strong>genomic regions harboring multiple genes</strong>.</li>
+<li>
+<strong><code>biotype_order</code></strong>: Custom ordering of biotype categories for conflict resolution. Default: <code>c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")</code>. Set <code>c("lncRNA", "protein")</code> to prioritise lncRNAs.</li>
 <li>
 <strong><code>neighbor_hop</code></strong>: An advanced topological parameter for 3D chromatin interactome network traversal. Target gene assignment uses <code>neighbor_hop + 1</code> graph steps to capture genes at opposite anchors. A value of 0 restricts loop topology to direct contacts (target genes searched within 1-hop); a value of 1 (Hub Mode) extends both to secondary network effects.</li>
 <li>
@@ -217,7 +220,8 @@
 <span>    neighbor_hop     <span class="op">=</span> <span class="fl">0</span>,                   <span class="co"># Direct contacts only</span></span>
 <span>    hub_percentile   <span class="op">=</span> <span class="fl">0.95</span>,                <span class="co"># Top 5% as regulatory hubs</span></span>
 <span>    out_dir          <span class="op">=</span> <span class="va">out_dir</span>,</span>
-<span>    project_name     <span class="op">=</span> <span class="st">"HiChIP_Integrative"</span></span>
+<span>    project_name     <span class="op">=</span> <span class="st">"HiChIP_Integrative"</span>,</span>
+<span>    quiet            <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span>  <span class="op">)</span></span>
 <span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
 <span>  <span class="va">tmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/environment.html" class="external-link">new.env</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -238,15 +242,17 @@
 </div>
 </div>
 <div class="section level3">
-<h3 id="module-3-expression-aware-refinement">Module 3: Expression-Aware Refinement<a class="anchor" aria-label="anchor" href="#module-3-expression-aware-refinement"></a>
+<h3 id="module-3a-expression-aware-refinement">Module 3A: Expression-Aware Refinement<a class="anchor" aria-label="anchor" href="#module-3a-expression-aware-refinement"></a>
 </h3>
 <p>Physical proximity is a structural prerequisite, but not a direct proxy for active <strong>transcriptional regulation</strong>. This module integrates quantitative transcriptome data to annotate each loop with expression-aware functional status. All structural loops are preserved; the pipeline reclassifies silent anchors (P to eP, G to eG), flags which loops belong to the high-confidence functional subset (<code>Retained_In_Functional_Network</code>), and exposes <code>Refinement_Action</code> for transparent interpretation.</p>
 <p><strong>Key Parameters:</strong></p>
 <ul>
 <li>
-<code>threshold</code> &amp; <code>unit_type</code>: Defines the quantitative expression cutoff (e.g., <code>threshold = 1.0</code>, <code>unit_type = "TPM"</code>); genes with expression &gt;= <code>threshold</code> are considered active. This parameter enables downward compatibility with various normalization methods.</li>
+<code>threshold</code> &amp; <code>unit_type</code>: Defines the quantitative expression cutoff (e.g., <code>threshold = 1.0</code>, <code>unit_type = "TPM"</code>); genes with expression &gt;= <code>threshold</code> are considered active.</li>
 <li>
-<code>reclassify_by_expression</code>: When enabled (<code>TRUE</code>), <strong>transcriptionally silent promoters</strong> are not simply discarded; instead, they are biologically reclassified to enhancer-like regulatory elements. This correction refines the <strong>regulatory topology</strong> (e.g., reclassifying a functionally silent <strong>P-P</strong> loop into a curated <strong>eP-P</strong> loop).</li>
+<code>threshold_mode</code> (new): <code>"absolute"</code> (default): <code>threshold</code> is a direct expression cutoff. <code>"quantile"</code>: <code>threshold</code> is a quantile of the expression distribution (e.g., <code>0.75</code> selects the top 25% most highly expressed genes), adapting to different sequencing depths.</li>
+<li>
+<code>reclassify_by_expression</code>: When enabled (<code>TRUE</code>), <strong>transcriptionally silent promoters</strong> are not simply discarded; instead, they are biologically reclassified to enhancer-like regulatory elements. This correction refines the <strong>regulatory topology</strong> (e.g., reclassifying a functionally silent <strong>P-P</strong> loop into a curated <strong>eP-P</strong> loop). <strong>Important:</strong> <code>eP</code>/<code>eG</code> labels indicate transcriptional silence, not functional enhancer activity. Orthogonal chromatin data are required for functional interpretation.</li>
 </ul>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">expr_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_tpm.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
@@ -259,7 +265,8 @@
 <span>  unit_type <span class="op">=</span> <span class="st">"TPM"</span>,</span>
 <span>  reclassify_by_expression <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
-<span>  project_name <span class="op">=</span> <span class="st">"Refined_Network"</span></span>
+<span>  project_name <span class="op">=</span> <span class="st">"Refined_Network"</span>,</span>
+<span>  quiet <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p><strong>Output Data Dictionary: The Functionally Active Regulome</strong> Following transcriptome integration, the refined tabular outputs represent a high-confidence, functionally active subset of the initial 3D chromatin interactome. The <strong>key features</strong> of these output are as follows:</p>
 <ul>
@@ -271,12 +278,41 @@
 <strong>Filtered Target Gene Links</strong>: The refined provenance sheet retains only peak-gene links still used by the refined target columns and appends <code>Mean_Expression</code> plus <code>Passes_Expression_Filter</code>, so inactive Basic-stage links are not carried forward as active refined evidence.</li>
 </ul>
 <p>The <code>eP</code> and <code>eG</code> labels denote expression-inactive promoter- or gene-body-associated anchors treated as distal-like regulatory anchors for network syntax. These should not be interpreted as experimentally validated enhancers without additional epigenomic evidence (e.g., ATAC-seq accessibility, H3K27ac enrichment).</p>
-<p><strong>Orthogonal Chromatin Validation.</strong> <code>looplook</code> provides <code><a href="reference/validate_epeG_by_chromatin.html">validate_epeG_by_chromatin()</a></code> for testing eP/eG anchors against user-supplied chromatin mark BED files (ATAC-seq, H3K27ac, H3K4me1, H3K27me3, H3K4me3). Anchors are scored against ENCODE active-enhancer criteria (gold_standard / high_confidence / supported / weak / uncertain). The function can be called standalone, embedded in <code><a href="reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression()</a></code> via the <code>chromatin_beds</code> parameter (adds a <em>Chromatin Validation</em> sheet to the Excel workbook), or rendered in <code><a href="reference/looplook_report.html">looplook_report()</a></code> HTML output.</p>
 <div align="center">
 <img src="reference/figures/g2_refine.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Refinement Results"><p>
 <em>Figure 2: <strong>Representative outputs of Expression-Aware Refinement.</strong> As shown by the Multi-Omics Sankey Tracking, this curated visualization dynamically traces the fate of peak through 3D chromatin topological interactions to their corresponding transcriptionally active target genes.</em>
 </p>
 </div>
+</div>
+<div class="section level3">
+<h3 id="module-3b-chromatin-guided-reclassification">Module 3B: Chromatin-Guided Reclassification<a class="anchor" aria-label="anchor" href="#module-3b-chromatin-guided-reclassification"></a>
+</h3>
+<p>While expression data identify transcriptionally active anchors, orthogonal chromatin marks (ChIP-seq, CUT&amp;Tag, ATAC-seq) provide direct evidence of regulatory element identity. Module 3B offers two complementary functions for chromatin-based anchor validation:</p>
+<p><strong><code><a href="reference/validate_epeG_by_chromatin.html">validate_epeG_by_chromatin()</a></code></strong> — Tests eP/eG (or P/G/E) anchors against user-supplied chromatin mark BED files. Each anchor is scored against ENCODE active-enhancer criteria: <code>gold_standard</code> (H3K4me1+, H3K27ac+, ATAC+, H3K4me3-, H3K27me3-), <code>high_confidence</code>, <code>supported</code>, <code>weak</code>, or <code>uncertain</code>.</p>
+<p><strong><code><a href="reference/refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin()</a></code></strong> — Applies chromatin-mark evidence to systematically <strong>reclassify</strong> anchors and update loop topologies. Reclassification rules (minimum input H3K4me1 + H3K4me3): P + dual marks → <code>dual</code>; P + enhancer marks → <code>E</code>; eP/eG + promoter marks → <code>P</code>/<code>G</code> (revert); E + H3K4me3 only → <code>P</code> (unannotated promoter); and more. Supports <code>recompute_targets = TRUE</code> to rebuild target gene links with updated anchor types, producing chromatin-aware <code>target_annotation</code> and <code>target_gene_links</code>.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Validate eP/eG anchors against chromatin marks</span></span>
+<span><span class="va">val</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/validate_epeG_by_chromatin.html">validate_epeG_by_chromatin</a></span><span class="op">(</span></span>
+<span>  annotation_res <span class="op">=</span> <span class="va">refined_res</span>,</span>
+<span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    H3K4me1  <span class="op">=</span> <span class="st">"H3K4me1_peaks.bed"</span>,</span>
+<span>    H3K27ac  <span class="op">=</span> <span class="st">"H3K27ac_peaks.bed"</span>,</span>
+<span>    ATAC     <span class="op">=</span> <span class="st">"atac_peaks.bed"</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">val</span><span class="op">$</span><span class="va">confidence</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Chromatin-guided reclassification with target link recomputation</span></span>
+<span><span class="va">cr</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></span><span class="op">(</span></span>
+<span>  annotation_res   <span class="op">=</span> <span class="va">refined_res</span>,</span>
+<span>  chromatin_beds   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    H3K4me1  <span class="op">=</span> <span class="st">"H3K4me1_peaks.bed"</span>,</span>
+<span>    H3K4me3  <span class="op">=</span> <span class="st">"H3K4me3_peaks.bed"</span>,</span>
+<span>    H3K27ac  <span class="op">=</span> <span class="st">"H3K27ac_peaks.bed"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  recompute_targets <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">cr</span><span class="op">$</span><span class="va">loop_annotation</span><span class="op">$</span><span class="va">loop_type</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="module-4-automated-functional-profiling">Module 4: Automated Functional Profiling<a class="anchor" aria-label="anchor" href="#module-4-automated-functional-profiling"></a>
@@ -307,7 +343,7 @@
 <li>
 <strong><code>use_nearest_gene</code> (The Control)</strong> Serves as a <strong>classical baseline reference</strong>. If set to <code>TRUE</code>, the engine bypasses 3D spatial topology and strictly assigns genomic features to their nearest linear genes, facilitating a direct comparison to demonstrate the <strong>novel functional insights</strong> gained from 3D-guided mapping.</li>
 </ul>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">diff_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_deg.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span><span class="va">meta_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_coldata.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span></span>
@@ -343,7 +379,7 @@
 <li>
 <strong><code>species</code></strong> Specifies the <strong>organism of interest</strong>, directing the function to automatically load the corresponding <code>TxDb</code> and <code>OrgDb</code> Bioconductor packages. This ensures <strong>precise rendering of gene tracks</strong>, including exon-intron structures and strand directionality.</li>
 </ul>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bedpe_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_loops_1.bedpe"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span><span class="va">bed_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span></span>
@@ -366,7 +402,7 @@
 <h3 id="one-click-parameterised-report">One-Click Parameterised Report<a class="anchor" aria-label="anchor" href="#one-click-parameterised-report"></a>
 </h3>
 <p>To facilitate intuitive data exploration and result interpretation, an integrated HTML report can be compiled to encapsulate the complete analytical workflow (annotation, refinement, and profiling), presenting the outputs in a structured and accessible format.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># One-click report (renders a standalone HTML via nested rmarkdown)</span></span>
 <span><span class="fu">looplook</span><span class="fu">::</span><span class="fu"><a href="reference/looplook_report.html">looplook_report</a></span><span class="op">(</span></span>
 <span>  bedpe_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_loops_1.bedpe"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span>,</span>
@@ -405,285 +441,254 @@
 <blockquote>
 <p>ZHANG Y, HUANG X, CHEN Y, XU L. <strong>looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions.</strong> <em>bioRxiv</em>, 2026. DOI: <a href="https://www.biorxiv.org/content/10.64898/2026.04.03.715516v1" class="external-link">10.64898/2026.04.03.715516</a></p>
 </blockquote>
-<div class="sourceCode" id="cb8"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">zhang2026looplook</span>,</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="dt">title</span> = {looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions},</span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="dt">author</span> = {Zhang, Ying and Huang, Xingze and Chen, Ye and Xu, Liang},</span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="dt">year</span> = {2026},</span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="dt">journal</span> = {bioRxiv},</span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="dt">doi</span> = {10.64898/2026.04.03.715516}</span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">zhang2026looplook</span>,</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="dt">title</span> = {looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions},</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="dt">author</span> = {Zhang, Ying and Huang, Xingze and Chen, Ye and Xu, Liang},</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="dt">year</span> = {2026},</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>  <span class="dt">journal</span> = {bioRxiv},</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  <span class="dt">doi</span> = {10.64898/2026.04.03.715516}</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>}</span></code></pre></div>
 <hr>
 </div>
 <div class="section level2">
 <h2 id="session-information">Session Information<a class="anchor" aria-label="anchor" href="#session-information"></a>
 </h2>
 <p>For reproducibility, <code>looplook</code> is developed and tested under the following environment:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="do">## ─ Session info ───────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="do">##  setting  value</span></span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="do">##  version  R version 4.5.1 (2025-06-13)</span></span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="do">##  os       macOS Sequoia 15.3</span></span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="do">##  system   aarch64, darwin20</span></span>
-<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="do">##  ui       RStudio</span></span>
-<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="do">##  language (EN)</span></span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="do">##  collate  en_US.UTF-8</span></span>
-<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="do">##  ctype    en_US.UTF-8</span></span>
-<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a><span class="do">##  tz       Asia/Singapore</span></span>
-<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="do">##  date     2026-06-12</span></span>
-<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="do">##  rstudio  2025.05.1+513 Mariposa Orchid (desktop)</span></span>
-<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a><span class="do">##  pandoc   3.9.0.2 @ /opt/homebrew/bin/ (via rmarkdown)</span></span>
-<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a><span class="do">##  quarto   1.6.42 @ /Applications/RStudio.app/Contents/Resources/app/quarto/bin/quarto</span></span>
-<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="do">## ─ Packages ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span>
-<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="do">##  ! package                           * version   date (UTC) lib source</span></span>
-<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="do">##    abind                               1.4-8     2024-09-12 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a><span class="do">##    AnnotationDbi                     * 1.70.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a><span class="do">##    AnnotationFilter                    1.32.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a><span class="do">##    ape                                 5.8-1     2024-12-16 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a><span class="do">##    aplot                               0.2.9     2025-09-12 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a><span class="do">##    askpass                             1.2.1     2024-10-04 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a><span class="do">##    backports                           1.5.0     2024-05-23 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a><span class="do">##    bamsignals                          1.40.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a><span class="do">##    base64enc                           0.1-3     2015-07-28 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a><span class="do">##    bezier                              1.1.2     2018-12-14 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a><span class="do">##    Biobase                           * 2.68.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a><span class="do">##    BiocBaseUtils                       1.10.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a><span class="do">##    BiocCheck                           1.44.2    2025-05-19 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="do">##    BiocFileCache                       2.16.2    2025-08-28 [1] Bioconductor 3.21 (R 4.5.1)</span></span>
-<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="do">##    BiocGenerics                      * 0.54.1    2025-10-09 [1] Bioconductor 3.21 (R 4.5.1)</span></span>
-<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a><span class="do">##    BiocIO                              1.18.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a><span class="do">##    BiocManager                         1.30.26   2025-06-05 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a><span class="do">##    BiocParallel                        1.42.2    2025-09-11 [1] Bioconductor 3.21 (R 4.5.1)</span></span>
-<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a><span class="do">##    biocViews                           1.76.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a><span class="do">##    Biostrings                          2.76.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a><span class="do">##    biovizBase                          1.56.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a><span class="do">##    bit                                 4.6.0     2025-03-06 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a><span class="do">##    bit64                               4.6.0-1   2025-01-16 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a><span class="do">##    bitops                              1.0-9     2024-10-03 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="do">##    blob                                1.2.4     2023-03-17 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a><span class="do">##    boot                                1.3-31    2024-08-28 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a><span class="do">##    brio                                1.1.5     2024-04-24 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-45"><a href="#cb9-45" tabindex="-1"></a><span class="do">##    broom                               1.0.11    2025-12-04 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-46"><a href="#cb9-46" tabindex="-1"></a><span class="do">##    BSgenome                            1.76.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-47"><a href="#cb9-47" tabindex="-1"></a><span class="do">##    BSgenome.Hsapiens.UCSC.hg38         1.4.5     2026-02-15 [1] Bioconductor</span></span>
-<span id="cb9-48"><a href="#cb9-48" tabindex="-1"></a><span class="do">##    bslib                               0.9.0     2025-01-30 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-49"><a href="#cb9-49" tabindex="-1"></a><span class="do">##    cachem                              1.1.0     2024-05-16 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-50"><a href="#cb9-50" tabindex="-1"></a><span class="do">##    callr                               3.7.6     2024-03-25 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-51"><a href="#cb9-51" tabindex="-1"></a><span class="do">##    car                                 3.1-3     2024-09-27 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-52"><a href="#cb9-52" tabindex="-1"></a><span class="do">##    carData                             3.0-5     2022-01-06 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-53"><a href="#cb9-53" tabindex="-1"></a><span class="do">##    caTools                             1.18.3    2024-09-04 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-54"><a href="#cb9-54" tabindex="-1"></a><span class="do">##    checkmate                           2.3.3     2025-08-18 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-55"><a href="#cb9-55" tabindex="-1"></a><span class="do">##    ChIPseeker                          1.44.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-56"><a href="#cb9-56" tabindex="-1"></a><span class="do">##    chron                               2.3-62    2024-12-31 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-57"><a href="#cb9-57" tabindex="-1"></a><span class="do">##    circlize                            0.4.16    2024-02-20 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-58"><a href="#cb9-58" tabindex="-1"></a><span class="do">##    cli                                 3.6.5     2025-04-23 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-59"><a href="#cb9-59" tabindex="-1"></a><span class="do">##    clue                                0.3-66    2024-11-13 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-60"><a href="#cb9-60" tabindex="-1"></a><span class="do">##    cluster                             2.1.8.1   2025-03-12 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-61"><a href="#cb9-61" tabindex="-1"></a><span class="do">##    clusterProfiler                     4.16.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-62"><a href="#cb9-62" tabindex="-1"></a><span class="do">##    codetools                           0.2-20    2024-03-31 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-63"><a href="#cb9-63" tabindex="-1"></a><span class="do">##    colorspace                          2.1-2     2025-09-22 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-64"><a href="#cb9-64" tabindex="-1"></a><span class="do">##    commonmark                          2.0.0     2025-07-07 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-65"><a href="#cb9-65" tabindex="-1"></a><span class="do">##    ComplexHeatmap                      2.26.0    2025-10-29 [1] Bioconductor 3.22 (R 4.5.1)</span></span>
-<span id="cb9-66"><a href="#cb9-66" tabindex="-1"></a><span class="do">##    covr                                3.6.5     2025-11-09 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-67"><a href="#cb9-67" tabindex="-1"></a><span class="do">##    cowplot                             1.2.0     2025-07-07 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-68"><a href="#cb9-68" tabindex="-1"></a><span class="do">##    crayon                              1.5.3     2024-06-20 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-69"><a href="#cb9-69" tabindex="-1"></a><span class="do">##    credentials                         2.0.3     2025-09-12 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-70"><a href="#cb9-70" tabindex="-1"></a><span class="do">##    crosstalk                           1.2.2     2025-08-26 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-71"><a href="#cb9-71" tabindex="-1"></a><span class="do">##    curl                                7.0.0     2025-08-19 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-72"><a href="#cb9-72" tabindex="-1"></a><span class="do">##    data.table                          1.17.8    2025-07-10 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-73"><a href="#cb9-73" tabindex="-1"></a><span class="do">##    data.tree                           1.2.0     2025-08-25 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-74"><a href="#cb9-74" tabindex="-1"></a><span class="do">##    DBI                                 1.2.3     2024-06-02 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-75"><a href="#cb9-75" tabindex="-1"></a><span class="do">##    dbplyr                              2.5.1     2025-09-10 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-76"><a href="#cb9-76" tabindex="-1"></a><span class="do">##    DelayedArray                        0.34.1    2025-04-17 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-77"><a href="#cb9-77" tabindex="-1"></a><span class="do">##    desc                                1.4.3     2023-12-10 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-78"><a href="#cb9-78" tabindex="-1"></a><span class="do">##    devtools                            2.4.6     2025-10-03 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-79"><a href="#cb9-79" tabindex="-1"></a><span class="do">##    dichromat                           2.0-0.1   2022-05-02 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-80"><a href="#cb9-80" tabindex="-1"></a><span class="do">##    digest                              0.6.37    2024-08-19 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-81"><a href="#cb9-81" tabindex="-1"></a><span class="do">##    DirichletMultinomial                1.50.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-82"><a href="#cb9-82" tabindex="-1"></a><span class="do">##    distributional                      0.6.0     2026-01-14 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-83"><a href="#cb9-83" tabindex="-1"></a><span class="do">##    doParallel                          1.0.17    2022-02-07 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-84"><a href="#cb9-84" tabindex="-1"></a><span class="do">##    DOSE                                4.2.0     2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-85"><a href="#cb9-85" tabindex="-1"></a><span class="do">##    dotCall64                           1.2       2024-10-04 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-86"><a href="#cb9-86" tabindex="-1"></a><span class="do">##    dplyr                               1.1.4     2023-11-17 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-87"><a href="#cb9-87" tabindex="-1"></a><span class="do">##    DT                                  0.34.0    2025-09-02 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-88"><a href="#cb9-88" tabindex="-1"></a><span class="do">##    ellipsis                            0.3.2     2021-04-29 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-89"><a href="#cb9-89" tabindex="-1"></a><span class="do">##    enrichplot                          1.28.4    2025-07-14 [1] Bioconductor 3.21 (R 4.5.1)</span></span>
-<span id="cb9-90"><a href="#cb9-90" tabindex="-1"></a><span class="do">##    ensembldb                           2.32.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-91"><a href="#cb9-91" tabindex="-1"></a><span class="do">##    evaluate                            1.0.5     2025-08-27 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-92"><a href="#cb9-92" tabindex="-1"></a><span class="do">##    farver                              2.1.2     2024-05-13 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-93"><a href="#cb9-93" tabindex="-1"></a><span class="do">##    fastmap                             1.2.0     2024-05-15 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-94"><a href="#cb9-94" tabindex="-1"></a><span class="do">##    fastmatch                           1.1-6     2024-12-23 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-95"><a href="#cb9-95" tabindex="-1"></a><span class="do">##    fgsea                               1.34.2    2025-07-10 [1] Bioconductor 3.21 (R 4.5.1)</span></span>
-<span id="cb9-96"><a href="#cb9-96" tabindex="-1"></a><span class="do">##    fields                              17.1      2025-09-08 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-97"><a href="#cb9-97" tabindex="-1"></a><span class="do">##    filelock                            1.0.3     2023-12-11 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-98"><a href="#cb9-98" tabindex="-1"></a><span class="do">##    foreach                             1.5.2     2022-02-02 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-99"><a href="#cb9-99" tabindex="-1"></a><span class="do">##    foreign                             0.8-90    2025-03-31 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-100"><a href="#cb9-100" tabindex="-1"></a><span class="do">##    Formula                             1.2-5     2023-02-24 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-101"><a href="#cb9-101" tabindex="-1"></a><span class="do">##    fs                                  1.6.6     2025-04-12 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-102"><a href="#cb9-102" tabindex="-1"></a><span class="do">##    generics                          * 0.1.4     2025-05-09 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-103"><a href="#cb9-103" tabindex="-1"></a><span class="do">##    GenomeInfoDb                        1.44.3    2025-09-18 [1] Bioconductor 3.21 (R 4.5.1)</span></span>
-<span id="cb9-104"><a href="#cb9-104" tabindex="-1"></a><span class="do">##    GenomeInfoDbData                    1.2.14    2025-10-19 [1] Bioconductor</span></span>
-<span id="cb9-105"><a href="#cb9-105" tabindex="-1"></a><span class="do">##    GenomicAlignments                   1.44.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-106"><a href="#cb9-106" tabindex="-1"></a><span class="do">##    GenomicFeatures                     1.60.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-107"><a href="#cb9-107" tabindex="-1"></a><span class="do">##    GenomicRanges                       1.60.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-108"><a href="#cb9-108" tabindex="-1"></a><span class="do">##    gert                                2.1.5     2025-03-25 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-109"><a href="#cb9-109" tabindex="-1"></a><span class="do">##    GetoptLong                          1.1.0     2025-11-28 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-110"><a href="#cb9-110" tabindex="-1"></a><span class="do">##    ggdist                              3.3.3     2025-04-23 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-111"><a href="#cb9-111" tabindex="-1"></a><span class="do">##    ggforce                             0.5.0     2025-06-18 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-112"><a href="#cb9-112" tabindex="-1"></a><span class="do">##    ggfun                               0.2.0     2025-07-15 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-113"><a href="#cb9-113" tabindex="-1"></a><span class="do">##    ggplot2                             4.0.0     2025-09-11 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-114"><a href="#cb9-114" tabindex="-1"></a><span class="do">##    ggplotify                           0.1.3     2025-09-20 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-115"><a href="#cb9-115" tabindex="-1"></a><span class="do">##    ggpointdensity                      0.2.1     2025-11-18 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-116"><a href="#cb9-116" tabindex="-1"></a><span class="do">##    ggpubr                              0.6.2     2025-10-17 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-117"><a href="#cb9-117" tabindex="-1"></a><span class="do">##    ggrepel                             0.9.8     2026-03-17 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-118"><a href="#cb9-118" tabindex="-1"></a><span class="do">##    ggsignif                            0.6.4     2022-10-13 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-119"><a href="#cb9-119" tabindex="-1"></a><span class="do">##    ggtangle                            0.0.7     2025-06-30 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-120"><a href="#cb9-120" tabindex="-1"></a><span class="do">##    ggtree                              3.16.3    2025-07-14 [1] Bioconductor 3.21 (R 4.5.1)</span></span>
-<span id="cb9-121"><a href="#cb9-121" tabindex="-1"></a><span class="do">##    GlobalOptions                       0.1.2     2020-06-10 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-122"><a href="#cb9-122" tabindex="-1"></a><span class="do">##    glue                                1.8.0     2024-09-30 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-123"><a href="#cb9-123" tabindex="-1"></a><span class="do">##    GO.db                               3.21.0    2025-10-19 [1] Bioconductor</span></span>
-<span id="cb9-124"><a href="#cb9-124" tabindex="-1"></a><span class="do">##    GOSemSim                            2.34.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-125"><a href="#cb9-125" tabindex="-1"></a><span class="do">##    gplots                              3.2.0     2024-10-05 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-126"><a href="#cb9-126" tabindex="-1"></a><span class="do">##    graph                               1.86.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-127"><a href="#cb9-127" tabindex="-1"></a><span class="do">##    gridExtra                           2.3       2017-09-09 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-128"><a href="#cb9-128" tabindex="-1"></a><span class="do">##    gridGraphics                        0.5-1     2020-12-13 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-129"><a href="#cb9-129" tabindex="-1"></a><span class="do">##    gson                                0.1.0     2023-03-07 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-130"><a href="#cb9-130" tabindex="-1"></a><span class="do">##    gsubfn                              0.7       2018-03-16 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-131"><a href="#cb9-131" tabindex="-1"></a><span class="do">##    gtable                              0.3.6     2024-10-25 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-132"><a href="#cb9-132" tabindex="-1"></a><span class="do">##    gtools                              3.9.5     2023-11-20 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-133"><a href="#cb9-133" tabindex="-1"></a><span class="do">##    hash                                2.2.6.3   2023-08-19 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-134"><a href="#cb9-134" tabindex="-1"></a><span class="do">##    Hmisc                               5.2-4     2025-10-05 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-135"><a href="#cb9-135" tabindex="-1"></a><span class="do">##    htmlTable                           2.4.3     2024-07-21 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-136"><a href="#cb9-136" tabindex="-1"></a><span class="do">##    htmltools                           0.5.8.1   2024-04-04 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-137"><a href="#cb9-137" tabindex="-1"></a><span class="do">##    htmlwidgets                         1.6.4     2023-12-06 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-138"><a href="#cb9-138" tabindex="-1"></a><span class="do">##    httr                                1.4.7     2023-08-15 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-139"><a href="#cb9-139" tabindex="-1"></a><span class="do">##    httr2                               1.2.1     2025-07-22 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-140"><a href="#cb9-140" tabindex="-1"></a><span class="do">##    igraph                              2.2.0     2025-10-13 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-141"><a href="#cb9-141" tabindex="-1"></a><span class="do">##    InteractionSet                      1.36.1    2025-05-08 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-142"><a href="#cb9-142" tabindex="-1"></a><span class="do">##    IRanges                           * 2.42.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-143"><a href="#cb9-143" tabindex="-1"></a><span class="do">##    iterators                           1.0.14    2022-02-05 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-144"><a href="#cb9-144" tabindex="-1"></a><span class="do">##    JASPAR2020                          0.99.10   2026-02-15 [1] Bioconductor</span></span>
-<span id="cb9-145"><a href="#cb9-145" tabindex="-1"></a><span class="do">##    jquerylib                           0.1.4     2021-04-26 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-146"><a href="#cb9-146" tabindex="-1"></a><span class="do">##    jsonlite                            2.0.0     2025-03-27 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-147"><a href="#cb9-147" tabindex="-1"></a><span class="do">##    karyoploteR                         1.34.2    2025-06-09 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-148"><a href="#cb9-148" tabindex="-1"></a><span class="do">##    KEGGREST                            1.48.1    2025-06-19 [1] Bioconductor 3.21 (R 4.5.1)</span></span>
-<span id="cb9-149"><a href="#cb9-149" tabindex="-1"></a><span class="do">##    KernSmooth                          2.23-26   2025-01-01 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-150"><a href="#cb9-150" tabindex="-1"></a><span class="do">##    knitr                               1.51      2025-12-20 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-151"><a href="#cb9-151" tabindex="-1"></a><span class="do">##    lattice                             0.22-7    2025-04-02 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-152"><a href="#cb9-152" tabindex="-1"></a><span class="do">##    lazyeval                            0.2.2     2019-03-15 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-153"><a href="#cb9-153" tabindex="-1"></a><span class="do">##    lifecycle                           1.0.4     2023-11-07 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-154"><a href="#cb9-154" tabindex="-1"></a><span class="do">##  P looplook                          * 0.99.14   2026-06-11 [?] Bioconductor</span></span>
-<span id="cb9-155"><a href="#cb9-155" tabindex="-1"></a><span class="do">##    magick                              2.9.0     2025-09-08 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-156"><a href="#cb9-156" tabindex="-1"></a><span class="do">##    magrittr                            2.0.4     2025-09-12 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-157"><a href="#cb9-157" tabindex="-1"></a><span class="do">##    maps                                3.4.3     2025-05-26 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-158"><a href="#cb9-158" tabindex="-1"></a><span class="do">##    MASS                                7.3-65    2025-02-28 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-159"><a href="#cb9-159" tabindex="-1"></a><span class="do">##    Matrix                              1.7-3     2025-03-11 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-160"><a href="#cb9-160" tabindex="-1"></a><span class="do">##    MatrixGenerics                      1.20.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-161"><a href="#cb9-161" tabindex="-1"></a><span class="do">##    matrixStats                         1.5.0     2025-01-07 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-162"><a href="#cb9-162" tabindex="-1"></a><span class="do">##    memoise                             2.0.1     2021-11-26 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-163"><a href="#cb9-163" tabindex="-1"></a><span class="do">##    motifmatchr                         1.30.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-164"><a href="#cb9-164" tabindex="-1"></a><span class="do">##    networkD3                           0.4.1     2025-04-14 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-165"><a href="#cb9-165" tabindex="-1"></a><span class="do">##    nlme                                3.1-168   2025-03-31 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-166"><a href="#cb9-166" tabindex="-1"></a><span class="do">##    nnet                                7.3-20    2025-01-01 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-167"><a href="#cb9-167" tabindex="-1"></a><span class="do">##    openssl                             2.3.4     2025-09-30 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-168"><a href="#cb9-168" tabindex="-1"></a><span class="do">##    openxlsx                            4.2.8.1   2025-10-31 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-169"><a href="#cb9-169" tabindex="-1"></a><span class="do">##    org.Hs.eg.db                      * 3.21.0    2025-10-20 [1] Bioconductor</span></span>
-<span id="cb9-170"><a href="#cb9-170" tabindex="-1"></a><span class="do">##    otel                                0.2.0     2025-08-29 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-171"><a href="#cb9-171" tabindex="-1"></a><span class="do">##    patchwork                           1.3.2     2025-08-25 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-172"><a href="#cb9-172" tabindex="-1"></a><span class="do">##    pillar                              1.11.1    2025-09-17 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-173"><a href="#cb9-173" tabindex="-1"></a><span class="do">##    pkgbuild                            1.4.8     2025-05-26 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-174"><a href="#cb9-174" tabindex="-1"></a><span class="do">##    pkgconfig                           2.0.3     2019-09-22 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-175"><a href="#cb9-175" tabindex="-1"></a><span class="do">##    pkgload                             1.4.1     2025-09-23 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-176"><a href="#cb9-176" tabindex="-1"></a><span class="do">##    plotrix                             3.8-4     2023-11-10 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-177"><a href="#cb9-177" tabindex="-1"></a><span class="do">##    plyr                                1.8.9     2023-10-02 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-178"><a href="#cb9-178" tabindex="-1"></a><span class="do">##    png                                 0.1-9     2026-03-15 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-179"><a href="#cb9-179" tabindex="-1"></a><span class="do">##    polyclip                            1.10-7    2024-07-23 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-180"><a href="#cb9-180" tabindex="-1"></a><span class="do">##    prettyunits                         1.2.0     2023-09-24 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-181"><a href="#cb9-181" tabindex="-1"></a><span class="do">##    processx                            3.8.6     2025-02-21 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-182"><a href="#cb9-182" tabindex="-1"></a><span class="do">##    ProtGenerics                        1.40.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-183"><a href="#cb9-183" tabindex="-1"></a><span class="do">##    proto                               1.0.0     2016-10-29 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-184"><a href="#cb9-184" tabindex="-1"></a><span class="do">##    ps                                  1.9.1     2025-04-12 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-185"><a href="#cb9-185" tabindex="-1"></a><span class="do">##    purrr                               1.2.1     2026-01-09 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-186"><a href="#cb9-186" tabindex="-1"></a><span class="do">##    pwalign                             1.4.0     2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-187"><a href="#cb9-187" tabindex="-1"></a><span class="do">##    qvalue                              2.40.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-188"><a href="#cb9-188" tabindex="-1"></a><span class="do">##    R.methodsS3                         1.8.2     2022-06-13 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-189"><a href="#cb9-189" tabindex="-1"></a><span class="do">##    R.oo                                1.27.1    2025-05-02 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-190"><a href="#cb9-190" tabindex="-1"></a><span class="do">##    R.utils                             2.13.0    2025-02-24 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-191"><a href="#cb9-191" tabindex="-1"></a><span class="do">##    R6                                  2.6.1     2025-02-15 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-192"><a href="#cb9-192" tabindex="-1"></a><span class="do">##    rappdirs                            0.3.3     2021-01-31 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-193"><a href="#cb9-193" tabindex="-1"></a><span class="do">##    RBGL                                1.84.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-194"><a href="#cb9-194" tabindex="-1"></a><span class="do">##    rcmdcheck                           1.4.0     2021-09-27 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-195"><a href="#cb9-195" tabindex="-1"></a><span class="do">##    RColorBrewer                        1.1-3     2022-04-03 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-196"><a href="#cb9-196" tabindex="-1"></a><span class="do">##    Rcpp                                1.1.0     2025-07-02 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-197"><a href="#cb9-197" tabindex="-1"></a><span class="do">##    RCurl                               1.98-1.17 2025-03-22 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-198"><a href="#cb9-198" tabindex="-1"></a><span class="do">##    regioneR                            1.40.1    2025-05-29 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-199"><a href="#cb9-199" tabindex="-1"></a><span class="do">##    remotes                             2.5.0     2024-03-17 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-200"><a href="#cb9-200" tabindex="-1"></a><span class="do">##    reshape2                            1.4.4     2020-04-09 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-201"><a href="#cb9-201" tabindex="-1"></a><span class="do">##    restfulr                            0.0.16    2025-06-27 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-202"><a href="#cb9-202" tabindex="-1"></a><span class="do">##    rex                                 1.2.1     2021-11-26 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-203"><a href="#cb9-203" tabindex="-1"></a><span class="do">##    rjson                               0.2.23    2024-09-16 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-204"><a href="#cb9-204" tabindex="-1"></a><span class="do">##    rlang                               1.2.0     2026-04-06 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-205"><a href="#cb9-205" tabindex="-1"></a><span class="do">##    rmarkdown                           2.30      2025-09-28 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-206"><a href="#cb9-206" tabindex="-1"></a><span class="do">##    roxygen2                            7.3.3     2025-09-03 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-207"><a href="#cb9-207" tabindex="-1"></a><span class="do">##    rpart                               4.1.24    2025-01-07 [1] CRAN (R 4.5.1)</span></span>
-<span id="cb9-208"><a href="#cb9-208" tabindex="-1"></a><span class="do">##    rprojroot                           2.1.1     2025-08-26 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-209"><a href="#cb9-209" tabindex="-1"></a><span class="do">##    Rsamtools                           2.24.1    2025-09-04 [1] Bioconductor 3.21 (R 4.5.1)</span></span>
-<span id="cb9-210"><a href="#cb9-210" tabindex="-1"></a><span class="do">##    RSQLite                             2.4.3     2025-08-20 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-211"><a href="#cb9-211" tabindex="-1"></a><span class="do">##    rstatix                             0.7.3     2025-10-18 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-212"><a href="#cb9-212" tabindex="-1"></a><span class="do">##    rstudioapi                          0.17.1    2024-10-22 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-213"><a href="#cb9-213" tabindex="-1"></a><span class="do">##    rtracklayer                         1.68.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-214"><a href="#cb9-214" tabindex="-1"></a><span class="do">##    RUnit                               0.4.33.1  2025-06-17 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-215"><a href="#cb9-215" tabindex="-1"></a><span class="do">##    S4Arrays                            1.8.1     2025-05-29 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-216"><a href="#cb9-216" tabindex="-1"></a><span class="do">##    S4Vectors                         * 0.48.0    2025-10-29 [1] Bioconductor 3.22 (R 4.5.1)</span></span>
-<span id="cb9-217"><a href="#cb9-217" tabindex="-1"></a><span class="do">##    S7                                  0.2.0     2024-11-07 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-218"><a href="#cb9-218" tabindex="-1"></a><span class="do">##    sass                                0.4.10    2025-04-11 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-219"><a href="#cb9-219" tabindex="-1"></a><span class="do">##    scales                              1.4.0     2025-04-24 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-220"><a href="#cb9-220" tabindex="-1"></a><span class="do">##    seqLogo                             1.74.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-221"><a href="#cb9-221" tabindex="-1"></a><span class="do">##    sessioninfo                         1.2.3     2025-02-05 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-222"><a href="#cb9-222" tabindex="-1"></a><span class="do">##    shape                               1.4.6.1   2024-02-23 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-223"><a href="#cb9-223" tabindex="-1"></a><span class="do">##    spam                                2.11-1    2025-01-20 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-224"><a href="#cb9-224" tabindex="-1"></a><span class="do">##    SparseArray                         1.8.1     2025-07-21 [1] Bioconductor 3.21 (R 4.5.1)</span></span>
-<span id="cb9-225"><a href="#cb9-225" tabindex="-1"></a><span class="do">##    sqldf                               0.4-11    2017-06-28 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-226"><a href="#cb9-226" tabindex="-1"></a><span class="do">##    STRINGdb                            2.20.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-227"><a href="#cb9-227" tabindex="-1"></a><span class="do">##    stringdist                          0.9.15    2025-01-10 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-228"><a href="#cb9-228" tabindex="-1"></a><span class="do">##    stringi                             1.8.7     2025-03-27 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-229"><a href="#cb9-229" tabindex="-1"></a><span class="do">##    stringr                             1.5.2     2025-09-08 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-230"><a href="#cb9-230" tabindex="-1"></a><span class="do">##    SummarizedExperiment                1.38.1    2025-04-28 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-231"><a href="#cb9-231" tabindex="-1"></a><span class="do">##    sys                                 3.4.3     2024-10-04 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-232"><a href="#cb9-232" tabindex="-1"></a><span class="do">##    testthat                          * 3.3.1     2025-11-25 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-233"><a href="#cb9-233" tabindex="-1"></a><span class="do">##    TFBSTools                           1.46.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-234"><a href="#cb9-234" tabindex="-1"></a><span class="do">##    TFMPvalue                           1.0.0     2026-01-19 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-235"><a href="#cb9-235" tabindex="-1"></a><span class="do">##    tibble                              3.3.0     2025-06-08 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-236"><a href="#cb9-236" tabindex="-1"></a><span class="do">##    tidyr                               1.3.1     2024-01-24 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-237"><a href="#cb9-237" tabindex="-1"></a><span class="do">##    tidyselect                          1.2.1     2024-03-11 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-238"><a href="#cb9-238" tabindex="-1"></a><span class="do">##    tidytree                            0.4.6     2023-12-12 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-239"><a href="#cb9-239" tabindex="-1"></a><span class="do">##    treeio                              1.32.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-240"><a href="#cb9-240" tabindex="-1"></a><span class="do">##    tweenr                              2.0.3     2024-02-26 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-241"><a href="#cb9-241" tabindex="-1"></a><span class="do">##    TxDb.Hsapiens.UCSC.hg19.knownGene   3.2.2     2025-10-20 [1] Bioconductor</span></span>
-<span id="cb9-242"><a href="#cb9-242" tabindex="-1"></a><span class="do">##    TxDb.Hsapiens.UCSC.hg38.knownGene   3.21.0    2025-10-20 [1] Bioconductor</span></span>
-<span id="cb9-243"><a href="#cb9-243" tabindex="-1"></a><span class="do">##    UCSC.utils                          1.4.0     2025-04-17 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-244"><a href="#cb9-244" tabindex="-1"></a><span class="do">##    UpSetR                              1.4.0     2019-05-22 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-245"><a href="#cb9-245" tabindex="-1"></a><span class="do">##    usethis                             3.2.1     2025-09-06 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-246"><a href="#cb9-246" tabindex="-1"></a><span class="do">##    VariantAnnotation                   1.54.1    2025-05-08 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-247"><a href="#cb9-247" tabindex="-1"></a><span class="do">##    vctrs                               0.7.2     2026-03-21 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-248"><a href="#cb9-248" tabindex="-1"></a><span class="do">##    viridis                             0.6.5     2024-01-29 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-249"><a href="#cb9-249" tabindex="-1"></a><span class="do">##    viridisLite                         0.4.2     2023-05-02 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-250"><a href="#cb9-250" tabindex="-1"></a><span class="do">##    withr                               3.0.2     2024-10-28 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-251"><a href="#cb9-251" tabindex="-1"></a><span class="do">##    xfun                                0.55      2025-12-16 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb9-252"><a href="#cb9-252" tabindex="-1"></a><span class="do">##    XML                                 3.99-0.19 2025-08-22 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-253"><a href="#cb9-253" tabindex="-1"></a><span class="do">##    xml2                                1.4.0     2025-08-20 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-254"><a href="#cb9-254" tabindex="-1"></a><span class="do">##    xopen                               1.0.1     2024-04-25 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-255"><a href="#cb9-255" tabindex="-1"></a><span class="do">##    XVector                             0.48.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-256"><a href="#cb9-256" tabindex="-1"></a><span class="do">##    yaml                                2.3.10    2024-07-26 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-257"><a href="#cb9-257" tabindex="-1"></a><span class="do">##    yulab.utils                         0.2.1     2025-08-19 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-258"><a href="#cb9-258" tabindex="-1"></a><span class="do">##    zip                                 2.3.3     2025-05-13 [1] CRAN (R 4.5.0)</span></span>
-<span id="cb9-259"><a href="#cb9-259" tabindex="-1"></a><span class="do">##    zlibbioc                            1.54.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
-<span id="cb9-260"><a href="#cb9-260" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb9-261"><a href="#cb9-261" tabindex="-1"></a><span class="do">##  [1] /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library</span></span>
-<span id="cb9-262"><a href="#cb9-262" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb9-263"><a href="#cb9-263" tabindex="-1"></a><span class="do">##  * ── Packages attached to the search path.</span></span>
-<span id="cb9-264"><a href="#cb9-264" tabindex="-1"></a><span class="do">##  P ── Loaded and on-disk path mismatch.</span></span>
-<span id="cb9-265"><a href="#cb9-265" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb9-266"><a href="#cb9-266" tabindex="-1"></a><span class="do">## ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="do">## ─ Session info ───────────────────────────────────────────────────────────────</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="do">##  setting  value</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="do">##  version  R version 4.5.1 (2025-06-13)</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="do">##  os       macOS Sequoia 15.3</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="do">##  system   aarch64, darwin20</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a><span class="do">##  ui       X11</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="do">##  language (EN)</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="do">##  collate  en_US.UTF-8</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="do">##  ctype    en_US.UTF-8</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="do">##  tz       Asia/Singapore</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="do">##  date     2026-06-19</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="do">##  pandoc   3.9.0.2 @ /opt/homebrew/bin/ (via rmarkdown)</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="do">##  quarto   NA</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="do">## ─ Packages ───────────────────────────────────────────────────────────────────</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="do">##  package                           * version   date (UTC) lib source</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="do">##  abind                               1.4-8     2024-09-12 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="do">##  AnnotationDbi                     * 1.72.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="do">##  AnnotationFilter                    1.34.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="do">##  ape                                 5.8-1     2024-12-16 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="do">##  aplot                               0.2.9     2025-09-12 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="do">##  backports                           1.5.1     2026-04-03 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a><span class="do">##  bamsignals                          1.42.0    2025-10-29 [1] Bioconductor 3.22 (R 4.5.1)</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a><span class="do">##  base64enc                           0.1-6     2026-02-02 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a><span class="do">##  bezier                              1.1.2     2018-12-14 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a><span class="do">##  Biobase                           * 2.70.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.3)</span></span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a><span class="do">##  BiocGenerics                      * 0.56.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a><span class="do">##  BiocIO                              1.20.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a><span class="do">##  BiocParallel                        1.44.0    2025-10-29 [1] Bioconductor 3.22 (R 4.5.1)</span></span>
+<span id="cb10-30"><a href="#cb10-30" tabindex="-1"></a><span class="do">##  Biostrings                          2.78.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-31"><a href="#cb10-31" tabindex="-1"></a><span class="do">##  biovizBase                          1.58.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-32"><a href="#cb10-32" tabindex="-1"></a><span class="do">##  bit                                 4.6.0     2025-03-06 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-33"><a href="#cb10-33" tabindex="-1"></a><span class="do">##  bit64                               4.8.2     2026-05-19 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-34"><a href="#cb10-34" tabindex="-1"></a><span class="do">##  bitops                              1.0-9     2024-10-03 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-35"><a href="#cb10-35" tabindex="-1"></a><span class="do">##  blob                                1.3.0     2026-01-14 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-36"><a href="#cb10-36" tabindex="-1"></a><span class="do">##  boot                                1.3-31    2024-08-28 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-37"><a href="#cb10-37" tabindex="-1"></a><span class="do">##  broom                               1.0.11    2025-12-04 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-38"><a href="#cb10-38" tabindex="-1"></a><span class="do">##  BSgenome                            1.78.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-39"><a href="#cb10-39" tabindex="-1"></a><span class="do">##  BSgenome.Hsapiens.UCSC.hg38         1.4.5     2026-02-15 [1] Bioconductor</span></span>
+<span id="cb10-40"><a href="#cb10-40" tabindex="-1"></a><span class="do">##  cachem                              1.1.0     2024-05-16 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-41"><a href="#cb10-41" tabindex="-1"></a><span class="do">##  car                                 3.1-3     2024-09-27 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-42"><a href="#cb10-42" tabindex="-1"></a><span class="do">##  carData                             3.0-5     2022-01-06 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-43"><a href="#cb10-43" tabindex="-1"></a><span class="do">##  caTools                             1.18.3    2024-09-04 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-44"><a href="#cb10-44" tabindex="-1"></a><span class="do">##  checkmate                           2.3.4     2026-02-03 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-45"><a href="#cb10-45" tabindex="-1"></a><span class="do">##  ChIPseeker                          1.46.1    2025-11-04 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-46"><a href="#cb10-46" tabindex="-1"></a><span class="do">##  chron                               2.3-62    2024-12-31 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-47"><a href="#cb10-47" tabindex="-1"></a><span class="do">##  cigarillo                           1.0.0     2025-10-29 [1] Bioconductor 3.22 (R 4.5.1)</span></span>
+<span id="cb10-48"><a href="#cb10-48" tabindex="-1"></a><span class="do">##  circlize                            0.4.16    2024-02-20 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-49"><a href="#cb10-49" tabindex="-1"></a><span class="do">##  cli                                 3.6.6     2026-04-09 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-50"><a href="#cb10-50" tabindex="-1"></a><span class="do">##  clue                                0.3-66    2024-11-13 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-51"><a href="#cb10-51" tabindex="-1"></a><span class="do">##  cluster                             2.1.8.1   2025-03-12 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-52"><a href="#cb10-52" tabindex="-1"></a><span class="do">##  clusterProfiler                     4.18.4    2025-12-15 [1] https://bioc-release.r-universe.dev (R 4.5.3)</span></span>
+<span id="cb10-53"><a href="#cb10-53" tabindex="-1"></a><span class="do">##  codetools                           0.2-20    2024-03-31 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-54"><a href="#cb10-54" tabindex="-1"></a><span class="do">##  colorspace                          2.1-2     2025-09-22 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-55"><a href="#cb10-55" tabindex="-1"></a><span class="do">##  ComplexHeatmap                      2.26.0    2025-10-29 [1] Bioconductor 3.22 (R 4.5.1)</span></span>
+<span id="cb10-56"><a href="#cb10-56" tabindex="-1"></a><span class="do">##  cowplot                             1.2.0     2025-07-07 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-57"><a href="#cb10-57" tabindex="-1"></a><span class="do">##  crayon                              1.5.3     2024-06-20 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-58"><a href="#cb10-58" tabindex="-1"></a><span class="do">##  curl                                7.1.0     2026-04-22 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-59"><a href="#cb10-59" tabindex="-1"></a><span class="do">##  data.table                          1.18.4    2026-05-06 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-60"><a href="#cb10-60" tabindex="-1"></a><span class="do">##  data.tree                           1.2.0     2025-08-25 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-61"><a href="#cb10-61" tabindex="-1"></a><span class="do">##  DBI                                 1.3.0     2026-02-25 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-62"><a href="#cb10-62" tabindex="-1"></a><span class="do">##  DelayedArray                        0.36.1    2026-03-31 [1] https://bioc-release.r-universe.dev (R 4.5.3)</span></span>
+<span id="cb10-63"><a href="#cb10-63" tabindex="-1"></a><span class="do">##  devtools                            2.4.6     2025-10-03 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-64"><a href="#cb10-64" tabindex="-1"></a><span class="do">##  dichromat                           2.0-0.1   2022-05-02 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-65"><a href="#cb10-65" tabindex="-1"></a><span class="do">##  digest                              0.6.39    2025-11-19 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-66"><a href="#cb10-66" tabindex="-1"></a><span class="do">##  DirichletMultinomial                1.50.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
+<span id="cb10-67"><a href="#cb10-67" tabindex="-1"></a><span class="do">##  distributional                      0.6.0     2026-01-14 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-68"><a href="#cb10-68" tabindex="-1"></a><span class="do">##  doParallel                          1.0.17    2022-02-07 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-69"><a href="#cb10-69" tabindex="-1"></a><span class="do">##  DOSE                                4.4.0     2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-70"><a href="#cb10-70" tabindex="-1"></a><span class="do">##  dotCall64                           1.2       2024-10-04 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-71"><a href="#cb10-71" tabindex="-1"></a><span class="do">##  dplyr                               1.2.1     2026-04-03 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-72"><a href="#cb10-72" tabindex="-1"></a><span class="do">##  ellipsis                            0.3.2     2021-04-29 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-73"><a href="#cb10-73" tabindex="-1"></a><span class="do">##  enrichplot                          1.30.5    2026-03-02 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-74"><a href="#cb10-74" tabindex="-1"></a><span class="do">##  ensembldb                           2.34.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-75"><a href="#cb10-75" tabindex="-1"></a><span class="do">##  evaluate                            1.0.5     2025-08-27 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-76"><a href="#cb10-76" tabindex="-1"></a><span class="do">##  farver                              2.1.2     2024-05-13 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-77"><a href="#cb10-77" tabindex="-1"></a><span class="do">##  fastmap                             1.2.0     2024-05-15 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-78"><a href="#cb10-78" tabindex="-1"></a><span class="do">##  fastmatch                           1.1-8     2026-01-17 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-79"><a href="#cb10-79" tabindex="-1"></a><span class="do">##  fgsea                               1.36.2    2026-01-05 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-80"><a href="#cb10-80" tabindex="-1"></a><span class="do">##  fields                              17.3      2026-05-05 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-81"><a href="#cb10-81" tabindex="-1"></a><span class="do">##  fontBitstreamVera                   0.1.1     2017-02-01 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-82"><a href="#cb10-82" tabindex="-1"></a><span class="do">##  fontLiberation                      0.1.0     2016-10-15 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-83"><a href="#cb10-83" tabindex="-1"></a><span class="do">##  fontquiver                          0.2.1     2017-02-01 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-84"><a href="#cb10-84" tabindex="-1"></a><span class="do">##  foreach                             1.5.2     2022-02-02 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-85"><a href="#cb10-85" tabindex="-1"></a><span class="do">##  foreign                             0.8-90    2025-03-31 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-86"><a href="#cb10-86" tabindex="-1"></a><span class="do">##  Formula                             1.2-5     2023-02-24 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-87"><a href="#cb10-87" tabindex="-1"></a><span class="do">##  fs                                  2.1.0     2026-04-18 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-88"><a href="#cb10-88" tabindex="-1"></a><span class="do">##  gdtools                             0.5.1     2026-05-25 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-89"><a href="#cb10-89" tabindex="-1"></a><span class="do">##  generics                          * 0.1.4     2025-05-09 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-90"><a href="#cb10-90" tabindex="-1"></a><span class="do">##  GenomeInfoDb                        1.46.2    2025-12-04 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-91"><a href="#cb10-91" tabindex="-1"></a><span class="do">##  GenomicAlignments                   1.46.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-92"><a href="#cb10-92" tabindex="-1"></a><span class="do">##  GenomicFeatures                     1.62.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-93"><a href="#cb10-93" tabindex="-1"></a><span class="do">##  GenomicRanges                       1.62.1    2025-12-08 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-94"><a href="#cb10-94" tabindex="-1"></a><span class="do">##  GetoptLong                          1.1.0     2025-11-28 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-95"><a href="#cb10-95" tabindex="-1"></a><span class="do">##  ggdist                              3.3.3     2025-04-23 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-96"><a href="#cb10-96" tabindex="-1"></a><span class="do">##  ggforce                             0.5.0     2025-06-18 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-97"><a href="#cb10-97" tabindex="-1"></a><span class="do">##  ggfun                               0.2.0     2025-07-15 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-98"><a href="#cb10-98" tabindex="-1"></a><span class="do">##  ggiraph                             0.9.6     2026-02-21 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-99"><a href="#cb10-99" tabindex="-1"></a><span class="do">##  ggnewscale                          0.5.2     2025-06-20 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-100"><a href="#cb10-100" tabindex="-1"></a><span class="do">##  ggplot2                             4.0.3     2026-04-22 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-101"><a href="#cb10-101" tabindex="-1"></a><span class="do">##  ggplotify                           0.1.3     2025-09-20 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-102"><a href="#cb10-102" tabindex="-1"></a><span class="do">##  ggpointdensity                      0.2.1     2025-11-18 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-103"><a href="#cb10-103" tabindex="-1"></a><span class="do">##  ggpubr                              0.6.3     2026-02-24 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-104"><a href="#cb10-104" tabindex="-1"></a><span class="do">##  ggrepel                             0.9.8     2026-03-17 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-105"><a href="#cb10-105" tabindex="-1"></a><span class="do">##  ggsignif                            0.6.4     2022-10-13 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-106"><a href="#cb10-106" tabindex="-1"></a><span class="do">##  ggtangle                            0.1.2     2026-04-22 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-107"><a href="#cb10-107" tabindex="-1"></a><span class="do">##  ggtree                              4.0.5     2026-03-17 [1] https://bioc-release.r-universe.dev (R 4.5.3)</span></span>
+<span id="cb10-108"><a href="#cb10-108" tabindex="-1"></a><span class="do">##  GlobalOptions                       0.1.2     2020-06-10 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-109"><a href="#cb10-109" tabindex="-1"></a><span class="do">##  glue                                1.8.1     2026-04-17 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-110"><a href="#cb10-110" tabindex="-1"></a><span class="do">##  GO.db                               3.22.0    2026-06-16 [1] Bioconductor</span></span>
+<span id="cb10-111"><a href="#cb10-111" tabindex="-1"></a><span class="do">##  GOSemSim                            2.36.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-112"><a href="#cb10-112" tabindex="-1"></a><span class="do">##  gplots                              3.3.0     2025-11-30 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-113"><a href="#cb10-113" tabindex="-1"></a><span class="do">##  gridExtra                           2.3       2017-09-09 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-114"><a href="#cb10-114" tabindex="-1"></a><span class="do">##  gridGraphics                        0.5-1     2020-12-13 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-115"><a href="#cb10-115" tabindex="-1"></a><span class="do">##  gson                                0.1.0     2023-03-07 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-116"><a href="#cb10-116" tabindex="-1"></a><span class="do">##  gsubfn                              0.7       2018-03-16 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-117"><a href="#cb10-117" tabindex="-1"></a><span class="do">##  gtable                              0.3.6     2024-10-25 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-118"><a href="#cb10-118" tabindex="-1"></a><span class="do">##  gtools                              3.9.5     2023-11-20 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-119"><a href="#cb10-119" tabindex="-1"></a><span class="do">##  hash                                2.2.6.3   2023-08-19 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-120"><a href="#cb10-120" tabindex="-1"></a><span class="do">##  Hmisc                               5.2-5     2026-01-09 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-121"><a href="#cb10-121" tabindex="-1"></a><span class="do">##  htmlTable                           2.5.0     2026-04-22 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-122"><a href="#cb10-122" tabindex="-1"></a><span class="do">##  htmltools                           0.5.9     2025-12-04 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-123"><a href="#cb10-123" tabindex="-1"></a><span class="do">##  htmlwidgets                         1.6.4     2023-12-06 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-124"><a href="#cb10-124" tabindex="-1"></a><span class="do">##  httr                                1.4.8     2026-02-13 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-125"><a href="#cb10-125" tabindex="-1"></a><span class="do">##  igraph                              2.3.2     2026-05-29 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-126"><a href="#cb10-126" tabindex="-1"></a><span class="do">##  InteractionSet                      1.38.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-127"><a href="#cb10-127" tabindex="-1"></a><span class="do">##  IRanges                           * 2.44.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-128"><a href="#cb10-128" tabindex="-1"></a><span class="do">##  iterators                           1.0.14    2022-02-05 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-129"><a href="#cb10-129" tabindex="-1"></a><span class="do">##  JASPAR2020                          0.99.10   2026-02-15 [1] Bioconductor</span></span>
+<span id="cb10-130"><a href="#cb10-130" tabindex="-1"></a><span class="do">##  jsonlite                            2.0.0     2025-03-27 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-131"><a href="#cb10-131" tabindex="-1"></a><span class="do">##  karyoploteR                         1.36.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-132"><a href="#cb10-132" tabindex="-1"></a><span class="do">##  KEGGREST                            1.50.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-133"><a href="#cb10-133" tabindex="-1"></a><span class="do">##  KernSmooth                          2.23-26   2025-01-01 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-134"><a href="#cb10-134" tabindex="-1"></a><span class="do">##  knitr                               1.51      2025-12-20 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-135"><a href="#cb10-135" tabindex="-1"></a><span class="do">##  lattice                             0.22-7    2025-04-02 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-136"><a href="#cb10-136" tabindex="-1"></a><span class="do">##  lazyeval                            0.2.3     2026-04-04 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-137"><a href="#cb10-137" tabindex="-1"></a><span class="do">##  lifecycle                           1.0.5     2026-01-08 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-138"><a href="#cb10-138" tabindex="-1"></a><span class="do">##  looplook                          * 0.99.14   2026-06-19 [1] Bioconductor</span></span>
+<span id="cb10-139"><a href="#cb10-139" tabindex="-1"></a><span class="do">##  magick                              2.9.0     2025-09-08 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-140"><a href="#cb10-140" tabindex="-1"></a><span class="do">##  magrittr                            2.0.5     2026-04-04 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-141"><a href="#cb10-141" tabindex="-1"></a><span class="do">##  maps                                3.4.3     2025-05-26 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-142"><a href="#cb10-142" tabindex="-1"></a><span class="do">##  MASS                                7.3-65    2025-02-28 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-143"><a href="#cb10-143" tabindex="-1"></a><span class="do">##  Matrix                              1.7-3     2025-03-11 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-144"><a href="#cb10-144" tabindex="-1"></a><span class="do">##  MatrixGenerics                      1.22.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-145"><a href="#cb10-145" tabindex="-1"></a><span class="do">##  matrixStats                         1.5.0     2025-01-07 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-146"><a href="#cb10-146" tabindex="-1"></a><span class="do">##  memoise                             2.0.1     2021-11-26 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-147"><a href="#cb10-147" tabindex="-1"></a><span class="do">##  motifmatchr                         1.30.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
+<span id="cb10-148"><a href="#cb10-148" tabindex="-1"></a><span class="do">##  networkD3                           0.4.1     2025-04-14 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-149"><a href="#cb10-149" tabindex="-1"></a><span class="do">##  nlme                                3.1-168   2025-03-31 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-150"><a href="#cb10-150" tabindex="-1"></a><span class="do">##  nnet                                7.3-20    2025-01-01 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-151"><a href="#cb10-151" tabindex="-1"></a><span class="do">##  openxlsx                            4.2.8.1   2025-10-31 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-152"><a href="#cb10-152" tabindex="-1"></a><span class="do">##  org.Hs.eg.db                      * 3.21.0    2025-10-20 [1] Bioconductor</span></span>
+<span id="cb10-153"><a href="#cb10-153" tabindex="-1"></a><span class="do">##  otel                                0.2.0     2025-08-29 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-154"><a href="#cb10-154" tabindex="-1"></a><span class="do">##  patchwork                           1.3.2     2025-08-25 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-155"><a href="#cb10-155" tabindex="-1"></a><span class="do">##  pillar                              1.11.1    2025-09-17 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-156"><a href="#cb10-156" tabindex="-1"></a><span class="do">##  pkgbuild                            1.4.8     2025-05-26 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-157"><a href="#cb10-157" tabindex="-1"></a><span class="do">##  pkgconfig                           2.0.3     2019-09-22 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-158"><a href="#cb10-158" tabindex="-1"></a><span class="do">##  pkgload                             1.4.1     2025-09-23 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-159"><a href="#cb10-159" tabindex="-1"></a><span class="do">##  plotrix                             3.8-14    2026-02-13 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-160"><a href="#cb10-160" tabindex="-1"></a><span class="do">##  plyr                                1.8.9     2023-10-02 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-161"><a href="#cb10-161" tabindex="-1"></a><span class="do">##  png                                 0.1-9     2026-03-15 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-162"><a href="#cb10-162" tabindex="-1"></a><span class="do">##  polyclip                            1.10-7    2024-07-23 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-163"><a href="#cb10-163" tabindex="-1"></a><span class="do">##  ProtGenerics                        1.42.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-164"><a href="#cb10-164" tabindex="-1"></a><span class="do">##  proto                               1.0.0     2016-10-29 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-165"><a href="#cb10-165" tabindex="-1"></a><span class="do">##  purrr                               1.2.2     2026-04-10 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-166"><a href="#cb10-166" tabindex="-1"></a><span class="do">##  pwalign                             1.4.0     2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
+<span id="cb10-167"><a href="#cb10-167" tabindex="-1"></a><span class="do">##  qvalue                              2.42.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-168"><a href="#cb10-168" tabindex="-1"></a><span class="do">##  R.methodsS3                         1.8.2     2022-06-13 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-169"><a href="#cb10-169" tabindex="-1"></a><span class="do">##  R.oo                                1.27.1    2025-05-02 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-170"><a href="#cb10-170" tabindex="-1"></a><span class="do">##  R.utils                             2.13.0    2025-02-24 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-171"><a href="#cb10-171" tabindex="-1"></a><span class="do">##  R6                                  2.6.1     2025-02-15 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-172"><a href="#cb10-172" tabindex="-1"></a><span class="do">##  rappdirs                            0.3.4     2026-01-17 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-173"><a href="#cb10-173" tabindex="-1"></a><span class="do">##  RColorBrewer                        1.1-3     2022-04-03 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-174"><a href="#cb10-174" tabindex="-1"></a><span class="do">##  Rcpp                                1.1.1-1.1 2026-04-24 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-175"><a href="#cb10-175" tabindex="-1"></a><span class="do">##  RCurl                               1.98-1.19 2026-06-03 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-176"><a href="#cb10-176" tabindex="-1"></a><span class="do">##  regioneR                            1.42.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-177"><a href="#cb10-177" tabindex="-1"></a><span class="do">##  remotes                             2.5.0     2024-03-17 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-178"><a href="#cb10-178" tabindex="-1"></a><span class="do">##  reshape2                            1.4.5     2025-11-12 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-179"><a href="#cb10-179" tabindex="-1"></a><span class="do">##  restfulr                            0.0.17    2026-06-11 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-180"><a href="#cb10-180" tabindex="-1"></a><span class="do">##  rjson                               0.2.23    2024-09-16 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-181"><a href="#cb10-181" tabindex="-1"></a><span class="do">##  rlang                               1.2.0     2026-04-06 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-182"><a href="#cb10-182" tabindex="-1"></a><span class="do">##  rmarkdown                           2.31      2026-03-26 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-183"><a href="#cb10-183" tabindex="-1"></a><span class="do">##  rpart                               4.1.24    2025-01-07 [1] CRAN (R 4.5.1)</span></span>
+<span id="cb10-184"><a href="#cb10-184" tabindex="-1"></a><span class="do">##  Rsamtools                           2.26.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-185"><a href="#cb10-185" tabindex="-1"></a><span class="do">##  RSQLite                             3.53.1    2026-05-23 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-186"><a href="#cb10-186" tabindex="-1"></a><span class="do">##  rstatix                             0.7.3     2025-10-18 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-187"><a href="#cb10-187" tabindex="-1"></a><span class="do">##  rstudioapi                          0.19.0    2026-06-11 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-188"><a href="#cb10-188" tabindex="-1"></a><span class="do">##  rtracklayer                         1.70.1    2025-12-20 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-189"><a href="#cb10-189" tabindex="-1"></a><span class="do">##  S4Arrays                            1.10.1    2025-12-01 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-190"><a href="#cb10-190" tabindex="-1"></a><span class="do">##  S4Vectors                         * 0.48.1    2026-04-04 [1] https://bioc-release.r-universe.dev (R 4.5.3)</span></span>
+<span id="cb10-191"><a href="#cb10-191" tabindex="-1"></a><span class="do">##  S7                                  0.2.2     2026-04-22 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-192"><a href="#cb10-192" tabindex="-1"></a><span class="do">##  scales                              1.4.0     2025-04-24 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-193"><a href="#cb10-193" tabindex="-1"></a><span class="do">##  scatterpie                          0.2.6     2025-09-12 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-194"><a href="#cb10-194" tabindex="-1"></a><span class="do">##  Seqinfo                             1.0.0     2025-10-29 [1] Bioconductor 3.22 (R 4.5.1)</span></span>
+<span id="cb10-195"><a href="#cb10-195" tabindex="-1"></a><span class="do">##  seqLogo                             1.74.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
+<span id="cb10-196"><a href="#cb10-196" tabindex="-1"></a><span class="do">##  sessioninfo                         1.2.3     2025-02-05 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-197"><a href="#cb10-197" tabindex="-1"></a><span class="do">##  shape                               1.4.6.1   2024-02-23 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-198"><a href="#cb10-198" tabindex="-1"></a><span class="do">##  spam                                2.11-4    2026-05-29 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-199"><a href="#cb10-199" tabindex="-1"></a><span class="do">##  SparseArray                         1.10.10   2026-03-30 [1] https://bioc-release.r-universe.dev (R 4.5.3)</span></span>
+<span id="cb10-200"><a href="#cb10-200" tabindex="-1"></a><span class="do">##  sqldf                               0.4-11    2017-06-28 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-201"><a href="#cb10-201" tabindex="-1"></a><span class="do">##  STRINGdb                            2.20.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
+<span id="cb10-202"><a href="#cb10-202" tabindex="-1"></a><span class="do">##  stringi                             1.8.7     2025-03-27 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-203"><a href="#cb10-203" tabindex="-1"></a><span class="do">##  stringr                             1.6.0     2025-11-04 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-204"><a href="#cb10-204" tabindex="-1"></a><span class="do">##  SummarizedExperiment                1.40.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-205"><a href="#cb10-205" tabindex="-1"></a><span class="do">##  systemfonts                         1.3.2     2026-03-05 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-206"><a href="#cb10-206" tabindex="-1"></a><span class="do">##  TFBSTools                           1.46.0    2025-04-15 [1] Bioconductor 3.21 (R 4.5.0)</span></span>
+<span id="cb10-207"><a href="#cb10-207" tabindex="-1"></a><span class="do">##  TFMPvalue                           1.0.0     2026-01-19 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-208"><a href="#cb10-208" tabindex="-1"></a><span class="do">##  tibble                              3.3.1     2026-01-11 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-209"><a href="#cb10-209" tabindex="-1"></a><span class="do">##  tidydr                              0.0.6     2025-07-25 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-210"><a href="#cb10-210" tabindex="-1"></a><span class="do">##  tidyr                               1.3.2     2025-12-19 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-211"><a href="#cb10-211" tabindex="-1"></a><span class="do">##  tidyselect                          1.2.1     2024-03-11 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-212"><a href="#cb10-212" tabindex="-1"></a><span class="do">##  tidytree                            0.4.7     2026-01-08 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-213"><a href="#cb10-213" tabindex="-1"></a><span class="do">##  treeio                              1.34.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-214"><a href="#cb10-214" tabindex="-1"></a><span class="do">##  tweenr                              2.0.3     2024-02-26 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-215"><a href="#cb10-215" tabindex="-1"></a><span class="do">##  TxDb.Hsapiens.UCSC.hg19.knownGene   3.22.1    2026-06-16 [1] Bioconductor</span></span>
+<span id="cb10-216"><a href="#cb10-216" tabindex="-1"></a><span class="do">##  TxDb.Hsapiens.UCSC.hg38.knownGene   3.21.0    2025-10-20 [1] Bioconductor</span></span>
+<span id="cb10-217"><a href="#cb10-217" tabindex="-1"></a><span class="do">##  UCSC.utils                          1.6.1     2025-12-09 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-218"><a href="#cb10-218" tabindex="-1"></a><span class="do">##  UpSetR                              1.4.1     2026-05-25 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-219"><a href="#cb10-219" tabindex="-1"></a><span class="do">##  usethis                             3.2.1     2025-09-06 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-220"><a href="#cb10-220" tabindex="-1"></a><span class="do">##  VariantAnnotation                   1.56.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-221"><a href="#cb10-221" tabindex="-1"></a><span class="do">##  vctrs                               0.7.3     2026-04-11 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-222"><a href="#cb10-222" tabindex="-1"></a><span class="do">##  viridis                             0.6.5     2024-01-29 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-223"><a href="#cb10-223" tabindex="-1"></a><span class="do">##  viridisLite                         0.4.3     2026-02-04 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-224"><a href="#cb10-224" tabindex="-1"></a><span class="do">##  withr                               3.0.2     2024-10-28 [1] CRAN (R 4.5.0)</span></span>
+<span id="cb10-225"><a href="#cb10-225" tabindex="-1"></a><span class="do">##  xfun                                0.58      2026-06-01 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-226"><a href="#cb10-226" tabindex="-1"></a><span class="do">##  XML                                 3.99-0.23 2026-03-20 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-227"><a href="#cb10-227" tabindex="-1"></a><span class="do">##  XVector                             0.50.0    2025-10-29 [1] https://bioc-release.r-universe.dev (R 4.5.2)</span></span>
+<span id="cb10-228"><a href="#cb10-228" tabindex="-1"></a><span class="do">##  yaml                                2.3.12    2025-12-10 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-229"><a href="#cb10-229" tabindex="-1"></a><span class="do">##  yulab.utils                         0.2.4     2026-02-02 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-230"><a href="#cb10-230" tabindex="-1"></a><span class="do">##  zip                                 3.0.0     2026-06-10 [1] CRAN (R 4.5.2)</span></span>
+<span id="cb10-231"><a href="#cb10-231" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb10-232"><a href="#cb10-232" tabindex="-1"></a><span class="do">##  [1] /Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library</span></span>
+<span id="cb10-233"><a href="#cb10-233" tabindex="-1"></a><span class="do">##  * ── Packages attached to the search path.</span></span>
+<span id="cb10-234"><a href="#cb10-234" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb10-235"><a href="#cb10-235" tabindex="-1"></a><span class="do">## ──────────────────────────────────────────────────────────────────────────────</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

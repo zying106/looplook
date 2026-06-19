@@ -89,14 +89,16 @@ refine_loop_anchors_by_chromatin(
 
 An invisible named list with updated `loop_annotation`,
 `anchor_loci_annotation`, `promoter_centric_stats`,
-`distal_element_stats`, `chromatin_validation`, and `metadata`. When
-`recompute_targets = FALSE` (default), `target_annotation` and
-`target_gene_links` are `NULL` (pre-chromatin anchor types); downstream
-profiling should use `target_source = "loops"`. When
-`recompute_targets = TRUE`, target links are rebuilt from
-chromatin-updated anchor states, producing chromatin-aware
-`target_annotation` and `target_gene_links`. The input must carry the
-`looplook_anchor_state` attribute (present when using
+`distal_element_stats`, `chromatin_validation`, `plots`
+(`Chromatin_Dumbbell`: anchor-type before/after comparison;
+`Chromatin_Rose`: loop-type proportion rose plot), `plot_list` (alias of
+`plots`), `qc_summary`, and `metadata`. When `recompute_targets = FALSE`
+(default), `target_annotation` and `target_gene_links` are `NULL`
+(pre-chromatin anchor types); downstream profiling should use
+`target_source = "loops"`. When `recompute_targets = TRUE`, target links
+are rebuilt from chromatin-updated anchor states, producing
+chromatin-aware `target_annotation` and `target_gene_links`. The input
+must carry the `looplook_anchor_state` attribute (present when using
 [`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
 output).
 

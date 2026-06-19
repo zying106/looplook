@@ -4,89 +4,95 @@
 
 ## Introduction
 
-Welcome to **`looplook`**, a versatile R/Bioconductor toolkit developed
-to integrate three-dimensional (3D) chromatin architecture data (e.g.,
-HiChIP, ChIA-PET, Hi-C) with other tabular omics datasets, including
-transcriptomics, chromatin accessibility, protein-DNA interactions
-(derived from ChIP-seq, CUT&Tag, or CUT&RUN), and genetic variants
+**`looplook`** is an R/Bioconductor package that integrates
+three-dimensional (3D) chromatin architecture data — derived from
+HiChIP, ChIA-PET, or Hi-C — with complementary omics datasets, including
+transcriptomic profiles, chromatin accessibility maps, protein-DNA
+interaction data (ChIP-seq, CUT&Tag, CUT&RUN), and genetic variants
 annotated by genome-wide association studies (GWAS).
 
-Numerous studies have demonstrated that distal regulatory elements
-physically interact with target gene promoters via **3D chromatin
-looping**, thereby regulating the expression of genes located tens of
-kilobases to megabases away along the linear genome. However,
-conventional annotation strategies typically assign putative regulatory
-elements (e.g., informed by ChIP-seq peaks) to their **nearest
-neighboring genes in cis**, which often deviates from actual biological
-mechanisms. Consequently, the accurate assignment of non-coding genetic
-variants or orphan regulatory peaks to their **cognate target genes**
-represents a major bottleneck in the functional annotation of genomic
-regulatory elements.
+Distal regulatory elements physically contact target gene promoters
+through **3D chromatin looping**, enabling transcriptional regulation
+over distances spanning tens of kilobases to megabases along the linear
+genome. Conventional annotation strategies, however, assign putative
+regulatory elements to their **nearest neighboring genes in *cis*** — a
+linear approximation that frequently diverges from the underlying 3D
+topology. Accurate assignment of non-coding variants and orphan
+regulatory peaks to their **cognate target genes** therefore remains a
+central bottleneck in the functional interpretation of genomic
+regulatory landscapes.
 
-To overcome this challenge, **`looplook`** systematically prioritizes
-experimentally validated spatial chromatin contacts to batch-annotate
-thousands of regulatory elements at a **genome-wide, high-throughput
-scale**, thereby identifying their candidate target genes with high
-confidence and systematic efficiency.
+**`looplook`** addresses this challenge by systematically prioritizing
+experimentally validated spatial chromatin contacts to assign target
+genes to thousands of regulatory elements at genome-wide scale,
+producing high-confidence annotations with systematic provenance
+tracking.
 
-Beyond its utility as an integrative tool for target gene annotation,
-**`looplook`** serves as a **standalone platform** dedicated to
-chromatin loop analysis. Even in the absence of auxiliary omics data,
-this tool enables systematic annotation of the 3D chromatin interactome
-itself, classification of complex spatial interaction topologies (e.g.,
-Enhancer-Promoter, Promoter-Promoter interactions), and quantification
-of node connectivity, which facilitates the identification of **dense
-regulatory hubs** and **enhancer cliques** that may represent candidate
-regulatory domains driving cell-type-specific transcriptional programs.
+Beyond target gene assignment, **`looplook`** functions as a
+**standalone platform** for chromatin loop analysis. Even in the absence
+of auxiliary omics data, the package enables systematic annotation of
+the 3D interactome, classification of spatial interaction topologies
+(e.g., Enhancer–Promoter, Promoter–Promoter), and quantification of node
+connectivity to identify **dense regulatory hubs** and **enhancer
+cliques** — candidate regulatory domains that may drive
+cell-type-specific transcriptional programs.
 
-### Key Features & Capabilities
+### Key Features
 
-1.  **The “3D Spatial Bridge” for Multi-Omics**: Integrates auxiliary
-    genomic features (e.g., GWAS risk SNPs, ChIP-seq peaks) with 3D
-    chromatin loops. It implements a rigorous “Smart Fallback” logic
-    that prioritizes distal loop-mediated target genes while reverting
-    to the nearest neighboring genes when no spatial interactions are
-    detected, ensuring comprehensive and gapless target annotation.
+1.  **3D-Guided Multi-Omics Integration**: Maps auxiliary genomic
+    features (GWAS SNPs, ChIP-seq peaks, ATAC-seq regions) to target
+    genes via 3D chromatin contacts. A structured fallback mechanism
+    prioritizes loop-mediated target genes and supplements them with
+    nearest-gene assignments only when no spatial interaction is
+    detected, ensuring both 3D specificity and complete coverage.
 
-2.  **Comprehensive Loop Annotation & Topological Hub Detection**: In
-    addition to loop mapping, **`looplook`** enables biologically
-    informed annotation of the 3D chromatin interactome. It helps to
-    categorize spatial interaction types and computes spatial node
-    degrees to identify candidate 3D regulatory hubs.
+2.  **Systematic Loop Annotation and Hub Detection**: Classifies spatial
+    interaction types (E–P, P–P, E–E, and their expression- and
+    chromatin-refined variants) and computes node degree distributions
+    to identify candidate 3D regulatory hubs and enhancer cliques.
 
-3.  **Expression-Aware Refinement**: Incorporates quantitative
-    expression data to annotate expression-aware functional status while
-    preserving structural contacts. As some chromatin regions may
-    exhibit both enhancer and promoter activities, **`looplook`**
-    provides a function to reclassify loop anchors which associate with
-    transcriptionally silent reference promoters into **enhancer-like
-    elements (eP)**, yielding a refined network of regulatory
-    interactions.
+3.  **Expression-Aware Refinement**: Integrates quantitative
+    transcriptomic data to annotate each loop with expression-informed
+    functional status while preserving all structural contacts. Anchors
+    associated with transcriptionally silent reference promoters are
+    reclassified as enhancer-like elements (eP, eG), producing an
+    expression-refined regulatory network without discarding structural
+    evidence. A dataset-adaptive quantile mode
+    (`threshold_mode = "quantile"`) accommodates varying sequencing
+    depths.
 
-4.  **Reproducible Consolidation & Multi-source Consensus**: Utilizes
-    graph-theoretic clustering to effectively harmonize biological
-    replicates and mitigate potential technical noise. The framework can
-    be used to identify multi-source consensus by integrating datasets
-    from various experimental designs, such as HiChIP assays targeting
-    different factors (e.g., **H3K27ac and Pol II**). This enables
-    **orthogonal validation** to facilitate the construction of a
-    high-confidence, unified 3D chromatin interactome based on
-    consistent spatial features.
+4.  **Chromatin-Guided Anchor Reclassification**: Validates and
+    systematically reclassifies loop anchors using orthogonal chromatin
+    mark data (ChIP-seq, CUT&Tag, ATAC-seq). Anchors are scored against
+    ENCODE active-enhancer criteria across five confidence levels
+    (gold_standard to uncertain), and anchor types are updated based on
+    mark combinations — for instance, an eP anchor with H3K4me3+
+    H3K27me3− promoter-like chromatin is reverted to P, while a P anchor
+    with H3K4me1+ H3K4me3+ dual marks is upgraded to dual-function.
+    Reclassification is fully auditable through per-anchor chromatin
+    state, confidence, and before/after type columns.
 
-5.  **Automated Multi-Omics Functional Interpretations**: Provides an
-    end-to-end analytical engine for generating publication-ready
-    visualizations and functional interpretations. This includes
-    assessments of network connectivity and expression dynamics,
-    transcription factor motif enrichment (**SeqLogos**), and pathway
-    association networks (**Cnetplots**).
+5.  **Replicate Consolidation and Multi-Source Consensus**: Employs
+    graph-theoretic connected-component clustering to harmonize
+    biological replicates and suppress technical noise. The framework
+    supports multi-source consensus integration — for instance,
+    intersecting HiChIP datasets targeting H3K27ac and RNA Polymerase II
+    — to construct a unified, high-confidence 3D interactome supported
+    by orthogonal experimental evidence.
+
+6.  **Automated Functional Profiling**: Delivers an end-to-end
+    analytical pipeline generating publication-ready visualizations and
+    functional interpretations, including network connectivity and
+    expression dynamics, transcription factor motif enrichment
+    (SeqLogos), and pathway association networks (Cnetplots).
 
 ### Comparison with Existing Tools
 
-`looplook` bridges the gap between conventional 1D linear annotation
-strategies and specialized 3D chromatin interaction tools, providing a
-unified environment for target assignment, expression-aware refinement,
+`looplook` bridges the gap between conventional 1D linear annotation and
+specialized 3D chromatin interaction tools, providing a unified
+environment for target assignment, expression-aware refinement,
 consensus consolidation, and functional inference. Table
-@ref(tab:comparison-table) highlights the core capabilities of
+@ref(tab:comparison-table) summarizes the core capabilities of
 `looplook` relative to existing tools in the ecosystem.
 
 | Feature | ChIPseeker | GREAT | GenomicInteractions | FUMA | ABC Model | looplook |
@@ -96,6 +102,7 @@ consensus consolidation, and functional inference. Table
 | User-input omics data | ✔ | ✔ | ✘ | ✘ | ✔ | ✔ |
 | Graph-based topological consensus | ✘ | ✘ | ✘ | ✘ | ✘ | ✔ |
 | Expression-guided refinement | ✘ | ✘ | ✘ | Partial | ✘ | ✔ |
+| Chromatin mark validation | ✘ | ✘ | ✘ | ✘ | ✘ | ✔ |
 | Topological reclassification | ✘ | ✘ | ✘ | ✘ | ✘ | ✔ |
 | Multi-hop network diffusion | ✘ | ✘ | ✘ | ✘ | ✘ | ✔ |
 | Smart linear fallback | ✘ | ✘ | ✘ | ✘ | ✘ | ✔ |
@@ -113,12 +120,15 @@ spatial chromatin topology; “✔” = native support; “✘” = not supporte
 user-provided input).
 
 `looplook` provides both 1D and 3D target annotation in a unified R
-workflow. Its expression-aware reclassification of silent regulatory
-elements (P to eP, G to eG) and graph-based replicate consolidation
-address two practical challenges in chromatin interaction analysis:
-distinguishing structural contacts from transcriptionally active
-regulatory events, and harmonizing loop calls across replicates without
-over-merging.
+workflow. Its three-stage refinement strategy — expression-aware
+reclassification of silent regulatory elements (P → eP, G → eG),
+orthogonal chromatin-mark validation against ENCODE enhancer criteria,
+and systematic anchor-type reclassification based on mark combinations —
+distinguishes structural chromatin contacts from functionally active
+regulatory events. Graph-based replicate consolidation harmonizes loop
+calls across biological replicates without over-merging, while
+per-Anchor provenance tracking ensures full auditability of every
+reclassification decision.
 
 ------------------------------------------------------------------------
 
@@ -142,20 +152,20 @@ out_dir <- tempdir()
 
 ## Module 1: Data Consolidation & Preprocessing
 
-In 3D genomics analyses, individual replicates typically exhibit certain
-degrees of **inconsistency or noise**. The
+Chromatin interaction datasets from individual biological replicates
+invariably contain technical variability and stochastic noise. The
 **`consolidate_chromatin_loops`** function serves as the foundational
-data-cleaning module, merging multiple replicates into a standardized,
-unified 3D chromatin interaction coordinate framework.
+data-integration module, merging multiple replicates into a
+standardized, unified 3D interaction coordinate framework.
 
-This module identifies **multi-source consensus** by integrating
-datasets from varied experimental designs, such as HiChIP assays
-targeting H3K27ac and Pol II. By capturing shared spatial interactions
-across these inputs, the framework enables **orthogonal validation** to
-**mitigate potential technical artifacts** and assay-specific biases.
-This approach leverages consistent spatial features to provide a robust
-foundation for downstream analyses supported by multiple lines of
-experimental evidence.
+The module supports **multi-source consensus** integration across
+independent experimental designs — for instance, HiChIP assays targeting
+H3K27ac and RNA Polymerase II. By identifying shared spatial
+interactions across heterogeneous inputs, the framework enables
+**orthogonal validation** that mitigates assay-specific biases and
+technical artifacts. Consensus loops supported by multiple independent
+lines of evidence provide a robust foundation for downstream annotation
+and functional interpretation.
 
 #### Parameter Strategy
 
@@ -322,11 +332,13 @@ consensus_dual <- consolidate_chromatin_loops(
 
 #### Module 2: 3D-Guided Annotation & Mapping
 
-This module constitutes the core mapping engine of **`looplook`**. Using
-**`annotate_peaks_and_loops`**, users can classify the topological
-architecture of the interactome. Optionally, users may supply a
-`target_bed` (e.g., GWAS loci, eQTLs, ChIP-seq peaks) to trace
-non-coding regulatory signals to their putative functional target genes.
+**`annotate_peaks_and_loops`** serves as the core mapping engine of
+**`looplook`**. It classifies the topological architecture of the 3D
+interactome — assigning each loop anchor a positional type (P, E, G) and
+each loop a structural class (E–P, P–P, etc.) — and, when a `target_bed`
+file is supplied, traces non-coding regulatory features (GWAS loci,
+eQTLs, ChIP-seq peaks) to their putative target genes through 3D
+chromatin contacts.
 
 To resolve mapping ambiguities within densely populated gene loci, where
 a single loop anchor overlaps multiple candidate genes, the engine
@@ -481,8 +493,8 @@ if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
 ### Example B: Intrinsic Loop Profiling (Loops ONLY)
 
 For users focused exclusively on 3D interactome architecture without
-auxiliary data related to genomic features, looplook functions as a
-standalone platform for loop profiling and structural hub
+auxiliary data related to genomic features, **`looplook`** functions as
+a standalone platform for loop profiling and structural hub
 identification.
 
 ``` r
@@ -746,16 +758,17 @@ print(res_integrated$plots$Karyo_Anchors) # renders via grid or opens in browser
 
 ------------------------------------------------------------------------
 
-## Module 3: Expression-Aware Refinement
+## Module 3: Refinement & Validation
 
-Physical proximity is a structural prerequisite, but not a direct proxy
-for active transcriptional regulation. This module integrates
-quantitative transcriptome data to annotate each loop with
-expression-aware functional status. All structural loops are preserved;
-the pipeline reclassifies silent anchors (P → eP, G → eG), flags which
-loops belong to the high-confidence functional subset
-(`Retained_In_Functional_Network`), and exposes `Refinement_Action` for
-transparent interpretation.
+Physical proximity detected by chromatin conformation assays is a
+structural prerequisite for regulatory interaction, but it does not
+directly indicate active transcriptional engagement. This module
+integrates quantitative transcriptomic data to annotate each loop with
+expression-informed functional status. All structural loops are
+preserved; the pipeline reclassifies transcriptionally silent anchors (P
+→ eP, G → eG), designates the high-confidence functional subset via
+`Retained_In_Functional_Network`, and records the rationale for each
+decision in `Refinement_Action`.
 
 #### Parameter Strategy & Core Inputs
 
@@ -1117,6 +1130,30 @@ full auditability. When `recompute_targets = FALSE` (default),
 `target_annotation` and `target_gene_links` are `NULL` — use
 `profile_target_genes(target_source = "loops")` for chromatin-aware
 downstream profiling.
+
+##### Chromatin Refinement Visualizations
+
+[`refine_loop_anchors_by_chromatin()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
+automatically generates four diagnostic plots (accessible via `$plots`):
+
+| Plot key | Type | Description |
+|----|----|----|
+| `Chromatin_Dumbbell` | Dumbbell chart | Anchor-type counts before vs. after reclassification |
+| `Chromatin_Sankey` | Sankey flow diagram | Anchor reclassification flows between types (amber = reclassified, green = unchanged) |
+| `Chromatin_MarkHeatmap` | Binary heatmap | Chromatin mark presence/absence at each reclassified anchor, grouped by reclassification outcome and confidence level |
+| `Chromatin_Rose` | Rose (coxcomb) chart | Loop-type proportion distribution after chromatin-guided reclassification |
+
+All plots are returned as **ggplot2** objects (except the heatmap, which
+is a **ComplexHeatmap** grob) and accept standard `+` layers for
+customisation. To access a specific plot:
+
+``` r
+
+cr$plots$Chromatin_Dumbbell   # before/after anchor type comparison
+cr$plots$Chromatin_Sankey      # reclassification flow diagram
+cr$plots$Chromatin_MarkHeatmap # per-anchor mark landscape
+cr$plots$Chromatin_Rose        # loop type proportions
+```
 
 ------------------------------------------------------------------------
 
@@ -1587,11 +1624,11 @@ sessionInfo()
 #>  [37] colorspace_2.1-2            AnnotationDbi_1.74.0       
 #>  [39] S4Vectors_0.50.1            regioneR_1.44.0            
 #>  [41] bezier_1.1.2                textshaping_1.0.5          
-#>  [43] Hmisc_5.2-5                 GenomicRanges_1.64.0       
+#>  [43] Hmisc_5.2-6                 GenomicRanges_1.64.0       
 #>  [45] RSQLite_3.53.2              httr_1.4.8                 
 #>  [47] polyclip_1.10-7             abind_1.4-8                
 #>  [49] compiler_4.6.0              bit64_4.8.2                
-#>  [51] withr_3.0.2                 htmlTable_2.5.0            
+#>  [51] withr_3.0.3                 htmlTable_2.5.0            
 #>  [53] S7_0.2.2                    backports_1.5.1            
 #>  [55] BiocParallel_1.46.0         DBI_1.3.0                  
 #>  [57] UpSetR_1.4.1                ggforce_0.5.0              
@@ -1616,7 +1653,7 @@ sessionInfo()
 #>  [95] gridExtra_2.3               bookdown_0.47              
 #>  [97] ProtGenerics_1.44.0         IRanges_2.46.0             
 #>  [99] Seqinfo_1.2.0               SummarizedExperiment_1.42.0
-#> [101] stats4_4.6.0                xfun_0.58                  
+#> [101] stats4_4.6.0                xfun_0.59                  
 #> [103] Biobase_2.72.0              matrixStats_1.5.0          
 #> [105] stringi_1.8.7               UCSC.utils_1.8.0           
 #> [107] lazyeval_0.2.3              yaml_2.3.12                
