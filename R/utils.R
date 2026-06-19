@@ -29,23 +29,23 @@ if (getRversion() >= "2.15.1") {
         "anchor2_type", "anchor_id", "annotation", "chr",
         "cluster_id", "col2rgb", "combined_score", "count", "deg", "detail_anno",
         "elementNROWS", "everything", "expansion", "final_color", "final_fill",
-        "final_label", "final_symbols", "fisher.test", "fraction",
+        "final_label", "final_symbols", "fraction",
         "geneList",
         "gene_id", "gene_level", "geom_hline", "group", "has_active", "head",
         "is_active",
         "hjust", "install.packages", "is_e_type", "is_lower_e", "label",
         "label_text", "label_x", "len", "lfc", "linked_loops",
         "logP", "loop_ID", "loop_genes", "loop_i",
-        "loop_type", "median", "mid1", "mid2", "n", "n_Linked_Distal",
+        "loop_type", "mid1", "mid2", "n", "n_Linked_Distal",
         "n_Linked_Distal_Filtered", "n_Linked_Promoters",
-        "n_Linked_Promoters_Filtered", "na.omit", "name", "p.adjust", "plot_label",
-        "prop", "proximate_loop_gene", "pvalue", "qid", "quantile", "query_idx",
+        "n_Linked_Promoters_Filtered", "name", "plot_label",
+        "prop", "proximate_loop_gene", "pvalue", "qid", "query_idx",
         "read.table", "reg_loop_genes", "reorder", "rgb", "runif", "runningScore",
         "scale_color_identity", "scale_fill_identity", "setNames",
-        "single_loop_genes", "strand", "t.test", "t1", "t2", "tgt_genes_p",
+        "single_loop_genes", "strand", "t1", "t2", "tgt_genes_p",
         "tgt_genes_pg", "tgt_genes_prio", "topo_genes_p", "topo_genes_pg", "tpm",
         "tx_id", "type", "type_code", "type_rank", "valid_genes", "valid_tpms",
-        "var", "width", "wilcox.test", "write.csv", "y_mid", "ymax", "ymin", "ypos", ":=",
+        "var", "width", "write.csv", "y_mid", "ymax", "ymin", "ypos", ":=",
         "Loop_Connection", "Neighbor_Gene", "Neighbor_Type", "s1", "s2", "x", "y",
         "Conn_Group_jitter", "Conn_Group_num", "Conn_Group_slab",
         "left_mid", "right_mid", ".fallback_ptg",
@@ -54,7 +54,9 @@ if (getRversion() >= "2.15.1") {
         "gene", "input_id", "evidence", "gene_role", "source", "anchor_role", "used_as_fallback",
         "in_regulated_promoter", "in_assigned_target", "in_all_loop_connected",
         "in_regulated_promoter_filled", "in_assigned_target_filled",
-        "opposite_anchor_id", "local_anchor_id", "Mean_Expression",
+        "opposite_anchor_id", "local_anchor_id", "old_type", "new_type",
+        "chromatin_state", "total", "fill", "xmin", "xmax",
+        "Mean_Expression",
         "Passes_Expression_Filter", "retained_after_refinement",
         "H3K4me1", "H3K27ac", "ATAC", "H3K27me3", "H3K4me3",
         "anchor_type", "anchor_gene", "confidence", "evidence",
@@ -1343,6 +1345,11 @@ get_colors <- function(n, palette_input) {
 #'   \code{print()} to display.
 #' @noRd
 draw_karyo_heatmap_internal <- function(gr_data, title_prefix, bin_size, sat_level, ref_txdb, plot_species, unit_label, custom_colors = NULL) {
+    # GenomeInfoDb::seqlevelsStyle<- and karyoploteR::plotKaryotype emit
+    # genome-info lines to stdout via cat(). Suppress them to keep reports
+    # and rendered README output clean.
+    sink(file = nullfile(), type = "output")
+    on.exit(sink(type = "output"), add = TRUE)
     standard_chroms <- paste0("chr", c(seq_len(22), "X", "Y"))
     if (grepl("mm", plot_species, fixed = TRUE)) standard_chroms <- paste0("chr", c(seq_len(19), "X", "Y"))
 

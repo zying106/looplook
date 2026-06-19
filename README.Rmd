@@ -63,17 +63,19 @@ consensus_global <- consolidate_chromatin_loops(
   files = c(f1, f2),
   mode = "consensus",
   gap = 1000,
-  out_file = file.path(out_dir, "consensus_loops.bedpe")
+  out_file = file.path(out_dir, "consensus_loops.bedpe"),
+  quiet = TRUE
 )
 ```
 
 ### Module 2: 3D-Guided Peak Annotation & Mapping
-This module serves as the **core target mapping engine**. It resolves locus assignment conflicts through a rigorous hierarchical pipeline: Functional Biotype Prioritization → Expression Filtering (within selected tier) → Co-Dominant Expression Tiebreaker (retains all genes within 10% of max expression).
+This module serves as the **core target mapping engine**. It resolves locus assignment conflicts through a rigorous hierarchical pipeline: Functional Biotype Prioritization → Expression Filtering (within selected tier) → Co-Dominant Expression Tiebreaker (retains all genes within 10% of max expression). The biotype priority order can be customised via the `biotype_order` parameter (five keywords: `protein`, `small_ncRNA`, `antisense`, `lncRNA`, `pseudogene`). For advanced control, `resolve_gene_conflicts()` exposes the full conflict-resolution logic as a standalone function.
 
 **Key Parameters:**
 
-* **`target_bed`**: pecifies the **auxiliary genomic features of interest** (e.g., GWAS SNPs, ATAC-seq peaks, or transcription factor binding sites) that require spatial target gene assignment.
+* **`target_bed`**: Specifies the **auxiliary genomic features of interest** (e.g., GWAS SNPs, ATAC-seq peaks, or transcription factor binding sites) that require spatial target gene assignment.
 * **`expr_matrix_file` & `sample_columns`**: Providing an RNA-seq matrix allows the engine to activate the Expression Pre-filter and Tiebreaker logic, drastically reducing false-positive gene assignments in **genomic regions harboring multiple genes**.
+* **`biotype_order`**: Custom ordering of biotype categories for conflict resolution. Default: `c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")`. Set `c("lncRNA", "protein")` to prioritise lncRNAs.
 * **`neighbor_hop`**: An advanced topological parameter for 3D chromatin interactome network traversal. Target gene assignment uses `neighbor_hop + 1` graph steps to capture genes at opposite anchors. A value of 0 restricts loop topology to direct contacts (target genes searched within 1-hop); a value of 1 (Hub Mode) extends both to secondary network effects.
 * **`tss_region`**: Defines the **spatial boundary of gene promoters** relative to the Transcription Start Site (TSS).
 
@@ -95,7 +97,8 @@ if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
     neighbor_hop     = 0,                   # Direct contacts only
     hub_percentile   = 0.95,                # Top 5% as regulatory hubs
     out_dir          = out_dir,
-    project_name     = "HiChIP_Integrative"
+    project_name     = "HiChIP_Integrative",
+    quiet            = TRUE
   )
 } else {
   tmp <- new.env()
@@ -119,13 +122,14 @@ The module systematically exports a multi-layered tabular catalog (e.g., `*_Basi
   <p><em>Figure 1: <strong>Representative outputs of 3D-Guided Annotation.</strong> This composite plot displays a curated subset of the automated profiling suite, featuring macro-scale chromosomal ideograms and topological overlap analysis of the annotated 3D interactome.</em></p>
 </div>
 
-### Module 3: Expression-Aware Refinement
+### Module 3A: Expression-Aware Refinement
 Physical proximity is a structural prerequisite, but not a direct proxy for active **transcriptional regulation**. This module integrates quantitative transcriptome data to annotate each loop with expression-aware functional status. All structural loops are preserved; the pipeline reclassifies silent anchors (P to eP, G to eG), flags which loops belong to the high-confidence functional subset (`Retained_In_Functional_Network`), and exposes `Refinement_Action` for transparent interpretation.
 
 **Key Parameters:**
 
-* `threshold` & `unit_type`: Defines the quantitative expression cutoff (e.g., `threshold = 1.0`, `unit_type = "TPM"`); genes with expression >= `threshold` are considered active. This parameter enables downward compatibility with various normalization methods.
-* `reclassify_by_expression`: When enabled (`TRUE`), **transcriptionally silent promoters** are not simply discarded; instead, they are biologically reclassified to enhancer-like regulatory elements. This correction refines the **regulatory topology** (e.g., reclassifying a functionally silent **P-P** loop into a curated **eP-P** loop).
+* `threshold` & `unit_type`: Defines the quantitative expression cutoff (e.g., `threshold = 1.0`, `unit_type = "TPM"`); genes with expression >= `threshold` are considered active.
+* `threshold_mode` (new): `"absolute"` (default): `threshold` is a direct expression cutoff. `"quantile"`: `threshold` is a quantile of the expression distribution (e.g., `0.75` selects the top 25% most highly expressed genes), adapting to different sequencing depths.
+* `reclassify_by_expression`: When enabled (`TRUE`), **transcriptionally silent promoters** are not simply discarded; instead, they are biologically reclassified to enhancer-like regulatory elements. This correction refines the **regulatory topology** (e.g., reclassifying a functionally silent **P-P** loop into a curated **eP-P** loop). **Important:** `eP`/`eG` labels indicate transcriptional silence, not functional enhancer activity. Orthogonal chromatin data are required for functional interpretation.
 
 ```{r}
 expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
@@ -138,7 +142,8 @@ refined_res <- refine_loop_anchors_by_expression(
   unit_type = "TPM",
   reclassify_by_expression = TRUE,
   out_dir = out_dir,
-  project_name = "Refined_Network"
+  project_name = "Refined_Network",
+  quiet = TRUE
 )
 ```
 
@@ -151,12 +156,42 @@ Following transcriptome integration, the refined tabular outputs represent a hig
 
 The `eP` and `eG` labels denote expression-inactive promoter- or gene-body-associated anchors treated as distal-like regulatory anchors for network syntax. These should not be interpreted as experimentally validated enhancers without additional epigenomic evidence (e.g., ATAC-seq accessibility, H3K27ac enrichment).
 
-**Orthogonal Chromatin Validation.** `looplook` provides `validate_epeG_by_chromatin()` for testing eP/eG anchors against user-supplied chromatin mark BED files (ATAC-seq, H3K27ac, H3K4me1, H3K27me3, H3K4me3). Anchors are scored against ENCODE active-enhancer criteria (gold_standard / high_confidence / supported / weak / uncertain). The function can be called standalone, embedded in `refine_loop_anchors_by_expression()` via the `chromatin_beds` parameter (adds a *Chromatin Validation* sheet to the Excel workbook), or rendered in `looplook_report()` HTML output.
-
 <div align="center">
   <img src="man/figures/g2_refine.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Refinement Results" />
   <p><em>Figure 2: <strong>Representative outputs of Expression-Aware Refinement.</strong> As shown by the Multi-Omics Sankey Tracking, this curated visualization dynamically traces the fate of peak through 3D chromatin topological interactions to their corresponding transcriptionally active target genes.</em></p>
 </div>
+
+### Module 3B: Chromatin-Guided Reclassification
+While expression data identify transcriptionally active anchors, orthogonal chromatin marks (ChIP-seq, CUT&Tag, ATAC-seq) provide direct evidence of regulatory element identity. Module 3B offers two complementary functions for chromatin-based anchor validation:
+
+**`validate_epeG_by_chromatin()`** — Tests eP/eG (or P/G/E) anchors against user-supplied chromatin mark BED files. Each anchor is scored against ENCODE active-enhancer criteria: `gold_standard` (H3K4me1+, H3K27ac+, ATAC+, H3K4me3-, H3K27me3-), `high_confidence`, `supported`, `weak`, or `uncertain`.
+
+**`refine_loop_anchors_by_chromatin()`** — Applies chromatin-mark evidence to systematically **reclassify** anchors and update loop topologies. Reclassification rules (minimum input H3K4me1 + H3K4me3): P + dual marks → `dual`; P + enhancer marks → `E`; eP/eG + promoter marks → `P`/`G` (revert); E + H3K4me3 only → `P` (unannotated promoter); and more. Supports `recompute_targets = TRUE` to rebuild target gene links with updated anchor types, producing chromatin-aware `target_annotation` and `target_gene_links`.
+
+```{r, eval=FALSE}
+# Validate eP/eG anchors against chromatin marks
+val <- validate_epeG_by_chromatin(
+  annotation_res = refined_res,
+  chromatin_beds = list(
+    H3K4me1  = "H3K4me1_peaks.bed",
+    H3K27ac  = "H3K27ac_peaks.bed",
+    ATAC     = "atac_peaks.bed"
+  )
+)
+table(val$confidence)
+
+# Chromatin-guided reclassification with target link recomputation
+cr <- refine_loop_anchors_by_chromatin(
+  annotation_res   = refined_res,
+  chromatin_beds   = list(
+    H3K4me1  = "H3K4me1_peaks.bed",
+    H3K4me3  = "H3K4me3_peaks.bed",
+    H3K27ac  = "H3K27ac_peaks.bed"
+  ),
+  recompute_targets = TRUE
+)
+table(cr$loop_annotation$loop_type)
+```
 
 ### Module 4: Automated Functional Profiling
 This module provides a fully automated, end-to-end multi-omics analysis pipeline that integrates 3D genomic interactions with transcriptomic data to unveil the regulatory mechanisms of targets of interest.

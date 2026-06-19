@@ -588,6 +588,12 @@ annotate_peaks_and_loops <- function(
     log_message <- function(...) {
         if (!quiet) message(...)
     }
+    # ChIPseeker::annotatePeak and GenomeInfoDb::seqlevelsStyle<- emit
+    # genome-info lines to stdout via cat(). Suppress when quiet=TRUE.
+    if (quiet) {
+        sink(file = nullfile(), type = "output")
+        on.exit(sink(type = "output"), add = TRUE)
+    }
 
     if (write_output && !dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
@@ -2842,8 +2848,8 @@ refine_loop_anchors_by_expression <- function(
 #'   \item All other anchors: unchanged.
 #' }
 #'
-#' \strong{Important — H3K4me3 dependency:} Rules that test for H3K4me3
-#' \emph{absence} (e.g., P→E, G→E) require H3K4me3 to be provided and
+#' \strong{Important  --  H3K4me3 dependency:} Rules that test for H3K4me3
+#' \emph{absence} (e.g., P -> E, G -> E) require H3K4me3 to be provided and
 #' explicitly called as absent at the anchor. When \code{H3K4me3} is not
 #' included in \code{chromatin_beds}, H3K4me3 is \code{NA} for all anchors,
 #' and these rules are skipped entirely (conservative: no reclassification
@@ -2855,7 +2861,7 @@ refine_loop_anchors_by_expression <- function(
 #' match first):
 #' \itemize{
 #'   \item \code{"conflicting_marks"}: H3K27me3+ coexisting with any
-#'         active mark (H3K4me1+, H3K27ac+, or H3K4me3+) —
+#'         active mark (H3K4me1+, H3K27ac+, or H3K4me3+)  -- 
 #'         bivalent/poised/ambiguous chromatin; takes priority over
 #'         enhancer-like and dual-like classifications.
 #'   \item \code{"dual_like"}: H3K4me1+ H3K4me3+
@@ -2902,8 +2908,11 @@ refine_loop_anchors_by_expression <- function(
 #'
 #' @return An invisible named list with updated \code{loop_annotation},
 #'   \code{anchor_loci_annotation}, \code{promoter_centric_stats},
-#'   \code{distal_element_stats}, \code{chromatin_validation}, and
-#'   \code{metadata}. When \code{recompute_targets = FALSE} (default),
+#'   \code{distal_element_stats}, \code{chromatin_validation},
+#'   \code{plots} (\code{Chromatin_Dumbbell}: anchor-type before/after
+#'   comparison; \code{Chromatin_Rose}: loop-type proportion rose plot),
+#'   \code{plot_list} (alias of \code{plots}), \code{qc_summary},
+#'   and \code{metadata}. When \code{recompute_targets = FALSE} (default),
 #'   \code{target_annotation} and \code{target_gene_links} are \code{NULL}
 #'   (pre-chromatin anchor types); downstream profiling should use
 #'   \code{target_source = "loops"}. When \code{recompute_targets = TRUE},
@@ -2953,6 +2962,20 @@ refine_loop_anchors_by_chromatin <- function(
     loop_df <- annotation_res$loop_annotation
     if (is.null(loop_df)) stop("'annotation_res$loop_annotation' is missing.")
     known_marks <- c("H3K4me1", "H3K27ac", "ATAC", "H3K27me3", "H3K4me3")
+    # Case-insensitive matching of user-provided mark names against canonical
+    # names (e.g., "h3k4me1"  ->  "H3K4me1"). Unmatched names are silently dropped.
+    mark_lookup <- setNames(known_marks, toupper(known_marks))
+    bed_names <- names(chromatin_beds)
+    matched_idx <- toupper(bed_names) %in% names(mark_lookup)
+    if (any(!matched_idx)) {
+        warning("Unrecognised chromatin_beds name(s) ignored: ",
+                paste(bed_names[!matched_idx], collapse = ", "),
+                ". Expected: ", paste(known_marks, collapse = ", "),
+                call. = FALSE)
+    }
+    # Normalise list element names to canonical case so downstream
+    # chromatin_beds[[mark]] lookups work with canonical mark names.
+    names(chromatin_beds)[matched_idx] <- unname(mark_lookup[toupper(bed_names[matched_idx])])
     provided_marks <- intersect(names(chromatin_beds), known_marks)
     if (!all(c("H3K4me1", "H3K4me3") %in% provided_marks)) {
         stop("chromatin_beds must include at least 'H3K4me1' and 'H3K4me3'.", call. = FALSE)
@@ -3005,6 +3028,20 @@ refine_loop_anchors_by_chromatin <- function(
 
     log_message(sprintf("  Reclassified      : %d anchors", sum(reclass_map$changed)))
     log_message("--- End Chromatin Refinement ---")
+
+    # --- 6b. Visualization ---
+    log_message("    Generating plots...")
+    loop_types_all <- sort(unique(loop_df$loop_type))
+    custom_colors <- get_colors(length(loop_types_all), "Paired")
+    names(custom_colors) <- loop_types_all
+    chromatin_plots <- list(
+        Chromatin_Dumbbell = .build_chromatin_dumbbell_plot(reclass_map, project_name),
+        Chromatin_Sankey   = .build_chromatin_sankey_plot(reclass_map, project_name),
+        Chromatin_MarkHeatmap = .build_chromatin_mark_heatmap(validation, reclass_map, project_name),
+        Chromatin_Rose     = .build_rose_plot(loop_df, custom_colors,
+                                paste0(project_name, ": Loop Types After Chromatin Refinement"),
+                                subtitle = "Loop type distribution after chromatin-guided anchor reclassification.")
+    )
 
     # --- 7. Recompute stats after reclassification ---
     log_message("    Recomputing connectivity stats...")
@@ -3062,6 +3099,8 @@ refine_loop_anchors_by_chromatin <- function(
         distal_element_stats = distal_element_df,
         target_annotation = ta,
         target_gene_links = tgl,
+        plots = chromatin_plots,
+        plot_list = chromatin_plots,
         metadata = .build_looplook_metadata(
             fun = "refine_loop_anchors_by_chromatin",
             params = list(
@@ -3742,7 +3781,7 @@ refine_loop_anchors_by_chromatin <- function(
         if (length(gs) == 0) {
             return("Inactive")
         }
-        if (any(gs %in% wl)) {
+        if (any(toupper(gs) %in% toupper(wl))) {
             return("Active")
         }
         return("Inactive")
@@ -3989,10 +4028,12 @@ refine_loop_anchors_by_chromatin <- function(
 #' @param loop_df Refined loop annotation.
 #' @param custom_colors Named color vector keyed by loop_type.
 #' @param project_name Character. Project prefix for the plot title.
+#' @param subtitle Character or NULL. Custom subtitle. NULL uses the default
+#'   expression-refinement subtitle. Default: \code{NULL}.
 #' @return A \code{ggplot} object.
 #' @keywords internal
 #' @noRd
-.build_rose_plot <- function(loop_df, custom_colors, project_name) {
+.build_rose_plot <- function(loop_df, custom_colors, project_name, subtitle = NULL) {
     rose_data <- loop_df %>%
         dplyr::group_by(loop_type) %>%
         dplyr::summarise(count = dplyr::n(), .groups = "drop") %>%
@@ -4020,7 +4061,8 @@ refine_loop_anchors_by_chromatin <- function(
             name = "Loop Type"
         ) +
         ggplot2::theme_void() +
-        ggplot2::labs(title = paste0(project_name, ": Structural Loop Types After Reclassification"), subtitle = "Full refined network (all loops). For active subset, filter on Retained_In_Functional_Network.") +
+        ggplot2::labs(title = paste0(project_name, ": Structural Loop Types After Reclassification"),
+             subtitle = if (is.null(subtitle)) "Full refined network (all loops). For active subset, filter on Retained_In_Functional_Network." else subtitle) +
         ggplot2::theme(
             plot.title = ggplot2::element_text(hjust = 0.5, face = "bold", size = 14),
             legend.position = "right",
@@ -4034,6 +4076,367 @@ refine_loop_anchors_by_chromatin <- function(
 #'
 #' @param original_loop_df Loop annotation before refinement.
 #' @param loop_df Loop annotation after refinement.
+#' Internal: Build Chromatin Reclassification Dumbbell Plot
+#'
+#' Compares anchor-type counts before vs. after chromatin-guided
+#' reclassification. Dark green academic palette for publication use.
+#'
+#' @param reclass_map Reclassification data frame from .chromatin_reclassify.
+#' @param project_name Character. Project prefix for the plot title.
+#' @return A ggplot object.
+#' @keywords internal
+#' @noRd
+.build_chromatin_dumbbell_plot <- function(reclass_map, project_name) {
+    df_before <- reclass_map %>%
+        dplyr::group_by(old_type) %>%
+        dplyr::summarise(Original = dplyr::n(), .groups = "drop") %>%
+        dplyr::rename(type = old_type)
+    df_after <- reclass_map %>%
+        dplyr::group_by(new_type) %>%
+        dplyr::summarise(Refined = dplyr::n(), .groups = "drop") %>%
+        dplyr::rename(type = new_type)
+    df_dumbbell <- dplyr::full_join(df_before, df_after, by = "type") %>%
+        dplyr::mutate(
+            Original = ifelse(is.na(Original), 0L, Original),
+            Refined  = ifelse(is.na(Refined),  0L, Refined)
+        ) %>%
+        dplyr::arrange(dplyr::desc(Original))
+    df_dumbbell$type <- factor(df_dumbbell$type, levels = rev(df_dumbbell$type))
+    df_long <- df_dumbbell %>%
+        tidyr::pivot_longer(cols = c("Original", "Refined"),
+                            names_to = "Source", values_to = "Count")
+
+    green_colors <- c("Original" = "#999999", "Refined" = "#2D5A3D")
+
+    ggplot2::ggplot() +
+        ggplot2::geom_segment(
+            data = df_dumbbell,
+            ggplot2::aes(y = type, yend = type, x = Original, xend = Refined),
+            color = "#b2b2b2", linewidth = 0.8
+        ) +
+        ggplot2::geom_point(
+            data = df_long,
+            ggplot2::aes(x = Count, y = type, color = Source), size = 3.5
+        ) +
+        ggplot2::scale_color_manual(values = green_colors) +
+        ggplot2::theme_minimal(base_size = 13) +
+        ggplot2::labs(
+            title = paste0(project_name, ": Anchor Reclassification by Chromatin"),
+            subtitle = paste0(sum(reclass_map$changed), " / ", nrow(reclass_map),
+                              " anchors reclassified"),
+            x = "Number of Anchors", y = "Anchor Type"
+        ) +
+        ggplot2::theme(
+            plot.title = ggplot2::element_text(hjust = 0.5, face = "bold", size = 14),
+            plot.subtitle = ggplot2::element_text(hjust = 0.5, size = 11, color = "#444444"),
+            legend.position = "top",
+            panel.grid.major.y = ggplot2::element_blank(),
+            panel.grid.minor = ggplot2::element_blank()
+        )
+}
+
+#' Internal: Build Chromatin Reclassification Sankey Flow Plot
+#'
+#' Shows anchor-type transitions from old to new as a left-to-right flow
+#' diagram. Uses ggforce::geom_parallel_sets for publication-quality rendering.
+#'
+#' @param reclass_map Reclassification data frame from .chromatin_reclassify.
+#' @param project_name Character. Project prefix for the plot title.
+#' @return A ggplot object.
+#' @keywords internal
+#' @noRd
+.build_chromatin_sankey_plot <- function(reclass_map, project_name) {
+    if (is.null(reclass_map) || nrow(reclass_map) == 0) {
+        return(NULL)
+    }
+
+    # Build transition counts
+    flow_df <- reclass_map %>%
+        dplyr::filter(!is.na(old_type), !is.na(new_type)) %>%
+        dplyr::group_by(old_type, new_type) %>%
+        dplyr::summarise(count = dplyr::n(), .groups = "drop") %>%
+        dplyr::filter(count > 0)
+
+    if (nrow(flow_df) == 0) return(NULL)
+
+    # Order types by total frequency (descending)
+    old_order <- flow_df %>%
+        dplyr::group_by(old_type) %>%
+        dplyr::summarise(total = sum(count), .groups = "drop") %>%
+        dplyr::arrange(dplyr::desc(total)) %>%
+        dplyr::pull(old_type)
+    new_order <- flow_df %>%
+        dplyr::group_by(new_type) %>%
+        dplyr::summarise(total = sum(count), .groups = "drop") %>%
+        dplyr::arrange(dplyr::desc(total)) %>%
+        dplyr::pull(new_type)
+
+    flow_df$old_type <- factor(flow_df$old_type, levels = old_order)
+    flow_df$new_type <- factor(flow_df$new_type, levels = new_order)
+
+    # Build node positions for left (old) and right (new) sides
+    old_totals <- flow_df %>%
+        dplyr::group_by(old_type) %>%
+        dplyr::summarise(total = sum(count), .groups = "drop") %>%
+        dplyr::arrange(dplyr::desc(old_type))
+    new_totals <- flow_df %>%
+        dplyr::group_by(new_type) %>%
+        dplyr::summarise(total = sum(count), .groups = "drop") %>%
+        dplyr::arrange(dplyr::desc(new_type))
+
+    y_max <- max(sum(old_totals$total), sum(new_totals$total))
+
+    # Compute y positions for left nodes
+    old_ymin <- numeric(nrow(old_totals))
+    old_ymax <- numeric(nrow(old_totals))
+    cum <- 0
+    for (i in seq_len(nrow(old_totals))) {
+        old_ymin[i] <- cum
+        old_ymax[i] <- cum + old_totals$total[i]
+        cum <- old_ymax[i]
+    }
+
+    # Compute y positions for right nodes
+    new_ymin <- numeric(nrow(new_totals))
+    new_ymax <- numeric(nrow(new_totals))
+    cum <- 0
+    for (i in seq_len(nrow(new_totals))) {
+        new_ymin[i] <- cum
+        new_ymax[i] <- cum + new_totals$total[i]
+        cum <- new_ymax[i]
+    }
+
+    names(old_ymin) <- as.character(old_totals$old_type)
+    names(old_ymax) <- as.character(old_totals$old_type)
+    names(new_ymin) <- as.character(new_totals$new_type)
+    names(new_ymax) <- as.character(new_totals$new_type)
+
+    # Build flow polygons
+    flow_polys <- list()
+    old_running <- setNames(rep(0, length(old_order)), as.character(old_order))
+    new_running <- setNames(rep(0, length(new_order)), as.character(new_order))
+
+    for (i in seq_len(nrow(flow_df))) {
+        ot <- as.character(flow_df$old_type[i])
+        nt <- as.character(flow_df$new_type[i])
+        cnt <- flow_df$count[i]
+
+        y0_bottom <- old_ymin[ot] + old_running[ot]
+        y0_top <- y0_bottom + cnt
+        old_running[ot] <- old_running[ot] + cnt
+
+        y1_bottom <- new_ymin[nt] + new_running[nt]
+        y1_top <- y1_bottom + cnt
+        new_running[nt] <- new_running[nt] + cnt
+
+        # Determine color: unchanged = green, changed = amber
+        is_unchanged <- ot == nt
+        fill_col <- if (is_unchanged) "#7E9F8E" else "#D4A574"
+
+        flow_polys[[i]] <- data.frame(
+            x = c(0.2, 0.2, 0.8, 0.8),
+            y = c(y0_bottom, y0_top, y1_top, y1_bottom),
+            group = i,
+            old_type = ot,
+            new_type = nt,
+            count = cnt,
+            changed = !is_unchanged,
+            fill = fill_col,
+            stringsAsFactors = FALSE
+        )
+    }
+    poly_df <- do.call(rbind, flow_polys)
+
+    # Node rectangles
+    old_rects <- data.frame(
+        xmin = 0.16, xmax = 0.2,
+        ymin = old_ymin, ymax = old_ymax,
+        label = names(old_ymin),
+        side = "old",
+        stringsAsFactors = FALSE
+    )
+    new_rects <- data.frame(
+        xmin = 0.8, xmax = 0.84,
+        ymin = new_ymin, ymax = new_ymax,
+        label = names(new_ymin),
+        side = "new",
+        stringsAsFactors = FALSE
+    )
+    node_rects <- rbind(old_rects, new_rects)
+
+    n_old <- length(old_order)
+    n_new <- length(new_order)
+    all_types <- unique(c(as.character(old_order), as.character(new_order)))
+    node_colors <- get_colors(length(all_types), "Paired")
+    names(node_colors) <- all_types
+
+    node_rects$fill <- node_colors[node_rects$label]
+
+    # Label positions
+    old_labels <- data.frame(
+        x = 0.14,
+        y = (old_ymin + old_ymax) / 2,
+        label = paste0(names(old_ymin), " (", old_totals$total, ")"),
+        stringsAsFactors = FALSE
+    )
+    new_labels <- data.frame(
+        x = 0.86,
+        y = (new_ymin + new_ymax) / 2,
+        label = paste0(names(new_ymin), " (", new_totals$total, ")"),
+        stringsAsFactors = FALSE
+    )
+
+    n_changed <- sum(reclass_map$changed)
+    n_total <- nrow(reclass_map)
+
+    p <- ggplot2::ggplot() +
+        ggplot2::geom_polygon(
+            data = poly_df,
+            ggplot2::aes(x = x, y = y, group = group, fill = fill),
+            alpha = 0.45, color = NA
+        ) +
+        ggplot2::geom_rect(
+            data = node_rects,
+            ggplot2::aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill),
+            color = "white", linewidth = 0.3
+        ) +
+        ggplot2::geom_text(
+            data = old_labels,
+            ggplot2::aes(x = x, y = y, label = label),
+            hjust = 1, size = 3.5, fontface = "bold"
+        ) +
+        ggplot2::geom_text(
+            data = new_labels,
+            ggplot2::aes(x = x, y = y, label = label),
+            hjust = 0, size = 3.5, fontface = "bold"
+        ) +
+        ggplot2::scale_fill_identity() +
+        ggplot2::scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
+        ggplot2::scale_y_continuous(expand = c(0, 0)) +
+        ggplot2::theme_void(base_size = 13) +
+        ggplot2::labs(
+            title = paste0(project_name, ": Anchor Reclassification Flow"),
+            subtitle = if (n_changed == 0) {
+                paste0("0 / ", n_total, " anchors reclassified")
+            } else {
+                paste0(n_changed, " / ", n_total,
+                       " anchors reclassified (amber = reclassified, green = unchanged)")
+            }
+        ) +
+        ggplot2::theme(
+            plot.title = ggplot2::element_text(hjust = 0.5, face = "bold", size = 14),
+            plot.subtitle = ggplot2::element_text(hjust = 0.5, size = 11, color = "#444444"),
+            plot.margin = ggplot2::margin(10, 80, 10, 80)
+        )
+
+    p
+}
+
+#' Internal: Build Chromatin Mark Combination Heatmap
+#'
+#' Binary heatmap showing which chromatin marks are present/absent at
+#' reclassified anchors, grouped by reclassification outcome.
+#'
+#' @param validation Chromatin validation data frame with mark columns.
+#' @param reclass_map Reclassification data frame from .chromatin_reclassify.
+#' @param project_name Character. Project prefix for the plot title.
+#' @return A ComplexHeatmap grob, or NULL if ComplexHeatmap is not installed.
+#' @keywords internal
+#' @noRd
+.build_chromatin_mark_heatmap <- function(validation, reclass_map, project_name) {
+    if (!requireNamespace("ComplexHeatmap", quietly = TRUE) ||
+        !requireNamespace("circlize", quietly = TRUE)) {
+        return(NULL)
+    }
+    if (is.null(validation) || nrow(validation) == 0) return(NULL)
+    if (is.null(reclass_map) || nrow(reclass_map) == 0) return(NULL)
+
+    # Filter to reclassified anchors only
+    changed_ids <- reclass_map$anchor_id[reclass_map$changed]
+    if (length(changed_ids) == 0) return(NULL)
+
+    df <- validation %>%
+        dplyr::filter(anchor_id %in% changed_ids) %>%
+        dplyr::left_join(
+            reclass_map %>% dplyr::select(anchor_id, old_type, new_type, chromatin_state),
+            by = "anchor_id"
+        )
+
+    if (nrow(df) == 0) return(NULL)
+
+    # Mark matrix (binary)
+    mark_cols <- c("H3K4me1", "H3K4me3", "H3K27ac", "ATAC", "H3K27me3")
+    available_marks <- intersect(mark_cols, colnames(df))
+    if (length(available_marks) == 0) return(NULL)
+
+    mat <- as.matrix(df[, available_marks, drop = FALSE])
+    storage.mode(mat) <- "logical"
+    mat[is.na(mat)] <- FALSE
+
+    # Row annotation: reclassification type and confidence
+    row_anno <- df %>%
+        dplyr::transmute(
+            Reclassification = paste0(old_type, "  ->  ", new_type),
+            Confidence = as.character(confidence)
+        )
+
+    # Order rows by reclassification type
+    row_order <- order(row_anno$Reclassification)
+    mat <- mat[row_order, , drop = FALSE]
+    row_anno <- row_anno[row_order, ]
+
+    # Color scheme: consistent with existing green palette
+    mark_colors <- circlize::colorRamp2(c(0, 1), c("#F5F5F5", "#2D5A3D"))
+
+    # Row annotation colors
+    reclass_types <- unique(row_anno$Reclassification)
+    reclass_cols <- get_colors(length(reclass_types), "Paired")
+    names(reclass_cols) <- reclass_types
+
+    conf_levels <- c("gold_standard", "high_confidence", "supported", "weak", "uncertain")
+    conf_colors <- c("#FFD700", "#7E9F8E", "#A8C4B8", "#D4A574", "#CCCCCC")
+    names(conf_colors) <- conf_levels
+
+    ha <- ComplexHeatmap::rowAnnotation(
+        Reclassification = row_anno$Reclassification,
+        Confidence = row_anno$Confidence,
+        col = list(
+            Reclassification = reclass_cols,
+            Confidence = conf_colors
+        ),
+        annotation_name_gp = grid::gpar(fontsize = 9, fontface = "bold"),
+        annotation_legend_param = list(
+            Reclassification = list(title_gp = grid::gpar(fontsize = 9, fontface = "bold"),
+                                    labels_gp = grid::gpar(fontsize = 8)),
+            Confidence = list(title_gp = grid::gpar(fontsize = 9, fontface = "bold"),
+                              labels_gp = grid::gpar(fontsize = 8))
+        ),
+        simple_anno_size = unit(0.3, "cm")
+    )
+
+    ht <- ComplexHeatmap::Heatmap(
+        mat,
+        name = "Mark\nPresence",
+        col = mark_colors,
+        cluster_rows = FALSE,
+        cluster_columns = FALSE,
+        show_row_names = FALSE,
+        row_title = NULL,
+        column_title = paste0(project_name, ": Chromatin Mark Landscape at Reclassified Anchors"),
+        column_title_gp = grid::gpar(fontsize = 12, fontface = "bold"),
+        right_annotation = ha,
+        border = TRUE,
+        rect_gp = grid::gpar(col = "white", lwd = 0.5),
+        heatmap_legend_param = list(
+            title_gp = grid::gpar(fontsize = 9, fontface = "bold"),
+            labels = c("Absent", "Present"),
+            labels_gp = grid::gpar(fontsize = 8)
+        )
+    )
+
+    ht
+}
+
 #' @param bed_info Target annotation data frame (optional).
 #' @param whitelist Character vector of active gene symbols.
 #' @param project_name Character. Project prefix for plot titles.
@@ -4246,13 +4649,18 @@ validate_epeG_by_chromatin <- function(
         warning("No chromatin_beds provided; all anchors classified as 'uncertain'.",
                 call. = FALSE)
     }
-    unknown <- setdiff(names(chromatin_beds), known_marks)
-    if (length(unknown) > 0) {
-        warning("Unknown mark names ignored: ",
-                paste(unknown, collapse = ", "),
+    # Case-insensitive matching of user-provided mark names against canonical
+    # names (e.g., "h3k4me1"  ->  "H3K4me1"). Unmatched names are warned and dropped.
+    mark_lookup <- setNames(known_marks, toupper(known_marks))
+    bed_names <- names(chromatin_beds)
+    matched_idx <- toupper(bed_names) %in% names(mark_lookup)
+    if (any(!matched_idx)) {
+        warning("Unrecognised chromatin_beds name(s) ignored: ",
+                paste(bed_names[!matched_idx], collapse = ", "),
                 ". Expected: ", paste(known_marks, collapse = ", "),
                 call. = FALSE)
     }
+    names(chromatin_beds)[matched_idx] <- unname(mark_lookup[toupper(bed_names[matched_idx])])
     provided_marks <- intersect(names(chromatin_beds), known_marks)
 
     # ---- 3+4. Overlap marks with anchors ----

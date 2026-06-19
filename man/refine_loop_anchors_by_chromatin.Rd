@@ -56,8 +56,11 @@ output). Default \code{FALSE}.}
 \value{
 An invisible named list with updated \code{loop_annotation},
 \code{anchor_loci_annotation}, \code{promoter_centric_stats},
-\code{distal_element_stats}, \code{chromatin_validation}, and
-\code{metadata}. When \code{recompute_targets = FALSE} (default),
+\code{distal_element_stats}, \code{chromatin_validation},
+\code{plots} (\code{Chromatin_Dumbbell}: anchor-type before/after
+comparison; \code{Chromatin_Rose}: loop-type proportion rose plot),
+\code{plot_list} (alias of \code{plots}), \code{qc_summary},
+and \code{metadata}. When \code{recompute_targets = FALSE} (default),
 \code{target_annotation} and \code{target_gene_links} are \code{NULL}
 (pre-chromatin anchor types); downstream profiling should use
 \code{target_source = "loops"}. When \code{recompute_targets = TRUE},
