@@ -23,8 +23,7 @@ When the refined output is provided, all anchors classified as
 is provided, all \code{P}, \code{G}, and \code{E} anchors are
 evaluated (chromatin evidence may reclassify E to P or dual).
 Anchors are tested for overlap with chromatin mark BED files and
-assigned confidence levels based on ENCODE active-enhancer criteria.
-annotated as P or G are tested.}
+assigned confidence levels based on ENCODE active-enhancer criteria.}
 
 \item{chromatin_beds}{Named list of BED file paths. Names must be
 mark identifiers: any of \code{"H3K4me1"}, \code{"H3K27ac"},

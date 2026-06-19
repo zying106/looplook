@@ -22,6 +22,7 @@ annotate_peaks_and_loops(
   min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
   co_dominance_ratio = 0.1,
+  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene"),
   anchor_gap = -1L,
   anchor_min_overlap = 1L,
   anchor_min_frac = 0,
@@ -39,7 +40,7 @@ Additional columns beyond 6 are retained in the output; anchor swapping only aff
 
 \item{org_db}{An \code{OrgDb} object, a package name string, or \code{NULL} to auto-resolve from \code{species}. Default: \code{NULL}.}
 
-\item{species}{Character. Genome assembly used when \code{txdb} and \code{org_db} are \code{NULL}. One of \code{"hg38"}, \code{"hg19"}, \code{"mm10"}, \code{"mm9"}. Default: \code{"hg38"}. The package is currently tested on human and mouse; the architecture supports extension to other species by adding entries to \code{species_txdb_pkg()}, \code{species_orgdb_pkg()}, and \code{species_bsgenome_pkg()}.}
+\item{species}{Character. Genome assembly used when \code{txdb} and \code{org_db} are \code{NULL}. One of \code{"hg38"}, \code{"hg19"}, \code{"mm10"}, \code{"mm9"}. Default: \code{"hg38"}. For other species, pass \code{txdb} and \code{org_db} as objects or package name strings directly (e.g. \code{txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene}, \code{org_db = "org.Dm.eg.db"}); \code{species} is then only used for karyotype ideograms.}
 
 \item{tss_region}{Numeric vector of length 2. Promoter window around the TSS in bp. Default: \code{c(-2000, 2000)} (typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).}
 
@@ -80,6 +81,13 @@ genes with expression >= \code{co_dominance_ratio x max(expression)} in the
 group are retained together. Default: \code{0.1} (i.e. within one order of
 magnitude). Lower values (e.g. \code{0.01}) retain more co-dominant
 candidates; higher values (e.g. \code{0.5}) are more stringent.}
+
+\item{biotype_order}{Character vector. Custom ordering of biotype categories
+for gene conflict resolution (passed to \code{\link{resolve_gene_conflicts}}).
+Five keywords: \code{"protein"}, \code{"small_ncRNA"}, \code{"antisense"},
+\code{"lncRNA"}, \code{"pseudogene"}. Listed categories get top priority;
+unlisted keep their default relative order appended at the bottom.
+Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")}.}
 
 \item{anchor_gap}{Integer. Search radius: how far apart (bp) can a peak and loop anchor be for the peak to be considered "near" the anchor? \code{-1L} (default): strict physical overlap required (GenomicRanges default -- peak and anchor must share at least 1 bp). \code{0L}: adjacent intervals (peak end == anchor start) also count. \code{>0}: explicit gap tolerance (e.g. \code{200} for cross-experiment integration). When \code{>= 0}, the result includes both physically overlapping pairs AND proximity-only pairs (within gap but no actual overlap). Use \code{anchor_min_overlap > 1} to require actual physical overlap among these candidates.}
 
@@ -149,6 +157,10 @@ provided) \code{Karyo_TargetGenes}, \code{Target_Rose},
 \item \code{plot_list} -- Backward-compatible alias of \code{plots}.
 \item \code{metadata} -- Internal metadata list (parameters, versions). Not intended for direct use.
 }
+The returned object carries a \code{looplook_anchor_state} attribute (access via
+\code{attr(result, "looplook_anchor_state")}) containing internal anchor
+topology data required by \code{\link{refine_loop_anchors_by_chromatin}}
+with \code{recompute_targets = TRUE}.
 If \code{write_output = TRUE}, also writes a multi-sheet Excel workbook to \code{out_dir}.
 }
 \description{

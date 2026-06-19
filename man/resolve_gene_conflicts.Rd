@@ -12,7 +12,8 @@ resolve_gene_conflicts(
   gene_expr_map,
   min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
-  co_dominance_ratio = 0.1
+  co_dominance_ratio = 0.1,
+  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
 )
 }
 \arguments{
@@ -45,6 +46,20 @@ genes with expression >= \code{co_dominance_ratio * max(expression)} in the
 group are retained together. Default: \code{0.1} (i.e. within one order of
 magnitude). Lower values (e.g. \code{0.01}) retain more co-dominant
 candidates; higher values (e.g. \code{0.5}) are more stringent.}
+
+\item{biotype_order}{Character vector. Custom ordering of biotype
+categories for conflict resolution. Each element must be one of five
+keywords (matched case-insensitively against the \code{GENETYPE} column):
+\code{"protein"} (protein-coding),
+\code{"small_ncRNA"} (miRNA, snoRNA, snRNA, rRNA, scaRNA),
+\code{"antisense"},
+\code{"lncRNA"} (lncRNA and other ncRNA),
+\code{"pseudogene"}.
+The order determines priority: rank 1 = highest. Categories not listed
+keep their default relative order and are appended after the listed ones.
+Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA",
+  "pseudogene")}. To prioritise lncRNAs over protein-coding genes while
+keeping everything else as-is, set \code{c("lncRNA", "protein")}.}
 }
 \value{
 The input data frame with \code{SYMBOL} and \code{annotation}
@@ -54,6 +69,7 @@ columns resolved.
 For each genomic range, identifies all promoter-overlapping genes,
 resolves conflicts using a two-stage strategy: (1) biotype priority
 (protein-coding > small-ncRNA > antisense > lncRNA/ncRNA > pseudogene),
+optionally overridden by \code{biotype_order}, and
 then (2) expression-aware filtering within the selected biotype tier.
 If any gene in the best tier is expressed (\code{tpm >= min_expr}), only
 expressed candidates are retained; otherwise all candidates in that tier

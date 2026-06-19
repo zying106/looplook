@@ -529,6 +529,7 @@ species_bsgenome_pkg <- function(species) {
 #' For each genomic range, identifies all promoter-overlapping genes,
 #' resolves conflicts using a two-stage strategy: (1) biotype priority
 #' (protein-coding > small-ncRNA > antisense > lncRNA/ncRNA > pseudogene),
+#' optionally overridden by \code{biotype_order}, and
 #' then (2) expression-aware filtering within the selected biotype tier.
 #' If any gene in the best tier is expressed (\code{tpm >= min_expr}), only
 #' expressed candidates are retained; otherwise all candidates in that tier
@@ -558,6 +559,19 @@ species_bsgenome_pkg <- function(species) {
 #'   group are retained together. Default: \code{0.1} (i.e. within one order of
 #'   magnitude). Lower values (e.g. \code{0.01}) retain more co-dominant
 #'   candidates; higher values (e.g. \code{0.5}) are more stringent.
+#' @param biotype_order Character vector. Custom ordering of biotype
+#'   categories for conflict resolution. Each element must be one of five
+#'   keywords (matched case-insensitively against the \code{GENETYPE} column):
+#'   \code{"protein"} (protein-coding),
+#'   \code{"small_ncRNA"} (miRNA, snoRNA, snRNA, rRNA, scaRNA),
+#'   \code{"antisense"},
+#'   \code{"lncRNA"} (lncRNA and other ncRNA),
+#'   \code{"pseudogene"}.
+#'   The order determines priority: rank 1 = highest. Categories not listed
+#'   keep their default relative order and are appended after the listed ones.
+#'   Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA",
+#'   "pseudogene")}. To prioritise lncRNAs over protein-coding genes while
+#'   keeping everything else as-is, set \code{c("lncRNA", "protein")}.
 #' @return The input data frame with \code{SYMBOL} and \code{annotation}
 #'   columns resolved.
 #' @importFrom GenomicRanges makeGRangesFromDataFrame findOverlaps
@@ -568,7 +582,8 @@ resolve_gene_conflicts <- function(
   current_anno_df, txdb_obj, org_db_pkg,
   tss_region, gene_expr_map, min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
-  co_dominance_ratio = 0.1
+  co_dominance_ratio = 0.1,
+  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
 ) {
     if (nrow(current_anno_df) == 0) {
         return(current_anno_df)
@@ -578,7 +593,8 @@ resolve_gene_conflicts <- function(
     # Build candidate gene map from promoter overlaps
     candidates <- .resolve_prepare_candidates(
         current_anno_df, txdb_obj, org_db_pkg,
-        tss_region, gene_expr_map, min_expr
+        tss_region, gene_expr_map, min_expr,
+        biotype_order = biotype_order
     )
 
     if (nrow(candidates) > 0) {
@@ -620,8 +636,13 @@ resolve_gene_conflicts <- function(
                         if (max_tpm <= 0) {
                             paste(sort(unique(genes)), collapse = ";")
                         } else {
-                            active_genes <- genes[tpms >= max(max_tpm * co_dominance_ratio, 1e-6)]
-                            paste(sort(unique(active_genes)), collapse = ";")
+                            threshold <- max(max_tpm * co_dominance_ratio, 1e-6)
+                            active_genes <- genes[tpms >= threshold]
+                            if (length(active_genes) == 0) {
+                                paste(sort(unique(genes)), collapse = ";")
+                            } else {
+                                paste(sort(unique(active_genes)), collapse = ";")
+                            }
                         }
                     }
                 }
@@ -663,7 +684,8 @@ resolve_gene_conflicts <- function(
 #' @noRd
 .resolve_prepare_candidates <- function(
     current_anno_df, txdb_obj, org_db_pkg,
-    tss_region, gene_expr_map, min_expr
+    tss_region, gene_expr_map, min_expr,
+    biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
 ) {
     gr_input <- .with_known_upstream_noise_suppressed(
         GenomicRanges::makeGRangesFromDataFrame(current_anno_df,
@@ -708,9 +730,9 @@ resolve_gene_conflicts <- function(
     )
 
     gene_map$tpm <- if (!is.null(gene_expr_map)) {
-        ifelse(is.na(gene_expr_map[gene_map$SYMBOL]), 0,
-            gene_expr_map[gene_map$SYMBOL]
-        )
+        expr_upper <- setNames(gene_expr_map, toupper(names(gene_expr_map)))
+        val <- expr_upper[toupper(gene_map$SYMBOL)]
+        ifelse(is.na(val), 0, val)
     } else {
         0
     }
@@ -721,17 +743,33 @@ resolve_gene_conflicts <- function(
     }
 
     if (has_genetype) {
-        gene_map <- gene_map %>%
-            dplyr::mutate(
-                type_rank = dplyr::case_when(
-                    grepl("protein", GENETYPE, ignore.case = TRUE) ~ 1,
-                    grepl("miRNA|snoRNA|snRNA|rRNA|scaRNA", GENETYPE, ignore.case = TRUE) ~ 2,
-                    grepl("antisense", GENETYPE, ignore.case = TRUE) ~ 3,
-                    grepl("lncRNA|ncrna", GENETYPE, ignore.case = TRUE) ~ 4,
-                    grepl("pseudo", GENETYPE, ignore.case = TRUE) ~ 5,
-                    TRUE ~ 6
-                )
-            )
+        # Build biotype pattern lookup
+        biotype_patterns <- list(
+            protein     = "protein",
+            small_ncRNA = "miRNA|snoRNA|snRNA|rRNA|scaRNA",
+            antisense   = "antisense",
+            lncRNA      = "lncRNA|ncrna",
+            pseudogene  = "pseudo"
+        )
+        default_order <- c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
+        # Listed categories: ranks 1, 2, 3, ...
+        # Unlisted categories: keep default relative order, appended after listed
+        unlisted <- setdiff(default_order, biotype_order)
+        full_order <- c(biotype_order, unlisted)
+        gene_map$type_rank <- length(full_order) + 1L  # fallback for unknown biotypes
+        for (i in seq_along(full_order)) {
+            key <- full_order[[i]]
+            pattern <- biotype_patterns[[key]]
+            if (!is.null(pattern)) {
+                gene_map <- gene_map %>%
+                    dplyr::mutate(
+                        type_rank = dplyr::if_else(
+                            grepl(pattern, GENETYPE, ignore.case = TRUE),
+                            as.integer(i), type_rank
+                        )
+                    )
+            }
+        }
     } else {
         gene_map$type_rank <- 1
     }
@@ -775,7 +813,7 @@ clean_anchor <- function(g, t, allow, down) {
         return(list(type = t_char, gene = NA_character_))
     }
     gs <- unlist(strsplit(g_char, ";"))
-    active_gs <- trimws(gs[trimws(gs) %in% allow])
+    active_gs <- trimws(gs[toupper(trimws(gs)) %in% toupper(allow)])
     if (length(active_gs) > 0) {
         return(list(type = t_char, gene = paste(unique(active_gs), collapse = ";")))
     }
@@ -1121,6 +1159,25 @@ load_expression_matrix <- function(expr_matrix_file, sample_columns = NULL) {
     }
 
     gene_ids <- trimws(as.character(d[[1]]))
+
+    # Diagnostic: check for potential case mismatch with OrgDb conventions
+    n_nonempty <- sum(nzchar(gene_ids))
+    if (n_nonempty > 0) {
+        frac_upper <- mean(grepl("^[A-Z0-9.]+$", gene_ids[nzchar(gene_ids)]))
+        if (frac_upper < 0.5) {
+            warning(
+                "Only ", round(frac_upper * 100), "% of expression matrix gene identifiers ",
+                "are all-uppercase. Matching is case-insensitive (toupper() on both sides), ",
+                "so this will NOT cause misclassification. However, if your expression ",
+                "matrix uses a different identifier convention (e.g., Ensembl IDs while ",
+                "OrgDb returns SYMBOL), cross-check that genes map correctly. ",
+                "Human OrgDb returns UPPERCASE (e.g., 'TP53'); mouse OrgDb returns ",
+                "Title Case (e.g., 'Trp53').",
+                call. = FALSE
+            )
+        }
+    }
+
     dup_genes <- unique(gene_ids[duplicated(gene_ids) & nzchar(gene_ids)])
     if (length(dup_genes) > 0) {
         warning(

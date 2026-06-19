@@ -70,6 +70,38 @@ test_that("consolidate_chromatin_loops balances clustered scores across replicat
   unlink(c(f1, f2))
 })
 
+test_that("consolidate_chromatin_loops consensus score is replicate-balanced (mean of per-source means)", {
+  # Scenario: 3 replicates with asymmetric fragmentation
+  # Rep1: 1 loop, score=100
+  # Rep2: 3 fragmented loops at same locus, scores=20,30,50  → per-source mean=33.3
+  # Rep3: 1 loop, score=60
+  # Expected: mean(100, 33.3, 60) = 64.4 (NOT mean(100,20,30,50,60)=52)
+  f1 <- tempfile(fileext = ".bedpe")
+  f2 <- tempfile(fileext = ".bedpe")
+  f3 <- tempfile(fileext = ".bedpe")
+  writeLines("chr1\t0\t100\tchr1\t200\t300\t100", f1)
+  writeLines(c(
+    "chr1\t5\t105\tchr1\t205\t305\t20",
+    "chr1\t10\t110\tchr1\t210\t310\t30",
+    "chr1\t15\t115\tchr1\t215\t315\t50"
+  ), f2)
+  writeLines("chr1\t0\t100\tchr1\t200\t300\t60", f3)
+
+  gi <- consolidate_chromatin_loops(
+    files = c(f1, f2, f3), mode = "consensus", gap = 25, quiet = TRUE
+  )
+  expect_equal(length(gi), 1)
+  # Per-source means: rep1=100, rep2=mean(20,30,50)=33.33, rep3=60
+  # Replicate-balanced score: mean(100, 33.33, 60) = 64.44
+  expected_score <- mean(c(100, mean(c(20, 30, 50)), 60))
+  expect_equal(S4Vectors::mcols(gi)$score[[1]], expected_score, tolerance = 0.1)
+  # n_reps should be 3 (all three files contribute)
+  expect_equal(S4Vectors::mcols(gi)$n_reps[[1]], 3L)
+  # n_members should be 5 (1 + 3 + 1 raw loops merged)
+  expect_equal(S4Vectors::mcols(gi)$n_members[[1]], 5L)
+  unlink(c(f1, f2, f3))
+})
+
 test_that("consolidate_chromatin_loops respects quiet and write_output flags", {
   loop1 <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
   loop2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
@@ -176,6 +208,25 @@ test_that("bedpe_to_gi swaps anchors when needed", {
   unlink(tmp)
 })
 
+test_that("bedpe_to_gi preserves score after anchor swap", {
+  tmp <- tempfile(fileext = ".bedpe")
+  # chr2 comes first in file; score=42 should follow the interaction after swap
+  writeLines(c(
+    "chr2\t100\t200\tchr1\t400\t500\t42",
+    "chr1\t50\t150\tchr3\t300\t400\t99"
+  ), tmp)
+  gi <- looplook:::bedpe_to_gi(tmp)
+  scores <- S4Vectors::mcols(gi)$score
+  # First loop (chr2-chr1) gets swapped to chr1-chr2; score 42 stays with it
+  # Second loop (chr1-chr3) stays; score 99 stays with it
+  a1_chr <- as.character(GenomicRanges::seqnames(InteractionSet::anchors(gi, "first")))
+  # Find the chr1-chr2 interaction (was originally chr2-chr1)
+  idx_swapped <- which(a1_chr == "chr1")
+  # The swapped interaction should still carry its original score
+  expect_true(all(scores[idx_swapped] %in% c(42, 99)))
+  unlink(tmp)
+})
+
 # --- bedpe_to_gi: score_col parameter ---
 test_that("bedpe_to_gi uses score_col when specified", {
   tmp <- tempfile(fileext = ".bedpe")
@@ -222,6 +273,35 @@ test_that("consolidate_chromatin_loops intersect mode works", {
   )
   expect_s4_class(gi, "GInteractions")
   expect_equal(length(gi), 1)
+
+  # intersect mode must assign cluster_id to each retained loop
+  expect_true("cluster_id" %in% colnames(S4Vectors::mcols(gi)))
+  expect_false(is.na(S4Vectors::mcols(gi)$cluster_id))
+  unlink(c(f1, f2))
+})
+
+# --- consolidate_chromatin_loops: intersect mode with cluster_id ---
+test_that("consolidate_chromatin_loops intersect mode assigns sequential cluster_id", {
+  f1 <- tempfile(fileext = ".bedpe")
+  f2 <- tempfile(fileext = ".bedpe")
+  writeLines(c(
+    "chr1\t100\t200\tchr1\t400\t500",
+    "chr1\t1000\t1100\tchr1\t1400\t1500"
+  ), f1)
+  writeLines(c(
+    "chr1\t110\t210\tchr1\t410\t510",
+    "chr1\t1010\t1110\tchr1\t1410\t1510"
+  ), f2)
+
+  gi <- looplook::consolidate_chromatin_loops(
+    files = c(f1, f2), mode = "intersect", gap = 50, quiet = TRUE
+  )
+  expect_equal(length(gi), 2)
+  mcols <- S4Vectors::mcols(gi)
+  expect_true("cluster_id" %in% colnames(mcols))
+  expect_false(any(is.na(mcols$cluster_id)))
+  # cluster_id values should be unique per retained loop
+  expect_equal(length(unique(mcols$cluster_id)), 2)
   unlink(c(f1, f2))
 })
 

@@ -96,6 +96,14 @@ chromatin -> kept (confirmed distal).
 \item All other anchors: unchanged.
 }
 
+\strong{Important — H3K4me3 dependency:} Rules that test for H3K4me3
+\emph{absence} (e.g., P→E, G→E) require H3K4me3 to be provided and
+explicitly called as absent at the anchor. When \code{H3K4me3} is not
+included in \code{chromatin_beds}, H3K4me3 is \code{NA} for all anchors,
+and these rules are skipped entirely (conservative: no reclassification
+without explicit data). Include \code{H3K4me3} to enable the full set of
+reclassification rules.
+
 \strong{Chromatin state inference:} Each anchor is also assigned a
 \code{chromatin_state} based on its mark combination (highest-priority
 match first):

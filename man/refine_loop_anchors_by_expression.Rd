@@ -9,6 +9,7 @@ refine_loop_anchors_by_expression(
   expr_matrix_file = NULL,
   sample_columns = NULL,
   threshold = 1,
+  threshold_mode = c("absolute", "quantile"),
   unit_type = "TPM",
   species = "hg38",
   out_dir = "./results/filtered",
@@ -35,6 +36,14 @@ refine_loop_anchors_by_expression(
 OrgDb (typically all-uppercase for human and mouse, e.g. \code{"TP53"},
 not \code{"Tp53"}). Mismatched case will cause expressed genes to be
 misclassified as silent (eP/eG).}
+
+\item{threshold_mode}{Character. How to interpret the \code{threshold}
+value. \code{"absolute"} (default): \code{threshold} is a direct expression
+cutoff (e.g., TPM >= 1). \code{"quantile"}: \code{threshold} is a quantile
+of the expression distribution (e.g., \code{0.75} means the top 25\\% most
+highly expressed genes are considered active). Quantile mode is
+dataset-adaptive and may be more robust across experiments with different
+sequencing depths. The effective expression cutoff is reported in the log.}
 
 \item{unit_type}{Character. Expression unit for plot labels (e.g., \code{"TPM"}). Default: \code{"TPM"}.}
 

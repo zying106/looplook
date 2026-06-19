@@ -77,9 +77,14 @@ profile_target_genes(
 
 \item{ppi_nSample}{Numeric. Maximum number of genes to include in PPI.}
 
-\item{heatmap_nSample}{Numeric. Maximum number of genes to plot in heatmap.}
+\item{heatmap_nSample}{Numeric. Maximum number of genes to plot in heatmap.
+Default \code{99999} (effectively no limit). Reduce to \code{20-50} for
+readable heatmaps.}
 
-\item{gsea_nSample}{Numeric. Maximum number of target genes to sample for GSEA.}
+\item{gsea_nSample}{Numeric. Maximum number of target genes to sample for GSEA.
+Default \code{99999} (effectively no down-sampling; all target genes are
+used). When the gene set is large, set to a smaller value (e.g. \code{20})
+to reduce enrichment bias. Set to \code{NULL} to always use the full set.}
 
 \item{cnet_nSample}{Numeric. Number of top GO terms to display in cnetplot.}
 

@@ -44,7 +44,12 @@
 #' @param ppi_score Numeric. Minimum combined confidence score for STRING edges.
 #' @param ppi_nSample Numeric. Maximum number of genes to include in PPI.
 #' @param heatmap_nSample Numeric. Maximum number of genes to plot in heatmap.
+#'   Default \code{99999} (effectively no limit). Reduce to \code{20-50} for
+#'   readable heatmaps.
 #' @param gsea_nSample Numeric. Maximum number of target genes to sample for GSEA.
+#'   Default \code{99999} (effectively no down-sampling; all target genes are
+#'   used). When the gene set is large, set to a smaller value (e.g. \code{20})
+#'   to reduce enrichment bias. Set to \code{NULL} to always use the full set.
 #' @param cnet_nSample Numeric. Number of top GO terms to display in cnetplot.
 #' @param stat_test Character. Statistical test for LFC comparisons.
 #' @param cor_method Character. Method for sample correlation matrices.
@@ -549,7 +554,9 @@ run_gsea_analysis <- function(target_genes, global_glist, gsea_nSample, current_
     if (!is.null(gsea_nSample) && length(curr_targets) > gsea_nSample) {
         warning("GSEA: down-sampling ", gsea_nSample, " of ", length(curr_targets),
                 " target genes. GSEA results represent a random subset, ",
-                "not the full gene set. Set gsea_nSample = NULL for full analysis.",
+                "not the full gene set. Set gsea_nSample = NULL for full analysis. ",
+                "For fully reproducible results, set the `seed` parameter in ",
+                "profile_target_genes() (e.g., seed = 42).",
                 call. = FALSE)
         curr_targets <- sample(curr_targets, size = gsea_nSample, replace = FALSE)
     }
@@ -1450,7 +1457,7 @@ run_heatmap_and_connectivity <- function(target_genes, tpm_mat_raw, meta_raw, lo
         take_n <- min(length(candidates), desired[i])
         if (take_n > 0) {
             selected <- c(selected, sample(candidates, take_n))
-            if (take_n == desired[i]) n_matched <- n_matched + take_n
+            n_matched <- n_matched + take_n
         }
     }
     selected <- unique(selected)

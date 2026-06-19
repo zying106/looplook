@@ -360,7 +360,13 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #' any cluster span exceeds the chaining threshold
 #' (\code{max(3*gap, 5*med_width*gap/1000)}). Use \code{chaining_policy} to
 #' control this behavior (\code{"warn"}, \code{"none"}, \code{"drop"}, or
-#' \code{"error"}).
+#' \code{"error"}). \strong{Note:} the default \code{"warn"} policy does
+#' \emph{not} remove affected clusters — their inflated coordinates (from
+#' \code{min(start)} to \code{max(end)} across all chained members) flow
+#' into downstream analyses unchanged. When chaining is a concern for
+#' downstream overlapping operations, use \code{chaining_policy = "drop"}
+#' to exclude wide clusters, or reduce \code{gap} to prevent chaining
+#' from forming.
 #'
 #' It also supports a \strong{two-stage filtering strategy} to improve signal-to-noise ratio:
 #' \itemize{
@@ -373,9 +379,9 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #' @param gap Numeric. Distance (bp) to consider loops as overlapping. Default 1000.
 #' @param mode Character. Choose one of the following: "consensus", "intersect", "union". Merge strategy:
 #'   \itemize{
+#'     \item \code{"consensus"}: Graph-based clustering to find a consensus set supported by a majority of samples (default). Formerly "reproducible".
 #'     \item \code{"intersect"}: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files).
 #'     \item \code{"union"}: Merges all detected loops into a comprehensive map.
-#'     \item \code{"consensus"}: Graph-based clustering to find a consensus set supported by a majority of samples. (Formerly "reproducible").
 #'   }
 #' @param min_consensus Integer. Minimum number of replicates a loop must appear in
 #'   (only effective when \code{mode = "consensus"}).
@@ -402,9 +408,11 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #' @param chaining_policy Character. Controls behaviour when connected-component
 #'   chaining produces clusters with span exceeding the chaining threshold
 #'   (\code{max(3*gap, 5*med_width*gap/1000)}).
-#'   \code{"warn"} (default): emit a warning and retain all clusters.
+#'   \code{"warn"} (default): emit a warning and retain all clusters
+#'   \emph{unchanged}, including their potentially inflated coordinates.
 #'   \code{"none"}: silently accept all clusters.
-#'   \code{"drop"}: remove clusters exceeding the threshold.
+#'   \code{"drop"}: remove clusters exceeding the threshold (safe for
+#'   downstream overlapping analyses that may be affected by inflated spans).
 #'   \code{"error"}: stop with an error.
 #' @param blacklist_species Character. Species/build for built-in ENCODE
 #'   blacklist (\code{"hg38"}, \code{"hg19"}, \code{"mm10"}, \code{"mm9"}),
@@ -1315,7 +1323,7 @@ dt_to_gi <- function(dt) {
 
     g <- igraph::make_empty_graph(n = n_loops, directed = FALSE)
     if (nrow(edges) > 0) {
-        edge_vec <- as.vector(t(as.matrix(edges)))
+        edge_vec <- as.vector(rbind(edges$from, edges$to))
         g <- igraph::add_edges(g, edge_vec)
     }
 
