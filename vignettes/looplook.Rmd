@@ -521,9 +521,9 @@ p + ggplot2::scale_fill_manual(
 
 To save any plot to disk, use `ggplot2::ggsave()`:
 
-```{r plot-save, eval = FALSE}
+```{r plot-save, eval=exists("res_integrated")}
 ggplot2::ggsave(
-  filename = "my_custom_donut.pdf",
+  filename = file.path(out_dir, "my_custom_donut.pdf"),
   plot = res_integrated$plots$Basic_Donut,
   width = 8, height = 6
 )
@@ -531,7 +531,7 @@ ggplot2::ggsave(
 
 For `looplook_karyo` objects (karyotype heatmaps), use `print()` to display:
 
-```{r plot-karyo, eval = FALSE}
+```{r plot-karyo, eval=exists("res_integrated")}
 print(res_integrated$plots$Karyo_Anchors) # renders via grid or opens in browser
 ```
 
@@ -616,7 +616,11 @@ Supply `chromatin_beds` to automatically validate eP/eG anchors against
 chromatin mark data. The result is added to the Excel workbook and returned
 as `refined_res$chromatin_validation`.
 
-```{r refinement_chromatin, eval=FALSE}
+```{r refinement_chromatin, eval=exists("res_integrated") && exists("out_dir"), message=FALSE, warning=FALSE}
+h3k27ac_path <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
+h3k4me1_path <- system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook")
+h3k4me3_path <- system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook")
+
 refined_val <- refine_loop_anchors_by_expression(
   annotation_res = res_integrated,
   expr_matrix_file = expr_path,
@@ -624,11 +628,9 @@ refined_val <- refine_loop_anchors_by_expression(
   threshold = 1.0,
   reclassify_by_expression = TRUE,
   chromatin_beds = list(
-    H3K27ac  = "path/to/H3K27ac_peaks.bed",
-    ATAC     = "path/to/atac_peaks.bed",
-    H3K4me1  = "path/to/H3K4me1_peaks.bed",
-    H3K27me3 = "path/to/H3K27me3_peaks.bed",  # optional
-    H3K4me3  = "path/to/H3K4me3_peaks.bed"    # optional
+    H3K27ac  = h3k27ac_path,
+    H3K4me1  = h3k4me1_path,
+    H3K4me3  = h3k4me3_path
   ),
   out_dir = out_dir,
   project_name = "Example_Validated"
@@ -665,24 +667,18 @@ After expression-aware refinement produces eP/eG labels, `validate_epeG_by_chrom
 
 #### Workflow
 
-```{r validate-epeG-example, eval=FALSE}
-# After refinement (produces eP/eG anchors)
-refined <- refine_loop_anchors_by_expression(
-  annotation_res = raw_annotation,
-  expr_matrix_file = "tpm.txt",
-  sample_columns = c("con1", "con2"),
-  threshold = 1.0
-)
+```{r validate-epeG-example, eval=exists("reclassified"), message=FALSE, warning=FALSE}
+h3k27ac_path <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
+h3k4me1_path <- system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook")
+h3k4me3_path <- system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook")
 
-# Validate with chromatin marks
+# Validate the eP/eG anchors from the refined result above
 val <- validate_epeG_by_chromatin(
-  annotation_res = refined,
+  annotation_res = reclassified,
   chromatin_beds = list(
-    H3K4me1  = "H3K4me1_peaks.bed",
-    H3K27ac  = "H3K27ac_peaks.bed",
-    ATAC     = "atac_peaks.bed",
-    H3K27me3 = "H3K27me3_peaks.bed",  # optional
-    H3K4me3  = "H3K4me3_peaks.bed"    # optional
+    H3K4me1  = h3k4me1_path,
+    H3K27ac  = h3k27ac_path,
+    H3K4me3  = h3k4me3_path
   ),
   anchor_gap = 200,          # proximity tolerance (bp)
   anchor_min_overlap = 100   # minimum overlap (bp)
@@ -690,9 +686,6 @@ val <- validate_epeG_by_chromatin(
 
 # View confidence distribution
 table(val$confidence)
-
-# Export for downstream use
-write.csv(val, "epeG_chromatin_validation.csv", row.names = FALSE)
 ```
 
 #### Confidence Criteria
@@ -738,22 +731,21 @@ The chromatin state of each anchor is also inferred (highest-priority match firs
 
 \strong{Important — H3K4me3 dependency:} Rules that test for H3K4me3 *absence* (e.g., P→E, G→E) require H3K4me3 to be provided in `chromatin_beds`. When H3K4me3 is omitted, its value is `NA` for all anchors, and these rules are skipped conservatively — no reclassification without explicit data. Include H3K4me3 (and optionally H3K27me3) to enable the full set of reclassification rules.
 
-```{r chromatin-refine-example, eval=FALSE}
+```{r chromatin-refine-example, eval=exists("reclassified") && exists("out_dir"), message=FALSE, warning=FALSE}
 # Run on expression-refined output (tests eP/eG anchors)
 cr <- refine_loop_anchors_by_chromatin(
-  annotation_res = refined_res,
+  annotation_res = reclassified,
   chromatin_beds = list(
-    H3K4me1  = "H3K4me1_peaks.bed",
-    H3K4me3  = "H3K4me3_peaks.bed",
-    H3K27ac  = "H3K27ac_peaks.bed",
-    ATAC     = "atac_peaks.bed",
-    H3K27me3 = "H3K27me3_peaks.bed"   # optional
+    H3K4me1  = h3k4me1_path,
+    H3K4me3  = h3k4me3_path,
+    H3K27ac  = h3k27ac_path
   ),
   anchor_gap = 200,
   anchor_min_overlap = 100,
   recompute_targets = TRUE,  # Rebuild target links with updated types
   species = "hg38",
-  project_name = "Chromatin_Refined"
+  project_name = "Chromatin_Refined",
+  out_dir = out_dir
 )
 
 # Summary of reclassification
@@ -782,7 +774,7 @@ The output `chromatin_validation` table records, for each candidate anchor, the 
 
 All plots are returned as **ggplot2** objects (except the heatmap, which is a **ComplexHeatmap** grob) and accept standard `+` layers for customisation. To access a specific plot:
 
-```{r, eval=FALSE}
+```{r chromatin-plots, eval=exists("cr")}
 cr$plots$Chromatin_Dumbbell   # before/after anchor type comparison
 cr$plots$Chromatin_Sankey      # reclassification flow diagram
 cr$plots$Chromatin_MarkHeatmap # per-anchor mark landscape
@@ -916,7 +908,7 @@ res_C <- profile_target_genes(
 
 Results are returned as a named list, one element per `target_source` (e.g., `"loops"`, `"targets"`). Each element contains `plots` (ggplot objects), `target_gene_sets` (character vectors), and `go_results` (data frames).
 
-```{r profiling-access, eval = FALSE}
+```{r profiling-access, eval=exists("res_profile")}
 # Accessing results from a profiling run
 names(res_profile) # one element per target_source ("loops", "targets")
 names(res_profile$loops) # "go_results" "target_gene_sets" "plots"

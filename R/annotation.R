@@ -70,9 +70,18 @@
         return("G")
     }
 
-    "E"  # positional default for unrecognised annotation types;
-         # ChIPseeker changes to annotation strings could silently
-         # route novel types here.  Review after ChIPseeker upgrades.
+    # Fallback: unrecognised annotation category that doesn't match any
+    # known ChIPseeker pattern.  Most genomic regions without gene overlap
+    # ARE distal/intergenic, so "E" is positionally reasonable, but a
+    # warning ensures users are aware of the novel category.
+    if (!is.na(anno_str) && nzchar(anno_str)) {
+        warning("Unrecognised ChIPseeker annotation type '", anno_str,
+                "', defaulting to 'E' (distal/intergenic). ",
+                "This may indicate a ChIPseeker version change; ",
+                "review after package upgrades.",
+                call. = FALSE)
+    }
+    "E"
 }
 
 #' Internal: Extract Loop Locus Genes
@@ -150,27 +159,29 @@
 #' Internal: Integrate Optional Target BED Annotation
 #' @keywords internal
 #' @noRd
-.annotate_target_bed <- function(
-  target_bed, txdb_obj, org_db_pkg, tss_region, gene_expr_map, min_expr,
-  conflict_strategy,
-  gr_anchors, anchor_topo_map, loop_annotation_final, map_info, ego_list_target,
-  log_message,
-  anchor_gap = -1L, anchor_min_overlap = 1L, anchor_min_frac = 0,
-  co_dominance_ratio = 0.1,
-  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
+# --- .annotate_target_bed helpers ---
+
+#' Internal: Read, annotate, and resolve gene conflicts for target BED
+#'
+#' Reads a BED file, converts to GRanges, runs ChIPseeker annotation,
+#' resolves gene conflicts, and harmonises seqlevels with loop anchors.
+#'
+#' @return A list(gr_bed, bed_info, n_peaks), or NULL if the BED is empty.
+#' @keywords internal
+#' @noRd
+.prepare_target_bed_granges <- function(
+    target_bed, txdb_obj, org_db_pkg, tss_region,
+    gene_expr_map, min_expr, conflict_strategy,
+    gr_anchors, co_dominance_ratio, biotype_order, log_message
 ) {
     bed_target <- read_robust_general(target_bed, min_cols = 3, desc = "Target BED")
     colnames(bed_target)[c(1, 2, 3)] <- c("chr", "start", "end")
     if (nrow(bed_target) == 0) {
         warning("Target BED contains no features; skipping target annotation.")
-        return(list(
-            bed_info = NULL,
-            target_connected_loops = NULL,
-            target_gene_links = NULL
-        ))
+        return(NULL)
     }
 
-    bed_target$start <- bed_target$start + 1 # BED is 0-based; GRanges is 1-based
+    bed_target$start <- bed_target$start + 1  # BED is 0-based; GRanges is 1-based
     gr_bed <- .with_known_upstream_noise_suppressed({
         gr_bed <- GenomicRanges::makeGRangesFromDataFrame(bed_target)
         gr_bed$input_id <- paste0("Peak_", seq_len(nrow(bed_target)))
@@ -178,57 +189,62 @@
         gr_bed
     })
     bed_annot <- .with_known_upstream_noise_suppressed(
-        ChIPseeker::annotatePeak(gr_bed, TxDb = txdb_obj, tssRegion = tss_region, annoDb = org_db_pkg, verbose = FALSE)
+        ChIPseeker::annotatePeak(gr_bed, TxDb = txdb_obj, tssRegion = tss_region,
+                                 annoDb = org_db_pkg, verbose = FALSE)
     )
     bed_info <- format_annotation_columns(as.data.frame(bed_annot))
-    if ("GENENAME" %in% colnames(bed_info)) bed_info <- bed_info %>% dplyr::rename(Gene_description = GENENAME)
-    log_message("    Refining Target annotation...")
-    bed_info <- resolve_gene_conflicts(bed_info, txdb_obj, org_db_pkg, tss_region, gene_expr_map, min_expr = min_expr, conflict_strategy = conflict_strategy, co_dominance_ratio = co_dominance_ratio, biotype_order = biotype_order)
-    gr_bed <- .harmonize_seqlevels(gr_bed, gr_anchors, "target BED")
-    n_peaks <- length(gr_bed)
-    n_anchors <- length(gr_anchors)
+    if ("GENENAME" %in% colnames(bed_info))
+        bed_info <- bed_info %>% dplyr::rename(Gene_description = GENENAME)
 
-    # anchor_gap = -1L: use findOverlaps default (strict physical overlap).
-    # anchor_gap >= 0:  proximity-based matching -- intervals within `anchor_gap`
-    #   bp of each other are considered hits even without physical overlap.
-    #   This is the intended behavior for cross-experiment integration.
-    #   The pintersect post-filter only applies when anchor_min_overlap > 1L
-    #   (user explicitly requests a stricter bp-level filter).
+    log_message("    Refining Target annotation...")
+    bed_info <- resolve_gene_conflicts(
+        bed_info, txdb_obj, org_db_pkg, tss_region,
+        gene_expr_map, min_expr = min_expr,
+        conflict_strategy = conflict_strategy,
+        co_dominance_ratio = co_dominance_ratio,
+        biotype_order = biotype_order
+    )
+    gr_bed <- .harmonize_seqlevels(gr_bed, gr_anchors, "target BED")
+
+    list(gr_bed = gr_bed, bed_info = bed_info, n_peaks = length(gr_bed))
+}
+
+#' Internal: Find peak-to-anchor overlaps with cascade filtering
+#'
+#' Applies three-stage filtering: gap tolerance, minimum physical overlap,
+#' and minimum overlap fraction. Emits diagnostic summary.
+#'
+#' @return A \code{\link[S4Vectors]{Hits}} object (may be empty).
+#' @keywords internal
+#' @noRd
+.find_peak_anchor_overlaps <- function(
+    gr_bed, gr_anchors,
+    anchor_gap, anchor_min_overlap, anchor_min_frac,
+    n_peaks, log_message
+) {
     if (anchor_gap >= 0L) {
-        hits <- GenomicRanges::findOverlaps(
-            gr_bed, gr_anchors,
-            maxgap = anchor_gap
-        )
+        hits <- GenomicRanges::findOverlaps(gr_bed, gr_anchors, maxgap = anchor_gap)
     } else {
         hits <- GenomicRanges::findOverlaps(gr_bed, gr_anchors)
     }
 
-    # Post-filter by minimum physical overlap -- only when user explicitly
-    # requests stricter bp-level filtering. Proximity-only hits (no actual
-    # overlap but within anchor_gap) are NOT filtered here.
     n_hits_raw <- length(hits)
     if (anchor_min_overlap > 1L && n_hits_raw > 0) {
         q_gr <- gr_bed[S4Vectors::queryHits(hits)]
         s_gr <- gr_anchors[S4Vectors::subjectHits(hits)]
-        overlap_w <- GenomicRanges::width(
-            GenomicRanges::pintersect(q_gr, s_gr)
-        )
+        overlap_w <- GenomicRanges::width(GenomicRanges::pintersect(q_gr, s_gr))
         hits <- hits[overlap_w >= anchor_min_overlap]
     }
 
-    # Fraction-based filtering: overlap must cover at least anchor_min_frac of the peak
     if (anchor_min_frac > 0 && length(hits) > 0) {
         q_gr <- gr_bed[S4Vectors::queryHits(hits)]
         s_gr <- gr_anchors[S4Vectors::subjectHits(hits)]
-        overlap_w <- GenomicRanges::width(
-            GenomicRanges::pintersect(q_gr, s_gr)
-        )
-        peak_w <- GenomicRanges::width(q_gr)
-        frac <- overlap_w / peak_w
+        overlap_w <- GenomicRanges::width(GenomicRanges::pintersect(q_gr, s_gr))
+        frac <- overlap_w / GenomicRanges::width(q_gr)
         hits <- hits[frac >= anchor_min_frac]
     }
 
-    # Diagnostic: peak-to-anchor overlap summary
+    # Diagnostic summary
     n_peaks_hit <- length(unique(S4Vectors::queryHits(hits)))
     frac_info <- if (anchor_min_frac > 0)
         sprintf(", min_frac=%.2f", anchor_min_frac) else ""
@@ -250,22 +266,46 @@
         log_message("    No peaks overlapped loop anchors. Check that target BED and loop BEDPE use the same genome build and seqlevel style.")
     }
 
+    hits
+}
+
+#' Internal: Build target-gene linkage from peak-anchor hits
+#'
+#' Constructs hit_df, joins topology data, computes per-peak gene summaries,
+#' and delegates to \code{.build_target_gene_links}.
+#'
+#' @return A list(bed_info, target_connected_loops, target_gene_links, hit_df).
+#' @keywords internal
+#' @noRd
+.build_target_hit_linkage <- function(
+    hits, gr_anchors, anchor_topo_map,
+    loop_annotation_final, bed_info, map_info, ego_list_target
+) {
     target_connected_loops <- NULL
     target_gene_links <- NULL
+    hit_df <- NULL
+
     if (length(hits) > 0) {
         target_connected_loops <- loop_annotation_final %>%
-            dplyr::filter(cluster_id %in% unique(gr_anchors$cluster_id[S4Vectors::subjectHits(hits)]))
-        hit_df <- data.frame(qid = S4Vectors::queryHits(hits), sid = S4Vectors::subjectHits(hits))
+            dplyr::filter(cluster_id %in%
+                unique(gr_anchors$cluster_id[S4Vectors::subjectHits(hits)]))
+        hit_df <- data.frame(
+            qid = S4Vectors::queryHits(hits),
+            sid = S4Vectors::subjectHits(hits)
+        )
         hit_df$anchor_id <- gr_anchors$anchor_id[hit_df$sid]
         hit_df <- hit_df %>% dplyr::left_join(anchor_topo_map, by = "anchor_id")
+
         anchor_loop_agg <- dplyr::bind_rows(
             loop_annotation_final %>% dplyr::select(anchor_id = a1_id, loop_ID),
             loop_annotation_final %>% dplyr::select(anchor_id = a2_id, loop_ID)
         ) %>%
             dplyr::distinct() %>%
             dplyr::group_by(anchor_id) %>%
-            dplyr::summarise(linked_loops = .annotation_extract_ids(loop_ID), .groups = "drop")
+            dplyr::summarise(linked_loops = .annotation_extract_ids(loop_ID),
+                             .groups = "drop")
         hit_df <- hit_df %>% dplyr::left_join(anchor_loop_agg, by = "anchor_id")
+
         summary_df <- hit_df %>%
             dplyr::group_by(qid) %>%
             dplyr::summarise(
@@ -276,14 +316,14 @@
                 .groups = "drop"
             ) %>%
             dplyr::mutate(join_id = paste0("Peak_", qid))
-        bed_info <- dplyr::left_join(bed_info, summary_df, by = c("input_id" = "join_id")) %>%
+        bed_info <- dplyr::left_join(bed_info, summary_df,
+                                     by = c("input_id" = "join_id")) %>%
             dplyr::select(-any_of(c("join_id", "qid")))
+
         target_gene_links <- .build_target_gene_links(
-            hit_df = hit_df,
-            bed_info = bed_info,
+            hit_df = hit_df, bed_info = bed_info,
             loop_annotation_final = loop_annotation_final,
-            map_info = map_info,
-            ego_list_target = ego_list_target
+            map_info = map_info, ego_list_target = ego_list_target
         )
     } else {
         bed_info$All_Loop_Connected_Genes <- NA
@@ -292,16 +332,33 @@
         bed_info$Linked_Loop_IDs <- NA
     }
 
+    # Fallback: build empty links if nothing was produced
     if (is.null(target_gene_links)) {
         target_gene_links <- .build_target_gene_links(
             hit_df = data.frame(qid = integer(0), anchor_id = character(0)),
             bed_info = bed_info,
             loop_annotation_final = loop_annotation_final,
-            map_info = map_info,
-            ego_list_target = ego_list_target
+            map_info = map_info, ego_list_target = ego_list_target
         )
     }
 
+    list(
+        bed_info = bed_info,
+        target_connected_loops = target_connected_loops,
+        target_gene_links = target_gene_links,
+        hit_df = hit_df
+    )
+}
+
+#' Internal: Finalize target BED evidence, fallback, and membership columns
+#'
+#' Computes regulated-promoter evidence strings, fills linear-fallback gene
+#' columns, marks target-gene-link membership flags, and reorders columns.
+#'
+#' @return A list(bed_info, target_gene_links).
+#' @keywords internal
+#' @noRd
+.finalize_target_bed_evidence <- function(bed_info, target_gene_links) {
     evidence_df <- .summarise_regulated_promoter_evidence(target_gene_links)
     bed_info <- dplyr::left_join(bed_info, evidence_df, by = "input_id")
     bed_info$Regulated_promoter_Evidence <- ifelse(
@@ -312,7 +369,11 @@
     )
 
     fallback_col <- .target_linear_gene_column(bed_info)
-    fallback_vec <- if (!is.null(fallback_col)) bed_info[[fallback_col]] else rep(NA_character_, nrow(bed_info))
+    fallback_vec <- if (!is.null(fallback_col)) {
+        bed_info[[fallback_col]]
+    } else {
+        rep(NA_character_, nrow(bed_info))
+    }
     ann_vec <- if ("annotation" %in% colnames(bed_info)) {
         bed_info$annotation
     } else {
@@ -321,28 +382,114 @@
     fallback_evidence <- .fallback_evidence_from_annotation(ann_vec)
 
     bed_info <- bed_info %>% dplyr::mutate(
-        All_Loop_Connected_Genes_Filled = .fill_target_gene_fallback(All_Loop_Connected_Genes, fallback_vec),
-        Regulated_promoter_genes_Filled = .fill_target_gene_fallback(Regulated_promoter_genes, fallback_vec),
-        Assigned_Target_Genes_Filled = .fill_target_gene_fallback(Assigned_Target_Genes, fallback_vec),
+        All_Loop_Connected_Genes_Filled = .fill_target_gene_fallback(
+            All_Loop_Connected_Genes, fallback_vec),
+        Regulated_promoter_genes_Filled = .fill_target_gene_fallback(
+            Regulated_promoter_genes, fallback_vec),
+        Assigned_Target_Genes_Filled = .fill_target_gene_fallback(
+            Assigned_Target_Genes, fallback_vec),
         Regulated_promoter_Fallback_Evidence = dplyr::case_when(
-            !is.na(Regulated_promoter_genes) & Regulated_promoter_genes != "" ~ "none",
-            !is.na(Regulated_promoter_genes_Filled) & Regulated_promoter_genes_Filled != "" ~
-                fallback_evidence,
+            !is.na(Regulated_promoter_genes) &
+                Regulated_promoter_genes != "" ~ "none",
+            !is.na(Regulated_promoter_genes_Filled) &
+                Regulated_promoter_genes_Filled != "" ~ fallback_evidence,
             TRUE ~ "none"
         )
     )
-    target_gene_links <- .mark_target_gene_link_membership(target_gene_links, bed_info)
+    target_gene_links <- .mark_target_gene_link_membership(
+        target_gene_links, bed_info
+    )
 
     if ("Linked_Loop_IDs" %in% colnames(bed_info)) {
-        target_col <- if ("Gene_description" %in% colnames(bed_info)) "Gene_description" else "SYMBOL"
+        target_col <- if ("Gene_description" %in% colnames(bed_info)) {
+            "Gene_description"
+        } else {
+            "SYMBOL"
+        }
         if (target_col %in% colnames(bed_info)) {
-            bed_info <- bed_info %>% dplyr::relocate(Linked_Loop_IDs, .after = dplyr::all_of(target_col))
+            bed_info <- bed_info %>%
+                dplyr::relocate(Linked_Loop_IDs, .after = dplyr::all_of(target_col))
         }
     }
 
-    # Return the real peak-to-anchor hit_df (with populated anchor_ids) for
-    # downstream chromatin-aware target remapping
-    stored_hit_df <- if (exists("hit_df", inherits = FALSE) && !is.null(hit_df) && nrow(hit_df) > 0) {
+    list(bed_info = bed_info, target_gene_links = target_gene_links)
+}
+
+#' Internal: Integrate Optional Target BED Annotation
+#'
+#' Orchestrates the full target-BED annotation pipeline: read & annotate,
+#' compute peak-anchor overlaps, build gene linkage, and finalize evidence
+#' columns.  Delegates to four internal helpers.
+#'
+#' @keywords internal
+#' @noRd
+.annotate_target_bed <- function(
+  target_bed, txdb_obj, org_db_pkg, tss_region, gene_expr_map, min_expr,
+  conflict_strategy,
+  gr_anchors, anchor_topo_map, loop_annotation_final, map_info, ego_list_target,
+  log_message,
+  anchor_gap = -1L, anchor_min_overlap = 1L, anchor_min_frac = 0,
+  co_dominance_ratio = 0.1,
+  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
+) {
+    # Step 1: Read, annotate, resolve conflicts
+    prep <- .prepare_target_bed_granges(
+        target_bed = target_bed, txdb_obj = txdb_obj,
+        org_db_pkg = org_db_pkg, tss_region = tss_region,
+        gene_expr_map = gene_expr_map, min_expr = min_expr,
+        conflict_strategy = conflict_strategy,
+        gr_anchors = gr_anchors,
+        co_dominance_ratio = co_dominance_ratio,
+        biotype_order = biotype_order,
+        log_message = log_message
+    )
+    if (is.null(prep)) {
+        return(list(
+            bed_info = NULL,
+            target_connected_loops = NULL,
+            target_gene_links = NULL,
+            hit_df = data.frame(qid = integer(0), sid = integer(0),
+                               anchor_id = character(0),
+                               stringsAsFactors = FALSE)
+        ))
+    }
+    gr_bed   <- prep$gr_bed
+    bed_info <- prep$bed_info
+    n_peaks  <- prep$n_peaks
+
+    # Step 2: Cascade-filtered peak-to-anchor overlaps
+    hits <- .find_peak_anchor_overlaps(
+        gr_bed = gr_bed, gr_anchors = gr_anchors,
+        anchor_gap = anchor_gap,
+        anchor_min_overlap = anchor_min_overlap,
+        anchor_min_frac = anchor_min_frac,
+        n_peaks = n_peaks, log_message = log_message
+    )
+
+    # Step 3: Build target-gene linkage from hits
+    linkage <- .build_target_hit_linkage(
+        hits = hits, gr_anchors = gr_anchors,
+        anchor_topo_map = anchor_topo_map,
+        loop_annotation_final = loop_annotation_final,
+        bed_info = bed_info, map_info = map_info,
+        ego_list_target = ego_list_target
+    )
+    bed_info              <- linkage$bed_info
+    target_connected_loops <- linkage$target_connected_loops
+    target_gene_links      <- linkage$target_gene_links
+    hit_df                 <- linkage$hit_df
+
+    # Step 4: Finalize evidence, fallback, and membership
+    final <- .finalize_target_bed_evidence(
+        bed_info = bed_info, target_gene_links = target_gene_links
+    )
+    bed_info <- final$bed_info
+    target_gene_links <- final$target_gene_links
+
+    # Step 5: Store peak-to-anchor mapping for downstream chromatin-aware
+    # target recomputation (refine_loop_anchors_by_chromatin with
+    # recompute_targets = TRUE).
+    stored_hit_df <- if (!is.null(hit_df) && nrow(hit_df) > 0) {
         hit_df %>%
             dplyr::select(dplyr::any_of(c("qid", "sid", "anchor_id"))) %>%
             dplyr::distinct()
@@ -2111,14 +2258,25 @@ build_annotation_plots <- function(
     ))
     anno_genes <- anno_genes[nzchar(anno_genes)]
     if (length(anno_genes) > 0) {
-        overlap_rate <- length(intersect(toupper(whitelist), toupper(anno_genes))) / length(anno_genes)
-        if (overlap_rate < 0.1) {
+        n_matched <- length(intersect(toupper(whitelist), toupper(anno_genes)))
+        overlap_rate <- n_matched / length(anno_genes)
+        log_message(sprintf(
+            "    >>> Gene symbol overlap: %.1f%% (%d / %d annotation genes present in expression whitelist)",
+            overlap_rate * 100, n_matched, length(anno_genes)
+        ))
+        if (overlap_rate < 0.5) {
             warning(
                 sprintf(
-                    "Only %.1f%% of annotation gene symbols match the expression matrix row names. ",
-                    overlap_rate * 100
+                    "Only %.1f%% (%d / %d) of annotation gene symbols match the expression matrix row names. ",
+                    overlap_rate * 100, n_matched, length(anno_genes)
                 ),
-                "Check that expression matrix row names use the same gene identifier convention (e.g., SYMBOL)."
+                "Low overlap suggests different gene identifier conventions. ",
+                "Check that expression matrix row names and OrgDb annotations use the same convention ",
+                "(e.g., both SYMBOL, or both ENSEMBL). ",
+                "If the expression matrix uses Ensembl IDs or Entrez IDs while annotations use SYMBOL, ",
+                "convert identifiers first (e.g., via AnnotationDbi::mapIds or org.*.eg.db). ",
+                "A mismatch will cause expressed genes to be misclassified as silent (eP/eG).",
+                call. = FALSE
             )
         }
     }

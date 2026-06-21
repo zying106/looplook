@@ -66,6 +66,31 @@
 # ```
 #
 # =========================================================================
+# 2c. Demo Chromatin Mark BEDs (for vignette examples)
+# Files: example_h3k4me1_peaks.bed, example_h3k4me3_peaks.bed
+# =========================================================================
+# These are tiny (3-region) dummy BED files created from example loop anchor
+# coordinates, solely to enable eval=TRUE in the chromatin-refinement vignette
+# chunks. They are NOT real experimental data and must not be used for
+# biological interpretation.
+#
+# ```bash
+# # H3K4me1: overlapping distal-like anchors from example_loops_1.bedpe
+# cat > inst/extdata/example_h3k4me1_peaks.bed << 'EOF'
+# chr1	109493000	109495500
+# chr1	116845000	116856500
+# chr1	146374500	146379000
+# EOF
+#
+# # H3K4me3: overlapping promoter-like anchors from example_loops_1.bedpe
+# cat > inst/extdata/example_h3k4me3_peaks.bed << 'EOF'
+# chr1	110644500	110649000
+# chr1	117820000	117829500
+# chr1	1371000	1376000
+# EOF
+# ```
+#
+# =========================================================================
 # 3. Pre-computed Result Objects
 # File: analysis_results.RData
 # =========================================================================
