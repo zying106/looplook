@@ -222,10 +222,15 @@ the classification.</p></dd>
     <p><strong>Confidence levels (ENCODE active-enhancer criteria):</strong></p><ul><li><p><code>"gold_standard"</code>: All five marks align with the canonical
 active-enhancer signature: H3K4me1(+), H3K27ac(+), ATAC(+),
 H3K4me3(-), H3K27me3(-). Requires all five marks to be provided.</p></li>
-<li><p><code>"high_confidence"</code>: H3K4me1(+) and H3K27ac(+), or
-H3K4me1(+) and ATAC(+). At least two supporting marks present.</p></li>
+<li><p><code>"high_confidence"</code>: H3K4me1(+) and (H3K27ac(+) or ATAC(+)),
+and H3K4me3(-) if tested. Anchors with H3K4me3(+) are classified as
+<code>"supported"</code> with a <code>"promoter_like"</code> evidence tag.</p></li>
 <li><p><code>"supported"</code>: At least one enhancer-associated mark
-(H3K4me1, H3K27ac, or ATAC) is present.</p></li>
+(H3K4me1, H3K27ac, or ATAC) is present. Anchors with H3K4me3(+)
+– regardless of H3K27me3 status – receive a <code>"promoter_like"</code>
+tag, indicating promoter signal that warrants reversion to P or
+dual-function classification by
+<code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></code>.</p></li>
 <li><p><code>"weak"</code>: Only exclusion marks are informative
 (H3K27me3(-) or H3K4me3(-)) without positive enhancer evidence.</p></li>
 <li><p><code>"uncertain"</code>: No chromatin data provided or no overlaps

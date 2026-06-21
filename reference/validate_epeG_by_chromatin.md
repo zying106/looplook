@@ -115,11 +115,15 @@ refined, P/G when the input is raw from `annotate_peaks_and_loops`):
   active-enhancer signature: H3K4me1(+), H3K27ac(+), ATAC(+),
   H3K4me3(-), H3K27me3(-). Requires all five marks to be provided.
 
-- `"high_confidence"`: H3K4me1(+) and H3K27ac(+), or H3K4me1(+) and
-  ATAC(+). At least two supporting marks present.
+- `"high_confidence"`: H3K4me1(+) and (H3K27ac(+) or ATAC(+)), and
+  H3K4me3(-) if tested. Anchors with H3K4me3(+) are classified as
+  `"supported"` with a `"promoter_like"` evidence tag.
 
 - `"supported"`: At least one enhancer-associated mark (H3K4me1,
-  H3K27ac, or ATAC) is present.
+  H3K27ac, or ATAC) is present. Anchors with H3K4me3(+) – regardless of
+  H3K27me3 status – receive a `"promoter_like"` tag, indicating promoter
+  signal that warrants reversion to P or dual-function classification by
+  [`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md).
 
 - `"weak"`: Only exclusion marks are informative (H3K27me3(-) or
   H3K4me3(-)) without positive enhancer evidence.

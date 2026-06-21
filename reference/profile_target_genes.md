@@ -213,6 +213,13 @@ as warnings and stored in the returned `warnings` element, allowing
 other modules to complete. To proactively disable specific modules, set
 `run_go = FALSE`, `run_ppi = FALSE`, or `run_motif = FALSE`.
 
+## See also
+
+[`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
+for initial 3D annotation,
+[`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
+for expression-aware refinement.
+
 ## Examples
 
 ``` r

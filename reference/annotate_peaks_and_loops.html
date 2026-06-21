@@ -170,7 +170,7 @@ Additional columns beyond 6 are retained in the output; anchor swapping only aff
 
 
 <dt id="arg-tss-region">tss_region<a class="anchor" aria-label="anchor" href="#arg-tss-region"></a></dt>
-<dd><p>Numeric vector of length 2. Promoter window around the TSS in bp. Default: <code>c(-2000, 2000)</code> (typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).</p></dd>
+<dd><p>Numeric vector of length 2. Promoter window around the TSS in bp. Default: <code>c(-2000, 2000)</code> (±2 kb; typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).</p></dd>
 
 
 <dt id="arg-out-dir">out_dir<a class="anchor" aria-label="anchor" href="#arg-out-dir"></a></dt>
@@ -194,7 +194,7 @@ Additional columns beyond 6 are retained in the output; anchor swapping only aff
 
 
 <dt id="arg-karyo-bin-size">karyo_bin_size<a class="anchor" aria-label="anchor" href="#arg-karyo-bin-size"></a></dt>
-<dd><p>Integer. Bin width in bp for karyotype heatmaps. Default: <code>1e5</code>.</p></dd>
+<dd><p>Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default: <code>1e5</code> (100 kb). Typical range: 5e4-5e5 depending on genome size and resolution.</p></dd>
 
 
 <dt id="arg-neighbor-hop">neighbor_hop<a class="anchor" aria-label="anchor" href="#arg-neighbor-hop"></a></dt>
@@ -243,7 +243,7 @@ Default: <code>c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")<
 
 
 <dt id="arg-anchor-gap">anchor_gap<a class="anchor" aria-label="anchor" href="#arg-anchor-gap"></a></dt>
-<dd><p>Integer. Search radius: how far apart (bp) can a peak and loop anchor be for the peak to be considered "near" the anchor? <code>-1L</code> (default): strict physical overlap required (GenomicRanges default – peak and anchor must share at least 1 bp). <code>0L</code>: adjacent intervals (peak end == anchor start) also count. <code>&gt;0</code>: explicit gap tolerance (e.g. <code>200</code> for cross-experiment integration). When <code>&gt;= 0</code>, the result includes both physically overlapping pairs AND proximity-only pairs (within gap but no actual overlap). Use <code>anchor_min_overlap &gt; 1</code> to require actual physical overlap among these candidates.</p></dd>
+<dd><p>Integer. Search radius: how far apart (bp) can a peak and loop anchor be for the peak to be considered "near" the anchor? <code>-1L</code> (default): strict physical overlap required (GenomicRanges default – peak and anchor must share at least 1 bp). <code>0L</code>: adjacent intervals (peak end == anchor start) also count. <code>&gt;0</code>: explicit gap tolerance in bp (e.g. <code>200</code> = 200 bp tolerance for cross-experiment integration). When <code>&gt;= 0</code>, the result includes both physically overlapping pairs AND proximity-only pairs (within gap but no actual overlap). Use <code>anchor_min_overlap &gt; 1</code> to require actual physical overlap among these candidates.</p></dd>
 
 
 <dt id="arg-anchor-min-overlap">anchor_min_overlap<a class="anchor" aria-label="anchor" href="#arg-anchor-min-overlap"></a></dt>
@@ -347,6 +347,12 @@ filters:</p><ol><li><p><code>anchor_gap</code> – expands the search radius aro
 <table class="table table"><tr><td><strong>Experimental design</strong></td><td><code>anchor_gap</code></td><td><code>anchor_min_overlap</code></td><td><code>anchor_min_frac</code></td></tr><tr><td>Same-experiment HiChIP / ChIA-PET (default)</td><td><code>0</code></td><td><code>1</code></td><td><code>0</code></td></tr><tr><td>Cross-experiment (e.g. ATAC-seq peaks x HiChIP loops)</td><td><code>200-500</code></td><td><code>10</code></td><td><code>0</code></td></tr><tr><td>Broad histone-mark peaks (H3K27ac, 2-5 kb)</td><td><code>0</code></td><td><code>100</code></td><td><code>0.1</code></td></tr><tr><td>Super-enhancers / wide domains (20-80 kb)</td><td><code>0</code></td><td><code>500</code></td><td><code>0.05</code></td></tr><tr><td>Point features (GWAS SNPs, eQTLs, 1 bp)</td><td><code>0</code></td><td><code>1</code></td><td><code>0</code></td></tr><tr><td>Stringent (high-confidence only)</td><td><code>0</code></td><td><code>100</code></td><td><code>0.5</code></td></tr></table><p>When <code>quiet = FALSE</code> (default), the function prints a diagnostic line
 reporting how many peaks overlapped loop anchors after filtering, helping you
 tune these thresholds for your data.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></code> for expression-aware refinement,
+<code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></code> for chromatin-guided reclassification,
+<code><a href="profile_target_genes.html">profile_target_genes</a></code> for automated functional profiling.</p></div>
     </div>
 
     <div class="section level2">

@@ -1034,13 +1034,17 @@ a confidence level (highest to lowest):
 | Confidence | Condition |
 |----|----|
 | `gold_standard` | All 5 marks provided; H3K4me1⁺, H3K27ac⁺, ATAC⁺, H3K27me3⁻, H3K4me3⁻ |
-| `high_confidence` | H3K4me1⁺ and (H3K27ac⁺ or ATAC⁺) |
-| `supported` | At least one of H3K4me1, H3K27ac, or ATAC is positive |
+| `high_confidence` | H3K4me1⁺ and (H3K27ac⁺ or ATAC⁺); H3K4me3⁻ if tested (H3K4me3⁺ downgrades to `supported`) |
+| `supported` | At least one of H3K4me1, H3K27ac, or ATAC is positive. H3K4me3⁺ anchors receive a `promoter_like` tag regardless of H3K27me3 status |
 | `weak` | No positive marks, but H3K27me3 or H3K4me3 is tested and absent |
 | `uncertain` | No chromatin data provided or no overlaps detected |
 
 Marks not provided are recorded as `NA` and do not influence scoring —
-missing data is never treated as negative evidence.
+missing data is never treated as negative evidence. Anchors with
+H3K4me3⁺ (with or without H3K27me3⁺) are flagged as `promoter_like`;
+[`refine_loop_anchors_by_chromatin()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
+reverts these to P (active or poised promoter) or dual-function based on
+the full mark combination.
 
 ##### Output Columns
 
@@ -1138,10 +1142,10 @@ automatically generates four diagnostic plots (accessible via `$plots`):
 
 | Plot key | Type | Description |
 |----|----|----|
-| `Chromatin_Dumbbell` | Dumbbell chart | Anchor-type counts before vs. after reclassification |
-| `Chromatin_Sankey` | Sankey flow diagram | Anchor reclassification flows between types (amber = reclassified, green = unchanged) |
-| `Chromatin_MarkHeatmap` | Binary heatmap | Chromatin mark presence/absence at each reclassified anchor, grouped by reclassification outcome and confidence level |
-| `Chromatin_Rose` | Rose (coxcomb) chart | Loop-type proportion distribution after chromatin-guided reclassification |
+| `Chromatin_Dumbbell` | Dumbbell chart | Anchor-type counts before vs. after reclassification. Grey = original, green = refined. |
+| `Chromatin_Sankey` | Sankey flow diagram | Left: anchor types before reclassification. Right: updated types after chromatin-guided reclassification. Green flows = unchanged, amber flows = reclassified. Each flow’s width is proportional to the number of anchors. |
+| `Chromatin_MarkHeatmap` | Aggregated heatmap | % of anchors in each reclassification group positive for each chromatin mark (white = 0%, deep green = 100%). One row per reclassification type (e.g., P→dual), one column per mark. Left bar: anchor count (N) per group. Cell labels show exact percentages. |
+| `Chromatin_Rose` | Rose (coxcomb) chart | Loop-type proportion distribution after chromatin-guided reclassification. |
 
 All plots are returned as **ggplot2** objects (except the heatmap, which
 is a **ComplexHeatmap** grob) and accept standard `+` layers for
@@ -1154,6 +1158,15 @@ cr$plots$Chromatin_Sankey      # reclassification flow diagram
 cr$plots$Chromatin_MarkHeatmap # per-anchor mark landscape
 cr$plots$Chromatin_Rose        # loop type proportions
 ```
+
+**Interpreting the MarkHeatmap:** Rows represent reclassification
+outcomes (e.g., “P → dual” means a promoter was reclassified as a
+dual-function element). Columns represent chromatin marks. High
+percentages (dark green) indicate marks that are frequently present in
+that reclassification group — these are the marks driving the
+reclassification decision. For example, if “P → dual” shows 95% for
+H3K4me1 and 88% for H3K4me3, it confirms that dual-mark presence is the
+primary driver of the P→dual reclassification.
 
 ------------------------------------------------------------------------
 
@@ -1574,6 +1587,221 @@ The template is also accessible from the RStudio menu: **File → New File
 
 ------------------------------------------------------------------------
 
+## Troubleshooting
+
+### Installation
+
+#### TxDb or OrgDb package not found
+
+    Error: TxDb 'TxDb.Hsapiens.UCSC.hg38.knownGene' not installed
+
+**Cause:** The required annotation database package is not installed.
+These are Bioconductor packages, not CRAN.
+
+**Solution:**
+
+``` r
+
+BiocManager::install("TxDb.Hsapiens.UCSC.hg38.knownGene")
+BiocManager::install("org.Hs.eg.db")
+```
+
+For mouse data:
+
+``` r
+
+BiocManager::install("TxDb.Mmusculus.UCSC.mm10.knownGene")
+BiocManager::install("org.Mm.eg.db")
+```
+
+### Input Data
+
+#### BEDPE file must have at least 6 columns
+
+    Error: BEDPE file must have at least 6 columns.
+
+**Cause:** The BEDPE file has fewer than 6 columns. BEDPE format
+requires: chr1, start1, end1, chr2, start2, end2.
+
+**Solution:** Check that the file is tab-delimited and contains at least
+6 columns. Additional columns (name, score, strand) are optional and
+retained in the output.
+
+#### BEDPE file contains rows with start \>= end
+
+    Error: BEDPE file contains rows with start >= end (zero-width or invalid).
+
+**Cause:** Some rows have invalid coordinates where the start position
+is greater than or equal to the end position.
+
+**Solution:** Filter out invalid rows before importing:
+
+``` bash
+awk '$2 < $3 && $5 < $6' input.bedpe > clean.bedpe
+```
+
+#### Expression matrix contains non-numeric values
+
+    Error: Expression matrix contains non-numeric values in sample columns
+
+**Cause:** The expression matrix contains text values (e.g., gene names)
+in sample columns.
+
+**Solution:** Ensure the expression matrix has gene identifiers in the
+first column and numeric values (TPM, FPKM, counts) in all other
+columns.
+
+### Gene Name Matching
+
+#### Only X% of annotation gene symbols match
+
+    Warning: Only 12.5% of annotation gene symbols match the expression matrix row names.
+
+**Cause:** Gene identifiers in the expression matrix do not match the
+OrgDb SYMBOL convention. This commonly occurs when: - Expression matrix
+uses Ensembl IDs (ENSG00000141510) but OrgDb returns gene symbols
+(TP53) - Case mismatch: expression matrix has “tp53” but OrgDb returns
+“TP53”
+
+**Solution:**
+
+``` r
+
+# Check current gene names
+head(rownames(expr_matrix))
+
+# Convert to uppercase if needed
+rownames(expr_matrix) <- toupper(rownames(expr_matrix))
+
+# Or map Ensembl IDs to symbols
+library(org.Hs.eg.db)
+symbols <- mapIds(org.Hs.eg.db, keys = rownames(expr_matrix),
+                  column = "SYMBOL", keytype = "ENSEMBL")
+rownames(expr_matrix) <- symbols
+```
+
+**Note:** looplook performs case-insensitive matching internally (using
+[`toupper()`](https://rdrr.io/r/base/chartr.html) on both sides), but it
+is best practice to use consistent naming.
+
+### Memory and Performance
+
+#### Clustering large datasets
+
+    Warning: Clustering 50000 loops with gap = 1000 bp. Large datasets may require significant memory.
+
+**Cause:** The connected-component clustering algorithm has O(N²)
+worst-case complexity per chromosome pair.
+
+**Solution:**
+
+``` r
+
+# Pre-filter low-confidence loops
+consolidate_chromatin_loops(
+  files = c("rep1.bedpe", "rep2.bedpe"),
+  mode = "consensus",
+  min_raw_score = 2,    # Remove singleton noise
+  gap = 500,            # Reduce gap for faster clustering
+  chaining_policy = "drop"  # Remove chained clusters
+)
+```
+
+#### Chaining warning
+
+    Warning: 5 cluster(s) have max_span > chaining threshold (5000 bp).
+
+**Cause:** Connected-component clustering may transitively merge distant
+loops through intermediate anchors (A-B + B-C merges A and C).
+
+**Solution:**
+
+``` r
+
+# Option 1: Drop chained clusters
+consolidate_chromatin_loops(..., chaining_policy = "drop")
+
+# Option 2: Reduce gap to prevent chaining
+consolidate_chromatin_loops(..., gap = 500)
+
+# Option 3: Inspect and manually filter
+result <- consolidate_chromatin_loops(..., chaining_policy = "none")
+# Filter by span
+anchors <- anchors(result)
+span <- end(anchors$first) - start(anchors$first) + 1
+result <- result[span < 5000]
+```
+
+### Empty Results
+
+#### All loops filtered by min_raw_score
+
+    Message: All loops filtered out by min_raw_score = 10. Returning empty result.
+
+**Cause:** The pre-filtering threshold is too high for the data.
+
+**Solution:** Lower the threshold or disable pre-filtering:
+
+``` r
+
+# Check score distribution first
+gi <- bedpe_to_gi("my_loops.bedpe")
+summary(mcols(gi)$score)
+
+# Use appropriate threshold
+consolidate_chromatin_loops(..., min_raw_score = 2)
+```
+
+#### No peaks overlapped loop anchors
+
+    Message: No peaks overlapped loop anchors. Check that target BED and loop BEDPE use the same genome build.
+
+**Cause:** The target BED file and loop BEDPE file use different genome
+builds (e.g., hg38 vs hg19) or different chromosome naming conventions
+(chr1 vs 1).
+
+**Solution:**
+
+``` r
+
+# Check chromosome names
+seqlevelsStyle(gr_peaks)   # Should match
+seqlevelsStyle(gr_anchors)  # Should match
+
+# Harmonize if needed
+seqlevelsStyle(gr_peaks) <- "UCSC"  # Convert to chr1 format
+```
+
+### Chromatin Refinement
+
+#### eP/eG labels dominate the results
+
+    Warning: 75% of P/G anchors were reclassified to eP/eG.
+
+**Cause:** The expression threshold is too high, or the expression
+matrix does not match the gene annotation.
+
+**Solution:**
+
+``` r
+
+# Check expression distribution
+hist(log2(vals + 1), main = "Expression Distribution")
+
+# Lower threshold
+refine_loop_anchors_by_expression(..., threshold = 0.5)
+
+# Or use quantile mode
+refine_loop_anchors_by_expression(..., threshold = 0.25, 
+                                   threshold_mode = "quantile")
+```
+
+**Important:** eP/eG labels indicate transcriptional silence, not
+functional enhancer activity. Validate with orthogonal chromatin data
+(ATAC-seq, H3K27ac) before biological interpretation.
+
+------------------------------------------------------------------------
+
 ## Session Info
 
 ``` r
@@ -1671,5 +1899,5 @@ sessionInfo()
 #> [131] VariantAnnotation_1.58.0    scales_1.4.0               
 #> [133] purrr_1.2.2                 openxlsx_4.2.8.1           
 #> [135] crayon_1.5.3                bamsignals_1.44.1          
-#> [137] rlang_1.2.0                 KEGGREST_1.52.0
+#> [137] rlang_1.2.0                 KEGGREST_1.52.2
 ```

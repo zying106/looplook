@@ -213,7 +213,7 @@ from forming.</p>
 
 
 <dt id="arg-gap">gap<a class="anchor" aria-label="anchor" href="#arg-gap"></a></dt>
-<dd><p>Numeric. Distance (bp) to consider loops as overlapping. Default 1000.</p></dd>
+<dd><p>Numeric. Maximum distance (in base pairs) between loop anchors to consider them as overlapping. Default: <code>1000</code> (1 kb). Typical range: 500-5000 bp depending on data resolution. Use <code>gap = 0</code> for strict overlap only.</p></dd>
 
 
 <dt id="arg-mode">mode<a class="anchor" aria-label="anchor" href="#arg-mode"></a></dt>
@@ -339,7 +339,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Intersect mode: Reference-based filtering (No Coordinate Merging)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Base: File 1. Criterion: Must overlap with ALL other files.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Intersecting with File 2...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpUyzjL0/file9d55734d1506.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpQyljjy/file9d5a35d4683c.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example B: Consensus Mode (formerly Reproducible)</span></span></span>
@@ -374,8 +374,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     #4: max_span = 11,840 bp, n_members = 2, n_reps = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/12 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>1 cluster(s) have max_span &gt; chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpUyzjL0/file9d55fcbfc94.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpQyljjy/file9d5a3bdc3977.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example C: Union Mode</span></span></span>
@@ -409,8 +408,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     #427: max_span = 26,620 bp, n_members = 1, n_reps = 1</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/586 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>15 cluster(s) have max_span &gt; chaining threshold (24,295 bp). Connected-component clustering may have chained through intermediate loops. Consider reducing 'gap' or inspecting clusters with large 'n_members'.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpUyzjL0/file9d55e1815de.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpQyljjy/file9d5a21ad9e50.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 586</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example D: Dual Filtering Strategy (Recommended for HiChIP)</span></span></span>
@@ -449,7 +447,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/7 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpUyzjL0/file9d551e0c8dc9.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpQyljjy/file9d5a2f4d8b0c.bedpe</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 4</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Inspect results</span></span></span>

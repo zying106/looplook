@@ -1904,11 +1904,14 @@ H3K4me3⁻</td>
 </tr>
 <tr class="even">
 <td><code>high_confidence</code></td>
-<td>H3K4me1⁺ and (H3K27ac⁺ or ATAC⁺)</td>
+<td>H3K4me1⁺ and (H3K27ac⁺ or ATAC⁺); H3K4me3⁻ if tested (H3K4me3⁺
+downgrades to <code>supported</code>)</td>
 </tr>
 <tr class="odd">
 <td><code>supported</code></td>
-<td>At least one of H3K4me1, H3K27ac, or ATAC is positive</td>
+<td>At least one of H3K4me1, H3K27ac, or ATAC is positive. H3K4me3⁺
+anchors receive a <code>promoter_like</code> tag regardless of H3K27me3
+status</td>
 </tr>
 <tr class="even">
 <td><code>weak</code></td>
@@ -1921,8 +1924,12 @@ H3K4me3⁻</td>
 </tbody>
 </table>
 <p>Marks not provided are recorded as <code>NA</code> and do not
-influence scoring — missing data is never treated as negative
-evidence.</p>
+influence scoring — missing data is never treated as negative evidence.
+Anchors with H3K4me3⁺ (with or without H3K27me3⁺) are flagged as
+<code>promoter_like</code>;
+<code><a href="../reference/refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin()</a></code> reverts these to P
+(active or poised promoter) or dual-function based on the full mark
+combination.</p>
 </div>
 <div class="section level5">
 <h5 id="output-columns">Output Columns<a class="anchor" aria-label="anchor" href="#output-columns"></a>
@@ -2085,25 +2092,30 @@ generates four diagnostic plots (accessible via
 <tr class="odd">
 <td><code>Chromatin_Dumbbell</code></td>
 <td>Dumbbell chart</td>
-<td>Anchor-type counts before vs. after reclassification</td>
+<td>Anchor-type counts before vs. after reclassification. Grey =
+original, green = refined.</td>
 </tr>
 <tr class="even">
 <td><code>Chromatin_Sankey</code></td>
 <td>Sankey flow diagram</td>
-<td>Anchor reclassification flows between types (amber = reclassified,
-green = unchanged)</td>
+<td>Left: anchor types before reclassification. Right: updated types
+after chromatin-guided reclassification. Green flows = unchanged, amber
+flows = reclassified. Each flow’s width is proportional to the number of
+anchors.</td>
 </tr>
 <tr class="odd">
 <td><code>Chromatin_MarkHeatmap</code></td>
-<td>Binary heatmap</td>
-<td>Chromatin mark presence/absence at each reclassified anchor, grouped
-by reclassification outcome and confidence level</td>
+<td>Aggregated heatmap</td>
+<td>% of anchors in each reclassification group positive for each
+chromatin mark (white = 0%, deep green = 100%). One row per
+reclassification type (e.g., P→dual), one column per mark. Left bar:
+anchor count (N) per group. Cell labels show exact percentages.</td>
 </tr>
 <tr class="even">
 <td><code>Chromatin_Rose</code></td>
 <td>Rose (coxcomb) chart</td>
 <td>Loop-type proportion distribution after chromatin-guided
-reclassification</td>
+reclassification.</td>
 </tr>
 </tbody>
 </table>
@@ -2116,6 +2128,14 @@ plot:</p>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_Sankey</span>      <span class="co"># reclassification flow diagram</span></span>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_MarkHeatmap</span> <span class="co"># per-anchor mark landscape</span></span>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_Rose</span>        <span class="co"># loop type proportions</span></span></code></pre></div>
+<p><strong>Interpreting the MarkHeatmap:</strong> Rows represent
+reclassification outcomes (e.g., “P → dual” means a promoter was
+reclassified as a dual-function element). Columns represent chromatin
+marks. High percentages (dark green) indicate marks that are frequently
+present in that reclassification group — these are the marks driving the
+reclassification decision. For example, if “P → dual” shows 95% for
+H3K4me1 and 88% for H3K4me3, it confirms that dual-mark presence is the
+primary driver of the P→dual reclassification.</p>
 <hr>
 </div>
 </div>
@@ -2672,9 +2692,201 @@ New File → R Markdown → From Template → looplook Report</strong>.</p>
 <hr>
 </div>
 <div class="section level2">
+<h2 id="troubleshooting">Troubleshooting<a class="anchor" aria-label="anchor" href="#troubleshooting"></a>
+</h2>
+<div class="section level3">
+<h3 id="installation-1">Installation<a class="anchor" aria-label="anchor" href="#installation-1"></a>
+</h3>
+<div class="section level4">
+<h4 id="txdb-or-orgdb-package-not-found">TxDb or OrgDb package not found<a class="anchor" aria-label="anchor" href="#txdb-or-orgdb-package-not-found"></a>
+</h4>
+<pre><code>Error: TxDb 'TxDb.Hsapiens.UCSC.hg38.knownGene' not installed</code></pre>
+<p><strong>Cause:</strong> The required annotation database package is
+not installed. These are Bioconductor packages, not CRAN.</p>
+<p><strong>Solution:</strong></p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"TxDb.Hsapiens.UCSC.hg38.knownGene"</span><span class="op">)</span></span>
+<span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span><span class="op">)</span></span></code></pre></div>
+<p>For mouse data:</p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"TxDb.Mmusculus.UCSC.mm10.knownGene"</span><span class="op">)</span></span>
+<span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"org.Mm.eg.db"</span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level3">
+<h3 id="input-data">Input Data<a class="anchor" aria-label="anchor" href="#input-data"></a>
+</h3>
+<div class="section level4">
+<h4 id="bedpe-file-must-have-at-least-6-columns">BEDPE file must have at least 6 columns<a class="anchor" aria-label="anchor" href="#bedpe-file-must-have-at-least-6-columns"></a>
+</h4>
+<pre><code>Error: BEDPE file must have at least 6 columns.</code></pre>
+<p><strong>Cause:</strong> The BEDPE file has fewer than 6 columns.
+BEDPE format requires: chr1, start1, end1, chr2, start2, end2.</p>
+<p><strong>Solution:</strong> Check that the file is tab-delimited and
+contains at least 6 columns. Additional columns (name, score, strand)
+are optional and retained in the output.</p>
+</div>
+<div class="section level4">
+<h4 id="bedpe-file-contains-rows-with-start-end">BEDPE file contains rows with start &gt;= end<a class="anchor" aria-label="anchor" href="#bedpe-file-contains-rows-with-start-end"></a>
+</h4>
+<pre><code>Error: BEDPE file contains rows with start &gt;= end (zero-width or invalid).</code></pre>
+<p><strong>Cause:</strong> Some rows have invalid coordinates where the
+start position is greater than or equal to the end position.</p>
+<p><strong>Solution:</strong> Filter out invalid rows before
+importing:</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="fu">awk</span> <span class="st">'$2 &lt; $3 &amp;&amp; $5 &lt; $6'</span> input.bedpe <span class="op">&gt;</span> clean.bedpe</span></code></pre></div>
+</div>
+<div class="section level4">
+<h4 id="expression-matrix-contains-non-numeric-values">Expression matrix contains non-numeric values<a class="anchor" aria-label="anchor" href="#expression-matrix-contains-non-numeric-values"></a>
+</h4>
+<pre><code>Error: Expression matrix contains non-numeric values in sample columns</code></pre>
+<p><strong>Cause:</strong> The expression matrix contains text values
+(e.g., gene names) in sample columns.</p>
+<p><strong>Solution:</strong> Ensure the expression matrix has gene
+identifiers in the first column and numeric values (TPM, FPKM, counts)
+in all other columns.</p>
+</div>
+</div>
+<div class="section level3">
+<h3 id="gene-name-matching">Gene Name Matching<a class="anchor" aria-label="anchor" href="#gene-name-matching"></a>
+</h3>
+<div class="section level4">
+<h4 id="only-x-of-annotation-gene-symbols-match">Only X% of annotation gene symbols match<a class="anchor" aria-label="anchor" href="#only-x-of-annotation-gene-symbols-match"></a>
+</h4>
+<pre><code>Warning: Only 12.5% of annotation gene symbols match the expression matrix row names.</code></pre>
+<p><strong>Cause:</strong> Gene identifiers in the expression matrix do
+not match the OrgDb SYMBOL convention. This commonly occurs when: -
+Expression matrix uses Ensembl IDs (ENSG00000141510) but OrgDb returns
+gene symbols (TP53) - Case mismatch: expression matrix has “tp53” but
+OrgDb returns “TP53”</p>
+<p><strong>Solution:</strong></p>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Check current gene names</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">expr_matrix</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Convert to uppercase if needed</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">expr_matrix</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/chartr.html" class="external-link">toupper</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">expr_matrix</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or map Ensembl IDs to symbols</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">org.Hs.eg.db</span><span class="op">)</span></span>
+<span><span class="va">symbols</span> <span class="op">&lt;-</span> <span class="fu">mapIds</span><span class="op">(</span><span class="va">org.Hs.eg.db</span>, keys <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">expr_matrix</span><span class="op">)</span>,</span>
+<span>                  column <span class="op">=</span> <span class="st">"SYMBOL"</span>, keytype <span class="op">=</span> <span class="st">"ENSEMBL"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">expr_matrix</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">symbols</span></span></code></pre></div>
+<p><strong>Note:</strong> looplook performs case-insensitive matching
+internally (using <code><a href="https://rdrr.io/r/base/chartr.html" class="external-link">toupper()</a></code> on both sides), but it is best
+practice to use consistent naming.</p>
+</div>
+</div>
+<div class="section level3">
+<h3 id="memory-and-performance">Memory and Performance<a class="anchor" aria-label="anchor" href="#memory-and-performance"></a>
+</h3>
+<div class="section level4">
+<h4 id="clustering-large-datasets">Clustering large datasets<a class="anchor" aria-label="anchor" href="#clustering-large-datasets"></a>
+</h4>
+<pre><code>Warning: Clustering 50000 loops with gap = 1000 bp. Large datasets may require significant memory.</code></pre>
+<p><strong>Cause:</strong> The connected-component clustering algorithm
+has O(N²) worst-case complexity per chromosome pair.</p>
+<p><strong>Solution:</strong></p>
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Pre-filter low-confidence loops</span></span>
+<span><span class="fu"><a href="../reference/consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></span><span class="op">(</span></span>
+<span>  files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rep1.bedpe"</span>, <span class="st">"rep2.bedpe"</span><span class="op">)</span>,</span>
+<span>  mode <span class="op">=</span> <span class="st">"consensus"</span>,</span>
+<span>  min_raw_score <span class="op">=</span> <span class="fl">2</span>,    <span class="co"># Remove singleton noise</span></span>
+<span>  gap <span class="op">=</span> <span class="fl">500</span>,            <span class="co"># Reduce gap for faster clustering</span></span>
+<span>  chaining_policy <span class="op">=</span> <span class="st">"drop"</span>  <span class="co"># Remove chained clusters</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level4">
+<h4 id="chaining-warning">Chaining warning<a class="anchor" aria-label="anchor" href="#chaining-warning"></a>
+</h4>
+<pre><code>Warning: 5 cluster(s) have max_span &gt; chaining threshold (5000 bp).</code></pre>
+<p><strong>Cause:</strong> Connected-component clustering may
+transitively merge distant loops through intermediate anchors (A-B + B-C
+merges A and C).</p>
+<p><strong>Solution:</strong></p>
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Option 1: Drop chained clusters</span></span>
+<span><span class="fu"><a href="../reference/consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></span><span class="op">(</span><span class="va">...</span>, chaining_policy <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Option 2: Reduce gap to prevent chaining</span></span>
+<span><span class="fu"><a href="../reference/consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></span><span class="op">(</span><span class="va">...</span>, gap <span class="op">=</span> <span class="fl">500</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Option 3: Inspect and manually filter</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></span><span class="op">(</span><span class="va">...</span>, chaining_policy <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span>
+<span><span class="co"># Filter by span</span></span>
+<span><span class="va">anchors</span> <span class="op">&lt;-</span> <span class="fu">anchors</span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span>
+<span><span class="va">span</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/start.html" class="external-link">end</a></span><span class="op">(</span><span class="va">anchors</span><span class="op">$</span><span class="va">first</span><span class="op">)</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/stats/start.html" class="external-link">start</a></span><span class="op">(</span><span class="va">anchors</span><span class="op">$</span><span class="va">first</span><span class="op">)</span> <span class="op">+</span> <span class="fl">1</span></span>
+<span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">[</span><span class="va">span</span> <span class="op">&lt;</span> <span class="fl">5000</span><span class="op">]</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level3">
+<h3 id="empty-results">Empty Results<a class="anchor" aria-label="anchor" href="#empty-results"></a>
+</h3>
+<div class="section level4">
+<h4 id="all-loops-filtered-by-min_raw_score">All loops filtered by min_raw_score<a class="anchor" aria-label="anchor" href="#all-loops-filtered-by-min_raw_score"></a>
+</h4>
+<pre><code>Message: All loops filtered out by min_raw_score = 10. Returning empty result.</code></pre>
+<p><strong>Cause:</strong> The pre-filtering threshold is too high for
+the data.</p>
+<p><strong>Solution:</strong> Lower the threshold or disable
+pre-filtering:</p>
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Check score distribution first</span></span>
+<span><span class="va">gi</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bedpe_to_gi.html">bedpe_to_gi</a></span><span class="op">(</span><span class="st">"my_loops.bedpe"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu">mcols</span><span class="op">(</span><span class="va">gi</span><span class="op">)</span><span class="op">$</span><span class="va">score</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Use appropriate threshold</span></span>
+<span><span class="fu"><a href="../reference/consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></span><span class="op">(</span><span class="va">...</span>, min_raw_score <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level4">
+<h4 id="no-peaks-overlapped-loop-anchors">No peaks overlapped loop anchors<a class="anchor" aria-label="anchor" href="#no-peaks-overlapped-loop-anchors"></a>
+</h4>
+<pre><code>Message: No peaks overlapped loop anchors. Check that target BED and loop BEDPE use the same genome build.</code></pre>
+<p><strong>Cause:</strong> The target BED file and loop BEDPE file use
+different genome builds (e.g., hg38 vs hg19) or different chromosome
+naming conventions (chr1 vs 1).</p>
+<p><strong>Solution:</strong></p>
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Check chromosome names</span></span>
+<span><span class="fu">seqlevelsStyle</span><span class="op">(</span><span class="va">gr_peaks</span><span class="op">)</span>   <span class="co"># Should match</span></span>
+<span><span class="fu">seqlevelsStyle</span><span class="op">(</span><span class="va">gr_anchors</span><span class="op">)</span>  <span class="co"># Should match</span></span>
+<span></span>
+<span><span class="co"># Harmonize if needed</span></span>
+<span><span class="fu">seqlevelsStyle</span><span class="op">(</span><span class="va">gr_peaks</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="st">"UCSC"</span>  <span class="co"># Convert to chr1 format</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level3">
+<h3 id="chromatin-refinement">Chromatin Refinement<a class="anchor" aria-label="anchor" href="#chromatin-refinement"></a>
+</h3>
+<div class="section level4">
+<h4 id="epeg-labels-dominate-the-results">eP/eG labels dominate the results<a class="anchor" aria-label="anchor" href="#epeg-labels-dominate-the-results"></a>
+</h4>
+<pre><code>Warning: 75% of P/G anchors were reclassified to eP/eG.</code></pre>
+<p><strong>Cause:</strong> The expression threshold is too high, or the
+expression matrix does not match the gene annotation.</p>
+<p><strong>Solution:</strong></p>
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Check expression distribution</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log2</a></span><span class="op">(</span><span class="va">vals</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Expression Distribution"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Lower threshold</span></span>
+<span><span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span><span class="va">...</span>, threshold <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or use quantile mode</span></span>
+<span><span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span><span class="va">...</span>, threshold <span class="op">=</span> <span class="fl">0.25</span>, </span>
+<span>                                   threshold_mode <span class="op">=</span> <span class="st">"quantile"</span><span class="op">)</span></span></code></pre></div>
+<p><strong>Important:</strong> eP/eG labels indicate transcriptional
+silence, not functional enhancer activity. Validate with orthogonal
+chromatin data (ATAC-seq, H3K27ac) before biological interpretation.</p>
+<hr>
+</div>
+</div>
+</div>
+<div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
@@ -2768,7 +2980,7 @@ New File → R Markdown → From Template → looplook Report</strong>.</p>
 <span><span class="co">#&gt; [131] VariantAnnotation_1.58.0    scales_1.4.0               </span></span>
 <span><span class="co">#&gt; [133] purrr_1.2.2                 openxlsx_4.2.8.1           </span></span>
 <span><span class="co">#&gt; [135] crayon_1.5.3                bamsignals_1.44.1          </span></span>
-<span><span class="co">#&gt; [137] rlang_1.2.0                 KEGGREST_1.52.0</span></span></code></pre></div>
+<span><span class="co">#&gt; [137] rlang_1.2.0                 KEGGREST_1.52.2</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

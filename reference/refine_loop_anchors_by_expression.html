@@ -157,7 +157,7 @@ loops belong to the high-confidence active subset.</p>
 
 
 <dt id="arg-threshold">threshold<a class="anchor" aria-label="anchor" href="#arg-threshold"></a></dt>
-<dd><p>Numeric. Minimum expression (e.g. TPM &gt;= 1) for a gene to be considered active. Default: <code>1</code>.
+<dd><p>Numeric. Minimum expression value (e.g., TPM &gt;= 1) for a gene to be considered active. Default: <code>1</code>. Set to <code>0</code> to retain any detected expression (TPM &gt; 0). Use <code>threshold_mode = "quantile"</code> to specify a quantile instead of an absolute value.
 <strong>Gene name matching is case-sensitive.</strong> Ensure gene identifiers in
 <code>expr_matrix_file</code> use the same case as the symbols returned by your
 OrgDb (typically all-uppercase for human and mouse, e.g. <code>"TP53"</code>,
@@ -196,7 +196,7 @@ sequencing depths. The effective expression cutoff is reported in the log.</p></
 
 
 <dt id="arg-karyo-bin-size">karyo_bin_size<a class="anchor" aria-label="anchor" href="#arg-karyo-bin-size"></a></dt>
-<dd><p>Integer. Bin width in bp for karyotype heatmaps. Default: <code>1e5</code>.</p></dd>
+<dd><p>Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default: <code>1e5</code> (100 kb). Typical range: 5e4-5e5 depending on genome size and resolution.</p></dd>
 
 
 <dt id="arg-reclassify-by-expression">reclassify_by_expression<a class="anchor" aria-label="anchor" href="#arg-reclassify-by-expression"></a></dt>
@@ -325,6 +325,11 @@ treated as hypotheses requiring orthogonal validation (ATAC-seq, H3K27ac,
 H3K4me1, or H3K27me3 depletion). Users with matched chromatin data should
 overlay eP/eG loci against these tracks before interpreting them as
 putative regulatory elements.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></code> for initial 3D annotation,
+<code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></code> for chromatin-guided reclassification.</p></div>
     </div>
 
     <div class="section level2">

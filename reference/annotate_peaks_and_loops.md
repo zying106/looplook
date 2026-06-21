@@ -82,9 +82,9 @@ annotate_peaks_and_loops(
 - tss_region:
 
   Numeric vector of length 2. Promoter window around the TSS in bp.
-  Default: `c(-2000, 2000)` (typical for mammalian protein-coding genes;
-  may need widening for broad domains like HOX clusters, or narrowing
-  for compact genomes).
+  Default: `c(-2000, 2000)` (±2 kb; typical for mammalian protein-coding
+  genes; may need widening for broad domains like HOX clusters, or
+  narrowing for compact genomes).
 
 - out_dir:
 
@@ -113,7 +113,9 @@ annotate_peaks_and_loops(
 
 - karyo_bin_size:
 
-  Integer. Bin width in bp for karyotype heatmaps. Default: `1e5`.
+  Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default:
+  `1e5` (100 kb). Typical range: 5e4-5e5 depending on genome size and
+  resolution.
 
 - neighbor_hop:
 
@@ -176,11 +178,12 @@ annotate_peaks_and_loops(
   be for the peak to be considered "near" the anchor? `-1L` (default):
   strict physical overlap required (GenomicRanges default – peak and
   anchor must share at least 1 bp). `0L`: adjacent intervals (peak end
-  == anchor start) also count. `>0`: explicit gap tolerance (e.g. `200`
-  for cross-experiment integration). When `>= 0`, the result includes
-  both physically overlapping pairs AND proximity-only pairs (within gap
-  but no actual overlap). Use `anchor_min_overlap > 1` to require actual
-  physical overlap among these candidates.
+  == anchor start) also count. `>0`: explicit gap tolerance in bp (e.g.
+  `200` = 200 bp tolerance for cross-experiment integration). When
+  `>= 0`, the result includes both physically overlapping pairs AND
+  proximity-only pairs (within gap but no actual overlap). Use
+  `anchor_min_overlap > 1` to require actual physical overlap among
+  these candidates.
 
 - anchor_min_overlap:
 
@@ -377,6 +380,15 @@ designs.
 When `quiet = FALSE` (default), the function prints a diagnostic line
 reporting how many peaks overlapped loop anchors after filtering,
 helping you tune these thresholds for your data.
+
+## See also
+
+[`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
+for expression-aware refinement,
+[`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
+for chromatin-guided reclassification,
+[`profile_target_genes`](https://zying106.github.io/looplook/reference/profile_target_genes.md)
+for automated functional profiling.
 
 ## Examples
 

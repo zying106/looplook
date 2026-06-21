@@ -49,8 +49,10 @@ refine_loop_anchors_by_expression(
 
 - threshold:
 
-  Numeric. Minimum expression (e.g. TPM \>= 1) for a gene to be
-  considered active. Default: `1`. **Gene name matching is
+  Numeric. Minimum expression value (e.g., TPM \>= 1) for a gene to be
+  considered active. Default: `1`. Set to `0` to retain any detected
+  expression (TPM \> 0). Use `threshold_mode = "quantile"` to specify a
+  quantile instead of an absolute value. **Gene name matching is
   case-sensitive.** Ensure gene identifiers in `expr_matrix_file` use
   the same case as the symbols returned by your OrgDb (typically
   all-uppercase for human and mouse, e.g. `"TP53"`, not `"Tp53"`).
@@ -95,7 +97,9 @@ refine_loop_anchors_by_expression(
 
 - karyo_bin_size:
 
-  Integer. Bin width in bp for karyotype heatmaps. Default: `1e5`.
+  Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default:
+  `1e5` (100 kb). Typical range: 5e4-5e5 depending on genome size and
+  resolution.
 
 - reclassify_by_expression:
 
@@ -298,6 +302,13 @@ hypotheses requiring orthogonal validation (ATAC-seq, H3K27ac, H3K4me1,
 or H3K27me3 depletion). Users with matched chromatin data should overlay
 eP/eG loci against these tracks before interpreting them as putative
 regulatory elements.
+
+## See also
+
+[`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
+for initial 3D annotation,
+[`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
+for chromatin-guided reclassification.
 
 ## Examples
 

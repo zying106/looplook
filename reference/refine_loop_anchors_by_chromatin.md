@@ -19,6 +19,7 @@ refine_loop_anchors_by_chromatin(
   species = "hg38",
   out_dir = "./results/chromatin",
   project_name = "HiChIP",
+  color_palette = "Paired",
   candidate_types = NULL,
   recompute_targets = FALSE,
   write_output = TRUE,
@@ -61,6 +62,12 @@ refine_loop_anchors_by_chromatin(
 - project_name:
 
   Character. Project prefix. Default `"HiChIP"`.
+
+- color_palette:
+
+  Character. RColorBrewer palette name for the rose chart and sankey
+  fallback colours. Dumbbell and mark-enrichment heatmap use fixed
+  academic palettes. Default: `"Paired"`.
 
 - candidate_types:
 
@@ -132,20 +139,20 @@ output).
 
 - All other anchors: unchanged.
 
-**Important — H3K4me3 dependency:** Rules that test for H3K4me3
-*absence* (e.g., P→E, G→E) require H3K4me3 to be provided and explicitly
-called as absent at the anchor. When `H3K4me3` is not included in
-`chromatin_beds`, H3K4me3 is `NA` for all anchors, and these rules are
-skipped entirely (conservative: no reclassification without explicit
-data). Include `H3K4me3` to enable the full set of reclassification
-rules.
+**Important – H3K4me3 dependency:** Rules that test for H3K4me3
+*absence* (e.g., P -\> E, G -\> E) require H3K4me3 to be provided and
+explicitly called as absent at the anchor. When `H3K4me3` is not
+included in `chromatin_beds`, H3K4me3 is `NA` for all anchors, and these
+rules are skipped entirely (conservative: no reclassification without
+explicit data). Include `H3K4me3` to enable the full set of
+reclassification rules.
 
 **Chromatin state inference:** Each anchor is also assigned a
 `chromatin_state` based on its mark combination (highest-priority match
 first):
 
 - `"conflicting_marks"`: H3K27me3+ coexisting with any active mark
-  (H3K4me1+, H3K27ac+, or H3K4me3+) — bivalent/poised/ambiguous
+  (H3K4me1+, H3K27ac+, or H3K4me3+) – bivalent/poised/ambiguous
   chromatin; takes priority over enhancer-like and dual-like
   classifications.
 
@@ -173,6 +180,15 @@ tests `P`, `G`, and `E` anchors. Expression-refined input tests `eP` and
 
 After reclassification, `loop_type` is recomputed from the updated
 anchor types.
+
+## See also
+
+[`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
+for initial 3D annotation,
+[`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
+for expression-aware refinement,
+[`validate_epeG_by_chromatin`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)
+for standalone chromatin validation.
 
 ## Examples
 
