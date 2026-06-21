@@ -386,7 +386,7 @@ helping you tune these thresholds for your data.
 [`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
 for expression-aware refinement,
 [`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
-for chromatin-guided reclassification,
+for chromatin-aware reclassification,
 [`profile_target_genes`](https://zying106.github.io/looplook/reference/profile_target_genes.md)
 for automated functional profiling.
 

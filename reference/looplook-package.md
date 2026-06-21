@@ -21,9 +21,15 @@ data integration, functional annotation, and data visualization.
   expression-aware conflict resolution
   ([`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)).
 
-- **Expression-Aware Refinement:** Transcriptome-guided filtering and
+- **Expression-Aware Refinement:** Transcriptome-aware filtering and
   topological reclassification of silent regulatory elements
   ([`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)).
+
+- **Chromatin-Aware Refinement:** Chromatin mark-based anchor
+  reclassification, dual-function element detection, and orthogonal
+  validation of expression-derived hypotheses
+  ([`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md),
+  [`validate_epeG_by_chromatin`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)).
 
 - **Automated Profiling:** End-to-end multi-omics analysis including
   GSEA, GO enrichment, motif scanning, and PPI networks

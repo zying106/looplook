@@ -16,8 +16,8 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Integrative Suite for Target Assignment and Functional Annotation of Chromatin Interactions">
-<meta name="description" content="Provides a versatile suite for target assignment and functional annotation of 3D chromatin interactions. Leverages customizable genomic feature integration, expression-aware refinement, and connected-components clustering to prioritize biologically relevant chromatin loops. The pipeline also supports multi-omics data integration, functional annotation (GO, GSEA, motif, PPI), and publication-ready visualization.">
-<meta property="og:description" content="Provides a versatile suite for target assignment and functional annotation of 3D chromatin interactions. Leverages customizable genomic feature integration, expression-aware refinement, and connected-components clustering to prioritize biologically relevant chromatin loops. The pipeline also supports multi-omics data integration, functional annotation (GO, GSEA, motif, PPI), and publication-ready visualization.">
+<meta name="description" content="Provides tools for target assignment and functional annotation of 3D chromatin interactions. Integrates genomic feature data, expression-aware and chromatin-aware refinement, and connected-components clustering to prioritize biologically relevant chromatin loops. Supports functional profiling (GO, GSEA, motif, PPI) and programmatic figure generation.">
+<meta property="og:description" content="Provides tools for target assignment and functional annotation of 3D chromatin interactions. Integrates genomic feature data, expression-aware and chromatin-aware refinement, and connected-components clustering to prioritize biologically relevant chromatin loops. Supports functional profiling (GO, GSEA, motif, PPI) and programmatic figure generation.">
 <meta property="og:image" content="https://zying106.github.io/looplook/logo.png">
 <style>
 .template-article .row > main,
@@ -129,7 +129,7 @@
 <img src="logo.png" class="logo" alt=""><h1 id="looplook-">looplook <a class="anchor" aria-label="anchor" href="#looplook-"></a>
 </h1>
 </div>
-<p>An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions.</p>
+<p>An integrative suite for target assignment and functional annotation of chromatin interactions.</p>
 <p><a href="https://github.com/zying106/looplook/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/zying106/looplook/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a> <a href="https://www.gnu.org/licenses/gpl-3.0" class="external-link"><img src="https://img.shields.io/badge/License-GPL%20v3-blue.svg" alt="License: GPL (&gt;= 3)"></a> <a href="#"><img src="https://img.shields.io/badge/Bioconductor-Ready-success.svg" alt="Bioconductor Ready"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#stable" class="external-link"><img src="https://img.shields.io/badge/lifecycle-stable-brightgreen.svg" alt="Lifecycle: stable"></a></p>
 <hr>
 <div class="section level2">
@@ -302,7 +302,7 @@
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">val</span><span class="op">$</span><span class="va">confidence</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Chromatin-guided reclassification with target link recomputation</span></span>
+<span><span class="co"># Chromatin-aware reclassification with target link recomputation</span></span>
 <span><span class="va">cr</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></span><span class="op">(</span></span>
 <span>  annotation_res   <span class="op">=</span> <span class="va">refined_res</span>,</span>
 <span>  chromatin_beds   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
@@ -471,7 +471,7 @@
 <span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a><span class="do">##  tz       Asia/Singapore</span></span>
 <span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="do">##  date     2026-06-21</span></span>
 <span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="do">##  pandoc   3.9.0.2 @ /opt/homebrew/bin/ (via rmarkdown)</span></span>
-<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="do">##  quarto   NA</span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="do">##  quarto   1.6.42 @ /Applications/RStudio.app/Contents/Resources/app/quarto/bin/quarto</span></span>
 <span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="do">## </span></span>
 <span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="do">## ─ Packages ───────────────────────────────────────────────────────────────────</span></span>
 <span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="do">##  package                           * version   date (UTC) lib source</span></span>
@@ -596,7 +596,7 @@
 <span id="cb10-135"><a href="#cb10-135" tabindex="-1"></a><span class="do">##  lattice                             0.22-7    2025-04-02 [1] CRAN (R 4.5.1)</span></span>
 <span id="cb10-136"><a href="#cb10-136" tabindex="-1"></a><span class="do">##  lazyeval                            0.2.3     2026-04-04 [1] CRAN (R 4.5.2)</span></span>
 <span id="cb10-137"><a href="#cb10-137" tabindex="-1"></a><span class="do">##  lifecycle                           1.0.5     2026-01-08 [1] CRAN (R 4.5.2)</span></span>
-<span id="cb10-138"><a href="#cb10-138" tabindex="-1"></a><span class="do">##  looplook                          * 0.99.14   2026-06-20 [1] Bioconductor</span></span>
+<span id="cb10-138"><a href="#cb10-138" tabindex="-1"></a><span class="do">##  looplook                          * 0.99.14   2026-06-21 [1] Bioconductor</span></span>
 <span id="cb10-139"><a href="#cb10-139" tabindex="-1"></a><span class="do">##  magick                              2.9.0     2025-09-08 [1] CRAN (R 4.5.0)</span></span>
 <span id="cb10-140"><a href="#cb10-140" tabindex="-1"></a><span class="do">##  magrittr                            2.0.5     2026-04-04 [1] CRAN (R 4.5.2)</span></span>
 <span id="cb10-141"><a href="#cb10-141" tabindex="-1"></a><span class="do">##  maps                                3.4.3     2025-05-26 [1] CRAN (R 4.5.0)</span></span>

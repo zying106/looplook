@@ -1,4 +1,4 @@
-# Chromatin-guided refinement of loop anchor classification
+# Chromatin-Aware refinement of loop anchor classification
 
 Refines loop anchor types (P, E, G, eP, eG) using chromatin mark
 evidence (H3K4me1, H3K4me3, and optionally H3K27ac, ATAC, H3K27me3).
@@ -120,7 +120,9 @@ output).
   alone).
 
 - eP/eG + gold_standard or high_confidence + active/primed enhancer
-  chromatin -\> kept (confirmed distal).
+  chromatin -\> `"E"` (enhancer identity confirmed; matches the P-\>E
+  rule to guarantee the same outcome whether expression or chromatin
+  refinement runs first).
 
 - eP + promoter_like (H3K4me3+, H3K27me3-) -\> `"P"` (revert).
 
@@ -181,6 +183,30 @@ tests `P`, `G`, and `E` anchors. Expression-refined input tests `eP` and
 After reclassification, `loop_type` is recomputed from the updated
 anchor types.
 
+**Pipeline guidance:** The two refinement modules serve distinct roles
+in a complete analysis:
+
+- **Expression-aware refinement** evaluates transcriptional activity (is
+  the gene expressed?) and produces activity-aware metrics
+  (`Active_Target_Genes`, `Retained_In_Functional_Network`,
+  `Refinement_Action`) required for downstream GSEA, GO enrichment, and
+  differential expression profiling.
+
+- **Chromatin-aware refinement** evaluates chromatin identity (what *is*
+  this anchor?) using direct histone mark evidence, correcting anchor
+  types and reclassifying eP/eG into definitive categories (E, P, G,
+  dual).
+
+When you have **both RNA-seq and ChIP-seq**, use
+`refine_loop_anchors_by_expression` first, then
+`refine_loop_anchors_by_chromatin` – expression marks silent anchors as
+hypotheses (eP/eG), chromatin confirms or corrects them into definitive
+types, and the expression-derived activity columns
+(`Active_Target_Genes` etc.) pass through into downstream profiling.
+When you have **only ChIP-seq**, run chromatin refinement directly on
+the output of
+[`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md).
+
 ## See also
 
 [`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
@@ -193,15 +219,35 @@ for standalone chromatin validation.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
-refined_chromatin <- refine_loop_anchors_by_chromatin(
-  annotation_res = refined_expr,
-  chromatin_beds = list(
-    H3K4me1 = "H3K4me1_peaks.bed",
-    H3K4me3 = "H3K4me3_peaks.bed",
-    H3K27ac = "H3K27ac_peaks.bed"
-  )
+# 1. Get paths to the required example files in the package
+rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
+k4me1_path <- system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook")
+k4me3_path <- system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook")
+
+# 2. Load pre-computed annotation result
+temp_env <- new.env()
+load(rdata_path, envir = temp_env)
+raw_annotation <- temp_env[[ls(temp_env)[1]]]
+raw_annotation$loop_annotation <- head(raw_annotation$loop_annotation, 10)
+raw_annotation$target_annotation <- head(raw_annotation$target_annotation, 3)
+
+# 3. Run chromatin-aware refinement
+res_chromatin <- refine_loop_anchors_by_chromatin(
+    annotation_res = raw_annotation,
+    chromatin_beds = list(
+        H3K4me1 = k4me1_path,
+        H3K4me3 = k4me3_path
+    ),
+    anchor_gap = 500,
+    anchor_min_overlap = 100,
+    species = "hg38",
+    out_dir = tempdir(),
+    project_name = "Example_Chromatin",
+    write_output = FALSE,
+    quiet = TRUE
 )
-table(refined_chromatin$loop_annotation$loop_type)
-} # }
+table(res_chromatin$loop_annotation$loop_type)
+#> 
+#> E-E E-P G-G G-P P-P 
+#>   1   2   1   1   5 
 ```

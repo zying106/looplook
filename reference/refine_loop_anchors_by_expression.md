@@ -303,12 +303,22 @@ or H3K27me3 depletion). Users with matched chromatin data should overlay
 eP/eG loci against these tracks before interpreting them as putative
 regulatory elements.
 
+**Pipeline guidance:** When matched chromatin data are available, follow
+expression refinement with
+[`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
+– chromatin evidence resolves eP/eG into definitive types (E, P, G,
+dual), while the expression-derived activity columns
+(`Active_Target_Genes`, `Retained_In_Functional_Network`) pass through
+for downstream profiling. See
+[`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
+for the full pipeline recommendation.
+
 ## See also
 
 [`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
 for initial 3D annotation,
 [`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
-for chromatin-guided reclassification.
+for chromatin-aware reclassification.
 
 ## Examples
 

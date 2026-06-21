@@ -1,7 +1,7 @@
 # looplook
 
-An integrative suite for expression-aware target assignment and
-functional annotation of chromatin interactions.
+An integrative suite for target assignment and functional annotation of
+chromatin interactions.
 
 [![R-CMD-check](https://github.com/zying106/looplook/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/zying106/looplook/actions/workflows/R-CMD-check.yaml)
 [![License: GPL (\>=
@@ -338,7 +338,7 @@ val <- validate_epeG_by_chromatin(
 )
 table(val$confidence)
 
-# Chromatin-guided reclassification with target link recomputation
+# Chromatin-aware reclassification with target link recomputation
 cr <- refine_loop_anchors_by_chromatin(
   annotation_res   = refined_res,
   chromatin_beds   = list(
@@ -547,7 +547,7 @@ following environment:
 ##  tz       Asia/Singapore
 ##  date     2026-06-21
 ##  pandoc   3.9.0.2 @ /opt/homebrew/bin/ (via rmarkdown)
-##  quarto   NA
+##  quarto   1.6.42 @ /Applications/RStudio.app/Contents/Resources/app/quarto/bin/quarto
 ## 
 ## ─ Packages ───────────────────────────────────────────────────────────────────
 ##  package                           * version   date (UTC) lib source
@@ -672,7 +672,7 @@ following environment:
 ##  lattice                             0.22-7    2025-04-02 [1] CRAN (R 4.5.1)
 ##  lazyeval                            0.2.3     2026-04-04 [1] CRAN (R 4.5.2)
 ##  lifecycle                           1.0.5     2026-01-08 [1] CRAN (R 4.5.2)
-##  looplook                          * 0.99.14   2026-06-20 [1] Bioconductor
+##  looplook                          * 0.99.14   2026-06-21 [1] Bioconductor
 ##  magick                              2.9.0     2025-09-08 [1] CRAN (R 4.5.0)
 ##  magrittr                            2.0.5     2026-04-04 [1] CRAN (R 4.5.2)
 ##  maps                                3.4.3     2025-05-26 [1] CRAN (R 4.5.0)

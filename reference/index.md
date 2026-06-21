@@ -33,7 +33,7 @@ validating regulatory elements.
 - [`refine_loop_anchors_by_expression()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
   : Expression-Aware refinement of loop anchors and target linkages
 - [`refine_loop_anchors_by_chromatin()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
-  : Chromatin-guided refinement of loop anchor classification
+  : Chromatin-Aware refinement of loop anchor classification
 - [`validate_epeG_by_chromatin()`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)
   : Orthogonal validation of eP/eG reclassification by chromatin marks
 

@@ -325,11 +325,19 @@ treated as hypotheses requiring orthogonal validation (ATAC-seq, H3K27ac,
 H3K4me1, or H3K27me3 depletion). Users with matched chromatin data should
 overlay eP/eG loci against these tracks before interpreting them as
 putative regulatory elements.</p>
+<p><strong>Pipeline guidance:</strong> When matched chromatin data are available,
+follow expression refinement with
+<code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></code> – chromatin evidence
+resolves eP/eG into definitive types (E, P, G, dual), while the
+expression-derived activity columns (<code>Active_Target_Genes</code>,
+<code>Retained_In_Functional_Network</code>) pass through for downstream
+profiling. See <code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></code> for the full
+pipeline recommendation.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></code> for initial 3D annotation,
-<code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></code> for chromatin-guided reclassification.</p></div>
+<code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></code> for chromatin-aware reclassification.</p></div>
     </div>
 
     <div class="section level2">
