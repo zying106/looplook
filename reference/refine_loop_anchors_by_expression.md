@@ -339,6 +339,7 @@ res_reclassified <- refine_loop_anchors_by_expression(
     write_output = FALSE,
     quiet = TRUE
 )
+#> Warning: Only 18.2% (2 / 11) of annotation gene symbols match the expression matrix row names. Low overlap suggests different gene identifier conventions. Check that expression matrix row names and OrgDb annotations use the same convention (e.g., both SYMBOL, or both ENSEMBL). If the expression matrix uses Ensembl IDs or Entrez IDs while annotations use SYMBOL, convert identifiers first (e.g., via AnnotationDbi::mapIds or org.*.eg.db). A mismatch will cause expressed genes to be misclassified as silent (eP/eG).
 #> Warning: 100% of P/G anchors were reclassified to eP/eG. eP/eG labels indicate transcriptionally inactive promoter/gene-body states; enhancer activity requires orthogonal chromatin evidence. Validate with orthogonal chromatin data (ATAC-seq, H3K27ac) before interpreting eP/eG anchors as functional enhancers.
 print(table(res_reclassified$loop_annotation$loop_type))
 #> 

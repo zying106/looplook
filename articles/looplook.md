@@ -742,7 +742,7 @@ To save any plot to disk, use
 ``` r
 
 ggplot2::ggsave(
-  filename = "my_custom_donut.pdf",
+  filename = file.path(out_dir, "my_custom_donut.pdf"),
   plot = res_integrated$plots$Basic_Donut,
   width = 8, height = 6
 )
@@ -910,6 +910,10 @@ returned as `refined_res$chromatin_validation`.
 
 ``` r
 
+h3k27ac_path <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
+h3k4me1_path <- system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook")
+h3k4me3_path <- system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook")
+
 refined_val <- refine_loop_anchors_by_expression(
   annotation_res = res_integrated,
   expr_matrix_file = expr_path,
@@ -917,11 +921,9 @@ refined_val <- refine_loop_anchors_by_expression(
   threshold = 1.0,
   reclassify_by_expression = TRUE,
   chromatin_beds = list(
-    H3K27ac  = "path/to/H3K27ac_peaks.bed",
-    ATAC     = "path/to/atac_peaks.bed",
-    H3K4me1  = "path/to/H3K4me1_peaks.bed",
-    H3K27me3 = "path/to/H3K27me3_peaks.bed",  # optional
-    H3K4me3  = "path/to/H3K4me3_peaks.bed"    # optional
+    H3K27ac  = h3k27ac_path,
+    H3K4me1  = h3k4me1_path,
+    H3K4me3  = h3k4me3_path
   ),
   out_dir = out_dir,
   project_name = "Example_Validated"
@@ -997,23 +999,17 @@ evidence needed to elevate or discard those candidates.
 
 ``` r
 
-# After refinement (produces eP/eG anchors)
-refined <- refine_loop_anchors_by_expression(
-  annotation_res = raw_annotation,
-  expr_matrix_file = "tpm.txt",
-  sample_columns = c("con1", "con2"),
-  threshold = 1.0
-)
+h3k27ac_path <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
+h3k4me1_path <- system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook")
+h3k4me3_path <- system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook")
 
-# Validate with chromatin marks
+# Validate the eP/eG anchors from the refined result above
 val <- validate_epeG_by_chromatin(
-  annotation_res = refined,
+  annotation_res = reclassified,
   chromatin_beds = list(
-    H3K4me1  = "H3K4me1_peaks.bed",
-    H3K27ac  = "H3K27ac_peaks.bed",
-    ATAC     = "atac_peaks.bed",
-    H3K27me3 = "H3K27me3_peaks.bed",  # optional
-    H3K4me3  = "H3K4me3_peaks.bed"    # optional
+    H3K4me1  = h3k4me1_path,
+    H3K27ac  = h3k27ac_path,
+    H3K4me3  = h3k4me3_path
   ),
   anchor_gap = 200,          # proximity tolerance (bp)
   anchor_min_overlap = 100   # minimum overlap (bp)
@@ -1021,9 +1017,6 @@ val <- validate_epeG_by_chromatin(
 
 # View confidence distribution
 table(val$confidence)
-
-# Export for downstream use
-write.csv(val, "epeG_chromatin_validation.csv", row.names = FALSE)
 ```
 
 ##### Confidence Criteria
@@ -1098,19 +1091,18 @@ H3K27me3) to enable the full set of reclassification rules.
 
 # Run on expression-refined output (tests eP/eG anchors)
 cr <- refine_loop_anchors_by_chromatin(
-  annotation_res = refined_res,
+  annotation_res = reclassified,
   chromatin_beds = list(
-    H3K4me1  = "H3K4me1_peaks.bed",
-    H3K4me3  = "H3K4me3_peaks.bed",
-    H3K27ac  = "H3K27ac_peaks.bed",
-    ATAC     = "atac_peaks.bed",
-    H3K27me3 = "H3K27me3_peaks.bed"   # optional
+    H3K4me1  = h3k4me1_path,
+    H3K4me3  = h3k4me3_path,
+    H3K27ac  = h3k27ac_path
   ),
   anchor_gap = 200,
   anchor_min_overlap = 100,
   recompute_targets = TRUE,  # Rebuild target links with updated types
   species = "hg38",
-  project_name = "Chromatin_Refined"
+  project_name = "Chromatin_Refined",
+  out_dir = out_dir
 )
 
 # Summary of reclassification

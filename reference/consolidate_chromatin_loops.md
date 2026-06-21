@@ -245,7 +245,7 @@ res_intersect <- consolidate_chromatin_loops(
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1. Criterion: Must overlap with ALL other files.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmpQyljjy/file9d5a35d4683c.bedpe
+#> Finished! Saved to /tmp/RtmpknYYUi/file9d621baac8cb.bedpe
 #> Finished! Final loops: 12
 
 # Example B: Consensus Mode (formerly Reproducible)
@@ -280,7 +280,7 @@ res_consensus <- consolidate_chromatin_loops(
 #>     #4: max_span = 11,840 bp, n_members = 2, n_reps = 2
 #>   Chaining: 0/12 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpQyljjy/file9d5a3bdc3977.bedpe
+#> Finished! Saved to /tmp/RtmpknYYUi/file9d628af8f2a.bedpe
 #> Finished! Final loops: 12
 
 # Example C: Union Mode
@@ -314,7 +314,7 @@ res_union <- consolidate_chromatin_loops(
 #>     #427: max_span = 26,620 bp, n_members = 1, n_reps = 1
 #>   Chaining: 0/586 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpQyljjy/file9d5a21ad9e50.bedpe
+#> Finished! Saved to /tmp/RtmpknYYUi/file9d6261795c6.bedpe
 #> Finished! Final loops: 586
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -353,7 +353,7 @@ res_clean <- consolidate_chromatin_loops(
 #>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2
 #>   Chaining: 0/7 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpQyljjy/file9d5a2f4d8b0c.bedpe
+#> Finished! Saved to /tmp/RtmpknYYUi/file9d627f8a5aee.bedpe
 #> Finished! Final loops: 4
 
 # Inspect results

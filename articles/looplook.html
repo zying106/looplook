@@ -1555,7 +1555,7 @@ layers for recolouring, theme adjustment, or annotation:</p>
 <p>To save any plot to disk, use <code><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggplot2::ggsave()</a></code>:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggsave</a></span><span class="op">(</span></span>
-<span>  filename <span class="op">=</span> <span class="st">"my_custom_donut.pdf"</span>,</span>
+<span>  filename <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">out_dir</span>, <span class="st">"my_custom_donut.pdf"</span><span class="op">)</span>,</span>
 <span>  plot <span class="op">=</span> <span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Basic_Donut</span>,</span>
 <span>  width <span class="op">=</span> <span class="fl">8</span>, height <span class="op">=</span> <span class="fl">6</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -1765,18 +1765,20 @@ anchors against chromatin mark data. The result is added to the Excel
 workbook and returned as
 <code>refined_res$chromatin_validation</code>.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">refined_val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="va">h3k27ac_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_k27ac_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<span><span class="va">h3k4me1_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_h3k4me1_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<span><span class="va">h3k4me3_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_h3k4me3_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">refined_val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
 <span>  annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
 <span>  expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span>
 <span>  sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span>
 <span>  threshold <span class="op">=</span> <span class="fl">1.0</span>,</span>
 <span>  reclassify_by_expression <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    H3K27ac  <span class="op">=</span> <span class="st">"path/to/H3K27ac_peaks.bed"</span>,</span>
-<span>    ATAC     <span class="op">=</span> <span class="st">"path/to/atac_peaks.bed"</span>,</span>
-<span>    H3K4me1  <span class="op">=</span> <span class="st">"path/to/H3K4me1_peaks.bed"</span>,</span>
-<span>    H3K27me3 <span class="op">=</span> <span class="st">"path/to/H3K27me3_peaks.bed"</span>,  <span class="co"># optional</span></span>
-<span>    H3K4me3  <span class="op">=</span> <span class="st">"path/to/H3K4me3_peaks.bed"</span>    <span class="co"># optional</span></span>
+<span>    H3K27ac  <span class="op">=</span> <span class="va">h3k27ac_path</span>,</span>
+<span>    H3K4me1  <span class="op">=</span> <span class="va">h3k4me1_path</span>,</span>
+<span>    H3K4me3  <span class="op">=</span> <span class="va">h3k4me3_path</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
 <span>  project_name <span class="op">=</span> <span class="st">"Example_Validated"</span></span>
@@ -1854,33 +1856,24 @@ orthogonal evidence needed to elevate or discard those candidates.</p>
 <h5 id="workflow">Workflow<a class="anchor" aria-label="anchor" href="#workflow"></a>
 </h5>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># After refinement (produces eP/eG anchors)</span></span>
-<span><span class="va">refined</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
-<span>  annotation_res <span class="op">=</span> <span class="va">raw_annotation</span>,</span>
-<span>  expr_matrix_file <span class="op">=</span> <span class="st">"tpm.txt"</span>,</span>
-<span>  sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span>
-<span>  threshold <span class="op">=</span> <span class="fl">1.0</span></span>
-<span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">h3k27ac_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_k27ac_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<span><span class="va">h3k4me1_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_h3k4me1_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<span><span class="va">h3k4me3_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_h3k4me3_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Validate with chromatin marks</span></span>
+<span><span class="co"># Validate the eP/eG anchors from the refined result above</span></span>
 <span><span class="va">val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/validate_epeG_by_chromatin.html">validate_epeG_by_chromatin</a></span><span class="op">(</span></span>
-<span>  annotation_res <span class="op">=</span> <span class="va">refined</span>,</span>
+<span>  annotation_res <span class="op">=</span> <span class="va">reclassified</span>,</span>
 <span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    H3K4me1  <span class="op">=</span> <span class="st">"H3K4me1_peaks.bed"</span>,</span>
-<span>    H3K27ac  <span class="op">=</span> <span class="st">"H3K27ac_peaks.bed"</span>,</span>
-<span>    ATAC     <span class="op">=</span> <span class="st">"atac_peaks.bed"</span>,</span>
-<span>    H3K27me3 <span class="op">=</span> <span class="st">"H3K27me3_peaks.bed"</span>,  <span class="co"># optional</span></span>
-<span>    H3K4me3  <span class="op">=</span> <span class="st">"H3K4me3_peaks.bed"</span>    <span class="co"># optional</span></span>
+<span>    H3K4me1  <span class="op">=</span> <span class="va">h3k4me1_path</span>,</span>
+<span>    H3K27ac  <span class="op">=</span> <span class="va">h3k27ac_path</span>,</span>
+<span>    H3K4me3  <span class="op">=</span> <span class="va">h3k4me3_path</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  anchor_gap <span class="op">=</span> <span class="fl">200</span>,          <span class="co"># proximity tolerance (bp)</span></span>
 <span>  anchor_min_overlap <span class="op">=</span> <span class="fl">100</span>   <span class="co"># minimum overlap (bp)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># View confidence distribution</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">val</span><span class="op">$</span><span class="va">confidence</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Export for downstream use</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.csv</a></span><span class="op">(</span><span class="va">val</span>, <span class="st">"epeG_chromatin_validation.csv"</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">val</span><span class="op">$</span><span class="va">confidence</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level5">
 <h5 id="confidence-criteria">Confidence Criteria<a class="anchor" aria-label="anchor" href="#confidence-criteria"></a>
@@ -2034,19 +2027,18 @@ full set of reclassification rules.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Run on expression-refined output (tests eP/eG anchors)</span></span>
 <span><span class="va">cr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></span><span class="op">(</span></span>
-<span>  annotation_res <span class="op">=</span> <span class="va">refined_res</span>,</span>
+<span>  annotation_res <span class="op">=</span> <span class="va">reclassified</span>,</span>
 <span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    H3K4me1  <span class="op">=</span> <span class="st">"H3K4me1_peaks.bed"</span>,</span>
-<span>    H3K4me3  <span class="op">=</span> <span class="st">"H3K4me3_peaks.bed"</span>,</span>
-<span>    H3K27ac  <span class="op">=</span> <span class="st">"H3K27ac_peaks.bed"</span>,</span>
-<span>    ATAC     <span class="op">=</span> <span class="st">"atac_peaks.bed"</span>,</span>
-<span>    H3K27me3 <span class="op">=</span> <span class="st">"H3K27me3_peaks.bed"</span>   <span class="co"># optional</span></span>
+<span>    H3K4me1  <span class="op">=</span> <span class="va">h3k4me1_path</span>,</span>
+<span>    H3K4me3  <span class="op">=</span> <span class="va">h3k4me3_path</span>,</span>
+<span>    H3K27ac  <span class="op">=</span> <span class="va">h3k27ac_path</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  anchor_gap <span class="op">=</span> <span class="fl">200</span>,</span>
 <span>  anchor_min_overlap <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  recompute_targets <span class="op">=</span> <span class="cn">TRUE</span>,  <span class="co"># Rebuild target links with updated types</span></span>
 <span>  species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
-<span>  project_name <span class="op">=</span> <span class="st">"Chromatin_Refined"</span></span>
+<span>  project_name <span class="op">=</span> <span class="st">"Chromatin_Refined"</span>,</span>
+<span>  out_dir <span class="op">=</span> <span class="va">out_dir</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Summary of reclassification</span></span>

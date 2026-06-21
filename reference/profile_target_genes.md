@@ -253,16 +253,16 @@ profile_res <- profile_target_genes(
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 
-#> --- Task: PP_Genes (Valid Genes: 66) ---
-#> Warning: GSEA: down-sampling 20 of 66 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).
+#> --- Task: PP_Genes (Valid Genes: 67) ---
+#> Warning: GSEA: down-sampling 20 of 67 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 
 #> ================================================================
 #> >>> Processing Source: [targets]
 #> 
-#> --- Task: Target_Genes (Valid Genes: 216) ---
-#> Warning: GSEA: down-sampling 20 of 216 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).
+#> --- Task: Target_Genes (Valid Genes: 217) ---
+#> Warning: GSEA: down-sampling 20 of 217 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 
