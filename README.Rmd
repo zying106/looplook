@@ -193,6 +193,11 @@ cr <- refine_loop_anchors_by_chromatin(
 table(cr$loop_annotation$loop_type)
 ```
 
+<div align="center">
+  <img src="man/figures/g4.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Chromatin Refinement Results" />
+  <p><em>Figure 4: <strong>Chromatin-Guided Reclassification outputs.</strong> Right: Sankey flow diagram tracing each anchor's reclassification path (Before → After) with colourblind-safe Wong palette. Left: aggregated heatmap showing the percentage of anchors in each reclassification group positive for each chromatin mark (green = present, lighter = lower enrichment).</em></p>
+</div>
+
 ### Module 4: Automated Functional Profiling
 This module provides a fully automated, end-to-end multi-omics analysis pipeline that integrates 3D genomic interactions with transcriptomic data to unveil the regulatory mechanisms of targets of interest.
 

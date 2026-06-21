@@ -359,6 +359,21 @@ cr <- refine_loop_anchors_by_chromatin(
 table(cr$loop_annotation$loop_type)
 ```
 
+<div align="center">
+
+<img src="man/figures/g4.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Chromatin Refinement Results" />
+<p>
+
+<em>Figure 4: <strong>Chromatin-Guided Reclassification
+outputs.</strong> Right: Sankey flow diagram tracing each anchor’s
+reclassification path (Before → After) with colourblind-safe Wong
+palette. Left: aggregated heatmap showing the percentage of anchors in
+each reclassification group positive for each chromatin mark (green =
+present, lighter = lower enrichment).</em>
+</p>
+
+</div>
+
 ### Module 4: Automated Functional Profiling
 
 This module provides a fully automated, end-to-end multi-omics analysis
@@ -552,7 +567,7 @@ following environment:
     ##  collate  en_US.UTF-8
     ##  ctype    en_US.UTF-8
     ##  tz       Asia/Singapore
-    ##  date     2026-06-19
+    ##  date     2026-06-21
     ##  pandoc   3.9.0.2 @ /opt/homebrew/bin/ (via rmarkdown)
     ##  quarto   NA
     ## 
@@ -679,7 +694,7 @@ following environment:
     ##  lattice                             0.22-7    2025-04-02 [1] CRAN (R 4.5.1)
     ##  lazyeval                            0.2.3     2026-04-04 [1] CRAN (R 4.5.2)
     ##  lifecycle                           1.0.5     2026-01-08 [1] CRAN (R 4.5.2)
-    ##  looplook                          * 0.99.14   2026-06-19 [1] Bioconductor
+    ##  looplook                          * 0.99.14   2026-06-20 [1] Bioconductor
     ##  magick                              2.9.0     2025-09-08 [1] CRAN (R 4.5.0)
     ##  magrittr                            2.0.5     2026-04-04 [1] CRAN (R 4.5.2)
     ##  maps                                3.4.3     2025-05-26 [1] CRAN (R 4.5.0)

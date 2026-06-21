@@ -30,3 +30,4 @@
 ^Library$
 ^looplook_algorithm.*\.(md|docx)$
 coverage
+^\.Rproj\.user$

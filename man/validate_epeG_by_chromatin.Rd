@@ -79,10 +79,15 @@ ENCODE active-enhancer signature.
 \item \code{"gold_standard"}: All five marks align with the canonical
 active-enhancer signature: H3K4me1(+), H3K27ac(+), ATAC(+),
 H3K4me3(-), H3K27me3(-). Requires all five marks to be provided.
-\item \code{"high_confidence"}: H3K4me1(+) and H3K27ac(+), or
-H3K4me1(+) and ATAC(+). At least two supporting marks present.
+\item \code{"high_confidence"}: H3K4me1(+) and (H3K27ac(+) or ATAC(+)),
+and H3K4me3(-) if tested. Anchors with H3K4me3(+) are classified as
+\code{"supported"} with a \code{"promoter_like"} evidence tag.
 \item \code{"supported"}: At least one enhancer-associated mark
-(H3K4me1, H3K27ac, or ATAC) is present.
+(H3K4me1, H3K27ac, or ATAC) is present. Anchors with H3K4me3(+)
+-- regardless of H3K27me3 status -- receive a \code{"promoter_like"}
+tag, indicating promoter signal that warrants reversion to P or
+dual-function classification by
+\code{\link{refine_loop_anchors_by_chromatin}}.
 \item \code{"weak"}: Only exclusion marks are informative
 (H3K27me3(-) or H3K4me3(-)) without positive enhancer evidence.
 \item \code{"uncertain"}: No chromatin data provided or no overlaps

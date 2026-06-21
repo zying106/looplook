@@ -376,7 +376,7 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #' }
 #'
 #' @param files Character vector. Paths to BEDPE files (at least two).
-#' @param gap Numeric. Distance (bp) to consider loops as overlapping. Default 1000.
+#' @param gap Numeric. Maximum distance (in base pairs) between loop anchors to consider them as overlapping. Default: \code{1000} (1 kb). Typical range: 500-5000 bp depending on data resolution. Use \code{gap = 0} for strict overlap only.
 #' @param mode Character. Choose one of the following: "consensus", "intersect", "union". Merge strategy:
 #'   \itemize{
 #'     \item \code{"consensus"}: Graph-based clustering to find a consensus set supported by a majority of samples (default). Formerly "reproducible".
@@ -749,7 +749,12 @@ consolidate_chromatin_loops <- function(
         } else {
             3 * gap
         }
-        wide_idx <- which(pmax(span1, span2) > span_threshold)
+        nm <- S4Vectors::mcols(result_gi)$n_members
+        # Only flag clusters with n_members > 2 as potential chaining.
+        # n_members == 2 typically means the same loop detected in two
+        # replicates; wide span is from naturally broad anchors (super-
+        # enhancers), not from chaining through intermediate loops.
+        wide_idx <- which(pmax(span1, span2) > span_threshold & nm > 2)
         n_wide <- length(wide_idx)
         if (n_wide > 0) {
             if (chaining_policy == "warn") {

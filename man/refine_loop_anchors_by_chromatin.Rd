@@ -12,6 +12,7 @@ refine_loop_anchors_by_chromatin(
   species = "hg38",
   out_dir = "./results/chromatin",
   project_name = "HiChIP",
+  color_palette = "Paired",
   candidate_types = NULL,
   recompute_targets = FALSE,
   write_output = TRUE,
@@ -37,6 +38,10 @@ improve confidence but are optional.}
 \item{out_dir}{Character. Output directory for Excel export. Default \code{"./results/chromatin"}.}
 
 \item{project_name}{Character. Project prefix. Default \code{"HiChIP"}.}
+
+\item{color_palette}{Character. RColorBrewer palette name for the
+rose chart and sankey fallback colours. Dumbbell and mark-enrichment
+heatmap use fixed academic palettes. Default: \code{"Paired"}.}
 
 \item{candidate_types}{Character vector or \code{NULL}. Anchor types to
 validate and reclassify. \code{NULL} (default): auto-selects
@@ -99,8 +104,8 @@ chromatin -> kept (confirmed distal).
 \item All other anchors: unchanged.
 }
 
-\strong{Important — H3K4me3 dependency:} Rules that test for H3K4me3
-\emph{absence} (e.g., P→E, G→E) require H3K4me3 to be provided and
+\strong{Important  --  H3K4me3 dependency:} Rules that test for H3K4me3
+\emph{absence} (e.g., P -> E, G -> E) require H3K4me3 to be provided and
 explicitly called as absent at the anchor. When \code{H3K4me3} is not
 included in \code{chromatin_beds}, H3K4me3 is \code{NA} for all anchors,
 and these rules are skipped entirely (conservative: no reclassification
@@ -112,7 +117,7 @@ reclassification rules.
 match first):
 \itemize{
 \item \code{"conflicting_marks"}: H3K27me3+ coexisting with any
-active mark (H3K4me1+, H3K27ac+, or H3K4me3+) —
+active mark (H3K4me1+, H3K27ac+, or H3K4me3+)  --
 bivalent/poised/ambiguous chromatin; takes priority over
 enhancer-like and dual-like classifications.
 \item \code{"dual_like"}: H3K4me1+ H3K4me3+
@@ -145,4 +150,9 @@ refined_chromatin <- refine_loop_anchors_by_chromatin(
 )
 table(refined_chromatin$loop_annotation$loop_type)
 }
+}
+\seealso{
+\code{\link{annotate_peaks_and_loops}} for initial 3D annotation,
+\code{\link{refine_loop_anchors_by_expression}} for expression-aware refinement,
+\code{\link{validate_epeG_by_chromatin}} for standalone chromatin validation.
 }

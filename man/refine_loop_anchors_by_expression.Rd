@@ -30,7 +30,7 @@ refine_loop_anchors_by_expression(
 
 \item{sample_columns}{Character vector or integer indices. Columns in \code{expr_matrix_file} to average. Default: \code{NULL}.}
 
-\item{threshold}{Numeric. Minimum expression (e.g. TPM >= 1) for a gene to be considered active. Default: \code{1}.
+\item{threshold}{Numeric. Minimum expression value (e.g., TPM >= 1) for a gene to be considered active. Default: \code{1}. Set to \code{0} to retain any detected expression (TPM > 0). Use \code{threshold_mode = "quantile"} to specify a quantile instead of an absolute value.
 \strong{Gene name matching is case-sensitive.} Ensure gene identifiers in
 \code{expr_matrix_file} use the same case as the symbols returned by your
 OrgDb (typically all-uppercase for human and mouse, e.g. \code{"TP53"},
@@ -55,7 +55,7 @@ sequencing depths. The effective expression cutoff is reported in the log.}
 
 \item{color_palette}{Character. RColorBrewer palette name for loop-type colour assignments. Default: \code{"Paired"}.}
 
-\item{karyo_bin_size}{Integer. Bin width in bp for karyotype heatmaps. Default: \code{1e5}.}
+\item{karyo_bin_size}{Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default: \code{1e5} (100 kb). Typical range: 5e4-5e5 depending on genome size and resolution.}
 
 \item{reclassify_by_expression}{Logical. If \code{TRUE} (default), silent promoters (P) and gene bodies (G) are reclassified as eP/eG.}
 
@@ -222,4 +222,8 @@ res_reclassified <- refine_loop_anchors_by_expression(
     quiet = TRUE
 )
 print(table(res_reclassified$loop_annotation$loop_type))
+}
+\seealso{
+\code{\link{annotate_peaks_and_loops}} for initial 3D annotation,
+\code{\link{refine_loop_anchors_by_chromatin}} for chromatin-guided reclassification.
 }

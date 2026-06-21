@@ -1,3 +1,31 @@
+Changes in version 0.99.14 (2026-06-21)
+-----------------------------------------
+
+Algorithm & Correctness
+
+* Fixed case-sensitive gene name matching: clean_anchor() and resolve_gene_conflicts()
+  now use toupper() on both sides, preventing silent P→eP misclassification when
+  expression matrix row names differ in case from OrgDb SYMBOLs.
+* Added biotype_order parameter to annotate_peaks_and_loops() and resolve_gene_conflicts(),
+  allowing users to customise biotype priority order (e.g., prioritise lncRNAs).
+* Case-insensitive diagnostic warning in expression-refinement overlap check.
+
+Chromatin Refinement Visualizations
+
+* Added Chromatin_Sankey: anchor-type flow diagram showing reclassification direction
+  (unchanged = green, reclassified = amber).
+* Added Chromatin_MarkHeatmap: aggregated ComplexHeatmap showing mark enrichment %
+  per reclassification group, with N count bar annotation.
+* Chromatin_Dumbbell: updated to grey-green academic palette (Original = #999999,
+  Refined = #2D5A3D) for consistency with Expression Refinement module.
+
+Documentation
+
+* Added @seealso cross-references between annotate_peaks_and_loops(),
+  refine_loop_anchors_by_expression(), refine_loop_anchors_by_chromatin(),
+  and profile_target_genes().
+* Updated roxygen for .build_chromatin_mark_heatmap() to match actual implementation.
+
 Changes in version 0.99.9 (2026-05-09)
 -----------------------------------------
 

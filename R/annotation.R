@@ -425,7 +425,7 @@
 #' @param txdb A \code{\link[GenomicFeatures]{TxDb}} object, a package name string, or \code{NULL} to auto-resolve from \code{species}. Default: \code{NULL}.
 #' @param org_db An \code{OrgDb} object, a package name string, or \code{NULL} to auto-resolve from \code{species}. Default: \code{NULL}.
 #' @param species Character. Genome assembly used when \code{txdb} and \code{org_db} are \code{NULL}. One of \code{"hg38"}, \code{"hg19"}, \code{"mm10"}, \code{"mm9"}. Default: \code{"hg38"}. For other species, pass \code{txdb} and \code{org_db} as objects or package name strings directly (e.g. \code{txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene}, \code{org_db = "org.Dm.eg.db"}); \code{species} is then only used for karyotype ideograms.
-#' @param tss_region Numeric vector of length 2. Promoter window around the TSS in bp. Default: \code{c(-2000, 2000)} (typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).
+#' @param tss_region Numeric vector of length 2. Promoter window around the TSS in bp. Default: \code{c(-2000, 2000)} (±2 kb; typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).
 #' @param out_dir Character. Output directory for the Excel results file. Default: \code{"./results"}.
 #' @param expr_matrix_file Optional path to a normalised expression matrix (TPM/FPKM, genes x samples). Enables expression-aware conflict resolution. Default: \code{NULL}.
 #' @param sample_columns Character vector or integer indices. Columns in \code{expr_matrix_file} to average for baseline expression. Default: \code{NULL}.
@@ -456,9 +456,9 @@
 #'   Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")}.
 #' @param project_name Character. Prefix for output files and plot titles. Default: \code{"HiChIP"}.
 #' @param color_palette Character. RColorBrewer palette name. Default: \code{"Set2"}.
-#' @param karyo_bin_size Integer. Bin width in bp for karyotype heatmaps. Default: \code{1e5}.
+#' @param karyo_bin_size Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default: \code{1e5} (100 kb). Typical range: 5e4-5e5 depending on genome size and resolution.
 #' @param neighbor_hop Integer. k-hop ego-network expansion order via \code{igraph::ego()}. \code{0} restricts to direct contacts. Default: \code{0}. Target gene assignment searches one additional hop (\code{neighbor_hop + 1}) to capture genes at the opposite anchor of directly connected loops.
-#' @param anchor_gap Integer. Search radius: how far apart (bp) can a peak and loop anchor be for the peak to be considered "near" the anchor? \code{-1L} (default): strict physical overlap required (GenomicRanges default -- peak and anchor must share at least 1 bp). \code{0L}: adjacent intervals (peak end == anchor start) also count. \code{>0}: explicit gap tolerance (e.g. \code{200} for cross-experiment integration). When \code{>= 0}, the result includes both physically overlapping pairs AND proximity-only pairs (within gap but no actual overlap). Use \code{anchor_min_overlap > 1} to require actual physical overlap among these candidates.
+#' @param anchor_gap Integer. Search radius: how far apart (bp) can a peak and loop anchor be for the peak to be considered "near" the anchor? \code{-1L} (default): strict physical overlap required (GenomicRanges default -- peak and anchor must share at least 1 bp). \code{0L}: adjacent intervals (peak end == anchor start) also count. \code{>0}: explicit gap tolerance in bp (e.g. \code{200} = 200 bp tolerance for cross-experiment integration). When \code{>= 0}, the result includes both physically overlapping pairs AND proximity-only pairs (within gap but no actual overlap). Use \code{anchor_min_overlap > 1} to require actual physical overlap among these candidates.
 #' @param anchor_min_overlap Integer. After candidate pairs are found (via \code{anchor_gap}), how many base pairs of actual physical overlap are required? Default \code{1L}: any touch counts (including proximity-only hits when \code{anchor_gap >= 0}). Increase to \code{10-100} to filter out spurious boundary overlaps. Setting this \code{> 1} with \code{anchor_gap >= 0} ensures that even with gap tolerance, only pairs with genuine physical overlap are retained.
 #' @param anchor_min_frac Numeric (0-1). After the first two filters, what fraction of the \emph{peak} width must physically overlap the anchor? Default \code{0}: any fraction accepted. Set to \code{0.1-0.5} when peaks are broad (e.g. H3K27ac domains, 2-5 kb) so a 1 bp overlap does not link the entire broad peak. Ignored for point features (SNPs, eQTLs). Applied last, only to pairs that passed \code{anchor_gap} and \code{anchor_min_overlap}.
 #' @param hub_percentile Numeric (0-1). Loop-count quantile for hub detection. Default: \code{0.95}. Genes or distal elements with connectivity at or above this quantile are flagged as hubs. A minimum floor of 3 (promoter-centric) or 2 (distal) is applied to avoid false hubs in small datasets.
@@ -527,6 +527,10 @@
 #' topology data required by \code{\link{refine_loop_anchors_by_chromatin}}
 #' with \code{recompute_targets = TRUE}.
 #' If \code{write_output = TRUE}, also writes a multi-sheet Excel workbook to \code{out_dir}.
+#'
+#' @seealso \code{\link{refine_loop_anchors_by_expression}} for expression-aware refinement,
+#'   \code{\link{refine_loop_anchors_by_chromatin}} for chromatin-guided reclassification,
+#'   \code{\link{profile_target_genes}} for automated functional profiling.
 #'
 #' @export
 #'
@@ -2482,7 +2486,7 @@ build_annotation_plots <- function(
 #' @param annotation_res List. The raw foundational output object returned by \code{\link{annotate_peaks_and_loops}}.
 #' @param expr_matrix_file Path to a normalised expression matrix (TPM/FPKM, genes x samples). Required for refinement. Default: \code{NULL}.
 #' @param sample_columns Character vector or integer indices. Columns in \code{expr_matrix_file} to average. Default: \code{NULL}.
-#' @param threshold Numeric. Minimum expression (e.g. TPM >= 1) for a gene to be considered active. Default: \code{1}.
+#' @param threshold Numeric. Minimum expression value (e.g., TPM >= 1) for a gene to be considered active. Default: \code{1}. Set to \code{0} to retain any detected expression (TPM > 0). Use \code{threshold_mode = "quantile"} to specify a quantile instead of an absolute value.
 #'   \strong{Gene name matching is case-sensitive.} Ensure gene identifiers in
 #'   \code{expr_matrix_file} use the same case as the symbols returned by your
 #'   OrgDb (typically all-uppercase for human and mouse, e.g. \code{"TP53"},
@@ -2500,7 +2504,7 @@ build_annotation_plots <- function(
 #' @param out_dir Character. Output directory for the Excel results file. Default: \code{"./results/filtered"}.
 #' @param project_name Character. Prefix for output files (automatically appends \code{"_Filtered"}). Default: \code{"HiChIP"}.
 #' @param color_palette Character. RColorBrewer palette name for loop-type colour assignments. Default: \code{"Paired"}.
-#' @param karyo_bin_size Integer. Bin width in bp for karyotype heatmaps. Default: \code{1e5}.
+#' @param karyo_bin_size Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default: \code{1e5} (100 kb). Typical range: 5e4-5e5 depending on genome size and resolution.
 #' @param reclassify_by_expression Logical. If \code{TRUE} (default), silent promoters (P) and gene bodies (G) are reclassified as eP/eG.
 #' @param hub_percentile Numeric (0-1). Node-degree quantile for hub detection. Default: \code{0.95}.
 #' @param chromatin_beds Named list of BED file paths for orthogonal chromatin
@@ -2595,6 +2599,10 @@ build_annotation_plots <- function(
 #' @importFrom tidyr pivot_longer separate_rows
 #' @importFrom GenomicRanges makeGRangesFromDataFrame findOverlaps
 #' @importFrom openxlsx createWorkbook addWorksheet writeData saveWorkbook
+#'
+#' @seealso \code{\link{annotate_peaks_and_loops}} for initial 3D annotation,
+#'   \code{\link{refine_loop_anchors_by_chromatin}} for chromatin-guided reclassification.
+#'
 #' @export
 #'
 #' @examples
@@ -2894,6 +2902,9 @@ refine_loop_anchors_by_expression <- function(
 #' @param species Character. Genome assembly. Default \code{"hg38"}.
 #' @param out_dir Character. Output directory for Excel export. Default \code{"./results/chromatin"}.
 #' @param project_name Character. Project prefix. Default \code{"HiChIP"}.
+#' @param color_palette Character. RColorBrewer palette name for the
+#'   rose chart and sankey fallback colours. Dumbbell and mark-enrichment
+#'   heatmap use fixed academic palettes. Default: \code{"Paired"}.
 #' @param candidate_types Character vector or \code{NULL}. Anchor types to
 #'   validate and reclassify. \code{NULL} (default): auto-selects
 #'   \code{c("eP","eG")} for refined input, \code{c("P","G","E")} for raw.
@@ -2922,6 +2933,10 @@ refine_loop_anchors_by_expression <- function(
 #'   \code{looplook_anchor_state} attribute (present when using
 #'   \code{\link{annotate_peaks_and_loops}} output).
 #'
+#' @seealso \code{\link{annotate_peaks_and_loops}} for initial 3D annotation,
+#'   \code{\link{refine_loop_anchors_by_expression}} for expression-aware refinement,
+#'   \code{\link{validate_epeG_by_chromatin}} for standalone chromatin validation.
+#'
 #' @export
 #'
 #' @examples
@@ -2944,6 +2959,7 @@ refine_loop_anchors_by_chromatin <- function(
     species = "hg38",
     out_dir = "./results/chromatin",
     project_name = "HiChIP",
+    color_palette = "Paired",
     candidate_types = NULL,
     recompute_targets = FALSE,
     write_output = TRUE,
@@ -3031,8 +3047,10 @@ refine_loop_anchors_by_chromatin <- function(
 
     # --- 6b. Visualization ---
     log_message("    Generating plots...")
-    loop_types_all <- sort(unique(loop_df$loop_type))
-    custom_colors <- get_colors(length(loop_types_all), "Paired")
+    # Assign colours by descending loop-type frequency (not alphabetical)
+    loop_type_counts <- sort(table(loop_df$loop_type), decreasing = TRUE)
+    loop_types_all <- names(loop_type_counts)
+    custom_colors <- get_colors(length(loop_types_all), color_palette)
     names(custom_colors) <- loop_types_all
     chromatin_plots <- list(
         Chromatin_Dumbbell = .build_chromatin_dumbbell_plot(reclass_map, project_name),
@@ -3160,124 +3178,71 @@ refine_loop_anchors_by_chromatin <- function(
 #' @keywords internal
 #' @noRd
 .chromatin_reclassify <- function(validation) {
-    n <- nrow(validation)
+    # Build booleans from mark columns (vectorised).
+    # isTRUE(x) becomes !is.na(x) & x; isTRUE(!is.na(x) && !x) becomes !is.na(x) & !x.
     out <- data.frame(
         anchor_id        = validation$anchor_id,
-        positional_type  = validation$anchor_type,  # original ChIPseeker type
+        positional_type  = validation$anchor_type,
         old_type         = validation$anchor_type,
         new_type         = validation$anchor_type,
-        # chromatin_state is inferred per-row in the loop below
         chromatin_state  = NA_character_,
         changed          = FALSE,
         stringsAsFactors = FALSE
-    )
+    ) %>%
+        dplyr::mutate(
+            h3k4me1_p  = !is.na(validation$H3K4me1)  & validation$H3K4me1,
+            h3k4me3_p  = !is.na(validation$H3K4me3)  & validation$H3K4me3,
+            h3k27ac_p  = !is.na(validation$H3K27ac)  & validation$H3K27ac,
+            h3k27me3_p = !is.na(validation$H3K27me3) & validation$H3K27me3,
+            atac_p     = !is.na(validation$ATAC)     & validation$ATAC,
+            # Tested and explicitly absent
+            h3k4me3_n  = !is.na(validation$H3K4me3)  & !validation$H3K4me3,
+            h3k4me1_n  = !is.na(validation$H3K4me1)  & !validation$H3K4me1,
+            # Evidence-tag-based promoter-like flag
+            is_promoter_like = grepl("promoter_like", validation$evidence, fixed = TRUE),
+            conf_chr = as.character(validation$confidence),
 
-    for (i in seq_len(n)) {
-        conf <- as.character(validation$confidence[i])
-        old  <- out$old_type[i]
-        is_promoter_like <- grepl("promoter_like", validation$evidence[i], fixed = TRUE)
-        h3k4me1_pos <- isTRUE(validation$H3K4me1[i])
-        h3k4me3_pos <- isTRUE(validation$H3K4me3[i])
-        h3k27ac_pos  <- isTRUE(validation$H3K27ac[i])
-        h3k27me3_pos <- isTRUE(validation$H3K27me3[i])
+            # --- chromatin_state inference (first match wins) ---
+            chromatin_state = dplyr::case_when(
+                h3k27me3_p & (h3k4me1_p | h3k27ac_p | h3k4me3_p) ~ "conflicting_marks",
+                h3k4me1_p & h3k4me3_p ~ "dual_like",
+                h3k4me1_p & h3k27ac_p & atac_p ~ "active_enhancer_like",
+                h3k4me1_p & (h3k27ac_p | atac_p) ~ "primed_enhancer_like",
+                h3k4me1_p | h3k27ac_p ~ "weak_enhancer_like",
+                h3k4me3_p ~ "promoter_like",
+                h3k27me3_p ~ "repressed",
+                !is.na(validation$H3K4me1) | !is.na(validation$H3K4me3) |
+                    !is.na(validation$H3K27ac) ~ "uncertain",
+                TRUE ~ "no_data"
+            ),
 
-        # Infer chromatin state from mark combination.
-        # H3K27me3 (repressive) coexisting with any active mark takes
-        # highest priority: bivalent/poised/conflicting chromatin should
-        # not be called enhancer-like or dual-like.
-        if (h3k27me3_pos && (h3k4me1_pos || h3k27ac_pos || h3k4me3_pos)) {
-            out$chromatin_state[i] <- "conflicting_marks"
-        } else if (h3k4me1_pos && h3k4me3_pos) {
-            out$chromatin_state[i] <- "dual_like"
-        } else if (h3k4me1_pos && h3k27ac_pos &&
-                   isTRUE(validation$ATAC[i])) {
-            out$chromatin_state[i] <- "active_enhancer_like"
-        } else if (h3k4me1_pos && (h3k27ac_pos ||
-                   isTRUE(validation$ATAC[i]))) {
-            out$chromatin_state[i] <- "primed_enhancer_like"
-        } else if (h3k4me1_pos || h3k27ac_pos) {
-            out$chromatin_state[i] <- "weak_enhancer_like"
-        } else if (h3k4me3_pos) {
-            out$chromatin_state[i] <- "promoter_like"
-        } else if (h3k27me3_pos) {
-            out$chromatin_state[i] <- "repressed"
-        } else if (any(!is.na(c(validation$H3K4me1[i], validation$H3K4me3[i],
-                                validation$H3K27ac[i])))) {
-            out$chromatin_state[i] <- "uncertain"
-        } else {
-            out$chromatin_state[i] <- "no_data"
-        }
+            # --- anchor-type reclassification (first match wins) ---
+            new_type = dplyr::case_when(
+                old_type == "P" & h3k4me1_p & h3k4me3_p ~ "dual",
+                old_type == "P" & h3k4me1_p & h3k4me3_n &
+                    (h3k27ac_p | atac_p) ~ "E",
+                old_type %in% c("eP","eG") & chromatin_state == "dual_like" ~ "dual",
+                old_type %in% c("eP","eG") &
+                    conf_chr %in% c("gold_standard","high_confidence") &
+                    chromatin_state %in% c("active_enhancer_like","primed_enhancer_like") ~ old_type,
+                old_type == "eP" &
+                    (chromatin_state == "promoter_like" | is_promoter_like) ~ "P",
+                old_type == "eG" &
+                    (chromatin_state == "promoter_like" | is_promoter_like) ~ "G",
+                old_type == "E" & h3k4me1_p & h3k4me3_p ~ "dual",
+                old_type == "E" & h3k4me3_p & h3k4me1_n ~ "P",
+                old_type == "G" & h3k4me1_p & h3k4me3_p ~ "dual",
+                old_type == "G" & h3k4me3_p & h3k4me1_n ~ "P",
+                old_type == "G" & h3k4me1_p & h3k4me3_n &
+                    (h3k27ac_p | atac_p) ~ "E",
+                TRUE ~ old_type
+            ),
 
-        # P + H3K4me1+ H3K4me3+ -> dual
-        if (old == "P" && h3k4me1_pos && h3k4me3_pos) {
-            out$new_type[i] <- "dual"
-            out$changed[i]  <- TRUE
-        }
-        # P + H3K4me1+ H3K4me3- + (H3K27ac+ or ATAC+) -> E (conservative)
-        # Requires active mark confirmation beyond H3K4me1 alone.
-        else if (old == "P" && h3k4me1_pos &&
-                 isTRUE(!is.na(validation$H3K4me3[i]) && !validation$H3K4me3[i]) &&
-                 (h3k27ac_pos || isTRUE(validation$ATAC[i]))) {
-            out$new_type[i] <- "E"
-            out$changed[i]  <- TRUE
-        }
-        # eP/eG with dual_like chromatin -> reclassify as dual
-        else if (old %in% c("eP", "eG") &&
-                 out$chromatin_state[i] == "dual_like") {
-            out$new_type[i] <- "dual"
-            out$changed[i]  <- TRUE
-        }
-        # eP/eG confirmed distal (gold/high, active/primed enhancer) -> keep
-        else if (old %in% c("eP", "eG") &&
-                 conf %in% c("gold_standard", "high_confidence") &&
-                 out$chromatin_state[i] %in% c("active_enhancer_like",
-                                               "primed_enhancer_like")) {
-            # keep -- confirmed distal regulatory element, no conflicting promoter marks
-        }
-        # eP/eG + promoter_like evidence -> revert to active promoter/gene body.
-        # Two sources: chromatin_state == "promoter_like" (H3K4me3+ only), or
-        # evidence tag "promoter_like" (supported confidence + H3K4me3+ + H3K27me3-).
-        else if (old == "eP" &&
-                 (out$chromatin_state[i] == "promoter_like" || is_promoter_like)) {
-            out$new_type[i] <- "P"
-            out$changed[i]  <- TRUE
-        }
-        else if (old == "eG" &&
-                 (out$chromatin_state[i] == "promoter_like" || is_promoter_like)) {
-            out$new_type[i] <- "G"
-            out$changed[i]  <- TRUE
-        }
-        # E + H3K4me1+ H3K4me3+ -> dual (unannotated dual-function locus)
-        else if (old == "E" && h3k4me1_pos && h3k4me3_pos) {
-            out$new_type[i] <- "dual"
-            out$changed[i]  <- TRUE
-        }
-        # E + H3K4me3+ (no H3K4me1) -> P (unannotated promoter / ncRNA gene)
-        else if (old == "E" && h3k4me3_pos &&
-                 isTRUE(!is.na(validation$H3K4me1[i]) && !validation$H3K4me1[i])) {
-            out$new_type[i] <- "P"
-            out$changed[i]  <- TRUE
-        }
-        # G + H3K4me1+ H3K4me3+ -> dual (gene body dual-function element)
-        else if (old == "G" && h3k4me1_pos && h3k4me3_pos) {
-            out$new_type[i] <- "dual"
-            out$changed[i]  <- TRUE
-        }
-        # G + H3K4me3+ (no H3K4me1) -> P (internal promoter)
-        else if (old == "G" && h3k4me3_pos &&
-                 isTRUE(!is.na(validation$H3K4me1[i]) && !validation$H3K4me1[i])) {
-            out$new_type[i] <- "P"
-            out$changed[i]  <- TRUE
-        }
-        # G + H3K4me1+ H3K4me3- + (H3K27ac+ or ATAC+) -> E (conservative intronic enhancer)
-        else if (old == "G" && h3k4me1_pos &&
-                 isTRUE(!is.na(validation$H3K4me3[i]) && !validation$H3K4me3[i]) &&
-                 (h3k27ac_pos || isTRUE(validation$ATAC[i]))) {
-            out$new_type[i] <- "E"
-            out$changed[i]  <- TRUE
-        }
-        # default: unchanged
-    }
+            changed = new_type != old_type
+        ) %>%
+        dplyr::select(-h3k4me1_p, -h3k4me3_p, -h3k4me3_n, -h3k4me1_n,
+                      -h3k27ac_p, -h3k27me3_p, -atac_p,
+                      -is_promoter_like, -conf_chr)
     out
 }
 
@@ -4100,13 +4065,13 @@ refine_loop_anchors_by_chromatin <- function(
             Original = ifelse(is.na(Original), 0L, Original),
             Refined  = ifelse(is.na(Refined),  0L, Refined)
         ) %>%
-        dplyr::arrange(dplyr::desc(Original))
+        dplyr::arrange(dplyr::desc(Refined))
     df_dumbbell$type <- factor(df_dumbbell$type, levels = rev(df_dumbbell$type))
     df_long <- df_dumbbell %>%
         tidyr::pivot_longer(cols = c("Original", "Refined"),
                             names_to = "Source", values_to = "Count")
 
-    green_colors <- c("Original" = "#999999", "Refined" = "#2D5A3D")
+    green_colors <- c("Original" = "#999999", "Refined" = "#2E8B57")
 
     ggplot2::ggplot() +
         ggplot2::geom_segment(
@@ -4149,8 +4114,12 @@ refine_loop_anchors_by_chromatin <- function(
     if (is.null(reclass_map) || nrow(reclass_map) == 0) {
         return(NULL)
     }
+    if (!requireNamespace("networkD3", quietly = TRUE) ||
+        !requireNamespace("htmlwidgets", quietly = TRUE)) {
+        return(NULL)
+    }
 
-    # Build transition counts
+    # Build transition counts: old_type -> new_type
     flow_df <- reclass_map %>%
         dplyr::filter(!is.na(old_type), !is.na(new_type)) %>%
         dplyr::group_by(old_type, new_type) %>%
@@ -4159,188 +4128,167 @@ refine_loop_anchors_by_chromatin <- function(
 
     if (nrow(flow_df) == 0) return(NULL)
 
-    # Order types by total frequency (descending)
-    old_order <- flow_df %>%
-        dplyr::group_by(old_type) %>%
-        dplyr::summarise(total = sum(count), .groups = "drop") %>%
-        dplyr::arrange(dplyr::desc(total)) %>%
-        dplyr::pull(old_type)
-    new_order <- flow_df %>%
-        dplyr::group_by(new_type) %>%
-        dplyr::summarise(total = sum(count), .groups = "drop") %>%
-        dplyr::arrange(dplyr::desc(total)) %>%
-        dplyr::pull(new_type)
-
-    flow_df$old_type <- factor(flow_df$old_type, levels = old_order)
-    flow_df$new_type <- factor(flow_df$new_type, levels = new_order)
-
-    # Build node positions for left (old) and right (new) sides
+    # Compute per-type totals for labels
     old_totals <- flow_df %>%
         dplyr::group_by(old_type) %>%
-        dplyr::summarise(total = sum(count), .groups = "drop") %>%
-        dplyr::arrange(dplyr::desc(old_type))
+        dplyr::summarise(total = sum(count), .groups = "drop")
     new_totals <- flow_df %>%
         dplyr::group_by(new_type) %>%
-        dplyr::summarise(total = sum(count), .groups = "drop") %>%
-        dplyr::arrange(dplyr::desc(new_type))
+        dplyr::summarise(total = sum(count), .groups = "drop")
 
-    y_max <- max(sum(old_totals$total), sum(new_totals$total))
+    n_total   <- nrow(reclass_map)
+    # Build nodes: type name + count + percentage (column headers via D3)
+    old_nodes <- paste0(old_totals$old_type,
+                        " (n=", format(old_totals$total, big.mark = ","),
+                        ", ", round(old_totals$total / n_total * 100, 1), "%)")
+    new_nodes <- paste0(new_totals$new_type,
+                        " (n=", format(new_totals$total, big.mark = ","),
+                        ", ", round(new_totals$total / n_total * 100, 1), "%)")
+    nodes <- data.frame(
+        name = c(old_nodes, new_nodes),
+        stringsAsFactors = FALSE
+    )
 
-    # Compute y positions for left nodes
-    old_ymin <- numeric(nrow(old_totals))
-    old_ymax <- numeric(nrow(old_totals))
-    cum <- 0
-    for (i in seq_len(nrow(old_totals))) {
-        old_ymin[i] <- cum
-        old_ymax[i] <- cum + old_totals$total[i]
-        cum <- old_ymax[i]
-    }
+    # Build links: source -> target with value = count
+    old_lookup <- setNames(seq_along(old_nodes) - 1L,
+                           old_totals$old_type)
+    new_lookup <- setNames(seq_along(new_nodes) - 1L +
+                             length(old_nodes),
+                           new_totals$new_type)
 
-    # Compute y positions for right nodes
-    new_ymin <- numeric(nrow(new_totals))
-    new_ymax <- numeric(nrow(new_totals))
-    cum <- 0
-    for (i in seq_len(nrow(new_totals))) {
-        new_ymin[i] <- cum
-        new_ymax[i] <- cum + new_totals$total[i]
-        cum <- new_ymax[i]
-    }
-
-    names(old_ymin) <- as.character(old_totals$old_type)
-    names(old_ymax) <- as.character(old_totals$old_type)
-    names(new_ymin) <- as.character(new_totals$new_type)
-    names(new_ymax) <- as.character(new_totals$new_type)
-
-    # Build flow polygons
-    flow_polys <- list()
-    old_running <- setNames(rep(0, length(old_order)), as.character(old_order))
-    new_running <- setNames(rep(0, length(new_order)), as.character(new_order))
-
-    for (i in seq_len(nrow(flow_df))) {
-        ot <- as.character(flow_df$old_type[i])
-        nt <- as.character(flow_df$new_type[i])
-        cnt <- flow_df$count[i]
-
-        y0_bottom <- old_ymin[ot] + old_running[ot]
-        y0_top <- y0_bottom + cnt
-        old_running[ot] <- old_running[ot] + cnt
-
-        y1_bottom <- new_ymin[nt] + new_running[nt]
-        y1_top <- y1_bottom + cnt
-        new_running[nt] <- new_running[nt] + cnt
-
-        # Determine color: unchanged = green, changed = amber
-        is_unchanged <- ot == nt
-        fill_col <- if (is_unchanged) "#7E9F8E" else "#D4A574"
-
-        flow_polys[[i]] <- data.frame(
-            x = c(0.2, 0.2, 0.8, 0.8),
-            y = c(y0_bottom, y0_top, y1_top, y1_bottom),
-            group = i,
-            old_type = ot,
-            new_type = nt,
-            count = cnt,
-            changed = !is_unchanged,
-            fill = fill_col,
-            stringsAsFactors = FALSE
+    links <- flow_df %>%
+        dplyr::transmute(
+            source = old_lookup[as.character(old_type)],
+            target = new_lookup[as.character(new_type)],
+            value  = count
         )
-    }
-    poly_df <- do.call(rbind, flow_polys)
-
-    # Node rectangles
-    old_rects <- data.frame(
-        xmin = 0.16, xmax = 0.2,
-        ymin = old_ymin, ymax = old_ymax,
-        label = names(old_ymin),
-        side = "old",
-        stringsAsFactors = FALSE
-    )
-    new_rects <- data.frame(
-        xmin = 0.8, xmax = 0.84,
-        ymin = new_ymin, ymax = new_ymax,
-        label = names(new_ymin),
-        side = "new",
-        stringsAsFactors = FALSE
-    )
-    node_rects <- rbind(old_rects, new_rects)
-
-    n_old <- length(old_order)
-    n_new <- length(new_order)
-    all_types <- unique(c(as.character(old_order), as.character(new_order)))
-    node_colors <- get_colors(length(all_types), "Paired")
-    names(node_colors) <- all_types
-
-    node_rects$fill <- node_colors[node_rects$label]
-
-    # Label positions
-    old_labels <- data.frame(
-        x = 0.14,
-        y = (old_ymin + old_ymax) / 2,
-        label = paste0(names(old_ymin), " (", old_totals$total, ")"),
-        stringsAsFactors = FALSE
-    )
-    new_labels <- data.frame(
-        x = 0.86,
-        y = (new_ymin + new_ymax) / 2,
-        label = paste0(names(new_ymin), " (", new_totals$total, ")"),
-        stringsAsFactors = FALSE
-    )
 
     n_changed <- sum(reclass_map$changed)
-    n_total <- nrow(reclass_map)
 
-    p <- ggplot2::ggplot() +
-        ggplot2::geom_polygon(
-            data = poly_df,
-            ggplot2::aes(x = x, y = y, group = group, fill = fill),
-            alpha = 0.45, color = NA
-        ) +
-        ggplot2::geom_rect(
-            data = node_rects,
-            ggplot2::aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = fill),
-            color = "white", linewidth = 0.3
-        ) +
-        ggplot2::geom_text(
-            data = old_labels,
-            ggplot2::aes(x = x, y = y, label = label),
-            hjust = 1, size = 3.5, fontface = "bold"
-        ) +
-        ggplot2::geom_text(
-            data = new_labels,
-            ggplot2::aes(x = x, y = y, label = label),
-            hjust = 0, size = 3.5, fontface = "bold"
-        ) +
-        ggplot2::scale_fill_identity() +
-        ggplot2::scale_x_continuous(limits = c(0, 1), expand = c(0, 0)) +
-        ggplot2::scale_y_continuous(expand = c(0, 0)) +
-        ggplot2::theme_void(base_size = 13) +
-        ggplot2::labs(
-            title = paste0(project_name, ": Anchor Reclassification Flow"),
-            subtitle = if (n_changed == 0) {
-                paste0("0 / ", n_total, " anchors reclassified")
-            } else {
-                paste0(n_changed, " / ", n_total,
-                       " anchors reclassified (amber = reclassified, green = unchanged)")
-            }
-        ) +
-        ggplot2::theme(
-            plot.title = ggplot2::element_text(hjust = 0.5, face = "bold", size = 14),
-            plot.subtitle = ggplot2::element_text(hjust = 0.5, size = 11, color = "#444444"),
-            plot.margin = ggplot2::margin(10, 80, 10, 80)
-        )
+    # Wong\'s colourblind-safe palette (Nature Methods 2011).  Each anchor
+    # type gets a fixed colour, consistently applied to both left (Before)
+    # and right (After) sides so the same type is recognisable across columns.
+    wong_palette <- c(
+        "eP"   = "#009E73",   # bluish-green
+        "eG"   = "#56B4E9",   # sky blue
+        "P"    = "#0072B2",   # blue
+        "G"    = "#CC79A7",   # reddish-purple
+        "E"    = "#E69F00",   # orange
+        "dual" = "#D55E00"    # vermillion
+    )
+    all_types <- unique(c(as.character(old_totals$old_type),
+                          as.character(new_totals$new_type)))
+    type_colors <- wong_palette[all_types]
+    # Fallback for any type not in the predefined palette
+    missing_types <- all_types[is.na(type_colors)]
+    if (length(missing_types) > 0) {
+        fallback <- setNames(get_colors(length(missing_types), "Set2"), missing_types)
+        type_colors[is.na(type_colors)] <- fallback[missing_types]
+    }
+    names(type_colors) <- all_types
+    # Extract type from node name: "eP (n=6910)" -> "eP"
+    node_type <- gsub(" \\(n=.*$", "", nodes$name)
+    sankey_colors <- unname(type_colors[node_type])
+    color_scale <- paste0('d3.scaleOrdinal().range(["',
+        paste(sankey_colors, collapse = '","'), '"])')
 
-    p
+    sn <- networkD3::sankeyNetwork(
+        Links = links, Nodes = nodes,
+        Source = "source", Target = "target",
+        Value = "value", NodeID = "name",
+        units = "", fontSize = 12, nodeWidth = 30,
+        colourScale = networkD3::JS(color_scale),
+        iterations = 0
+    )
+
+    sn$sizingPolicy$defaultWidth  <- "100%"
+    sn$sizingPolicy$defaultHeight <- "450px"
+
+    # Gradient links + dark node borders + bold labels — exactly matching
+    # the expression-refinement Sankey style (.build_sankey_plot).
+    sn <- htmlwidgets::onRender(sn, sprintf('
+		function(el, x) {
+		  var svg = d3.select(el).select("svg");
+		  function createValidID(name) {
+		    if (!name) return "unknown";
+		    return name.replace(/[^a-zA-Z0-9-]/g, "_");
+		  }
+		  svg.selectAll(".link").each(function(d) {
+		    var gradientID = "gradient-" + createValidID(d.source.name) +
+		      "-" + createValidID(d.target.name);
+		    if (svg.select("#" + gradientID).empty()) {
+		      var gradient = svg.append("defs")
+		        .append("linearGradient")
+		        .attr("id", gradientID)
+		        .attr("gradientUnits", "userSpaceOnUse")
+		        .attr("x1", d.source.x + d.source.dx / 2)
+		        .attr("y1", d.source.y + d.source.dy / 2)
+		        .attr("x2", d.target.x + d.target.dx / 2)
+		        .attr("y2", d.target.y + d.target.dy / 2);
+		      var sourceColor = d3.select(el).selectAll(".node")
+		        .filter(function(node) { return node.name === d.source.name; })
+		        .select("rect").style("fill");
+		      var targetColor = d3.select(el).selectAll(".node")
+		        .filter(function(node) { return node.name === d.target.name; })
+		        .select("rect").style("fill");
+		      gradient.append("stop").attr("offset", "0%%")
+		        .attr("stop-color", sourceColor);
+		      gradient.append("stop").attr("offset", "100%%")
+		        .attr("stop-color", targetColor);
+		    }
+		    d3.select(this).style("stroke", "url(#" + gradientID + ")")
+		      .style("stroke-opacity", 0.6)
+		      .style("stroke-width", function(d) { return Math.max(2, d.width); });
+		  });
+		  svg.selectAll(".node rect")
+		    .style("stroke", "#333333")
+		    .style("stroke-width", "1px");
+		  svg.selectAll("text")
+		    .style("font-size", "12px")
+		    .style("font-weight", "bold");
+		  // Before / After column labels
+		  var nodes = [];
+		  svg.selectAll(".node").each(function(d) { nodes.push(d); });
+		  if (nodes.length > 0) {
+		    var leftX  = d3.min(nodes, function(d) { return d.x; });
+		    var rightX = d3.max(nodes, function(d) { return d.x + d.dx; });
+		    var nodeW  = nodes[0].dx;
+		    var topY   = d3.min(nodes, function(d) { return d.y; }) - 20;
+		    svg.append("text")
+		      .attr("x", leftX + nodeW / 2)
+		      .attr("y", topY)
+		      .attr("text-anchor", "middle")
+		      .style("font-size", "12px")
+		      .style("font-weight", "bold")
+		      .style("fill", "#555555")
+		      .text("Before");
+		    svg.append("text")
+		      .attr("x", rightX - nodeW / 2)
+		      .attr("y", topY)
+		      .attr("text-anchor", "middle")
+		      .style("font-size", "12px")
+		      .style("font-weight", "bold")
+		      .style("fill", "#555555")
+		      .text("After");
+		  }
+		}
+		'))
+    sn
 }
 
-#' Internal: Build Chromatin Mark Combination Heatmap
+#' Internal: Build Chromatin Mark Enrichment Heatmap
 #'
-#' Binary heatmap showing which chromatin marks are present/absent at
-#' reclassified anchors, grouped by reclassification outcome.
+#' Aggregated ComplexHeatmap showing the percentage of anchors in each
+#' reclassification group that overlap each chromatin mark. One row per
+#' reclassification type, one column per mark. Cell colour encodes %%
+#' positive (white = 0%%, deep green = 100%%), with numeric labels.
+#' Left annotation: horizontal bar showing the number of anchors (N)
+#' per reclassification group.
 #'
 #' @param validation Chromatin validation data frame with mark columns.
 #' @param reclass_map Reclassification data frame from .chromatin_reclassify.
 #' @param project_name Character. Project prefix for the plot title.
-#' @return A ComplexHeatmap grob, or NULL if ComplexHeatmap is not installed.
+#' @return A ComplexHeatmap grob, or NULL if unavailable.
 #' @keywords internal
 #' @noRd
 .build_chromatin_mark_heatmap <- function(validation, reclass_map, project_name) {
@@ -4351,90 +4299,101 @@ refine_loop_anchors_by_chromatin <- function(
     if (is.null(validation) || nrow(validation) == 0) return(NULL)
     if (is.null(reclass_map) || nrow(reclass_map) == 0) return(NULL)
 
-    # Filter to reclassified anchors only
     changed_ids <- reclass_map$anchor_id[reclass_map$changed]
     if (length(changed_ids) == 0) return(NULL)
+
+    mark_cols <- c("H3K4me1", "H3K27ac", "ATAC", "H3K4me3", "H3K27me3")
+    available_marks <- intersect(mark_cols, colnames(validation))
+    if (length(available_marks) == 0) return(NULL)
 
     df <- validation %>%
         dplyr::filter(anchor_id %in% changed_ids) %>%
         dplyr::left_join(
-            reclass_map %>% dplyr::select(anchor_id, old_type, new_type, chromatin_state),
+            reclass_map %>% dplyr::select(anchor_id, old_type, new_type),
             by = "anchor_id"
-        )
+        ) %>%
+        dplyr::mutate(Reclassification = paste0(old_type, " -> ", new_type))
 
-    if (nrow(df) == 0) return(NULL)
+    # Compute % positive per mark x reclassification group
+    reclass_counts <- df %>%
+        dplyr::count(Reclassification, name = "N") %>%
+        dplyr::arrange(dplyr::desc(N))
 
-    # Mark matrix (binary)
-    mark_cols <- c("H3K4me1", "H3K4me3", "H3K27ac", "ATAC", "H3K27me3")
-    available_marks <- intersect(mark_cols, colnames(df))
-    if (length(available_marks) == 0) return(NULL)
+    pct_mat <- matrix(NA_real_,
+        nrow = nrow(reclass_counts),
+        ncol = length(available_marks),
+        dimnames = list(reclass_counts$Reclassification, available_marks))
 
-    mat <- as.matrix(df[, available_marks, drop = FALSE])
-    storage.mode(mat) <- "logical"
-    mat[is.na(mat)] <- FALSE
+    for (rc in reclass_counts$Reclassification) {
+        sub <- df[df$Reclassification == rc, , drop = FALSE]
+        for (mk in available_marks) {
+            vals <- sub[[mk]]
+            pct_mat[rc, mk] <- mean(!is.na(vals) & vals, na.rm = TRUE) * 100
+        }
+    }
 
-    # Row annotation: reclassification type and confidence
-    row_anno <- df %>%
-        dplyr::transmute(
-            Reclassification = paste0(old_type, "  ->  ", new_type),
-            Confidence = as.character(confidence)
-        )
+    row_labs <- reclass_counts$Reclassification
 
-    # Order rows by reclassification type
-    row_order <- order(row_anno$Reclassification)
-    mat <- mat[row_order, , drop = FALSE]
-    row_anno <- row_anno[row_order, ]
+    # Green gradient: light 0%, mid 50%, deep 100%
+    col_fun <- circlize::colorRamp2(c(0, 50, 100),
+                                     c("#F7FCF5", "#74C476", "#00441B"))
 
-    # Color scheme: consistent with existing green palette
-    mark_colors <- circlize::colorRamp2(c(0, 1), c("#F5F5F5", "#2D5A3D"))
+    # Cell labels: compact, only show non-zero
+    cell_fun <- function(j, i, x, y, width, height, fill) {
+        val <- pct_mat[i, j]
+        if (!is.na(val) && val > 0) {
+            grid::grid.text(sprintf("%.0f%%", val), x, y,
+                gp = grid::gpar(fontsize = 7, fontface = "plain",
+                    col = if (val > 60) "white" else "#333333"))
+        }
+    }
 
-    # Row annotation colors
-    reclass_types <- unique(row_anno$Reclassification)
-    reclass_cols <- get_colors(length(reclass_types), "Paired")
-    names(reclass_cols) <- reclass_types
+    # --- Left annotation: N per reclassification type ---
+    n_counts <- reclass_counts$N
+    names(n_counts) <- reclass_counts$Reclassification
 
-    conf_levels <- c("gold_standard", "high_confidence", "supported", "weak", "uncertain")
-    conf_colors <- c("#FFD700", "#7E9F8E", "#A8C4B8", "#D4A574", "#CCCCCC")
-    names(conf_colors) <- conf_levels
-
-    ha <- ComplexHeatmap::rowAnnotation(
-        Reclassification = row_anno$Reclassification,
-        Confidence = row_anno$Confidence,
-        col = list(
-            Reclassification = reclass_cols,
-            Confidence = conf_colors
+    ha_left <- ComplexHeatmap::rowAnnotation(
+        N = ComplexHeatmap::anno_barplot(
+            n_counts,
+            gp = grid::gpar(fill = "#8BA398", col = NA),
+            bar_width = 0.7,
+            axis = TRUE,
+            axis_param = list(gp = grid::gpar(fontsize = 7))
         ),
+        annotation_label = "N",
         annotation_name_gp = grid::gpar(fontsize = 9, fontface = "bold"),
-        annotation_legend_param = list(
-            Reclassification = list(title_gp = grid::gpar(fontsize = 9, fontface = "bold"),
-                                    labels_gp = grid::gpar(fontsize = 8)),
-            Confidence = list(title_gp = grid::gpar(fontsize = 9, fontface = "bold"),
-                              labels_gp = grid::gpar(fontsize = 8))
-        ),
-        simple_anno_size = unit(0.3, "cm")
+        show_legend = FALSE
     )
 
-    ht <- ComplexHeatmap::Heatmap(
-        mat,
-        name = "Mark\nPresence",
-        col = mark_colors,
+    n_changed <- sum(reclass_map$changed)
+
+    ComplexHeatmap::Heatmap(
+        pct_mat,
+        name = "%",
+        col = col_fun,
         cluster_rows = FALSE,
         cluster_columns = FALSE,
-        show_row_names = FALSE,
-        row_title = NULL,
-        column_title = paste0(project_name, ": Chromatin Mark Landscape at Reclassified Anchors"),
+        row_names_side = "left",
+        row_labels = row_labs,
+        row_names_gp = grid::gpar(fontsize = 10, fontface = "bold"),
+        column_names_gp = grid::gpar(fontsize = 10, fontface = "bold"),
+        column_title = paste0(project_name, ": Mark Enrichment (",
+                              n_changed, " reclassified anchors)"),
         column_title_gp = grid::gpar(fontsize = 12, fontface = "bold"),
-        right_annotation = ha,
-        border = TRUE,
+        cell_fun = cell_fun,
         rect_gp = grid::gpar(col = "white", lwd = 0.5),
+        border = TRUE,
+        left_annotation = ha_left,
         heatmap_legend_param = list(
+            title = "% Positive",
             title_gp = grid::gpar(fontsize = 9, fontface = "bold"),
-            labels = c("Absent", "Present"),
-            labels_gp = grid::gpar(fontsize = 8)
-        )
+            labels_gp = grid::gpar(fontsize = 8),
+            at = c(0, 25, 50, 75, 100),
+            legend_height = unit(2, "cm")
+        ),
+        width = unit(length(available_marks) * 1.8, "cm"),
+        height = unit(nrow(pct_mat) * 1.2, "cm")
     )
-
-    ht
 }
 
 #' @param bed_info Target annotation data frame (optional).
@@ -4536,10 +4495,15 @@ format_annotation_columns <- function(df) {
 #'   \item \code{"gold_standard"}: All five marks align with the canonical
 #'     active-enhancer signature: H3K4me1(+), H3K27ac(+), ATAC(+),
 #'     H3K4me3(-), H3K27me3(-). Requires all five marks to be provided.
-#'   \item \code{"high_confidence"}: H3K4me1(+) and H3K27ac(+), or
-#'     H3K4me1(+) and ATAC(+). At least two supporting marks present.
+#'   \item \code{"high_confidence"}: H3K4me1(+) and (H3K27ac(+) or ATAC(+)),
+#'     and H3K4me3(-) if tested. Anchors with H3K4me3(+) are classified as
+#'     \code{"supported"} with a \code{"promoter_like"} evidence tag.
 #'   \item \code{"supported"}: At least one enhancer-associated mark
-#'     (H3K4me1, H3K27ac, or ATAC) is present.
+#'     (H3K4me1, H3K27ac, or ATAC) is present. Anchors with H3K4me3(+)
+#'     -- regardless of H3K27me3 status -- receive a \code{"promoter_like"}
+#'     tag, indicating promoter signal that warrants reversion to P or
+#'     dual-function classification by
+#'     \code{\link{refine_loop_anchors_by_chromatin}}.
 #'   \item \code{"weak"}: Only exclusion marks are informative
 #'     (H3K27me3(-) or H3K4me3(-)) without positive enhancer evidence.
 #'   \item \code{"uncertain"}: No chromatin data provided or no overlaps
@@ -4865,6 +4829,10 @@ validate_epeG_by_chromatin <- function(
             .is_absent(result$H3K27me3[i]) && .is_absent(result$H3K4me3[i]))
             return("gold_standard")
         if (h3k4me1_t && result$H3K4me1[i] &&
+            # H3K4me3, if tested, must be absent: an anchor with both
+            # H3K4me1 and H3K4me3 is promoter-like, not a distal enhancer.
+            # When H3K4me3 is not provided (NA), we do not penalise.
+            (is.na(result$H3K4me3[i]) || .is_absent(result$H3K4me3[i])) &&
             ((h3k27ac_t && result$H3K27ac[i]) || (atac_t && result$ATAC[i])))
             return("high_confidence")
         if (has_positive[i]) return("supported")
@@ -4886,12 +4854,12 @@ validate_epeG_by_chromatin <- function(
             parts <- c(parts, "H3K27me3-")
         if (isTRUE(!is.na(result$H3K4me3[i]) && !result$H3K4me3[i]))
             parts <- c(parts, "H3K4me3-")
-        # Flag: active marks present + H3K4me3 tested & positive +
-        # H3K27me3 tested & absent -> chromatin looks more like active promoter
-        # than distal enhancer.  Kept as 'supported' but tagged for filtering.
+        # Flag: H3K4me3 tested & positive indicates promoter signal, regardless
+        # of whether H3K27me3 is absent (active promoter) or present (bivalent/
+        # poised promoter -- hallmark of silenced developmental genes). Both
+        # should be reverted to P by chromatin reclassification, not kept as eP.
         if (result$confidence[i] == "supported" &&
-            isTRUE(result$H3K4me3[i]) &&
-            isTRUE(!is.na(result$H3K27me3[i]) && !result$H3K27me3[i])) {
+            isTRUE(result$H3K4me3[i])) {
             parts <- c(parts, "promoter_like")
         }
         if (length(parts) == 0) return("no_data")

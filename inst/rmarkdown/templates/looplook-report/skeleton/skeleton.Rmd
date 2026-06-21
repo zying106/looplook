@@ -382,6 +382,7 @@ meta_path <- require_existing_path(
 has_expr <- !is.null(expr_path)
 has_peaks <- !is.null(peak_path)
 has_profiling <- has_expr && !is.null(diff_path) && !is.null(meta_path)
+has_chromatin <- length(params$chromatin_beds) > 0
 expr_sample_columns <- params$sample_columns
 if (has_expr && is.null(expr_sample_columns)) {
   expr_cols <- colnames(data.table::fread(expr_path, nrows = 0, showProgress = FALSE))
@@ -437,6 +438,10 @@ cat("The following analysis modules were executed:\n\n")
 cat("1. **3D-Guided Assignment:** Hierarchical peak-to-gene mapping via spatial contacts and proximity fallback.\n")
 if (has_expr) {
   cat(sprintf("2. **Expression Refinement:** Filtering silent contacts (TPM < %.1f) and topology reclassification (P to eP).\n", params$threshold))
+}
+if (has_chromatin) {
+  cat(sprintf("3. **Chromatin-Guided Reclassification:** %s mark(s) validated and reclassified anchors against ENCODE criteria.\n",
+    length(params$chromatin_beds)))
 }
 if (has_profiling) {
   cat("3. **Functional Profiling:** Multi-set differential expression analysis, GO/GSEA enrichment, and distal motif scanning.\n")
@@ -495,13 +500,15 @@ if (has_expr) {
 }
 
 # Chromatin-guided anchor reclassification (optional)
+# Runs on expression-refined output when available; falls back to raw
+# annotation when no expression data is provided.
 chromatin_refined <- NULL
 chromatin_error <- NULL
-has_chromatin <- length(params$chromatin_beds) > 0
-if (has_chromatin && !is.null(refined)) {
+chromatin_input <- if (!is.null(refined)) refined else res
+if (has_chromatin && !is.null(chromatin_input)) {
   chromatin_refined <- tryCatch(
     refine_loop_anchors_by_chromatin(
-      annotation_res = refined,
+      annotation_res = chromatin_input,
       chromatin_beds = params$chromatin_beds,
       species = params$species,
       write_output = FALSE,
@@ -513,7 +520,13 @@ if (has_chromatin && !is.null(refined)) {
     }
   )
   if (!is.null(chromatin_refined)) {
-    refined <- chromatin_refined
+    if (!is.null(refined)) {
+      # Merge: chromatin result inherits expression-level metadata
+      refined <- chromatin_refined
+    } else {
+      # No expression refinement — chromatin is the only refinement
+      refined <- chromatin_refined
+    }
   }
 }
 elapsed <- round(difftime(Sys.time(), t0, units="mins"), 1)
@@ -635,18 +648,17 @@ if (!is.null(res$plots)) {
 }
 ```
 
-# Expression-Aware Refinement {.section-header}
+# Refinement {.section-header}
 
 ```{r refinement-run}
-# Refinement already executed in annotation-core to feed the pre/post type count.
+# refinee already executed in annotation-core to feed the pre/post type count.
 # refined and refinement_error are already set.
-if (!has_expr) {
-  refined <- NULL
-}
+# Do NOT clear refined here: chromatin refinement may have set it even
+# without expression data (line ~524).
 ```
 
 ```{r refinement-summary, results='asis'}
-if (has_expr && !is.null(refined)) {
+if (has_expr && !is.null(refined) && !is.null(refined$loop_annotation)) {
   rla <- refined$loop_annotation
   n_original <- nrow(res$loop_annotation)
   n_filtered <- nrow(rla)
@@ -658,6 +670,16 @@ if (has_expr && !is.null(refined)) {
   cat(sprintf("%s of %s original loops passed QC (%s%% retained). ", 
       comma(n_filtered), comma(n_original), round(n_filtered / n_original * 100, 1)))
   cat(sprintf("<strong>%s</strong> promoter-anchors were reclassified as enhancer-like elements (eP).", comma(n_reclass)))
+  cat('</div>')
+} else if (!is.null(chromatin_refined) && !is.null(chromatin_refined$qc_summary)) {
+  # Chromatin-only refinement (no expression data)
+  qc <- chromatin_refined$qc_summary
+  cat('<div class="status-box status-success">')
+  cat(sprintf("<strong>Chromatin refinement complete.</strong> %s candidate anchors tested. ",
+      comma(qc$n_candidate_anchors)))
+  cat(sprintf("<strong>%s</strong> reclassified, <strong>%s</strong> gold-standard, ",
+      comma(qc$n_reclassified), comma(qc$n_gold_standard)))
+  cat(sprintf("<strong>%s</strong> high-confidence.", comma(qc$n_high_confidence)))
   cat('</div>')
 } else {
   cat('<div class="status-box status-warning">')
@@ -756,8 +778,8 @@ if (!is.null(rde) && nrow(rde) > 0) {
   print(render_table(rde[order(rde$n_Linked_Promoters, decreasing = TRUE), ]))
 }
 
-cat("\n## Refinement Visualizations\n")
-if (!is.null(refined$plots)) {
+if (has_expr && !is.null(refined$plots)) {
+  cat("\n## Refinement Visualizations\n")
   # ggplot-based plots — safe in results='asis'
   for (nm in c("Comparison_Dumbbell", "Rose", "Target_Loop_Donut")) {
     if (!is.null(refined$plots[[nm]])) {
@@ -791,6 +813,57 @@ if (!is.null(plot_descriptions[["Target_Sankey"]])) {
 }
 # iframe src is relative to the main report HTML; both live in out_dir
 cat(sprintf('<div class="plot-container"><iframe src="target_sankey.html" width="100%%" height="450" frameborder="0" style="border:none;"></iframe></div>\n'))
+```
+
+```{r chromatin-plot-descriptions, include=FALSE}
+# Chromatin refinement plot descriptions
+chromatin_plot_desc <- list(
+  Chromatin_Dumbbell = "Anchor-type distribution before vs. after chromatin-guided reclassification. Dark green (right dot) shows the refined counts after mark-evidence reclassification; grey (left dot) shows original counts. New categories (e.g., dual, P appearing from eP) indicate chromatin-driven corrections of the expression-only classification.",
+  Chromatin_Sankey = "Flow diagram tracing each anchor's reclassification path. Left column (Before): original anchor types after expression refinement. Right column (After): updated types after chromatin-guided reclassification. Each coloured block represents one anchor type (eP = bluish-green, eG = sky blue, P = blue, G = reddish-purple, E = orange, dual = vermillion); block height is proportional to anchor count. Gradient links trace flows between types. Key transitions: eP to P (promoter-like chromatin reversion), eP to dual (dual-function upgrade).",
+  Chromatin_MarkHeatmap = "Aggregated heatmap showing the percentage of anchors in each reclassification group that overlap each chromatin mark. Cell colour encodes % positive (white = 0%, dark green = 100%). One row per reclassification type, one column per mark. This compact view reveals which marks drive specific reclassification decisions — for example, H3K4me3 enrichment in eP→P reversions, or H3K27me3 co-occurrence in eP→dual upgrades.",
+  Chromatin_Rose = "Post-reclassification loop-type proportions. Comparing with the pre-chromatin rose (above) reveals how mark-evidence reclassification shifts the loop-type landscape."
+)
+```
+
+```{r chromatin-plots, results='asis', eval=show_htmlwidgets && !is.null(chromatin_refined) && !is.null(chromatin_refined$plots)}
+cat("\n# Chromatin Refinement Visualizations {.section-header}\n\n")
+chr_plot_nms <- c("Chromatin_Dumbbell", "Chromatin_Sankey", "Chromatin_MarkHeatmap", "Chromatin_Rose")
+for (nm in chr_plot_nms) {
+  if (!is.null(chromatin_refined$plots[[nm]])) {
+    if (inherits(chromatin_refined$plots[[nm]], "Heatmap")) {
+      # ComplexHeatmap
+      cat(sprintf("\n## %s\n\n", gsub("_", " ", nm)))
+      if (!is.null(chromatin_plot_desc[[nm]])) {
+        cat(sprintf('<div style="margin-bottom:10px; color:#555; font-size:0.92em; line-height:1.5;">%s</div>\n',
+          chromatin_plot_desc[[nm]]))
+      }
+      render_plot_container(chromatin_refined$plots[[nm]],
+        caption = nm, width = 10, height = max(6, nrow(chromatin_refined$chromatin_validation) * 0.02))
+    } else if (inherits(chromatin_refined$plots[[nm]], "htmlwidget")) {
+      # networkD3 Sankey
+      cat(sprintf("\n## %s\n\n", gsub("_", " ", nm)))
+      if (!is.null(chromatin_plot_desc[[nm]])) {
+        cat(sprintf('<div style="margin-bottom:10px; color:#555; font-size:0.92em; line-height:1.5;">%s</div>\n',
+          chromatin_plot_desc[[nm]]))
+      }
+      w <- chromatin_refined$plots[[nm]]
+      w$height <- 450
+      sankey_file <- file.path(params$out_dir, "chromatin_sankey.html")
+      dir.create(params$out_dir, showWarnings = FALSE, recursive = TRUE)
+      htmlwidgets::saveWidget(w, sankey_file, selfcontained = TRUE,
+                              title = "Chromatin Reclassification Sankey")
+      cat(sprintf('<div class="plot-container"><iframe src="chromatin_sankey.html" width="100%%" height="450" frameborder="0" style="border:none;"></iframe></div>\n'))
+    } else {
+      # ggplot2
+      cat(sprintf("\n## %s\n\n", gsub("_", " ", nm)))
+      if (!is.null(chromatin_plot_desc[[nm]])) {
+        cat(sprintf('<div style="margin-bottom:10px; color:#555; font-size:0.92em; line-height:1.5;">%s</div>\n',
+          chromatin_plot_desc[[nm]]))
+      }
+      render_plot_container(chromatin_refined$plots[[nm]], caption = nm)
+    }
+  }
+}
 ```
 
 ```{r chromatin-validation, results='asis', eval=has_expr && !is.null(refined) && !is.null(refined$chromatin_validation) && nrow(refined$chromatin_validation) > 0}
@@ -1128,7 +1201,8 @@ All results and processed data are saved in the directory: `r params$out_dir`
 
 **3D-Guided Target Assignment.** Chromatin loops are clustered using a graph-based connected-components approach (1kb gap). Target genes are assigned hierarchically: (1) Spatial contacts link features to promoters; (2) Expression-aware conflict resolution prioritizes highly expressed candidates; (3) unlooped features use a proximity-based fallback.
 
-`r if(!is.null(refined)) sprintf("**Expression Refinement.** RNA-seq data (threshold = %.1f %s) filtered silent contacts. Promoters below threshold were reclassified as enhancer-like (eP) to refine the regulatory landscape.", params$threshold, params$unit_type)`
+`r if(has_expr && !is.null(refined)) sprintf("**Expression Refinement.** RNA-seq data (threshold = %.1f %s) filtered silent contacts. Promoters below threshold were reclassified as enhancer-like (eP) to refine the regulatory landscape.", params$threshold, params$unit_type)`
+`r if(has_chromatin && !is.null(chromatin_refined)) sprintf("**Chromatin-Guided Reclassification.** Orthogonal chromatin mark data (%s) validated and reclassified loop anchors against ENCODE active-enhancer criteria.", paste(names(params$chromatin_beds), collapse = ", "))`
 
 `r if(params$run_go) "**Functional Analysis.** GO enrichment (clusterProfiler, BH-adj p < 0.05) and GSEA identify biological processes associated with target gene regulation."`
 

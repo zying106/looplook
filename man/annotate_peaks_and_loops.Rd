@@ -42,7 +42,7 @@ Additional columns beyond 6 are retained in the output; anchor swapping only aff
 
 \item{species}{Character. Genome assembly used when \code{txdb} and \code{org_db} are \code{NULL}. One of \code{"hg38"}, \code{"hg19"}, \code{"mm10"}, \code{"mm9"}. Default: \code{"hg38"}. For other species, pass \code{txdb} and \code{org_db} as objects or package name strings directly (e.g. \code{txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene}, \code{org_db = "org.Dm.eg.db"}); \code{species} is then only used for karyotype ideograms.}
 
-\item{tss_region}{Numeric vector of length 2. Promoter window around the TSS in bp. Default: \code{c(-2000, 2000)} (typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).}
+\item{tss_region}{Numeric vector of length 2. Promoter window around the TSS in bp. Default: \code{c(-2000, 2000)} (±2 kb; typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).}
 
 \item{out_dir}{Character. Output directory for the Excel results file. Default: \code{"./results"}.}
 
@@ -54,7 +54,7 @@ Additional columns beyond 6 are retained in the output; anchor swapping only aff
 
 \item{color_palette}{Character. RColorBrewer palette name. Default: \code{"Set2"}.}
 
-\item{karyo_bin_size}{Integer. Bin width in bp for karyotype heatmaps. Default: \code{1e5}.}
+\item{karyo_bin_size}{Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default: \code{1e5} (100 kb). Typical range: 5e4-5e5 depending on genome size and resolution.}
 
 \item{neighbor_hop}{Integer. k-hop ego-network expansion order via \code{igraph::ego()}. \code{0} restricts to direct contacts. Default: \code{0}. Target gene assignment searches one additional hop (\code{neighbor_hop + 1}) to capture genes at the opposite anchor of directly connected loops.}
 
@@ -89,7 +89,7 @@ Five keywords: \code{"protein"}, \code{"small_ncRNA"}, \code{"antisense"},
 unlisted keep their default relative order appended at the bottom.
 Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")}.}
 
-\item{anchor_gap}{Integer. Search radius: how far apart (bp) can a peak and loop anchor be for the peak to be considered "near" the anchor? \code{-1L} (default): strict physical overlap required (GenomicRanges default -- peak and anchor must share at least 1 bp). \code{0L}: adjacent intervals (peak end == anchor start) also count. \code{>0}: explicit gap tolerance (e.g. \code{200} for cross-experiment integration). When \code{>= 0}, the result includes both physically overlapping pairs AND proximity-only pairs (within gap but no actual overlap). Use \code{anchor_min_overlap > 1} to require actual physical overlap among these candidates.}
+\item{anchor_gap}{Integer. Search radius: how far apart (bp) can a peak and loop anchor be for the peak to be considered "near" the anchor? \code{-1L} (default): strict physical overlap required (GenomicRanges default -- peak and anchor must share at least 1 bp). \code{0L}: adjacent intervals (peak end == anchor start) also count. \code{>0}: explicit gap tolerance in bp (e.g. \code{200} = 200 bp tolerance for cross-experiment integration). When \code{>= 0}, the result includes both physically overlapping pairs AND proximity-only pairs (within gap but no actual overlap). Use \code{anchor_min_overlap > 1} to require actual physical overlap among these candidates.}
 
 \item{anchor_min_overlap}{Integer. After candidate pairs are found (via \code{anchor_gap}), how many base pairs of actual physical overlap are required? Default \code{1L}: any touch counts (including proximity-only hits when \code{anchor_gap >= 0}). Increase to \code{10-100} to filter out spurious boundary overlaps. Setting this \code{> 1} with \code{anchor_gap >= 0} ensures that even with gap tolerance, only pairs with genuine physical overlap are retained.}
 
@@ -244,4 +244,9 @@ if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
     )
     head(res$loop_annotation, 1)
 }
+}
+\seealso{
+\code{\link{refine_loop_anchors_by_expression}} for expression-aware refinement,
+\code{\link{refine_loop_anchors_by_chromatin}} for chromatin-guided reclassification,
+\code{\link{profile_target_genes}} for automated functional profiling.
 }

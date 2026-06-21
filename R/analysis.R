@@ -96,6 +96,9 @@
 #' )
 #' names(profile_res)
 #'
+#' @seealso \code{\link{annotate_peaks_and_loops}} for initial 3D annotation,
+#'   \code{\link{refine_loop_anchors_by_expression}} for expression-aware refinement.
+#'
 #' @export
 profile_target_genes <- function(
   annotation_res,

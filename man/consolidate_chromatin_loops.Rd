@@ -24,7 +24,7 @@ consolidate_chromatin_loops(
 \arguments{
 \item{files}{Character vector. Paths to BEDPE files (at least two).}
 
-\item{gap}{Numeric. Distance (bp) to consider loops as overlapping. Default 1000.}
+\item{gap}{Numeric. Maximum distance (in base pairs) between loop anchors to consider them as overlapping. Default: \code{1000} (1 kb). Typical range: 500-5000 bp depending on data resolution. Use \code{gap = 0} for strict overlap only.}
 
 \item{mode}{Character. Choose one of the following: "consensus", "intersect", "union". Merge strategy:
 \itemize{
