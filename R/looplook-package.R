@@ -15,9 +15,14 @@
 #'   \item \strong{3D-Guided Annotation:} Hierarchical peak-to-gene mapping with
 #'     expression-aware conflict resolution
 #'     (\code{\link{annotate_peaks_and_loops}}).
-#'   \item \strong{Expression-Aware Refinement:} Transcriptome-guided filtering
+#'   \item \strong{Expression-Aware Refinement:} Transcriptome-aware filtering
 #'     and topological reclassification of silent regulatory elements
 #'     (\code{\link{refine_loop_anchors_by_expression}}).
+#'   \item \strong{Chromatin-Aware Refinement:} Chromatin mark-based anchor
+#'     reclassification, dual-function element detection, and orthogonal
+#'     validation of expression-derived hypotheses
+#'     (\code{\link{refine_loop_anchors_by_chromatin}},
+#'     \code{\link{validate_epeG_by_chromatin}}).
 #'   \item \strong{Automated Profiling:} End-to-end multi-omics analysis including
 #'     GSEA, GO enrichment, motif scanning, and PPI networks
 #'     (\code{\link{profile_target_genes}}).

@@ -91,7 +91,7 @@ Beyond target gene assignment, **`looplook`** functions as a **standalone platfo
 
 3. **Expression-Aware Refinement**: Integrates quantitative transcriptomic data to annotate each loop with expression-informed functional status while preserving all structural contacts. Anchors associated with transcriptionally silent reference promoters are reclassified as enhancer-like elements (eP, eG), producing an expression-refined regulatory network without discarding structural evidence. A dataset-adaptive quantile mode (`threshold_mode = "quantile"`) accommodates varying sequencing depths.
 
-4. **Chromatin-Guided Anchor Reclassification**: Validates and systematically reclassifies loop anchors using orthogonal chromatin mark data (ChIP-seq, CUT&Tag, ATAC-seq). Anchors are scored against ENCODE active-enhancer criteria across five confidence levels (gold\_standard to uncertain), and anchor types are updated based on mark combinations — for instance, an eP anchor with H3K4me3+ H3K27me3− promoter-like chromatin is reverted to P, while a P anchor with H3K4me1+ H3K4me3+ dual marks is upgraded to dual-function. Reclassification is fully auditable through per-anchor chromatin state, confidence, and before/after type columns.
+4. **Chromatin-Aware Anchor Reclassification**: Validates and systematically reclassifies loop anchors using orthogonal chromatin mark data (ChIP-seq, CUT&Tag, ATAC-seq). Anchors are scored against ENCODE active-enhancer criteria across five confidence levels (gold\_standard to uncertain), and anchor types are updated based on mark combinations — for instance, an eP anchor with H3K4me3+ H3K27me3− promoter-like chromatin is reverted to P, while a P anchor with H3K4me1+ H3K4me3+ dual marks is upgraded to dual-function. Reclassification is fully auditable through per-anchor chromatin state, confidence, and before/after type columns.
 
 5. **Replicate Consolidation and Multi-Source Consensus**: Employs graph-theoretic connected-component clustering to harmonize biological replicates and suppress technical noise. The framework supports multi-source consensus integration — for instance, intersecting HiChIP datasets targeting H3K27ac and RNA Polymerase II — to construct a unified, high-confidence 3D interactome supported by orthogonal experimental evidence.
 
@@ -114,7 +114,7 @@ part <- "<span style='color: #FF8F00;'>Partial</span>"
 comp <- data.frame(
   "Feature" = c(
     "Primary annotation scheme", "User-input 3D interactome", "User-input omics data",
-    "Graph-based topological consensus", "Expression-guided refinement",
+    "Graph-based topological consensus", "Expression-aware refinement",
     "Chromatin mark validation", "Topological reclassification",
     "Multi-hop network diffusion", "Smart linear fallback", "Functional inference",
     "Multi-track visualization", "Local execution", "Ecosystem"
@@ -539,26 +539,37 @@ print(res_integrated$plots$Karyo_Anchors) # renders via grid or opens in browser
 
 # Module 3: Refinement & Validation
 
-Physical proximity detected by chromatin conformation assays is a structural prerequisite for regulatory interaction, but it does not directly indicate active transcriptional engagement. This module integrates quantitative transcriptomic data to annotate each loop with expression-informed functional status. All structural loops are preserved; the pipeline reclassifies transcriptionally silent anchors (P → eP, G → eG), designates the high-confidence functional subset via `Retained_In_Functional_Network`, and records the rationale for each decision in `Refinement_Action`.
+Module 3 provides two complementary refinement layers that answer distinct biological questions: **expression-aware refinement** evaluates transcriptional activity (is the gene expressed?), while **chromatin-aware refinement** evaluates regulatory identity (what *is* this anchor?) using direct histone mark evidence. Together they transform a structural contact map into a functionally interpretable regulatory network. The ideal workflow combines both — expression marks silent anchors as testable hypotheses (eP/eG), chromatin resolves them into definitive types (E, P, G, dual). When only one data type is available, either module can be used independently.
 
 
-### Parameter Strategy & Core Inputs
+### Submodule 3A: Expression-Aware Refinement
 
-The `refine_loop_anchors_by_expression` function implements expression-aware refinement via the following key parameters:
+Physical proximity detected by chromatin conformation assays is a structural prerequisite for regulatory interaction, but it does not directly indicate active transcriptional engagement. `refine_loop_anchors_by_expression()` integrates quantitative transcriptomic data to annotate each loop with expression-informed functional status. All structural loops are preserved; the pipeline reclassifies transcriptionally silent anchors (P → eP, G → eG), designates the high-confidence functional subset via `Retained_In_Functional_Network`, and records the rationale for each decision in `Refinement_Action`.
 
-- **`annotation_res`**: Foundational 3D annotation output generated by Module 2.
-- **`expr_matrix_file` & `sample_columns`**: Quantitative expression matrix (e.g., TPM, FPKM) and the specific replicates to average, establishing a robust baseline expression profile.
-- **`threshold` & `unit_type`**: Defines the quantitative expression cutoff (e.g., `threshold = 1`, `unit_type = "TPM"`); genes with expression >= `threshold` are considered active. This parameter enables downward compatibility with various normalization methods.
-- **`threshold_mode`** (new): Controls how `threshold` is interpreted. `"absolute"` (default): `threshold` is a direct expression cutoff (e.g., TPM >= 1). `"quantile"`: `threshold` is interpreted as a quantile of the expression distribution (e.g., `0.75` selects the top 25% most highly expressed genes). Quantile mode is dataset-adaptive and robust across experiments with different sequencing depths.
-- **`reclassify_by_expression`**: A transformative logical parameter (`TRUE`/`FALSE`). When enabled, transcriptionally silent Promoters (`P`) and Gene Bodies (`G`) are not simply discarded; instead, they are reclassified as enhancer-like regulatory elements (`eP`, `eG`). This correction refines the regulatory topology (e.g., reclassifying a functionally silent `P-P` loop into a curated `eP-P` loop). **Important:** `eP`/`eG` labels indicate transcriptional silence at the reference gene — they do **not** constitute evidence of enhancer activity. Orthogonal chromatin data (ATAC-seq, H3K27ac, H3K4me1) are required for functional enhancer interpretation.
-- **`color_palette`**: RColorBrewer palette for loop-type colour assignments in refinement plots (default: `"Paired"`). Controls the rose, donut, and dumbbell chart colours; karyotype heatmaps use fixed red/purple palettes.
-- **`hub_percentile`**: Node-degree quantile threshold for connectivity classification (default: `0.95`). The underlying structural hub classification is inherited from the annotation stage and is independent of expression status.
-- **`karyo_bin_size`**: Genomic bin width for karyotype heatmaps (default: `1e5`).
-- **`species`**: Genome assembly (`"hg38"`, `"hg19"`, `"mm10"`, `"mm9"`). Required for karyotype heatmap chromosome ideograms.
+**Important:** `eP`/`eG` labels indicate transcriptional silence at the reference gene — they do **not** constitute evidence of enhancer activity. Orthogonal chromatin data (ATAC-seq, H3K27ac, H3K4me1) are required for functional enhancer interpretation. These labels should be treated as hypotheses for chromatin validation.
 
-The `eP` and `eG` labels capture expression-aware enhancer-like regulatory states in 3D chromatin space. When available, orthogonal chromatin evidence such as ATAC-seq accessibility, H3K27ac enrichment, or H3K27me3 depletion can further strengthen biological interpretation of these reclassified anchors. `looplook` provides `validate_epeG_by_chromatin()` for systematic testing of eP/eG anchors against user-supplied chromatin mark BED files (see the Orthogonal Validation section below), or the `chromatin_beds` parameter in `refine_loop_anchors_by_expression()` to run validation automatically and add results to the Excel workbook. `refine_loop_anchors_by_chromatin()` provides a complementary chromatin-guided reclassification that updates anchor types and loop topologies; if you plan to use both, skip `chromatin_beds` in the expression refinement step to avoid redundant file reads.
+#### Key Parameters
 
-### Refinement Output Structure
+- **`annotation_res`**: Foundational 3D annotation output from Module 2.
+- **`expr_matrix_file` & `sample_columns`**: Quantitative expression matrix (e.g., TPM, FPKM) and the specific replicates to average.
+- **`threshold` & `unit_type`**: Expression cutoff (e.g., `threshold = 1`, `unit_type = "TPM"`). Genes with expression ≥ `threshold` are considered active.
+- **`threshold_mode`**: `"absolute"` (default): direct expression cutoff. `"quantile"`: dataset-adaptive quantile (e.g., `0.75` selects top 25% most highly expressed genes).
+- **`reclassify_by_expression`**: When `TRUE` (recommended), silent P/G anchors are reclassified as eP/eG rather than discarded, preserving topology while flagging transcriptional state.
+- **`species`**, **`hub_percentile`**, **`karyo_bin_size`**: Genome assembly, hub-detection quantile, and heatmap bin width (see Module 2).
+
+### Submodule 3B: Chromatin-Aware Anchor Reclassification
+
+`refine_loop_anchors_by_chromatin()` applies orthogonal chromatin mark evidence (ChIP-seq, CUT&Tag, ATAC-seq) to systematically reclassify loop anchors and update loop topologies. While expression-aware refinement asks *whether the gene is transcribed*, chromatin-aware refinement asks *what the regulatory element is* — a more fundamental question answered by direct histone modification data.
+
+The function tests all anchor types (P, G, E, eP, eG by default) against user-supplied BED files for up to five marks: H3K4me1, H3K4me3, H3K27ac, ATAC, and H3K27me3. Each anchor receives a confidence level (`gold_standard` through `uncertain`), a chromatin state (e.g., `active_enhancer_like`, `dual_like`, `promoter_like`), and an evidence string (e.g., `"H3K4me1+; H3K27ac+; H3K4me3-"`). Anchors are reclassified based on mark combinations according to ENCODE-based criteria — for instance, a P anchor with H3K4me1⁺ H3K4me3⁻ H3K27ac⁺ is reclassified as E, while an eP anchor with H3K4me3⁺ promoter-like chromatin is reverted to P with its original gene symbol restored.
+
+When `recompute_targets = TRUE`, target gene links are rebuilt from chromatin-updated anchor types and carry full audit columns (`anchor_type_before_chromatin`, `anchor_type_after_chromatin`, `chromatin_target_action`). See the Chromatin-Aware Anchor Reclassification section below for the complete rule set, confidence criteria, and output structure.
+
+**Pipeline guidance:** The two submodules serve distinct, complementary roles. When you have **both RNA-seq and ChIP-seq**, use expression refinement first then chromatin refinement — expression marks silent anchors as hypotheses, chromatin resolves them, and the activity columns (`Active_Target_Genes`, `Retained_In_Functional_Network`) pass through for downstream profiling. When you have **only ChIP-seq**, run chromatin refinement directly on Module 2 output. When you have **only RNA-seq**, run expression refinement alone — eP/eG labels serve as testable hypotheses for future chromatin validation.
+
+When chromatin data are complete (H3K4me1 + H3K4me3 minimum), the reclassification rules resolve most eP/eG into definitive types: dual (H3K4me1+ H3K4me3+), E (active/primed enhancer chromatin), or P/G (H3K4me3+ promoter signal). eP/eG may persist when chromatin evidence is insufficient to override the expression-based classification — for instance, H3K4me1 alone (`weak_enhancer_like`) cannot distinguish active from poised enhancers, H3K27me3 alone (`repressed`) is consistent with transcriptional silence, and anchors without detected marks (`uncertain`) lack the evidence needed for reclassification. Residual eP/eG are not errors; they flag loci where the available chromatin data do not resolve the regulatory identity, and the `chromatin_validation` table records the evidence (or lack thereof) for each anchor.
+
+### Expression Refinement Output Structure
 
 The refined `loop_annotation` contains two target gene columns with distinct semantics:
 
@@ -639,16 +650,16 @@ refined_val <- refine_loop_anchors_by_expression(
 table(refined_val$chromatin_validation$confidence)
 ```
 
-### Deep Dive: Refinement Visualizations
+### Deep Dive: Expression Refinement Visualizations
 
-This module automatically generates a specialized suite of visual diagnostics to quantify transcriptome-guided refinement efficacy and characterize the functional network:
+Expression refinement automatically generates a suite of visual diagnostics to quantify refinement efficacy and characterize the functional network:
 
 #### 1. Global Refinement Profiling
 *(Always Generated)*
 
 - **Refinement Effect Dumbbell** (`*_Comparison_Dumbbell.pdf`): Quantifies the impact of expression-aware reclassification by visualizing the numerical contrast between original structural loops and refined loops across all topological classes, highlighting reclassification-driven changes in loop type composition.
 
-- **Refined Loop Proportion Rose** (`*_Rose.pdf`): Coxcomb chart illustrating the topological distribution (by count) of the interactome after expression-guided reclassification.
+- **Refined Loop Proportion Rose** (`*_Rose.pdf`): Coxcomb chart illustrating the topological distribution (by count) of the interactome after expression-aware reclassification.
 - **Refined Active Genes Karyotype** (`*_Refined_Karyo_Active.pdf`): Genome-wide ideograms mapping the chromosomal density of transcriptionally active loop-associated genes that passed the expression threshold. 
 
 #### 2. Genomic Feature-to-3D Target Annotation Profiling
@@ -657,7 +668,9 @@ This module automatically generates a specialized suite of visual diagnostics to
 - **Multi-Omics Sankey Diagram** (`Target_Sankey` htmlwidget in-memory; `target_sankey.html` alongside the report when rendered): Core integration diagnostic that maps the fate of inputted genomic features across three logical tiers: Genomic Region (L1) → 3D Loop Connection (L2) → Target Expression Status (L3). This intuitively reveals the proportion of GWAS/ChIP-seq peaks structurally connected to functionally active genes. When generated through `looplook_report()`, keep `target_sankey.html` in the same output directory as the main HTML report.
 
 - **Refined Target Loop Donut** (`*_Target_Loop_Donut.pdf`): Visualizes the topological distribution of refined structural loops whose anchors overlap user-defined genomic features. This shows the full refined network; for the functional subset, filter on `Retained_In_Functional_Network`.
-- **Refined Target Genes Karyotype** (`*_Refined_Karyo_TargetGenes.pdf`): Chromosomal density map of strictly refined putative target genes, facilitating visualization of transcriptionally verified multi-omics loci.
+- **Refined Target Genes Karyotype** (`*_Refined_Karyo_TargetGenes.pdf`): Chromosomal density map of strictly refined putative target genes.
+
+For chromatin refinement visualizations (dumbbell, sankey, mark-enrichment heatmap, rose), see the Chromatin-Aware Anchor Reclassification section below.
 
 ### Orthogonal Validation of eP/eG Anchors (Chromatin Mark Evidence)
 
@@ -712,7 +725,7 @@ Marks not provided are recorded as `NA` and do not influence scoring — missing
 | `confidence` | Factor: `gold_standard` > `high_confidence` > `supported` > `weak` > `uncertain` |
 | `evidence` | Human-readable string (e.g. `"H3K4me1+; H3K27ac+; H3K27me3-"`) |
 
-### Chromatin-Guided Anchor Reclassification
+### Chromatin-Aware Anchor Reclassification
 
 While `validate_epeG_by_chromatin()` provides a confidence score for each eP/eG anchor independently, `refine_loop_anchors_by_chromatin()` applies chromatin-mark evidence to systematically **reclassify** anchors and update loop topologies. This function can be called on raw annotation output (`annotate_peaks_and_loops`) to test P/G/E anchors, or on expression-refined output to test eP/eG anchors.
 
@@ -723,13 +736,16 @@ Reclassification rules (minimum input: H3K4me1 + H3K4me3):
 - **E + H3K4me3⁺ H3K4me1⁻ → `P`**: Unannotated promoter or ncRNA gene
 - **E + H3K4me1⁺ H3K4me3⁺ → `dual`**: Dual-function locus in distal region
 - **G + H3K4me1⁺ H3K4me3⁺ → `dual`** / **G + H3K4me3⁺ H3K4me1⁻ → `P`**: Gene-body enhancer or internal promoter
-- **eP/eG + promoter_like → `P`/`G`**: Revert to active promoter/gene body
-- **eP/eG + dual_like → `dual`**: Confirm dual-function
+- **eP/eG + gold_standard or high_confidence + active/primed enhancer chromatin → `E`**: Enhancer identity confirmed by chromatin; matches the P→E rule to guarantee the same outcome regardless of refinement order
+- **eP/eG + promoter_like → `P`/`G`**: Revert to active promoter/gene body; original gene symbols restored
+- **eP/eG + dual_like → `dual`**: Confirm dual-function; original gene symbols restored
 - Anchor types not matching any rule remain unchanged.
 
 The chromatin state of each anchor is also inferred (highest-priority match first): `conflicting_marks` > `dual_like` > `active_enhancer_like` > `primed_enhancer_like` > `weak_enhancer_like` > `promoter_like` > `repressed` > `uncertain` > `no_data`.
 
 \strong{Important — H3K4me3 dependency:} Rules that test for H3K4me3 *absence* (e.g., P→E, G→E) require H3K4me3 to be provided in `chromatin_beds`. When H3K4me3 is omitted, its value is `NA` for all anchors, and these rules are skipped conservatively — no reclassification without explicit data. Include H3K4me3 (and optionally H3K27me3) to enable the full set of reclassification rules.
+
+\strong{Pipeline guidance:} The two refinement modules serve distinct roles that complement each other — they do not replace one another. Expression-aware refinement evaluates *transcriptional activity* (is the gene expressed?) and provides activity metrics (`Active_Target_Genes`, `Retained_In_Functional_Network`, `Refinement_Action`) required for downstream GSEA, GO enrichment, and differential expression profiling. Chromatin-aware refinement evaluates *chromatin identity* (what *is* this anchor?) using direct histone mark evidence, correcting positional and expression-derived anchor types into definitive categories (E, P, G, dual). When you have **both RNA-seq and ChIP-seq data**, use expression refinement first then chromatin refinement — expression marks silent anchors as hypotheses (eP/eG), chromatin confirms or corrects them, and the expression-derived activity columns pass through into downstream profiling. When you have **only ChIP-seq data**, run chromatin refinement directly on `annotate_peaks_and_loops()` output. When you have **only RNA-seq data**, run expression refinement alone — eP/eG labels serve as testable hypotheses for future chromatin validation.
 
 ```{r chromatin-refine-example, eval=exists("reclassified") && exists("out_dir"), message=FALSE, warning=FALSE}
 # Run on expression-refined output (tests eP/eG anchors)
@@ -768,9 +784,9 @@ The output `chromatin_validation` table records, for each candidate anchor, the 
 | Plot key | Type | Description |
 |----------|------|-------------|
 | `Chromatin_Dumbbell` | Dumbbell chart | Anchor-type counts before vs. after reclassification. Grey = original, green = refined. |
-| `Chromatin_Sankey` | Sankey flow diagram | Left: anchor types before reclassification. Right: updated types after chromatin-guided reclassification. Green flows = unchanged, amber flows = reclassified. Each flow's width is proportional to the number of anchors. |
+| `Chromatin_Sankey` | Sankey flow diagram | Left: anchor types before reclassification. Right: updated types after chromatin-aware reclassification. Green flows = unchanged, amber flows = reclassified. Each flow's width is proportional to the number of anchors. |
 | `Chromatin_MarkHeatmap` | Aggregated heatmap | % of anchors in each reclassification group positive for each chromatin mark (white = 0%, deep green = 100%). One row per reclassification type (e.g., P→dual), one column per mark. Left bar: anchor count (N) per group. Cell labels show exact percentages. |
-| `Chromatin_Rose` | Rose (coxcomb) chart | Loop-type proportion distribution after chromatin-guided reclassification. |
+| `Chromatin_Rose` | Rose (coxcomb) chart | Loop-type proportion distribution after chromatin-aware reclassification. |
 
 All plots are returned as **ggplot2** objects (except the heatmap, which is a **ComplexHeatmap** grob) and accept standard `+` layers for customisation. To access a specific plot:
 

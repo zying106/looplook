@@ -77,3 +77,36 @@ are kept. When multiple candidates share the same biotype rank, a
 co-dominant expression rule is applied: all genes with expression >= 10\\%
 of the group maximum are retained (collapsed with ";").
 }
+\examples{
+# This example uses a sample TxDb included with GenomicFeatures.
+# It demonstrates the core conflict-resolution logic on a synthetic
+# genomic region near the hg19 HLA locus (chr6:29,940,000-29,950,000).
+if (requireNamespace("org.Hs.eg.db", quietly = TRUE) &&
+    requireNamespace("GenomicFeatures", quietly = TRUE)) {
+    txdb <- AnnotationDbi::loadDb(
+        system.file("extdata", "hg19_knownGene_sample.sqlite",
+                     package = "GenomicFeatures")
+    )
+
+    # Minimal genomic region: seqnames, start, end
+    test_region <- data.frame(
+        seqnames = "chr6",
+        start    = 29940000L,
+        end      = 29950000L,
+        stringsAsFactors = FALSE
+    )
+
+    # Run with default settings (biotype-first, no expression data)
+    result <- resolve_gene_conflicts(
+        current_anno_df    = test_region,
+        txdb_obj           = txdb,
+        org_db_pkg         = "org.Hs.eg.db",
+        tss_region         = c(-2000, 2000),
+        gene_expr_map      = NULL,
+        conflict_strategy  = "biotype_first"
+    )
+
+    # Inspect resolved gene symbols (columns appear when genes are found)
+    if ("SYMBOL" \%in\% colnames(result)) print(result$SYMBOL)
+}
+}

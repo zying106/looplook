@@ -4,7 +4,7 @@ output: github_document
 
 # looplook <img src="man/figures/logo.png" align="right" width="160" alt="Looplook Logo" />
 
-An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions.
+An integrative suite for target assignment and functional annotation of chromatin interactions.
 
 [![R-CMD-check](https://github.com/zying106/looplook/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/zying106/looplook/actions/workflows/R-CMD-check.yaml)
 [![License: GPL (>= 3)](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -109,13 +109,13 @@ if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
 
 **Output Data Dictionary: The Comprehensive 3D Spatial Catalog**
 
-The module systematically exports a multi-layered tabular catalog (e.g., `*_Basic_Results.xlsx`) detailing the spatial interactome:
+The module exports a multi-layered tabular catalog (e.g., `*_Basic_Results.xlsx`) detailing the spatial interactome:
 
 * **Integrative Target Mapping (`target_annotation`)** Delineates the spatial coverage of genomic variants/features inputted by the user. It separates strict loop-derived columns (`Regulated_promoter_genes`, `Assigned_Target_Genes`) from `*_Filled` fallback columns, and records provenance through `Regulated_promoter_Evidence`, `Regulated_promoter_Fallback_Evidence`, and the long-format `target_gene_links` table. This keeps promoter-supported loop targets, historical assigned targets, and nearest-gene fallback choices traceable rather than conflated.
 
 * **3D Network Architecture (`loop_annotation`)** Resolves the biological syntax of the structural interactome. It classifies topological interactions (loop_type, e.g., E-P, P-P) and distinguishes biologically relevant `Putative_Target_Genes` from the broader, raw physical interaction footprints (`All_Anchor_Genes`).
 
-* **Topological Hub Detection** Quantifies structural node degrees (e.g., `n_Linked_Promoters`, `n_Linked_Distal`) to rigorously deconstruct the 3D interactome from two complementary perspectives: **`promoter_centric_stats`**: Identifies core target genes regulated by **complex regulatory architectures** (e.g., enhancer arrays or transcription factories), while **`distal_element_stats`** highlights high-connectivity non-coding regions to facilitate the discovery of putative enhancer cliques.
+* **Topological Hub Detection** Quantifies structural node degrees (e.g., `n_Linked_Promoters`, `n_Linked_Distal`) to deconstruct the 3D interactome from two complementary perspectives: **`promoter_centric_stats`**: Identifies core target genes regulated by **complex regulatory architectures** (e.g., enhancer arrays or transcription factories), while **`distal_element_stats`** highlights high-connectivity non-coding regions to facilitate the discovery of putative enhancer cliques.
 
 <div align="center">
   <img src="man/figures/g1_anno.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Annotation Results" />
@@ -151,7 +151,7 @@ refined_res <- refine_loop_anchors_by_expression(
 Following transcriptome integration, the refined tabular outputs represent a high-confidence, functionally active subset of the initial 3D chromatin interactome. The **key features** of these output are as follows:
 
 * **Expression-Aware Refinement**: All structural loops are preserved. The pipeline annotates each loop with expression-aware functional status (`Has_Active_Target`, `Retained_In_Functional_Network`, `Refinement_Action`) and provides a high-confidence functional subset for downstream analysis, without discarding structural evidence.
-* **Dynamic Topological Reclassification**: The topological annotations within the `loop_type` are biologically recalibrated. By dynamically reclassifying transcriptionally silent promoters (**P**) as enhancer-like elements (**eP**), the catalog fundamentally corrects the spatial regulatory syntax (e.g., seamlessly transforming a transcriptionally silent **P-P** loop into a curated **eP-P** interaction axis).
+* **Dynamic Topological Reclassification**: The topological annotations within the `loop_type` are biologically recalibrated. By dynamically reclassifying transcriptionally silent promoters (**P**) as enhancer-like elements (**eP**), the catalog fundamentally corrects the spatial regulatory syntax (e.g., transforming a silent **P-P** loop into an **eP-P** interaction axis).
 * **Filtered Target Gene Links**: The refined provenance sheet retains only peak-gene links still used by the refined target columns and appends `Mean_Expression` plus `Passes_Expression_Filter`, so inactive Basic-stage links are not carried forward as active refined evidence.
 
 The `eP` and `eG` labels denote expression-inactive promoter- or gene-body-associated anchors treated as distal-like regulatory anchors for network syntax. These should not be interpreted as experimentally validated enhancers without additional epigenomic evidence (e.g., ATAC-seq accessibility, H3K27ac enrichment).
@@ -161,12 +161,12 @@ The `eP` and `eG` labels denote expression-inactive promoter- or gene-body-assoc
   <p><em>Figure 2: <strong>Representative outputs of Expression-Aware Refinement.</strong> As shown by the Multi-Omics Sankey Tracking, this curated visualization dynamically traces the fate of peak through 3D chromatin topological interactions to their corresponding transcriptionally active target genes.</em></p>
 </div>
 
-### Module 3B: Chromatin-Guided Reclassification
+### Module 3B: Chromatin-Aware Reclassification
 While expression data identify transcriptionally active anchors, orthogonal chromatin marks (ChIP-seq, CUT&Tag, ATAC-seq) provide direct evidence of regulatory element identity. Module 3B offers two complementary functions for chromatin-based anchor validation:
 
 **`validate_epeG_by_chromatin()`** — Tests eP/eG (or P/G/E) anchors against user-supplied chromatin mark BED files. Each anchor is scored against ENCODE active-enhancer criteria: `gold_standard` (H3K4me1+, H3K27ac+, ATAC+, H3K4me3-, H3K27me3-), `high_confidence`, `supported`, `weak`, or `uncertain`.
 
-**`refine_loop_anchors_by_chromatin()`** — Applies chromatin-mark evidence to systematically **reclassify** anchors and update loop topologies. Reclassification rules (minimum input H3K4me1 + H3K4me3): P + dual marks → `dual`; P + enhancer marks → `E`; eP/eG + promoter marks → `P`/`G` (revert); E + H3K4me3 only → `P` (unannotated promoter); and more. Supports `recompute_targets = TRUE` to rebuild target gene links with updated anchor types, producing chromatin-aware `target_annotation` and `target_gene_links`.
+**`refine_loop_anchors_by_chromatin()`** — Applies chromatin-mark evidence to **reclassify** anchors and update loop topologies. Reclassification rules (minimum input H3K4me1 + H3K4me3): P + dual marks → `dual`; P + enhancer marks → `E`; eP/eG + promoter marks → `P`/`G` (revert); E + H3K4me3 only → `P` (unannotated promoter); and more. Supports `recompute_targets = TRUE` to rebuild target gene links with updated anchor types, producing chromatin-aware `target_annotation` and `target_gene_links`.
 
 ```{r, eval=FALSE}
 # Validate eP/eG anchors against chromatin marks
@@ -180,7 +180,7 @@ val <- validate_epeG_by_chromatin(
 )
 table(val$confidence)
 
-# Chromatin-guided reclassification with target link recomputation
+# Chromatin-aware reclassification with target link recomputation
 cr <- refine_loop_anchors_by_chromatin(
   annotation_res   = refined_res,
   chromatin_beds   = list(

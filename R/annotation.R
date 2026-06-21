@@ -676,7 +676,7 @@
 #' If \code{write_output = TRUE}, also writes a multi-sheet Excel workbook to \code{out_dir}.
 #'
 #' @seealso \code{\link{refine_loop_anchors_by_expression}} for expression-aware refinement,
-#'   \code{\link{refine_loop_anchors_by_chromatin}} for chromatin-guided reclassification,
+#'   \code{\link{refine_loop_anchors_by_chromatin}} for chromatin-aware reclassification,
 #'   \code{\link{profile_target_genes}} for automated functional profiling.
 #'
 #' @export
@@ -2641,6 +2641,15 @@ build_annotation_plots <- function(
 #' overlay eP/eG loci against these tracks before interpreting them as
 #' putative regulatory elements.
 #'
+#' \strong{Pipeline guidance:} When matched chromatin data are available,
+#' follow expression refinement with
+#' \code{\link{refine_loop_anchors_by_chromatin}} -- chromatin evidence
+#' resolves eP/eG into definitive types (E, P, G, dual), while the
+#' expression-derived activity columns (\code{Active_Target_Genes},
+#' \code{Retained_In_Functional_Network}) pass through for downstream
+#' profiling. See \code{\link{refine_loop_anchors_by_chromatin}} for the full
+#' pipeline recommendation.
+#'
 #' @param annotation_res List. The raw foundational output object returned by \code{\link{annotate_peaks_and_loops}}.
 #' @param expr_matrix_file Path to a normalised expression matrix (TPM/FPKM, genes x samples). Required for refinement. Default: \code{NULL}.
 #' @param sample_columns Character vector or integer indices. Columns in \code{expr_matrix_file} to average. Default: \code{NULL}.
@@ -2759,7 +2768,7 @@ build_annotation_plots <- function(
 #' @importFrom openxlsx createWorkbook addWorksheet writeData saveWorkbook
 #'
 #' @seealso \code{\link{annotate_peaks_and_loops}} for initial 3D annotation,
-#'   \code{\link{refine_loop_anchors_by_chromatin}} for chromatin-guided reclassification.
+#'   \code{\link{refine_loop_anchors_by_chromatin}} for chromatin-aware reclassification.
 #'
 #' @export
 #'
@@ -2983,7 +2992,7 @@ refine_loop_anchors_by_expression <- function(
     return(out)
 }
 
-#' @title Chromatin-guided refinement of loop anchor classification
+#' @title Chromatin-Aware refinement of loop anchor classification
 #'
 #' @description
 #' Refines loop anchor types (P, E, G, eP, eG) using chromatin mark evidence
@@ -3002,7 +3011,9 @@ refine_loop_anchors_by_expression <- function(
 #'         -> \code{"E"} (conservative: requires active-mark confirmation beyond
 #'         H3K4me1 alone).
 #'   \item eP/eG + gold_standard or high_confidence + active/primed enhancer
-#'         chromatin -> kept (confirmed distal).
+#'         chromatin -> \code{"E"} (enhancer identity confirmed; matches the
+#'         P->E rule to guarantee the same outcome whether expression or
+#'         chromatin refinement runs first).
 #'   \item eP + promoter_like (H3K4me3+, H3K27me3-) -> \code{"P"} (revert).
 #'   \item eG + promoter_like -> \code{"G"} (revert).
 #'   \item E + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-function).
@@ -3047,6 +3058,28 @@ refine_loop_anchors_by_expression <- function(
 #'
 #' After reclassification, \code{loop_type} is recomputed from the updated
 #' anchor types.
+#'
+#' \strong{Pipeline guidance:}
+#' The two refinement modules serve distinct roles in a complete analysis:
+#' \itemize{
+#'   \item \strong{Expression-aware refinement} evaluates transcriptional activity
+#'         (is the gene expressed?) and produces activity-aware metrics
+#'         (\code{Active_Target_Genes}, \code{Retained_In_Functional_Network},
+#'         \code{Refinement_Action}) required for downstream GSEA, GO enrichment,
+#'         and differential expression profiling.
+#'   \item \strong{Chromatin-aware refinement} evaluates chromatin identity
+#'         (what \emph{is} this anchor?) using direct histone mark evidence,
+#'         correcting anchor types and reclassifying eP/eG into definitive
+#'         categories (E, P, G, dual).
+#' }
+#' When you have \strong{both RNA-seq and ChIP-seq}, use
+#' \code{refine_loop_anchors_by_expression} first, then
+#' \code{refine_loop_anchors_by_chromatin} -- expression marks silent anchors
+#' as hypotheses (eP/eG), chromatin confirms or corrects them into definitive
+#' types, and the expression-derived activity columns
+#' (\code{Active_Target_Genes} etc.) pass through into downstream profiling.
+#' When you have \strong{only ChIP-seq}, run chromatin refinement directly on
+#' the output of \code{\link{annotate_peaks_and_loops}}.
 #'
 #' @param annotation_res List. Output from
 #'   \code{\link{annotate_peaks_and_loops}} or
@@ -3098,17 +3131,34 @@ refine_loop_anchors_by_expression <- function(
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' refined_chromatin <- refine_loop_anchors_by_chromatin(
-#'   annotation_res = refined_expr,
-#'   chromatin_beds = list(
-#'     H3K4me1 = "H3K4me1_peaks.bed",
-#'     H3K4me3 = "H3K4me3_peaks.bed",
-#'     H3K27ac = "H3K27ac_peaks.bed"
-#'   )
+#' # 1. Get paths to the required example files in the package
+#' rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
+#' k4me1_path <- system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook")
+#' k4me3_path <- system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook")
+#'
+#' # 2. Load pre-computed annotation result
+#' temp_env <- new.env()
+#' load(rdata_path, envir = temp_env)
+#' raw_annotation <- temp_env[[ls(temp_env)[1]]]
+#' raw_annotation$loop_annotation <- head(raw_annotation$loop_annotation, 10)
+#' raw_annotation$target_annotation <- head(raw_annotation$target_annotation, 3)
+#'
+#' # 3. Run chromatin-aware refinement
+#' res_chromatin <- refine_loop_anchors_by_chromatin(
+#'     annotation_res = raw_annotation,
+#'     chromatin_beds = list(
+#'         H3K4me1 = k4me1_path,
+#'         H3K4me3 = k4me3_path
+#'     ),
+#'     anchor_gap = 500,
+#'     anchor_min_overlap = 100,
+#'     species = "hg38",
+#'     out_dir = tempdir(),
+#'     project_name = "Example_Chromatin",
+#'     write_output = FALSE,
+#'     quiet = TRUE
 #' )
-#' table(refined_chromatin$loop_annotation$loop_type)
-#' }
+#' table(res_chromatin$loop_annotation$loop_type)
 refine_loop_anchors_by_chromatin <- function(
     annotation_res,
     chromatin_beds = list(),
@@ -3180,6 +3230,9 @@ refine_loop_anchors_by_chromatin <- function(
     # --- 4. Apply reclassification to loop_annotation ---
     loop_df <- .chromatin_update_loops(loop_df, reclass_map, validation)
 
+    # --- 4b. Restore gene symbols for eP/eG → P/G/dual ---
+    loop_df <- .chromatin_restore_genes(loop_df, reclass_map, annotation_res)
+
     # --- 5. Recompute loop_type and stats ---
     log_message("    Recomputing loop types and stats...")
     loop_df <- .chromatin_recompute_loop_types(loop_df)
@@ -3216,7 +3269,7 @@ refine_loop_anchors_by_chromatin <- function(
         Chromatin_MarkHeatmap = .build_chromatin_mark_heatmap(validation, reclass_map, project_name),
         Chromatin_Rose     = .build_rose_plot(loop_df, custom_colors,
                                 paste0(project_name, ": Loop Types After Chromatin Refinement"),
-                                subtitle = "Loop type distribution after chromatin-guided anchor reclassification.")
+                                subtitle = "Loop type distribution after chromatin-aware anchor reclassification.")
     )
 
     # --- 7. Recompute stats after reclassification ---
@@ -3286,7 +3339,7 @@ refine_loop_anchors_by_chromatin <- function(
                 species = species
             ),
             genome_build = species,
-            score_semantics = "chromatin-guided reclassification; dual = promoter-enhancer dual-function",
+            score_semantics = "chromatin-aware reclassification; dual = promoter-enhancer dual-function",
             database_versions = .record_database_versions(species)
         )
     )
@@ -3380,9 +3433,12 @@ refine_loop_anchors_by_chromatin <- function(
                 old_type == "P" & h3k4me1_p & h3k4me3_n &
                     (h3k27ac_p | atac_p) ~ "E",
                 old_type %in% c("eP","eG") & chromatin_state == "dual_like" ~ "dual",
-                old_type %in% c("eP","eG") &
+                old_type == "eP" &
                     conf_chr %in% c("gold_standard","high_confidence") &
-                    chromatin_state %in% c("active_enhancer_like","primed_enhancer_like") ~ old_type,
+                    chromatin_state %in% c("active_enhancer_like","primed_enhancer_like") ~ "E",
+                old_type == "eG" &
+                    conf_chr %in% c("gold_standard","high_confidence") &
+                    chromatin_state %in% c("active_enhancer_like","primed_enhancer_like") ~ "E",
                 old_type == "eP" &
                     (chromatin_state == "promoter_like" | is_promoter_like) ~ "P",
                 old_type == "eG" &
@@ -3425,6 +3481,76 @@ refine_loop_anchors_by_chromatin <- function(
         if (length(hits2) > 0) {
             loop_df$anchor2_type[hits2] <- type_map[loop_df$a2_id[hits2]]
         }
+    }
+    loop_df
+}
+
+#' Internal: Restore Gene Symbols for eP/eG Anchors Reclassified to P/G/dual
+#'
+#' When expression refinement cleared the gene symbol of a silent P/G anchor
+#' (turning it into eP/eG), but chromatin evidence later reclassifies the
+#' anchor back to P/G (H3K4me3+) or dual (H3K4me1+ H3K4me3+), the original
+#' gene symbol must be restored.  Without it, the reclassified anchor is
+#' promoter-like by type but gene-less -- it is silently dropped from
+#' promoter-centric stats and target-gene assignment.
+#'
+#' @param loop_df Loop annotation data frame with anchor1_gene/anchor2_gene.
+#' @param reclass_map Reclassification map from \code{\link{.chromatin_reclassify}}.
+#' @param annotation_res The full annotation result (may carry
+#'   \code{looplook_anchor_state} attribute with original gene symbols).
+#' @return The \code{loop_df} with gene symbols restored where applicable.
+#' @keywords internal
+#' @noRd
+.chromatin_restore_genes <- function(loop_df, reclass_map, annotation_res) {
+    # Only act on anchors that changed from eP/eG → P/G/dual
+    restore <- reclass_map[
+        reclass_map$changed &
+        reclass_map$old_type %in% c("eP", "eG") &
+        reclass_map$new_type %in% c("P", "G", "dual"),
+    ]
+    if (nrow(restore) == 0) return(loop_df)
+
+    # Try to recover original gene symbols from anchor_state
+    anchor_state <- attr(annotation_res, "looplook_anchor_state", exact = TRUE)
+    if (is.null(anchor_state) || !"map_info" %in% names(anchor_state)) {
+        return(loop_df)
+    }
+    gene_lookup <- setNames(
+        anchor_state$map_info$SYMBOL,
+        anchor_state$map_info$anchor_id
+    )
+
+    n_restored <- 0L
+    for (i in seq_len(nrow(restore))) {
+        aid <- restore$anchor_id[i]
+        orig_gene <- gene_lookup[[aid]]
+        if (is.null(orig_gene) || is.na(orig_gene) || orig_gene == "") next
+
+        # anchor1
+        if ("a1_id" %in% colnames(loop_df)) {
+            hits1 <- which(loop_df$a1_id == aid &
+                           (is.na(loop_df$anchor1_gene) | loop_df$anchor1_gene == ""))
+            if (length(hits1) > 0) {
+                loop_df$anchor1_gene[hits1] <- orig_gene
+                n_restored <- n_restored + length(hits1)
+            }
+        }
+        # anchor2
+        if ("a2_id" %in% colnames(loop_df)) {
+            hits2 <- which(loop_df$a2_id == aid &
+                           (is.na(loop_df$anchor2_gene) | loop_df$anchor2_gene == ""))
+            if (length(hits2) > 0) {
+                loop_df$anchor2_gene[hits2] <- orig_gene
+                n_restored <- n_restored + length(hits2)
+            }
+        }
+    }
+
+    if (n_restored > 0) {
+        message(sprintf(
+            "    Restored gene symbols for %d loop entries from %d reclassified eP/eG anchors.",
+            n_restored, nrow(restore)
+        ))
     }
     loop_df
 }
@@ -4201,7 +4327,7 @@ refine_loop_anchors_by_chromatin <- function(
 #' @param loop_df Loop annotation after refinement.
 #' Internal: Build Chromatin Reclassification Dumbbell Plot
 #'
-#' Compares anchor-type counts before vs. after chromatin-guided
+#' Compares anchor-type counts before vs. after chromatin-aware
 #' reclassification. Dark green academic palette for publication use.
 #'
 #' @param reclass_map Reclassification data frame from .chromatin_reclassify.
@@ -4858,7 +4984,6 @@ validate_epeG_by_chromatin <- function(
 .extract_epeG_anchors <- function(annotation_res, log_message, candidate_types = NULL) {
     loop_df <- annotation_res$loop_annotation
     if (is.null(loop_df)) stop("'annotation_res$loop_annotation' is missing.")
-    has_refined <- "Retained_In_Functional_Network" %in% colnames(loop_df)
     has_anchor_ids <- all(c("a1_id", "a2_id") %in% colnames(loop_df))
 
     if (has_anchor_ids) {
@@ -4883,15 +5008,18 @@ validate_epeG_by_chromatin <- function(
         ) %>% dplyr::distinct()
     }
 
-    type_label <- if (has_refined) "eP/eG" else "P/G"
-    # Use all positional categories (P/G/E) for raw input -- chromatin
-    # evidence may reclassify E anchors to P or dual as well.
+    type_label <- "P/G/E/eP/eG"
     type_filter <- if (!is.null(candidate_types)) {
         candidate_types
-    } else if (has_refined) {
-        c("eP", "eG")
     } else {
-        c("P", "G", "E")
+        # Always validate all positional types (P/G/E) plus any expression-
+        # silenced types (eP/eG).  Chromatin evidence can identify dual-
+        # function elements, unannotated promoters, and intronic enhancers
+        # regardless of transcriptional state.  Restricting to eP/eG on
+        # refined input would miss biologically important reclassifications
+        # such as P→dual (promoter-proximal enhancer) or E→P (unannotated
+        # promoter with H3K4me3+).
+        c("P", "G", "E", "eP", "eG")
     }
     epeG_anchors <- anchor_map %>% dplyr::filter(anchor_type %in% type_filter)
     if (nrow(epeG_anchors) == 0) {

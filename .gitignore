@@ -17,6 +17,7 @@ Rplots.pdf
 .Rproj.user/
 Meta/
 pkgdown/
+tests/testthat/_snaps/
 tests/testthat/_problems/
 tests/testthat/testthat-problems.rds
 coverage-report.html

@@ -18,12 +18,12 @@ Authors@R: c(
            email = "xuliang.phd@zju.edu.cn",
            comment = "This work is funded by the Fundamental Research Funds for the Central Universities (226-2025-00101) and the National Natural Science Foundation of China (32270746, 82203247, 82203415).")
   )
-Description: Provides a versatile suite for target assignment and functional
-    annotation of 3D chromatin interactions. Leverages customizable genomic feature
-    integration, expression-aware refinement, and connected-components clustering
-    to prioritize biologically relevant chromatin loops. The pipeline also
-    supports multi-omics data integration, functional annotation (GO, GSEA,
-    motif, PPI), and publication-ready visualization.
+Description: Provides tools for target assignment and functional annotation
+    of 3D chromatin interactions. Integrates genomic feature data,
+    expression-aware and chromatin-aware refinement, and connected-components
+    clustering to prioritize biologically relevant chromatin loops. Supports
+    functional profiling (GO, GSEA, motif, PPI) and programmatic figure
+    generation.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

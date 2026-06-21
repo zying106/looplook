@@ -193,6 +193,15 @@ treated as hypotheses requiring orthogonal validation (ATAC-seq, H3K27ac,
 H3K4me1, or H3K27me3 depletion). Users with matched chromatin data should
 overlay eP/eG loci against these tracks before interpreting them as
 putative regulatory elements.
+
+\strong{Pipeline guidance:} When matched chromatin data are available,
+follow expression refinement with
+\code{\link{refine_loop_anchors_by_chromatin}} -- chromatin evidence
+resolves eP/eG into definitive types (E, P, G, dual), while the
+expression-derived activity columns (\code{Active_Target_Genes},
+\code{Retained_In_Functional_Network}) pass through for downstream
+profiling. See \code{\link{refine_loop_anchors_by_chromatin}} for the full
+pipeline recommendation.
 }
 \examples{
 # 1. Get paths to the required example files in the package
@@ -225,5 +234,5 @@ print(table(res_reclassified$loop_annotation$loop_type))
 }
 \seealso{
 \code{\link{annotate_peaks_and_loops}} for initial 3D annotation,
-\code{\link{refine_loop_anchors_by_chromatin}} for chromatin-guided reclassification.
+\code{\link{refine_loop_anchors_by_chromatin}} for chromatin-aware reclassification.
 }

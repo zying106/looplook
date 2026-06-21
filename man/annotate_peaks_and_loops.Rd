@@ -247,6 +247,6 @@ if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
 }
 \seealso{
 \code{\link{refine_loop_anchors_by_expression}} for expression-aware refinement,
-\code{\link{refine_loop_anchors_by_chromatin}} for chromatin-guided reclassification,
+\code{\link{refine_loop_anchors_by_chromatin}} for chromatin-aware reclassification,
 \code{\link{profile_target_genes}} for automated functional profiling.
 }

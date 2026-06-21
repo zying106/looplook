@@ -338,7 +338,7 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 }
 
 
-#' Consolidate and Integrate Chromatin Loops from Replicates or Multiple Sources
+#' @title Consolidate and Integrate Chromatin Loops from Replicates or Multiple Sources
 #'
 #' @description
 #' This function consolidates chromatin loops from multiple BEDPE files. It is designed for two main purposes:

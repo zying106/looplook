@@ -2,7 +2,7 @@
 % Please edit documentation in R/annotation.R
 \name{refine_loop_anchors_by_chromatin}
 \alias{refine_loop_anchors_by_chromatin}
-\title{Chromatin-guided refinement of loop anchor classification}
+\title{Chromatin-Aware refinement of loop anchor classification}
 \usage{
 refine_loop_anchors_by_chromatin(
   annotation_res,
@@ -92,7 +92,9 @@ transcriptional activity) and do not depend on ordering.
 -> \code{"E"} (conservative: requires active-mark confirmation beyond
 H3K4me1 alone).
 \item eP/eG + gold_standard or high_confidence + active/primed enhancer
-chromatin -> kept (confirmed distal).
+chromatin -> \code{"E"} (enhancer identity confirmed; matches the
+P->E rule to guarantee the same outcome whether expression or
+chromatin refinement runs first).
 \item eP + promoter_like (H3K4me3+, H3K27me3-) -> \code{"P"} (revert).
 \item eG + promoter_like -> \code{"G"} (revert).
 \item E + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-function).
@@ -137,19 +139,58 @@ enhancer-like and dual-like classifications.
 
 After reclassification, \code{loop_type} is recomputed from the updated
 anchor types.
+
+\strong{Pipeline guidance:}
+The two refinement modules serve distinct roles in a complete analysis:
+\itemize{
+\item \strong{Expression-aware refinement} evaluates transcriptional activity
+(is the gene expressed?) and produces activity-aware metrics
+(\code{Active_Target_Genes}, \code{Retained_In_Functional_Network},
+\code{Refinement_Action}) required for downstream GSEA, GO enrichment,
+and differential expression profiling.
+\item \strong{Chromatin-aware refinement} evaluates chromatin identity
+(what \emph{is} this anchor?) using direct histone mark evidence,
+correcting anchor types and reclassifying eP/eG into definitive
+categories (E, P, G, dual).
+}
+When you have \strong{both RNA-seq and ChIP-seq}, use
+\code{refine_loop_anchors_by_expression} first, then
+\code{refine_loop_anchors_by_chromatin} -- expression marks silent anchors
+as hypotheses (eP/eG), chromatin confirms or corrects them into definitive
+types, and the expression-derived activity columns
+(\code{Active_Target_Genes} etc.) pass through into downstream profiling.
+When you have \strong{only ChIP-seq}, run chromatin refinement directly on
+the output of \code{\link{annotate_peaks_and_loops}}.
 }
 \examples{
-\dontrun{
-refined_chromatin <- refine_loop_anchors_by_chromatin(
-  annotation_res = refined_expr,
-  chromatin_beds = list(
-    H3K4me1 = "H3K4me1_peaks.bed",
-    H3K4me3 = "H3K4me3_peaks.bed",
-    H3K27ac = "H3K27ac_peaks.bed"
-  )
+# 1. Get paths to the required example files in the package
+rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
+k4me1_path <- system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook")
+k4me3_path <- system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook")
+
+# 2. Load pre-computed annotation result
+temp_env <- new.env()
+load(rdata_path, envir = temp_env)
+raw_annotation <- temp_env[[ls(temp_env)[1]]]
+raw_annotation$loop_annotation <- head(raw_annotation$loop_annotation, 10)
+raw_annotation$target_annotation <- head(raw_annotation$target_annotation, 3)
+
+# 3. Run chromatin-aware refinement
+res_chromatin <- refine_loop_anchors_by_chromatin(
+    annotation_res = raw_annotation,
+    chromatin_beds = list(
+        H3K4me1 = k4me1_path,
+        H3K4me3 = k4me3_path
+    ),
+    anchor_gap = 500,
+    anchor_min_overlap = 100,
+    species = "hg38",
+    out_dir = tempdir(),
+    project_name = "Example_Chromatin",
+    write_output = FALSE,
+    quiet = TRUE
 )
-table(refined_chromatin$loop_annotation$loop_type)
-}
+table(res_chromatin$loop_annotation$loop_type)
 }
 \seealso{
 \code{\link{annotate_peaks_and_loops}} for initial 3D annotation,
