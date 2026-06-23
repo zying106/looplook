@@ -1194,7 +1194,7 @@ automatically generates four diagnostic plots (accessible via `$plots`):
 | `Chromatin_Dumbbell` | Dumbbell chart | Anchor-type counts before vs. after reclassification. Grey = original, green = refined. |
 | `Chromatin_Sankey` | Sankey flow diagram | Left: anchor types before reclassification. Right: updated types after chromatin-aware reclassification. Green flows = unchanged, amber flows = reclassified. Each flow’s width is proportional to the number of anchors. |
 | `Chromatin_MarkHeatmap` | Aggregated heatmap | % of anchors in each reclassification group positive for each chromatin mark (white = 0%, deep green = 100%). One row per reclassification type (e.g., P→dual), one column per mark. Left bar: anchor count (N) per group. Cell labels show exact percentages. |
-| `Chromatin_Rose` | Rose (coxcomb) chart | Loop-type proportion distribution after chromatin-aware reclassification. |
+| `Chromatin_UpSet` | UpSet plot | Combinatorial view of loop-type intersections after chromatin-aware reclassification. Top: log10 bar chart of counts per combination. Bottom: dot-and-line matrix showing which anchor types participate in each combination, with self-loop arcs on E-E, P-P, and dual-dual types. |
 
 All plots are returned as **ggplot2** objects (except the heatmap, which
 is a **ComplexHeatmap** grob) and accept standard `+` layers for
@@ -1205,7 +1205,7 @@ customisation. To access a specific plot:
 cr$plots$Chromatin_Dumbbell   # before/after anchor type comparison
 cr$plots$Chromatin_Sankey      # reclassification flow diagram
 cr$plots$Chromatin_MarkHeatmap # per-anchor mark landscape
-cr$plots$Chromatin_Rose        # loop type proportions
+cr$plots$Chromatin_UpSet        # loop-type Upset (dot matrix + log10 bars)
 ```
 
 **Interpreting the MarkHeatmap:** Rows represent reclassification

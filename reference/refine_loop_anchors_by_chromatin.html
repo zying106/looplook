@@ -136,9 +136,10 @@ transcriptional activity) and do not depend on ordering.</p>
 <span>  project_name <span class="op">=</span> <span class="st">"HiChIP"</span>,</span>
 <span>  color_palette <span class="op">=</span> <span class="st">"Paired"</span>,</span>
 <span>  candidate_types <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  recompute_targets <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  recompute_targets <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  write_output <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  sankey_colors <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -181,8 +182,8 @@ improve confidence but are optional.</p></dd>
 
 <dt id="arg-color-palette">color_palette<a class="anchor" aria-label="anchor" href="#arg-color-palette"></a></dt>
 <dd><p>Character. RColorBrewer palette name for the
-rose chart and sankey fallback colours. Dumbbell and mark-enrichment
-heatmap use fixed academic palettes. Default: <code>"Paired"</code>.</p></dd>
+rose chart. Dumbbell and mark-enrichment heatmap use fixed academic
+palettes. Default: <code>"Paired"</code>.</p></dd>
 
 
 <dt id="arg-candidate-types">candidate_types<a class="anchor" aria-label="anchor" href="#arg-candidate-types"></a></dt>
@@ -193,7 +194,7 @@ Set explicitly to <code>c("P","G","E","eP","eG")</code> for full-range analysis.
 
 
 <dt id="arg-recompute-targets">recompute_targets<a class="anchor" aria-label="anchor" href="#arg-recompute-targets"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, re-run target gene
+<dd><p>Logical. If <code>TRUE</code> (default), re-run target gene
 assignment using updated anchor types. Requires the input
 <code>annotation_res</code> to contain the <code>looplook_anchor_state</code>
 attribute (present when using <code><a href="annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></code>
@@ -207,6 +208,17 @@ output). Default <code>FALSE</code>.</p></dd>
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
 <dd><p>Logical. Suppress messages. Default <code>FALSE</code>.</p></dd>
 
+
+<dt id="arg-sankey-colors">sankey_colors<a class="anchor" aria-label="anchor" href="#arg-sankey-colors"></a></dt>
+<dd><p>Named character vector or <code>NULL</code>. Override the
+default type-to-color mapping in the Sankey diagram. Names must be
+anchor types (<code>"P"</code>, <code>"E"</code>, <code>"G"</code>, <code>"eP"</code>,
+<code>"eG"</code>, <code>"dual"</code>), values are hex colours. When <code>NULL</code>
+(default), the colourblind-safe Wong palette is used:
+<code>E = "#E69F00"</code> (orange), <code>dual = "#CC0000"</code> (red),
+<code>P = "#0072B2"</code> (blue), <code>eP = "#009E73"</code> (bluish-green),
+<code>G = "#CC79A7"</code> (reddish-purple), <code>eG = "#56B4E9"</code> (sky blue).</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -214,13 +226,14 @@ output). Default <code>FALSE</code>.</p></dd>
 <code>anchor_loci_annotation</code>, <code>promoter_centric_stats</code>,
 <code>distal_element_stats</code>, <code>chromatin_validation</code>,
 <code>plots</code> (<code>Chromatin_Dumbbell</code>: anchor-type before/after
-comparison; <code>Chromatin_Rose</code>: loop-type proportion rose plot),
+comparison; <code>Chromatin_UpSet</code>: loop-type UpSet plot (dot matrix + log10 bar chart)),
 <code>plot_list</code> (alias of <code>plots</code>), <code>qc_summary</code>,
-and <code>metadata</code>. When <code>recompute_targets = FALSE</code> (default),
-<code>target_annotation</code> and <code>target_gene_links</code> are <code>NULL</code>
-(pre-chromatin anchor types); downstream profiling should use
-<code>target_source = "loops"</code>. When <code>recompute_targets = TRUE</code>,
+and <code>metadata</code>. When <code>recompute_targets = TRUE</code> (default),
 target links are rebuilt from chromatin-updated anchor states,
+producing chromatin-aware <code>target_annotation</code> and
+<code>target_gene_links</code>. Set to <code>FALSE</code> to preserve
+pre-chromatin target assignments and use
+<code>target_source = "loops"</code> for downstream profiling.
 producing chromatin-aware <code>target_annotation</code> and
 <code>target_gene_links</code>.  The input must carry the
 <code>looplook_anchor_state</code> attribute (present when using

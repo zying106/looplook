@@ -21,9 +21,10 @@ refine_loop_anchors_by_chromatin(
   project_name = "HiChIP",
   color_palette = "Paired",
   candidate_types = NULL,
-  recompute_targets = FALSE,
+  recompute_targets = TRUE,
   write_output = TRUE,
-  quiet = FALSE
+  quiet = FALSE,
+  sankey_colors = NULL
 )
 ```
 
@@ -65,9 +66,9 @@ refine_loop_anchors_by_chromatin(
 
 - color_palette:
 
-  Character. RColorBrewer palette name for the rose chart and sankey
-  fallback colours. Dumbbell and mark-enrichment heatmap use fixed
-  academic palettes. Default: `"Paired"`.
+  Character. RColorBrewer palette name for the rose chart. Dumbbell and
+  mark-enrichment heatmap use fixed academic palettes. Default:
+  `"Paired"`.
 
 - candidate_types:
 
@@ -78,9 +79,9 @@ refine_loop_anchors_by_chromatin(
 
 - recompute_targets:
 
-  Logical. If `TRUE`, re-run target gene assignment using updated anchor
-  types. Requires the input `annotation_res` to contain the
-  `looplook_anchor_state` attribute (present when using
+  Logical. If `TRUE` (default), re-run target gene assignment using
+  updated anchor types. Requires the input `annotation_res` to contain
+  the `looplook_anchor_state` attribute (present when using
   [`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
   output). Default `FALSE`.
 
@@ -92,20 +93,31 @@ refine_loop_anchors_by_chromatin(
 
   Logical. Suppress messages. Default `FALSE`.
 
+- sankey_colors:
+
+  Named character vector or `NULL`. Override the default type-to-color
+  mapping in the Sankey diagram. Names must be anchor types (`"P"`,
+  `"E"`, `"G"`, `"eP"`, `"eG"`, `"dual"`), values are hex colours. When
+  `NULL` (default), the colourblind-safe Wong palette is used:
+  `E = "#E69F00"` (orange), `dual = "#CC0000"` (red), `P = "#0072B2"`
+  (blue), `eP = "#009E73"` (bluish-green), `G = "#CC79A7"`
+  (reddish-purple), `eG = "#56B4E9"` (sky blue).
+
 ## Value
 
 An invisible named list with updated `loop_annotation`,
 `anchor_loci_annotation`, `promoter_centric_stats`,
 `distal_element_stats`, `chromatin_validation`, `plots`
 (`Chromatin_Dumbbell`: anchor-type before/after comparison;
-`Chromatin_Rose`: loop-type proportion rose plot), `plot_list` (alias of
-`plots`), `qc_summary`, and `metadata`. When `recompute_targets = FALSE`
-(default), `target_annotation` and `target_gene_links` are `NULL`
-(pre-chromatin anchor types); downstream profiling should use
-`target_source = "loops"`. When `recompute_targets = TRUE`, target links
-are rebuilt from chromatin-updated anchor states, producing
-chromatin-aware `target_annotation` and `target_gene_links`. The input
-must carry the `looplook_anchor_state` attribute (present when using
+`Chromatin_UpSet`: loop-type UpSet plot (dot matrix + log10 bar chart)),
+`plot_list` (alias of `plots`), `qc_summary`, and `metadata`. When
+`recompute_targets = TRUE` (default), target links are rebuilt from
+chromatin-updated anchor states, producing chromatin-aware
+`target_annotation` and `target_gene_links`. Set to `FALSE` to preserve
+pre-chromatin target assignments and use `target_source = "loops"` for
+downstream profiling. producing chromatin-aware `target_annotation` and
+`target_gene_links`. The input must carry the `looplook_anchor_state`
+attribute (present when using
 [`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
 output).
 

@@ -2160,10 +2160,13 @@ reclassification type (e.g., P→dual), one column per mark. Left bar:
 anchor count (N) per group. Cell labels show exact percentages.</td>
 </tr>
 <tr class="even">
-<td><code>Chromatin_Rose</code></td>
-<td>Rose (coxcomb) chart</td>
-<td>Loop-type proportion distribution after chromatin-aware
-reclassification.</td>
+<td><code>Chromatin_UpSet</code></td>
+<td>UpSet plot</td>
+<td>Combinatorial view of loop-type intersections after chromatin-aware
+reclassification. Top: log10 bar chart of counts per combination.
+Bottom: dot-and-line matrix showing which anchor types participate in
+each combination, with self-loop arcs on E-E, P-P, and dual-dual
+types.</td>
 </tr>
 </tbody>
 </table>
@@ -2175,7 +2178,7 @@ plot:</p>
 <code class="sourceCode R"><span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_Dumbbell</span>   <span class="co"># before/after anchor type comparison</span></span>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_Sankey</span>      <span class="co"># reclassification flow diagram</span></span>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_MarkHeatmap</span> <span class="co"># per-anchor mark landscape</span></span>
-<span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_Rose</span>        <span class="co"># loop type proportions</span></span></code></pre></div>
+<span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_UpSet</span>        <span class="co"># loop-type Upset (dot matrix + log10 bars)</span></span></code></pre></div>
 <p><strong>Interpreting the MarkHeatmap:</strong> Rows represent
 reclassification outcomes (e.g., “P → dual” means a promoter was
 reclassified as a dual-function element). Columns represent chromatin
