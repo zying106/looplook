@@ -63,7 +63,8 @@ if (getRversion() >= "2.15.1") {
         "Passes_Expression_Filter", "retained_after_refinement",
         "H3K4me1", "H3K27ac", "ATAC", "H3K27me3", "H3K4me3",
         "anchor_type", "anchor_gene", "confidence", "evidence",
-        "priority"
+        "priority", "combination", "log_count", "present", "count",
+        "set_counts", "bin_mat", "bar_df"
     ))
 }
 
@@ -1382,8 +1383,7 @@ get_colors <- function(n, palette_input) {
 #' @noRd
 draw_karyo_heatmap_internal <- function(gr_data, title_prefix, bin_size, sat_level, ref_txdb, plot_species, unit_label, custom_colors = NULL) {
     # GenomeInfoDb::seqlevelsStyle<- and karyoploteR::plotKaryotype emit
-    # genome-info lines to stdout via cat(). Suppress them to keep reports
-    # and rendered README output clean.
+    # genome-info lines via cat(). Suppress via sink.
     sink(file = nullfile(), type = "output")
     on.exit(sink(type = "output"), add = TRUE)
     standard_chroms <- paste0("chr", c(seq_len(22), "X", "Y"))
@@ -1455,7 +1455,9 @@ draw_karyo_heatmap_internal <- function(gr_data, title_prefix, bin_size, sat_lev
         pp$rightmargin <- 0.08
         pp$data1height <- 100
         kp <- .with_known_upstream_noise_suppressed(
-            karyoploteR::plotKaryotype(genome = plot_species, plot.type = 1, chromosomes = valid_chroms, plot.params = pp, main = NULL)
+            suppressMessages(
+                karyoploteR::plotKaryotype(genome = plot_species, plot.type = 1, chromosomes = valid_chroms, plot.params = pp, main = NULL)
+            )
         )
         karyoploteR::kpRect(kp, data = tiles, y0 = 0, y1 = 1, col = S4Vectors::mcols(tiles)$color, border = NA)
         main_title <- paste0("Loop Analysis: ", title_prefix, "\n(Genomic Load: Median ~", round(median_val / bin_size_mb, 1), " ", unit_label, "/MB)")

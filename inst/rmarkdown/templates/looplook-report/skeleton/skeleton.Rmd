@@ -52,6 +52,8 @@ params:
 
 <style>
   body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+  .dataTables_wrapper table.dataTable thead th,
+  .dataTables_wrapper table.dataTable tbody td { box-sizing: border-box; }
   .metric-container {
     display: flex;
     gap: 20px;
@@ -184,7 +186,8 @@ render_table <- function(df, page_length = 10, scroll_x = TRUE, head_n = 20,
                          searching = TRUE) {
   if (is.null(df) || nrow(df) == 0 || ncol(df) == 0) return(invisible(NULL))
   if (has_dt) {
-    opts <- list(pageLength = page_length, scrollX = scroll_x, searching = searching)
+    opts <- list(pageLength = page_length, searching = searching, autoWidth = TRUE)
+    if (ncol(df) > 8) opts$scrollX <- TRUE
     widget <- tryCatch(
       DT::datatable(df, options = opts, class = "stripe hover compact", rownames = FALSE),
       error = function(e) NULL
@@ -201,7 +204,7 @@ render_table <- function(df, page_length = 10, scroll_x = TRUE, head_n = 20,
 }
 
 repair_empty_manual_scales <- function(p) {
-  if (!inherits(p, "ggplot")) return(p)
+  if (!inherits(p, "ggplot") || inherits(p, "patchwork")) return(p)
   build_ok <- isTRUE(tryCatch({ ggplot2::ggplot_build(p); TRUE },
     error = function(e) !grepl("Insufficient values in manual scale", conditionMessage(e))))
   if (build_ok) return(p)
@@ -251,7 +254,7 @@ repair_empty_manual_scales <- function(p) {
   p
 }
 
-render_plot_container <- function(plot_obj, title = NULL, description = NULL, draw = print) {
+render_plot_container <- function(plot_obj, title = NULL, description = NULL, draw = print, ...) {
   if (!is.null(title)) {
     cat(sprintf("\n\n### %s\n\n", html_escape(title)))
   }
@@ -260,7 +263,7 @@ render_plot_container <- function(plot_obj, title = NULL, description = NULL, dr
   }
   cat('<div class="plot-container">')
   tryCatch(
-    draw(repair_empty_manual_scales(plot_obj)),
+    suppressMessages(draw(repair_empty_manual_scales(plot_obj))),
     error = function(e) {
       cat(sprintf(
         '<div class="status-box status-warning"><strong>Plot not rendered.</strong> %s</div>',
@@ -271,6 +274,28 @@ render_plot_container <- function(plot_obj, title = NULL, description = NULL, dr
   cat('</div>\n')
   invisible(NULL)
 }
+
+# ---- Plot titles (human-readable) ----
+chr_plot_titles <- list(
+  Basic_Circular                 = "Loop Type Gene Connectivity",
+  Basic_Flower                   = "Cross-Loop Gene Set Intersections",
+  Target_Rose                    = "Target-Linked Loop Type Distribution",
+  Anchor_Genomic_Distribution    = "Anchor Genomic Context",
+  Target_Genomic_Distribution    = "Target Genomic Distribution",
+  Target_Loop_Genomic_Distribution = "Loop-Connected Target Distribution",
+  Karyo_Anchors                  = "Chromosome-Wide Anchor Density",
+  Karyo_LoopGenes                = "Chromosome-Wide Loop-Associated Gene Density",
+  Karyo_TargetGenes              = "Chromosome-Wide Target Gene Density",
+  Comparison_Dumbbell            = "Loop Type Changes After Expression Refinement",
+  Rose                           = "Loop Type Distribution After Expression Refinement",
+  Target_Loop_Donut              = "Target-Linked Loop Types After Refinement",
+  Refined_Karyo_Active           = "Chromosome-Wide Active Gene Density",
+  Refined_Karyo_TargetGenes      = "Chromosome-Wide Refined Target Gene Density",
+  Chromatin_Dumbbell             = "Anchor-Type Changes After Reclassification",
+  Chromatin_Sankey               = "Reclassification Flow (Before → After)",
+  Chromatin_MarkHeatmap          = "Chromatin Mark Enrichment by Reclassification Group",
+  Chromatin_UpSet                = "Loop-Type Combinations After Chromatin Refinement"
+)
 
 # ---- Plot interpretation descriptions ----
 plot_descriptions <- list(
@@ -399,7 +424,7 @@ effective_run_ppi <- isTRUE(params$run_ppi)
 ppi_preflight_warning <- NULL
 ```
 
-# Executive Summary {.section-header}
+# Executive Summary
 
 ```{r summary-block, results='asis'}
 if (has_precomp) {
@@ -448,7 +473,7 @@ if (has_profiling) {
 }
 ```
 
-# 3D-Guided Target Gene Assignment {.section-header}
+# 3D Interactome Annotation
 
 ```{r annotation-core, results='asis'}
 t0 <- Sys.time()
@@ -464,7 +489,8 @@ if (!use_precomputed) {
     hub_percentile = params$hub_percentile,
     color_palette = params$color_palette,
     out_dir = params$out_dir,
-    project_name = params$project_name
+    project_name = params$project_name,
+    quiet = TRUE
   )
 }
 
@@ -490,7 +516,8 @@ if (has_expr) {
       karyo_bin_size = params$karyo_bin_size,
       chromatin_beds = params$chromatin_beds,
       out_dir = params$out_dir,
-      project_name = params$project_name
+      project_name = params$project_name,
+      quiet = TRUE
     ),
     error = function(e) {
       refinement_error <<- conditionMessage(e)
@@ -499,7 +526,7 @@ if (has_expr) {
   )
 }
 
-# Chromatin-guided anchor reclassification (optional)
+# Chromatin-aware anchor reclassification (optional)
 # Runs on expression-refined output when available; falls back to raw
 # annotation when no expression data is provided.
 chromatin_refined <- NULL
@@ -512,7 +539,8 @@ if (has_chromatin && !is.null(chromatin_input)) {
       chromatin_beds = params$chromatin_beds,
       species = params$species,
       write_output = FALSE,
-      quiet = TRUE
+      quiet = TRUE,
+      recompute_targets = TRUE
     ),
     error = function(e) {
       chromatin_error <<- conditionMessage(e)
@@ -648,13 +676,19 @@ if (!is.null(res$plots)) {
 }
 ```
 
-# Refinement {.section-header}
+# Refinement
 
-```{r refinement-run}
+```{r refinement-run, results='asis'}
 # refinee already executed in annotation-core to feed the pre/post type count.
 # refined and refinement_error are already set.
 # Do NOT clear refined here: chromatin refinement may have set it even
 # without expression data (line ~524).
+
+if (has_expr && !is.null(refined) && is.null(chromatin_refined)) {
+  cat("\n## Expression-Aware Refinement\n\n")
+} else if (!is.null(chromatin_refined)) {
+  cat("\n## Chromatin-Aware Anchor Reclassification\n\n")
+}
 ```
 
 ```{r refinement-summary, results='asis'}
@@ -665,7 +699,9 @@ if (has_expr && !is.null(refined) && !is.null(refined$loop_annotation)) {
   n_reclass <- sum(grepl("^e", rla$loop_type))
 
   cat('<div class="status-box status-success">')
-  cat(sprintf("<strong>Refinement complete.</strong> Applied a %s threshold of <strong>%.1f</strong>. ",
+  refine_label <- if (has_chromatin && !is.null(chromatin_refined)) "Dual refinement" else "Refinement"
+cat(sprintf("<strong>%s complete.</strong> Applied a %s threshold of <strong>%.1f</strong>. ",
+    refine_label,
       html_escape(params$unit_type), params$threshold))
   cat(sprintf("%s of %s original loops passed QC (%s%% retained). ", 
       comma(n_filtered), comma(n_original), round(n_filtered / n_original * 100, 1)))
@@ -695,13 +731,14 @@ if (has_chromatin && !is.null(chromatin_refined)) {
                 grepl("dual", chromatin_refined$loop_annotation$loop_type))
   n_reclass <- sum(grepl("Reclassified", names(table(chromatin_refined$chromatin_validation$confidence))))
   cv_summary <- table(chromatin_refined$chromatin_validation$confidence)
+  .get_cv <- function(tbl, nm) if (nm %in% names(tbl)) tbl[[nm]] else 0L
   cat('<div class="status-box status-info">')
   cat(sprintf("<strong>Chromatin refinement complete.</strong> "))
   if (n_dual > 0) cat(sprintf("<strong>%s</strong> anchors flagged as dual-function. ", comma(n_dual)))
   cat(sprintf("Confidence: gold=%s, high=%s, supported=%s, weak=%s, uncertain=%s.",
-      comma(cv_summary["gold_standard"]), comma(cv_summary["high_confidence"]),
-      comma(cv_summary["supported"]), comma(cv_summary["weak"]),
-      comma(cv_summary["uncertain"])))
+      comma(.get_cv(cv_summary, "gold_standard")), comma(.get_cv(cv_summary, "high_confidence")),
+      comma(.get_cv(cv_summary, "supported")), comma(.get_cv(cv_summary, "weak")),
+      comma(.get_cv(cv_summary, "uncertain"))))
   cat('</div>')
 } else if (has_chromatin && !is.null(chromatin_error)) {
   cat('<div class="status-box status-warning">')
@@ -710,7 +747,9 @@ if (has_chromatin && !is.null(chromatin_refined)) {
 }
 ```
 
-```{r refinement-results, results='asis', eval=has_expr && !is.null(refined)}
+`r if(has_chromatin && !is.null(chromatin_refined)) "<div class='status-box status-info' style='margin-bottom:20px'><strong>Combined refinement strategy:</strong> Both expression and chromatin data were provided. The sections below show chromatin-aware results, which incorporate and refine the expression-derived anchor classifications. Expression-only tables are omitted to avoid redundancy.</div>" else if(has_expr && !is.null(refined)) "<div class='status-box status-info' style='margin-bottom:20px'><strong>Expression-aware refinement:</strong> Only expression data was provided. eP/eG labels denote expression-filtered silent anchors — validate with orthogonal chromatin data before functional interpretation.</div>"`
+
+```{r refinement-results, results='asis', error=TRUE, eval=has_expr && !is.null(refined) && is.null(chromatin_refined)}
 cat("## Refined Interaction Types\n")
 rla <- refined$loop_annotation
 orig_counts <- as.data.frame(table(res$loop_annotation$loop_type))
@@ -725,9 +764,10 @@ change_df$PctFiltered <- round(change_df$Filtered / sum(change_df$Filtered) * 10
 change_df$PctRetained <- ifelse(change_df$Original > 0,
   round(change_df$Filtered / change_df$Original * 100, 1), NA)
 change_df$Shift <- round(change_df$PctFiltered - change_df$PctOriginal, 1)
+change_df$FoldRetention <- ifelse(change_df$Original > 0,
+  round(change_df$Filtered / change_df$Original, 2), NA)
 change_df <- change_df[order(-change_df$Original), ]
 
-cat('<div class="table-caption">Loop type changes before vs. after refinement</div>\n')
 print(render_table(change_df, head_n = Inf))
 
 
@@ -735,7 +775,7 @@ rta <- refined$target_annotation
 if (!is.null(rta) && nrow(rta) > 0) {
   cat("\n## Refined Target Assignments\n")
   cat('<div class="table-caption">Refined feature-to-target mapping</div>\n')
-  coord_cols <- intersect(c("seqnames", "start", "end", "width"), colnames(rta))
+  coord_cols <- intersect(c("input_id", "seqnames", "start", "end", "width"), colnames(rta))
   anno_cols <- intersect(c("annotation", "SYMBOL", "loop_type",
     "Linked_Loop_IDs", "All_Loop_Connected_Genes",
     "Regulated_promoter_genes", "Regulated_promoter_Evidence",
@@ -753,13 +793,6 @@ if (!is.null(refined$target_gene_links) && nrow(refined$target_gene_links) > 0) 
   print(render_table(refined$target_gene_links, head_n = 50))
 }
 
-rpc <- refined$promoter_centric_stats
-if (!is.null(rpc) && nrow(rpc) > 0) {
-  cat("\n## Refined Promoter Connectivity\n")
-  cat('<div class="table-caption">Refined promoter-centric statistics</div>\n')
-  print(render_table(rpc[order(rpc$Total_Loops, decreasing = TRUE), ]))
-}
-
 # Added Refined Loop Annotation here
 rla <- refined$loop_annotation
 if (!is.null(rla) && nrow(rla) > 0) {
@@ -771,27 +804,20 @@ if (!is.null(rla) && nrow(rla) > 0) {
   print(render_table(rla[, loop_show]))
 }
 
-rde <- refined$distal_element_stats
-if (!is.null(rde) && nrow(rde) > 0) {
-  cat("\n## Refined Distal Element Connectivity\n")
-  cat('<div class="table-caption">Refined distal element statistics</div>\n')
-  print(render_table(rde[order(rde$n_Linked_Promoters, decreasing = TRUE), ]))
-}
-
 if (has_expr && !is.null(refined$plots)) {
   cat("\n## Refinement Visualizations\n")
   # ggplot-based plots — safe in results='asis'
   for (nm in c("Comparison_Dumbbell", "Rose", "Target_Loop_Donut")) {
     if (!is.null(refined$plots[[nm]])) {
       render_plot_container(refined$plots[[nm]],
-        title = gsub("_", " ", nm),
+        title = chr_plot_titles[[nm]],
         description = plot_descriptions[[nm]])
     }
   }
   for (nm in c("Refined_Karyo_Active", "Refined_Karyo_TargetGenes")) {
     if (!is.null(refined$plots[[nm]])) {
       render_plot_container(refined$plots[[nm]],
-        title = gsub("_", " ", nm),
+        title = chr_plot_titles[[nm]],
         description = plot_descriptions[[nm]])
     }
   }
@@ -818,57 +844,159 @@ cat(sprintf('<div class="plot-container"><iframe src="target_sankey.html" width=
 ```{r chromatin-plot-descriptions, include=FALSE}
 # Chromatin refinement plot descriptions
 chromatin_plot_desc <- list(
-  Chromatin_Dumbbell = "Anchor-type distribution before vs. after chromatin-guided reclassification. Dark green (right dot) shows the refined counts after mark-evidence reclassification; grey (left dot) shows original counts. New categories (e.g., dual, P appearing from eP) indicate chromatin-driven corrections of the expression-only classification.",
-  Chromatin_Sankey = "Flow diagram tracing each anchor's reclassification path. Left column (Before): original anchor types after expression refinement. Right column (After): updated types after chromatin-guided reclassification. Each coloured block represents one anchor type (eP = bluish-green, eG = sky blue, P = blue, G = reddish-purple, E = orange, dual = vermillion); block height is proportional to anchor count. Gradient links trace flows between types. Key transitions: eP to P (promoter-like chromatin reversion), eP to dual (dual-function upgrade).",
+  Chromatin_Dumbbell = "Anchor-type distribution before vs. after chromatin-aware reclassification. Dark green (right dot) shows the refined counts after mark-evidence reclassification; grey (left dot) shows original counts. New categories (e.g., dual, P appearing from eP) indicate chromatin-driven corrections of the expression-only classification.",
+  Chromatin_Sankey = "Flow diagram tracing each anchor's reclassification path. Left column (Before): original anchor types after expression refinement. Right column (After): updated types after chromatin-aware reclassification. Each coloured block represents one anchor type (eP = bluish-green, eG = sky blue, P = blue, G = reddish-purple, E = orange, dual = red); block height is proportional to anchor count. Gradient links trace flows between types. Key transitions: eP to P (promoter-like chromatin reversion), eP to dual (dual-function upgrade).",
   Chromatin_MarkHeatmap = "Aggregated heatmap showing the percentage of anchors in each reclassification group that overlap each chromatin mark. Cell colour encodes % positive (white = 0%, dark green = 100%). One row per reclassification type, one column per mark. This compact view reveals which marks drive specific reclassification decisions — for example, H3K4me3 enrichment in eP→P reversions, or H3K27me3 co-occurrence in eP→dual upgrades.",
-  Chromatin_Rose = "Post-reclassification loop-type proportions. Comparing with the pre-chromatin rose (above) reveals how mark-evidence reclassification shifts the loop-type landscape."
+  Chromatin_UpSet = "UpSet plot showing the combinatorial landscape of loop types after chromatin-aware reclassification. Top panel: intersection size (log10 scale) for each loop-type combination (e.g., E-P, dual-P). Bottom panel: dot-and-line matrix indicating which anchor types participate in each combination, with self-loop arcs for E-E, P-P, and dual-dual types."
 )
 ```
 
-```{r chromatin-plots, results='asis', eval=show_htmlwidgets && !is.null(chromatin_refined) && !is.null(chromatin_refined$plots)}
-cat("\n# Chromatin Refinement Visualizations {.section-header}\n\n")
-chr_plot_nms <- c("Chromatin_Dumbbell", "Chromatin_Sankey", "Chromatin_MarkHeatmap", "Chromatin_Rose")
+```{r chromatin-plots, results='asis', error=TRUE, eval=show_htmlwidgets && !is.null(chromatin_refined) && !is.null(chromatin_refined$plots)}
+cat("\n## Chromatin-Aware Anchor Reclassification\n\n")
+
+# ---- Refined data tables (chromatin-aware) ----
+cat("## Refined Interaction Types\n")
+rla_chr <- refined$loop_annotation
+orig_counts <- as.data.frame(table(res$loop_annotation$loop_type))
+names(orig_counts) <- c("loop_type", "Original")
+filt_counts <- as.data.frame(table(rla_chr$loop_type))
+names(filt_counts) <- c("loop_type", "Filtered")
+change_df <- merge(orig_counts, filt_counts, by = "loop_type", all = TRUE)
+change_df[is.na(change_df)] <- 0
+change_df$Change <- change_df$Original - change_df$Filtered
+change_df$PctOriginal <- round(change_df$Original / sum(change_df$Original) * 100, 1)
+change_df$PctFiltered <- round(change_df$Filtered / sum(change_df$Filtered) * 100, 1)
+change_df$PctRetained <- ifelse(change_df$Original > 0,
+  round(change_df$Filtered / change_df$Original * 100, 1), NA)
+change_df$Shift <- round(change_df$PctFiltered - change_df$PctOriginal, 1)
+change_df$FoldRetention <- ifelse(change_df$Original > 0,
+  round(change_df$Filtered / change_df$Original, 2), NA)
+change_df <- change_df[order(-change_df$Original), ]
+print(render_table(change_df, head_n = Inf))
+
+rta_chr <- refined$target_annotation
+if (!is.null(rta_chr) && nrow(rta_chr) > 0) {
+  cat("\n## Refined Target Assignments\n")
+  cat('<div class="table-caption">Refined feature-to-target mapping</div>\n')
+  coord_cols <- intersect(c("input_id", "seqnames", "start", "end", "width"), colnames(rta_chr))
+  anno_cols <- intersect(c("annotation", "SYMBOL", "loop_type",
+    "Linked_Loop_IDs", "Regulated_promoter_genes", "Regulated_promoter_Evidence",
+    "Assigned_Target_Genes", "All_Loop_Connected_Genes_Filled",
+    "Regulated_promoter_genes_Filled", "Regulated_promoter_Fallback_Evidence",
+    "Assigned_Target_Genes_Filled"), colnames(rta_chr))
+  rshow <- c(coord_cols, anno_cols)
+  rshow <- rshow[vapply(rta_chr[rshow], function(x) !all(is.na(x)), logical(1))]
+  print(render_table(rta_chr[, rshow]))
+}
+if (!is.null(refined$target_gene_links) && nrow(refined$target_gene_links) > 0) {
+  cat('<div class="table-caption">Refined target gene evidence links</div>\n')
+  print(render_table(refined$target_gene_links, head_n = 50))
+}
+cat("\n## Refined Loop Annotation\n")
+loop_show <- intersect(c("loop_ID", "chr1", "start1", "end1", "chr2", "start2", "end2",
+  "loop_type", "anchor1_type", "anchor1_gene", "anchor2_type", "anchor2_gene", "All_Anchor_Genes",
+  "Putative_Target_Genes", "Cluster_All_Genes"), colnames(rla_chr))
+cat('<div class="table-caption">Refined loop-to-gene associations</div>\n')
+print(render_table(rla_chr[, loop_show]))
+
+
+# ---- Reclassification summary table ----
+if (!is.null(chromatin_refined$qc_summary)) {
+  qc <- chromatin_refined$qc_summary
+  cat("\n## Reclassification Summary\n\n")
+  cat('<div class="table-caption">Chromatin-aware anchor reclassification statistics</div>\n')
+  qc_df <- data.frame(
+    Metric = c("Candidate anchors tested", "Reclassified", "Gold standard", "High confidence",
+               "Supported", "Weak", "Dual-function anchors", "Promoter-like"),
+    Value = c(comma(qc$n_candidate_anchors), comma(qc$n_reclassified),
+              comma(qc$n_gold_standard), comma(qc$n_high_confidence),
+              comma(qc$n_supported), comma(qc$n_weak),
+              comma(qc$n_dual), comma(qc$n_promoter_like)),
+    stringsAsFactors = FALSE
+  )
+  print(render_table(qc_df, head_n = Inf))
+}
+
+# ---- Reclassification flow table (old_type -> new_type) ----
+if (!is.null(chromatin_refined$chromatin_validation) &&
+    nrow(chromatin_refined$chromatin_validation) > 0) {
+  cv <- chromatin_refined$chromatin_validation
+  if ("positional_type" %in% colnames(cv) && "final_type" %in% colnames(cv)) {
+    cat("\n## Anchor Reclassification Flows\n\n")
+    cat('<div class="table-caption">Number of anchors reclassified from each original type to each final type</div>\n')
+    flow_tab <- as.data.frame(table(
+      Original = cv$positional_type,
+      Final    = cv$final_type
+    ))
+    flow_tab <- flow_tab[flow_tab$Freq > 0, ]
+    flow_tab <- flow_tab[order(-flow_tab$Freq), ]
+    names(flow_tab)[3] <- "Count"
+    rownames(flow_tab) <- NULL
+    print(render_table(flow_tab, head_n = Inf))
+  }
+}
+
+chr_plot_nms <- c("Chromatin_Dumbbell", "Chromatin_Sankey", "Chromatin_MarkHeatmap", "Chromatin_UpSet")
 for (nm in chr_plot_nms) {
   if (!is.null(chromatin_refined$plots[[nm]])) {
-    if (inherits(chromatin_refined$plots[[nm]], "Heatmap")) {
-      # ComplexHeatmap
-      cat(sprintf("\n## %s\n\n", gsub("_", " ", nm)))
-      if (!is.null(chromatin_plot_desc[[nm]])) {
-        cat(sprintf('<div style="margin-bottom:10px; color:#555; font-size:0.92em; line-height:1.5;">%s</div>\n',
-          chromatin_plot_desc[[nm]]))
+    tryCatch({
+      if (inherits(chromatin_refined$plots[[nm]], "Heatmap")) {
+        # ComplexHeatmap — needs dedicated draw method
+        cat(sprintf("\n## %s\n\n", chr_plot_titles[[nm]]))
+        if (!is.null(chromatin_plot_desc[[nm]])) {
+          cat(sprintf('<div style="margin-bottom:10px; color:#555; font-size:0.92em; line-height:1.5;">%s</div>\n',
+            chromatin_plot_desc[[nm]]))
+        }
+        cat('<div class="plot-container">')
+        ComplexHeatmap::draw(chromatin_refined$plots[[nm]],
+          padding = unit(c(10, 2, 2, 2), "mm"))
+        cat('</div>\n')
+      } else if (inherits(chromatin_refined$plots[[nm]], "htmlwidget")) {
+        # networkD3 Sankey
+        cat(sprintf("\n## %s\n\n", chr_plot_titles[[nm]]))
+        if (!is.null(chromatin_plot_desc[[nm]])) {
+          cat(sprintf('<div style="margin-bottom:10px; color:#555; font-size:0.92em; line-height:1.5;">%s</div>\n',
+            chromatin_plot_desc[[nm]]))
+        }
+        w <- chromatin_refined$plots[[nm]]
+        w$height <- 450
+        sankey_file <- file.path(params$out_dir, "chromatin_sankey.html")
+        dir.create(params$out_dir, showWarnings = FALSE, recursive = TRUE)
+        htmlwidgets::saveWidget(w, sankey_file, selfcontained = TRUE,
+                                title = "Chromatin Reclassification Sankey")
+        cat(sprintf('<div class="plot-container"><iframe src="chromatin_sankey.html" width="100%%" height="450" frameborder="0" style="border:none;"></iframe></div>\n'))
+      } else if (inherits(chromatin_refined$plots[[nm]], "patchwork")) {
+        # patchwork (UpSet)
+        cat(sprintf("\n## %s\n\n", chr_plot_titles[[nm]]))
+        if (!is.null(chromatin_plot_desc[[nm]])) {
+          cat(sprintf('<div style="margin-bottom:10px; color:#555; font-size:0.92em; line-height:1.5;">%s</div>\n',
+            chromatin_plot_desc[[nm]]))
+        }
+        cat('<div class="plot-container">')
+        plot(chromatin_refined$plots[[nm]])
+        cat('</div>\n')
+      } else {
+        # ggplot2
+        cat(sprintf("\n## %s\n\n", chr_plot_titles[[nm]]))
+        if (!is.null(chromatin_plot_desc[[nm]])) {
+          cat(sprintf('<div style="margin-bottom:10px; color:#555; font-size:0.92em; line-height:1.5;">%s</div>\n',
+            chromatin_plot_desc[[nm]]))
+        }
+        render_plot_container(chromatin_refined$plots[[nm]],
+          title = chr_plot_titles[[nm]], description = chromatin_plot_desc[[nm]])
       }
-      render_plot_container(chromatin_refined$plots[[nm]],
-        caption = nm, width = 10, height = max(6, nrow(chromatin_refined$chromatin_validation) * 0.02))
-    } else if (inherits(chromatin_refined$plots[[nm]], "htmlwidget")) {
-      # networkD3 Sankey
-      cat(sprintf("\n## %s\n\n", gsub("_", " ", nm)))
-      if (!is.null(chromatin_plot_desc[[nm]])) {
-        cat(sprintf('<div style="margin-bottom:10px; color:#555; font-size:0.92em; line-height:1.5;">%s</div>\n',
-          chromatin_plot_desc[[nm]]))
-      }
-      w <- chromatin_refined$plots[[nm]]
-      w$height <- 450
-      sankey_file <- file.path(params$out_dir, "chromatin_sankey.html")
-      dir.create(params$out_dir, showWarnings = FALSE, recursive = TRUE)
-      htmlwidgets::saveWidget(w, sankey_file, selfcontained = TRUE,
-                              title = "Chromatin Reclassification Sankey")
-      cat(sprintf('<div class="plot-container"><iframe src="chromatin_sankey.html" width="100%%" height="450" frameborder="0" style="border:none;"></iframe></div>\n'))
-    } else {
-      # ggplot2
-      cat(sprintf("\n## %s\n\n", gsub("_", " ", nm)))
-      if (!is.null(chromatin_plot_desc[[nm]])) {
-        cat(sprintf('<div style="margin-bottom:10px; color:#555; font-size:0.92em; line-height:1.5;">%s</div>\n',
-          chromatin_plot_desc[[nm]]))
-      }
-      render_plot_container(chromatin_refined$plots[[nm]], caption = nm)
-    }
+    }, error = function(e) {
+      cat(sprintf('\n<div class="status-box status-warning"><strong>Plot "%s" failed:</strong> %s</div>\n',
+        nm, conditionMessage(e)))
+      message("!!! Chromatin plot failed: ", nm, " — ", conditionMessage(e))
+    })
   }
 }
 ```
 
-```{r chromatin-validation, results='asis', eval=has_expr && !is.null(refined) && !is.null(refined$chromatin_validation) && nrow(refined$chromatin_validation) > 0}
-cv <- refined$chromatin_validation
-cat("\n# Orthogonal Chromatin Validation {.section-header}\n\n")
+```{r chromatin-validation, results='asis', eval=!is.null(chromatin_refined) && !is.null(chromatin_refined$chromatin_validation) && nrow(chromatin_refined$chromatin_validation) > 0}
+cv <- chromatin_refined$chromatin_validation
+cat("\n## Orthogonal Chromatin Validation\n\n")
 cv_tab <- table(cv$confidence)
 cv_levels <- c("gold_standard", "high_confidence", "supported", "weak", "uncertain")
 cv_colors <- c("gold_standard"="#1B5E20", "high_confidence"="#2E7D32", "supported"="#66BB6A",
@@ -932,7 +1060,7 @@ if (cv_has_data) {
 }
 ```
 
-# Functional Profiling {.section-header}
+# Functional Profiling
 
 ```{r functional-profiling, eval=has_profiling}
 profiling_error <- NULL
@@ -955,7 +1083,7 @@ if (effective_run_ppi) {
 }
 
 profile_res <- tryCatch(
-  profile_target_genes(
+  suppressMessages(profile_target_genes(
     annotation_res = if (!is.null(refined)) refined else res,
     diff_file = diff_path,
     lfc_col = params$lfc_col,
@@ -979,7 +1107,7 @@ profile_res <- tryCatch(
     gsea_nSample = params$gsea_nSample,
     cnet_nSample = params$cnet_nSample,
     stat_test = params$stat_test
-  ),
+  )),
   error = function(e) {
     profiling_error <<- conditionMessage(e)
     NULL
@@ -1126,8 +1254,8 @@ if (has_any_plot) {
       show <- intersect(c("Description", "ONTOLOGY", "pvalue", "p.adjust", "Count"), colnames(go_df))
       if (has_dt) {
         go_widget <- DT::datatable(go_df[, show],
-          options = list(pageLength = 10, scrollX = TRUE, searching = TRUE,
-            autoWidth = FALSE, columnDefs = list(list(width = "40%%", targets = 0))),
+          options = list(pageLength = 10, searching = TRUE,
+            autoWidth = TRUE, columnDefs = list(list(width = "40%%", targets = 0))),
           class = "stripe hover compact", rownames = FALSE)
         if (requireNamespace("htmltools", quietly = TRUE))
           print(htmltools::tagList(go_widget))
@@ -1186,7 +1314,7 @@ if (has_any_plot) {
 }
 ```
 
-# Output Files {.section-header}
+# Output Files
 
 All results and processed data are saved in the directory: `r params$out_dir`
 

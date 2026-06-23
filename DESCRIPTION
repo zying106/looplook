@@ -62,6 +62,8 @@ Imports:
     withr,
     clusterProfiler,
     enrichplot,
+    jsonlite,
+    patchwork,
 Suggests:
     BiocStyle,
     ComplexHeatmap,

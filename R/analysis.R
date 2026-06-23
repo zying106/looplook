@@ -513,7 +513,7 @@ run_lfc_violin <- function(target_genes, global_glist, stat_test = c("wilcox.tes
     cols <- c("Target" = "#E41A1C", "Background" = "#999999")
 
     p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = Group, y = LFC, fill = Group)) +
-        ggplot2::geom_violin(trim = TRUE, alpha = 0.5, color = NA) +
+        ggplot2::geom_violin(trim = TRUE, alpha = 0.5, color = NA, scale = "width", width = 0.55, adjust = 2.5) +
         ggplot2::geom_boxplot(width = 0.15, outlier.shape = NA, alpha = 0.9, color = "black") +
         ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "grey30", linewidth = 0.5) +
         ggplot2::scale_x_discrete(labels = x_labels) +
@@ -635,7 +635,7 @@ run_gsea_analysis <- function(target_genes, global_glist, gsea_nSample, current_
 
         p3 <- ggplot2::ggplot(d, ggplot2::aes(x = x, y = geneList)) +
             ggplot2::geom_segment(ggplot2::aes(xend = x, yend = 0, color = geneList)) +
-            ggplot2::scale_color_gradient2(low = "#1B7837", mid = "white", high = "#762A83", midpoint = 0) +
+            ggplot2::scale_color_gradient2(low = "#1B7837", mid = "white", high = "#762A83", midpoint = 0, limits = c(-3, 3), oob = scales::squish) +
             ggplot2::scale_x_continuous(expand = c(0, 0), limits = c(0, max_rank)) +
             ggplot2::coord_cartesian(ylim = c(quantile(d$geneList, 0.005, na.rm = TRUE), quantile(d$geneList, 0.995, na.rm = TRUE))) +
             ggplot2::theme_classic() +
@@ -1061,11 +1061,11 @@ plot_summary_go_lollipop <- function(all_go_results, base_project_name) {
         if (length(res) == 0) return("Wilcox P: NA")
         paste0("Wilcox P (vs Others):\n", paste(res, collapse = " | "))
     }
-    base_box <- function(y_var, y_lab) {
+    base_box <- function(y_var, y_lab, density_adjust = 0.5) {
         ggplot2::ggplot(plot_df_rc, ggplot2::aes(fill = Conn_Group)) +
             ggplot2::geom_jitter(ggplot2::aes(x = .data$Conn_Group_jitter,
                 y = .data[[y_var]], color = .data$Conn_Group),
-                shape = 16, width = 0.03, height = 0, alpha = 0.6, size = 0.8) +
+                shape = 16, width = 0.03, height = 0, alpha = 0.6, size = 0.8, stroke = 0) +
             ggplot2::stat_boxplot(ggplot2::aes(x = .data$Conn_Group_num,
                 y = .data[[y_var]], color = .data$Conn_Group),
                 geom = "errorbar", width = 0.05, linewidth = 0.5) +
@@ -1077,28 +1077,29 @@ plot_summary_go_lollipop <- function(all_go_results, base_project_name) {
                 geom = "crossbar", width = 0.1, color = "black", linewidth = 0.4) +
             ggdist::stat_slab(ggplot2::aes(x = .data$Conn_Group_slab,
                 y = .data[[y_var]], fill = .data$Conn_Group),
-                adjust = 0.5, width = 0.35, justification = 0, alpha = 0.3, color = NA) +
+                adjust = density_adjust, width = 0.35, justification = 0, normalize = "groups", alpha = 0.3, color = NA) +
             ggdist::stat_slab(ggplot2::aes(x = .data$Conn_Group_slab,
                 y = .data[[y_var]], color = .data$Conn_Group),
-                adjust = 0.5, width = 0.35, justification = 0,
+                adjust = density_adjust, width = 0.35, justification = 0, normalize = "groups",
                 fill = NA, alpha = 0.5, linewidth = 0.4) +
             ggplot2::scale_x_continuous(
                 breaks = seq_along(levels(plot_df_rc$Conn_Group)),
                 labels = levels(plot_df_rc$Conn_Group)) +
-            ggplot2::coord_cartesian(
-                xlim = c(0.75, length(levels(plot_df_rc$Conn_Group)) + 0.6)) +
             ggplot2::scale_fill_manual(values = custom_colors) +
             ggplot2::scale_color_manual(values = custom_colors) +
             ggplot2::labs(title = "Regulation: High_connectivity vs Others",
                 subtitle = get_pval_str(y_var), x = NULL, y = y_lab) +
             clean_theme
     }
-    if (requireNamespace("ggdist", quietly = TRUE)) {
-        plots_list$Raincloud_LFC <- base_box("LFC", "Log2 Fold Change (LFC)") +
-            ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
-                                color = "grey45", linewidth = 0.6)
-        plots_list$Raincloud_Expr <- base_box("Expression", "Log2(Mean Expression + 1)")
-    }
+    plots_list$Raincloud_LFC <- base_box("LFC", "Log2 Fold Change (LFC)", density_adjust = 1.5) +
+        ggplot2::coord_cartesian(
+            xlim = c(0.75, length(levels(plot_df_rc$Conn_Group)) + 0.6),
+            ylim = c(-4, 4)) +
+        ggplot2::geom_hline(yintercept = 0, linetype = "dashed",
+                            color = "grey45", linewidth = 0.6)
+    plots_list$Raincloud_Expr <- base_box("Expression", "Log2(Mean Expression + 1)") +
+        ggplot2::coord_cartesian(
+            xlim = c(0.75, length(levels(plot_df_rc$Conn_Group)) + 0.6))
     plots_list
 }
 

@@ -273,7 +273,7 @@ test_that(".record_database_versions handles NULL species", {
 })
 
 # --- refine_loop_anchors_by_chromatin: E anchors included + target NULL ---
-test_that("refine_loop_anchors_by_chromatin: target_annotation is NULL", {
+test_that("refine_loop_anchors_by_chromatin: recompute_targets=FALSE yields NULL", {
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
   skip_if(rdata_path == "", "Pre-computed test data not available")
   tmp <- new.env()
@@ -290,7 +290,7 @@ test_that("refine_loop_anchors_by_chromatin: target_annotation is NULL", {
 
   out <- refine_loop_anchors_by_chromatin(res,
     chromatin_beds = list(H3K4me1 = h3k4me1, H3K4me3 = h3k4me3),
-    write_output = FALSE, quiet = TRUE)
+    write_output = FALSE, quiet = TRUE, recompute_targets = FALSE)
   expect_null(out$target_annotation)
   expect_null(out$target_gene_links)
   expect_s3_class(out$loop_annotation, "data.frame")

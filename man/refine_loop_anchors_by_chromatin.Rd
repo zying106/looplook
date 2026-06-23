@@ -14,9 +14,10 @@ refine_loop_anchors_by_chromatin(
   project_name = "HiChIP",
   color_palette = "Paired",
   candidate_types = NULL,
-  recompute_targets = FALSE,
+  recompute_targets = TRUE,
   write_output = TRUE,
-  quiet = FALSE
+  quiet = FALSE,
+  sankey_colors = NULL
 )
 }
 \arguments{
@@ -40,15 +41,15 @@ improve confidence but are optional.}
 \item{project_name}{Character. Project prefix. Default \code{"HiChIP"}.}
 
 \item{color_palette}{Character. RColorBrewer palette name for the
-rose chart and sankey fallback colours. Dumbbell and mark-enrichment
-heatmap use fixed academic palettes. Default: \code{"Paired"}.}
+rose chart. Dumbbell and mark-enrichment heatmap use fixed academic
+palettes. Default: \code{"Paired"}.}
 
 \item{candidate_types}{Character vector or \code{NULL}. Anchor types to
 validate and reclassify. \code{NULL} (default): auto-selects
 \code{c("eP","eG")} for refined input, \code{c("P","G","E")} for raw.
 Set explicitly to \code{c("P","G","E","eP","eG")} for full-range analysis.}
 
-\item{recompute_targets}{Logical. If \code{TRUE}, re-run target gene
+\item{recompute_targets}{Logical. If \code{TRUE} (default), re-run target gene
 assignment using updated anchor types. Requires the input
 \code{annotation_res} to contain the \code{looplook_anchor_state}
 attribute (present when using \code{\link{annotate_peaks_and_loops}}
@@ -57,19 +58,29 @@ output). Default \code{FALSE}.}
 \item{write_output}{Logical. Write Excel workbook. Default \code{TRUE}.}
 
 \item{quiet}{Logical. Suppress messages. Default \code{FALSE}.}
+
+\item{sankey_colors}{Named character vector or \code{NULL}. Override the
+default type-to-color mapping in the Sankey diagram. Names must be
+anchor types (\code{"P"}, \code{"E"}, \code{"G"}, \code{"eP"},
+\code{"eG"}, \code{"dual"}), values are hex colours. When \code{NULL}
+(default), the colourblind-safe Wong palette is used:
+\code{E = "#E69F00"} (orange), \code{dual = "#CC0000"} (red),
+\code{P = "#0072B2"} (blue), \code{eP = "#009E73"} (bluish-green),
+\code{G = "#CC79A7"} (reddish-purple), \code{eG = "#56B4E9"} (sky blue).}
 }
 \value{
 An invisible named list with updated \code{loop_annotation},
 \code{anchor_loci_annotation}, \code{promoter_centric_stats},
 \code{distal_element_stats}, \code{chromatin_validation},
 \code{plots} (\code{Chromatin_Dumbbell}: anchor-type before/after
-comparison; \code{Chromatin_Rose}: loop-type proportion rose plot),
+comparison; \code{Chromatin_UpSet}: loop-type UpSet plot (dot matrix + log10 bar chart)),
 \code{plot_list} (alias of \code{plots}), \code{qc_summary},
-and \code{metadata}. When \code{recompute_targets = FALSE} (default),
-\code{target_annotation} and \code{target_gene_links} are \code{NULL}
-(pre-chromatin anchor types); downstream profiling should use
-\code{target_source = "loops"}. When \code{recompute_targets = TRUE},
+and \code{metadata}. When \code{recompute_targets = TRUE} (default),
 target links are rebuilt from chromatin-updated anchor states,
+producing chromatin-aware \code{target_annotation} and
+\code{target_gene_links}. Set to \code{FALSE} to preserve
+pre-chromatin target assignments and use
+\code{target_source = "loops"} for downstream profiling.
 producing chromatin-aware \code{target_annotation} and
 \code{target_gene_links}.  The input must carry the
 \code{looplook_anchor_state} attribute (present when using

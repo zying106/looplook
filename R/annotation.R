@@ -3094,13 +3094,21 @@ refine_loop_anchors_by_expression <- function(
 #' @param out_dir Character. Output directory for Excel export. Default \code{"./results/chromatin"}.
 #' @param project_name Character. Project prefix. Default \code{"HiChIP"}.
 #' @param color_palette Character. RColorBrewer palette name for the
-#'   rose chart and sankey fallback colours. Dumbbell and mark-enrichment
-#'   heatmap use fixed academic palettes. Default: \code{"Paired"}.
+#'   rose chart. Dumbbell and mark-enrichment heatmap use fixed academic
+#'   palettes. Default: \code{"Paired"}.
+#' @param sankey_colors Named character vector or \code{NULL}. Override the
+#'   default type-to-color mapping in the Sankey diagram. Names must be
+#'   anchor types (\code{"P"}, \code{"E"}, \code{"G"}, \code{"eP"},
+#'   \code{"eG"}, \code{"dual"}), values are hex colours. When \code{NULL}
+#'   (default), the colourblind-safe Wong palette is used:
+#'   \code{E = "#E69F00"} (orange), \code{dual = "#CC0000"} (red),
+#'   \code{P = "#0072B2"} (blue), \code{eP = "#009E73"} (bluish-green),
+#'   \code{G = "#CC79A7"} (reddish-purple), \code{eG = "#56B4E9"} (sky blue).
 #' @param candidate_types Character vector or \code{NULL}. Anchor types to
 #'   validate and reclassify. \code{NULL} (default): auto-selects
 #'   \code{c("eP","eG")} for refined input, \code{c("P","G","E")} for raw.
 #'   Set explicitly to \code{c("P","G","E","eP","eG")} for full-range analysis.
-#' @param recompute_targets Logical. If \code{TRUE}, re-run target gene
+#' @param recompute_targets Logical. If \code{TRUE} (default), re-run target gene
 #'   assignment using updated anchor types. Requires the input
 #'   \code{annotation_res} to contain the \code{looplook_anchor_state}
 #'   attribute (present when using \code{\link{annotate_peaks_and_loops}}
@@ -3112,13 +3120,14 @@ refine_loop_anchors_by_expression <- function(
 #'   \code{anchor_loci_annotation}, \code{promoter_centric_stats},
 #'   \code{distal_element_stats}, \code{chromatin_validation},
 #'   \code{plots} (\code{Chromatin_Dumbbell}: anchor-type before/after
-#'   comparison; \code{Chromatin_Rose}: loop-type proportion rose plot),
+#'   comparison; \code{Chromatin_UpSet}: loop-type UpSet plot (dot matrix + log10 bar chart)),
 #'   \code{plot_list} (alias of \code{plots}), \code{qc_summary},
-#'   and \code{metadata}. When \code{recompute_targets = FALSE} (default),
-#'   \code{target_annotation} and \code{target_gene_links} are \code{NULL}
-#'   (pre-chromatin anchor types); downstream profiling should use
-#'   \code{target_source = "loops"}. When \code{recompute_targets = TRUE},
+#'   and \code{metadata}. When \code{recompute_targets = TRUE} (default),
 #'   target links are rebuilt from chromatin-updated anchor states,
+#'   producing chromatin-aware \code{target_annotation} and
+#'   \code{target_gene_links}. Set to \code{FALSE} to preserve
+#'   pre-chromatin target assignments and use
+#'   \code{target_source = "loops"} for downstream profiling.
 #'   producing chromatin-aware \code{target_annotation} and
 #'   \code{target_gene_links}.  The input must carry the
 #'   \code{looplook_anchor_state} attribute (present when using
@@ -3169,9 +3178,10 @@ refine_loop_anchors_by_chromatin <- function(
     project_name = "HiChIP",
     color_palette = "Paired",
     candidate_types = NULL,
-    recompute_targets = FALSE,
+    recompute_targets = TRUE,
     write_output = TRUE,
-    quiet = FALSE
+    quiet = FALSE,
+    sankey_colors = NULL
 ) {
     species <- match.arg(species, c("hg38", "hg19", "mm10", "mm9"))
     if (!grepl("_Chromatin$", project_name)) project_name <- paste0(project_name, "_Chromatin")
@@ -3265,9 +3275,9 @@ refine_loop_anchors_by_chromatin <- function(
     names(custom_colors) <- loop_types_all
     chromatin_plots <- list(
         Chromatin_Dumbbell = .build_chromatin_dumbbell_plot(reclass_map, project_name),
-        Chromatin_Sankey   = .build_chromatin_sankey_plot(reclass_map, project_name),
+        Chromatin_Sankey   = .build_chromatin_sankey_plot(reclass_map, project_name, sankey_colors = sankey_colors),
         Chromatin_MarkHeatmap = .build_chromatin_mark_heatmap(validation, reclass_map, project_name),
-        Chromatin_Rose     = .build_rose_plot(loop_df, custom_colors,
+        Chromatin_UpSet     = .build_loop_type_upset(loop_df,
                                 paste0(project_name, ": Loop Types After Chromatin Refinement"),
                                 subtitle = "Loop type distribution after chromatin-aware anchor reclassification.")
     )
@@ -3303,9 +3313,9 @@ refine_loop_anchors_by_chromatin <- function(
     }
 
     # --- 9. Build output ---
-    # When recompute_targets = FALSE, target_annotation / target_gene_links
-    # are NULL (pre-chromatin types).  Use profile_target_genes(target_source = "loops")
-    # for chromatin-aware profiling.
+    # By default (recompute_targets = TRUE), target_annotation and
+    # target_gene_links are rebuilt from chromatin-aware anchor types.
+    # Set to FALSE to preserve pre-chromatin assignments.
     qc_summary <- data.frame(
         n_candidate_anchors = nrow(validation),
         n_reclassified      = sum(reclass_map$changed),
@@ -4282,6 +4292,23 @@ refine_loop_anchors_by_chromatin <- function(
 #' @return A \code{ggplot} object.
 #' @keywords internal
 #' @noRd
+#' Internal: Build Loop-Type UpSet Plot
+#'
+#' Replaces the rose/coxcomb chart with an UpSet-style combinatorial view.
+#' Each loop type (e.g. "E-P", "dual-E") is an intersection of two anchor-
+#' type sets.  The top panel shows counts on a log10 axis to compress wide
+#' dynamic range; the bottom panel shows which anchor types participate in
+#' each combination via a dot-and-line matrix.  This format is standard in
+#' 3D-genomics papers and highlights the combinatorial nature of chromatin-
+#' aware anchor classification.
+#'
+#' @param loop_df Refined loop annotation data frame with a \code{loop_type} column.
+#' @param project_name Character. Plot title prefix.
+#' @param subtitle Character or \code{NULL}. Plot subtitle.
+#' @return A \code{ggplot} object assembled with \code{patchwork}.
+#' Internal: Build Rose Plot (Expression Refinement)
+#' @keywords internal
+#' @noRd
 .build_rose_plot <- function(loop_df, custom_colors, project_name, subtitle = NULL) {
     rose_data <- loop_df %>%
         dplyr::group_by(loop_type) %>%
@@ -4317,6 +4344,158 @@ refine_loop_anchors_by_chromatin <- function(
             legend.position = "right",
             legend.text = ggplot2::element_text(size = 10)
         )
+}
+
+#' Internal: Build Loop-Type UpSet Plot (Chromatin Refinement)
+#' @keywords internal
+#' @noRd
+.build_loop_type_upset <- function(loop_df, project_name, subtitle = NULL) {
+    # --- per-combination counts ---
+    type_counts <- table(loop_df$loop_type)
+    type_counts <- sort(type_counts, decreasing = TRUE)
+    comb_names  <- names(type_counts)
+    n_comb      <- length(comb_names)
+    if (n_comb == 0) return(NULL)
+
+    # --- binary matrix: rows = combinations, cols = anchor types ---
+    anchor_types <- c("E", "P", "G", "eP", "eG", "dual")
+    # Keep only types that actually appear in the data
+    all_parts <- unique(unlist(strsplit(comb_names, "-")))
+    anchor_types <- intersect(anchor_types, all_parts)
+    n_types <- length(anchor_types)
+    if (n_types < 2) return(NULL)
+
+    bin_mat <- matrix(0L, nrow = n_comb, ncol = n_types,
+                      dimnames = list(comb_names, anchor_types))
+    for (i in seq_len(n_comb)) {
+        parts <- strsplit(comb_names[i], "-")[[1]]
+        bin_mat[i, intersect(parts, anchor_types)] <- 1L
+    }
+
+    # --- colours: Wong palette, consistent with Sankey ---
+    type_pal <- c("E"="#E69F00", "P"="#0072B2", "G"="#CC79A7",
+                  "eP"="#009E73", "eG"="#56B4E9", "dual"="#CC0000")
+    type_cols <- type_pal[anchor_types]
+
+    # --- top panel: bar chart with log10 y ---
+    bar_df <- data.frame(
+        combination = factor(comb_names, levels = comb_names),
+        count = as.integer(type_counts),
+        stringsAsFactors = FALSE
+    )
+    # Guard against log10(0) — should never happen after table()
+    bar_df$log_count <- log10(pmax(bar_df$count, 1))
+
+    y_breaks <- pretty(bar_df$log_count, n = 4)
+    y_labels <- vapply(y_breaks, function(b) {
+        scales::comma(10^b, accuracy = 1)
+    }, character(1))
+
+    p_bar <- ggplot2::ggplot(bar_df, ggplot2::aes(x = combination, y = log_count)) +
+        ggplot2::geom_col(fill = "#555555", width = 0.7) +
+        ggplot2::scale_y_continuous(
+            name = "Intersection size (log10)",
+            breaks = y_breaks, labels = y_labels, expand = c(0, 0.05)
+        ) +
+        ggplot2::theme_minimal(base_size = 11) +
+        ggplot2::theme(
+            axis.title.x = ggplot2::element_blank(),
+            axis.text.x  = ggplot2::element_blank(),
+            axis.ticks.x = ggplot2::element_blank(),
+            panel.grid.major.x = ggplot2::element_blank(),
+            panel.grid.major.y = ggplot2::element_line(color = "gray92", linewidth = 0.25),
+            plot.title   = ggplot2::element_text(hjust = 0.5, face = "bold", size = 14),
+            plot.subtitle = ggplot2::element_text(hjust = 0.5, size = 10),
+            plot.margin  = ggplot2::margin(b = 0, t = 5, l = 5, r = 5)
+        ) +
+        ggplot2::labs(title = paste0(project_name, ": Loop Type Combinations"),
+             subtitle = if (is.null(subtitle)) "" else subtitle)
+
+    # --- bottom panel: dot matrix ---
+    dot_df <- expand.grid(
+        combination = factor(comb_names, levels = comb_names),
+        anchor_type = factor(anchor_types, levels = rev(anchor_types)),
+        stringsAsFactors = FALSE
+    )
+    dot_df$present <- as.logical(bin_mat[cbind(
+        as.character(dot_df$combination),
+        as.character(dot_df$anchor_type)
+    )])
+
+    p_dot <- ggplot2::ggplot(dot_df, ggplot2::aes(x = combination, y = anchor_type)) +
+        # Absent dots (small, grey, back-most layer)
+        ggplot2::geom_point(
+            data = subset(dot_df, !present),
+            color = "#E8E8E8", size = 1.0
+        ) +
+        # Connection lines — above grey dots, behind coloured dots
+        ggplot2::geom_line(
+            data = subset(dot_df, present),
+            ggplot2::aes(group = combination), color = "#999999", linewidth = 0.5
+        ) +
+        # Present dots (coloured, on top of lines)
+        ggplot2::geom_point(
+            data = subset(dot_df, present),
+            ggplot2::aes(color = anchor_type), size = 3.2
+        ) +
+        # Self-loop arc — same colour as lines
+        {
+            if (requireNamespace("ggforce", quietly = TRUE)) {
+                ggforce::geom_arc(
+                    data = subset(dot_df, present & grepl("^([A-Za-z]+)-\\1$", as.character(combination))),
+                    ggplot2::aes(x0 = as.numeric(combination), y0 = as.numeric(anchor_type),
+                                 r = 0.22, start = pi, end = 2 * pi),
+                    color = "#999999", linewidth = 0.5, inherit.aes = FALSE
+                )
+            }
+        } +
+        ggplot2::scale_color_manual(values = type_cols, guide = "none") +
+        ggplot2::theme_minimal(base_size = 11) +
+        ggplot2::theme(
+            axis.title = ggplot2::element_blank(),
+            axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 9),
+            panel.grid.major = ggplot2::element_blank(),
+            panel.grid.minor = ggplot2::element_blank(),
+            plot.margin = ggplot2::margin(t = 0, b = 5, l = 5, r = 5)
+        )
+
+    # --- side panel: set-size bar (loops per anchor type, not combinations) ---
+    set_counts <- colSums(bin_mat * bar_df$count)
+    set_df <- data.frame(
+        anchor_type = factor(names(set_counts), levels = rev(anchor_types)),
+        count = as.integer(set_counts),
+        stringsAsFactors = FALSE
+    )
+    set_df$log_count <- log10(pmax(set_df$count, 1))
+    side_breaks <- pretty(c(0, max(set_df$log_count)), n = 3)
+
+    p_side <- ggplot2::ggplot(set_df, ggplot2::aes(x = log_count, y = anchor_type)) +
+        ggplot2::geom_col(ggplot2::aes(fill = anchor_type), width = 0.7) +
+        ggplot2::scale_fill_manual(values = type_cols, guide = "none") +
+        ggplot2::scale_x_reverse(
+            name = "Set size (log10)",
+            breaks = side_breaks,
+            labels = scales::comma(10^side_breaks, accuracy = 1),
+            expand = c(0, 0.05)
+        ) +
+        ggplot2::theme_minimal(base_size = 11) +
+        ggplot2::theme(
+            axis.title.y = ggplot2::element_blank(),
+            axis.text.y  = ggplot2::element_blank(),
+            panel.grid.major.x = ggplot2::element_line(color = "gray92", linewidth = 0.25),
+            panel.grid.major.y = ggplot2::element_blank(),
+            plot.margin = ggplot2::margin(l = 5, r = 5, t = 5, b = 5)
+        )
+
+    # --- assemble: side | (bar / dot) ---
+    if (requireNamespace("patchwork", quietly = TRUE)) {
+        p_combined <- (p_side | (p_bar / p_dot)) +
+            patchwork::plot_layout(widths = c(1, 6), heights = c(3, 2))
+        return(p_combined)
+    }
+    # fallback: bar only (no side panel or dot matrix)
+    return(p_bar +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, size = 9)))
 }
 #' Internal: Build Refinement Visualization Suite
 #'
@@ -4394,7 +4573,7 @@ refine_loop_anchors_by_chromatin <- function(
 #' @return A ggplot object.
 #' @keywords internal
 #' @noRd
-.build_chromatin_sankey_plot <- function(reclass_map, project_name) {
+.build_chromatin_sankey_plot <- function(reclass_map, project_name, sankey_colors = NULL) {
     if (is.null(reclass_map) || nrow(reclass_map) == 0) {
         return(NULL)
     }
@@ -4449,20 +4628,29 @@ refine_loop_anchors_by_chromatin <- function(
 
     n_changed <- sum(reclass_map$changed)
 
-    # Wong\'s colourblind-safe palette (Nature Methods 2011).  Each anchor
-    # type gets a fixed colour, consistently applied to both left (Before)
-    # and right (After) sides so the same type is recognisable across columns.
-    wong_palette <- c(
+    # Default: Wong colourblind-safe palette with type-to-colour mapping.
+    # Users can override specific types via sankey_colors (e.g. sankey_colors = c("dual" = "#8B0000")).
+    default_palette <- c(
         "eP"   = "#009E73",   # bluish-green
         "eG"   = "#56B4E9",   # sky blue
         "P"    = "#0072B2",   # blue
         "G"    = "#CC79A7",   # reddish-purple
         "E"    = "#E69F00",   # orange
-        "dual" = "#D55E00"    # vermillion
+        "dual" = "#CC0000"    # red — clearly distinct from E orange #E69F00
     )
+    if (!is.null(sankey_colors)) {
+        if (!is.character(sankey_colors) || is.null(names(sankey_colors))) {
+            warning("sankey_colors must be a named character vector; using default palette.",
+                    call. = FALSE)
+        } else {
+            valid <- intersect(names(sankey_colors), names(default_palette))
+            if (length(valid) > 0) default_palette[valid] <- sankey_colors[valid]
+        }
+    }
+
     all_types <- unique(c(as.character(old_totals$old_type),
                           as.character(new_totals$new_type)))
-    type_colors <- wong_palette[all_types]
+    type_colors <- default_palette[all_types]
     # Fallback for any type not in the predefined palette
     missing_types <- all_types[is.na(type_colors)]
     if (length(missing_types) > 0) {
@@ -4470,29 +4658,39 @@ refine_loop_anchors_by_chromatin <- function(
         type_colors[is.na(type_colors)] <- fallback[missing_types]
     }
     names(type_colors) <- all_types
-    # Extract type from node name: "eP (n=6910)" -> "eP"
-    node_type <- gsub(" \\(n=.*$", "", nodes$name)
-    sankey_colors <- unname(type_colors[node_type])
-    color_scale <- paste0('d3.scaleOrdinal().range(["',
-        paste(sankey_colors, collapse = '","'), '"])')
+    # Per-node colours: extract type from node name ("eP (n=6910)" -> "eP")
+    # then look up the type's colour.  Each node has a unique name (count
+    # in parentheses), so D3 sees N distinct domain values and assigns the
+    # N colours in order.  Variable renamed from sankey_colors to avoid
+    # overwriting the user-supplied parameter of the same name.
+    type_json <- jsonlite::toJSON(as.list(type_colors), auto_unbox = TRUE)
 
     sn <- networkD3::sankeyNetwork(
         Links = links, Nodes = nodes,
         Source = "source", Target = "target",
         Value = "value", NodeID = "name",
         units = "", fontSize = 12, nodeWidth = 30,
-        colourScale = networkD3::JS(color_scale),
         iterations = 0
     )
 
     sn$sizingPolicy$defaultWidth  <- "100%"
     sn$sizingPolicy$defaultHeight <- "450px"
 
-    # Gradient links + dark node borders + bold labels — exactly matching
-    # the expression-refinement Sankey style (.build_sankey_plot).
-    sn <- htmlwidgets::onRender(sn, sprintf('
-		function(el, x) {
-		  var svg = d3.select(el).select("svg");
+    # Node colours via onRender — bypass networkD3's internal node reordering
+    # by applying the type→colour map directly.
+    sn <- htmlwidgets::onRender(sn, sprintf('function(el, x) {
+  var typeColors = %s;
+  var svg = d3.select(el).select("svg");
+  function nodeType(name) {
+    if (!name) return "";
+    return name.replace(/ \\(n=.*$/, "");
+  }
+  svg.selectAll(".node").each(function(d) {
+    var t = nodeType(d.name);
+    if (t && typeColors[t]) {
+      d3.select(this).select("rect").style("fill", typeColors[t]);
+    }
+  });
 		  function createValidID(name) {
 		    if (!name) return "unknown";
 		    return name.replace(/[^a-zA-Z0-9-]/g, "_");
@@ -4556,7 +4754,7 @@ refine_loop_anchors_by_chromatin <- function(
 		      .text("After");
 		  }
 		}
-		'))
+		', type_json))
     sn
 }
 
