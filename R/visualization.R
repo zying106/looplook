@@ -549,6 +549,8 @@ prepare_track_data <- function(
 #'   element_rect element_text margin
 #' @importFrom ggrepel geom_text_repel
 #' @importFrom ggforce geom_bezier
+#' @importFrom ggiraph geom_rect_interactive geom_segment_interactive
+#'   geom_path_interactive girafe opts_tooltip opts_hover opts_hover_inv
 #' @importFrom scales rescale comma
 #' @importFrom GenomicFeatures genes exonsBy
 #' @importFrom AnnotationDbi keys keytypes

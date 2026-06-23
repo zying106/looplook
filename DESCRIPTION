@@ -53,6 +53,7 @@ Imports:
     data.table,
     fields,
     ggforce,
+    ggiraph,
     ggrepel,
     igraph,
     karyoploteR,

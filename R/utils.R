@@ -64,7 +64,8 @@ if (getRversion() >= "2.15.1") {
         "H3K4me1", "H3K27ac", "ATAC", "H3K27me3", "H3K4me3",
         "anchor_type", "anchor_gene", "confidence", "evidence",
         "priority", "combination", "log_count", "present", "count",
-        "set_counts", "bin_mat", "bar_df"
+        "set_counts", "bin_mat", "bar_df",
+        "tooltip", "color", "data_id"
     ))
 }
 
