@@ -136,7 +136,8 @@ and annotated genes. Loop arcs can be colored or sized by interaction score
 <span>  intron_color <span class="op">=</span> <span class="st">"black"</span>,</span>
 <span>  score_to_alpha <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  min_score <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  save_file <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  save_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  interactive <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -237,10 +238,17 @@ transparency.</p></dd>
 <code><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggplot2::ggsave()</a></code>. When set, the plot is written to this file and
 the same <code>ggplot</code> object is still returned.</p></dd>
 
+
+<dt id="arg-interactive">interactive<a class="anchor" aria-label="anchor" href="#arg-interactive"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, returns a <code><a href="https://davidgohel.github.io/ggiraph/reference/girafe.html" class="external-link">girafe</a></code>
+interactive plot with hover tooltips on loop arcs, anchors, genes, and
+target features. Requires the <span class="pkg">ggiraph</span> package. Default: <code>FALSE</code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>ggplot</code> object. If <code>save_file</code> is provided, the plot is
+    <p>A <code>ggplot</code> object (or <code><a href="https://davidgohel.github.io/ggiraph/reference/girafe.html" class="external-link">girafe</a></code> object when
+<code>interactive = TRUE</code>). If <code>save_file</code> is provided, the plot is
 also written to disk via <code><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggplot2::ggsave()</a></code>.</p>
     </div>
 

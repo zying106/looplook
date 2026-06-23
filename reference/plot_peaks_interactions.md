@@ -28,7 +28,8 @@ plot_peaks_interactions(
   intron_color = "black",
   score_to_alpha = TRUE,
   min_score = NULL,
-  save_file = NULL
+  save_file = NULL,
+  interactive = FALSE
 )
 ```
 
@@ -126,10 +127,19 @@ plot_peaks_interactions(
   When set, the plot is written to this file and the same `ggplot`
   object is still returned.
 
+- interactive:
+
+  Logical. If `TRUE`, returns a
+  [`girafe`](https://davidgohel.github.io/ggiraph/reference/girafe.html)
+  interactive plot with hover tooltips on loop arcs, anchors, genes, and
+  target features. Requires the ggiraph package. Default: `FALSE`.
+
 ## Value
 
-A `ggplot` object. If `save_file` is provided, the plot is also written
-to disk via
+A `ggplot` object (or
+[`girafe`](https://davidgohel.github.io/ggiraph/reference/girafe.html)
+object when `interactive = TRUE`). If `save_file` is provided, the plot
+is also written to disk via
 [`ggplot2::ggsave()`](https://ggplot2.tidyverse.org/reference/ggsave.html).
 
 ## Examples

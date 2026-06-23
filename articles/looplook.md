@@ -1483,6 +1483,12 @@ tracks, enabling intuitive assessment of 3D structural context:
   Overlapping gene models are vertically separated to avoid label
   collisions and improve readability.
 
+Set `interactive = TRUE` to generate an interactive version with hover
+tooltips: genomic coordinates and scores on loop arcs and anchors, gene
+symbols and biotypes on genes, and peak identifiers on target features.
+When hovered, the selected element is highlighted while others dim for
+visual focus. Requires the `ggiraph` package.
+
 #### Parameter Strategy & Core Inputs
 
 The function provides fine-grained control over genomic locus selection,
