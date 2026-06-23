@@ -211,3 +211,26 @@ test_that("prepare_track_data infers chr when NULL", {
   expect_equal(d$chr, "chr5")
   unlink(bedpe_path)
 })
+
+test_that("plot_peaks_interactions: interactive mode returns girafe", {
+  skip_if_not_installed("ggiraph")
+  bedpe_path <- tempfile(fileext = ".bedpe")
+  writeLines("chr1\t11890000\t11890500\tchr1\t11905000\t11905500", bedpe_path)
+  p <- plot_peaks_interactions(
+    bedpe_file = bedpe_path, chr = "chr1", from = 11884299, to = 12106581,
+    show_gene_track = FALSE, interactive = TRUE
+  )
+  expect_s3_class(p, "girafe")
+  unlink(bedpe_path)
+})
+
+test_that("plot_peaks_interactions: interactive=FALSE unchanged", {
+  bedpe_path <- tempfile(fileext = ".bedpe")
+  writeLines("chr1\t11890000\t11890500\tchr1\t11905000\t11905500", bedpe_path)
+  p <- plot_peaks_interactions(
+    bedpe_file = bedpe_path, chr = "chr1", from = 11884299, to = 12106581,
+    show_gene_track = FALSE, interactive = FALSE
+  )
+  expect_s3_class(p, "ggplot")
+  unlink(bedpe_path)
+})

@@ -978,6 +978,8 @@ To visualize the local spatial interactome with high resolution, this module gen
 - **Target Track (Middle)**: Renders user-provided genomic features (e.g., ChIP-seq peaks or GWAS SNPs) from the input BED file, facilitating direct visualization of their spatial overlap with the loop anchors.
 - **Gene Track (Bottom)**: Retrieves the longest canonical transcript for each gene using standard Bioconductor annotation databases, with exons and introns mapped according to strand directionality. Overlapping gene models are vertically separated to avoid label collisions and improve readability.
 
+Set `interactive = TRUE` to generate an interactive version with hover tooltips: genomic coordinates and scores on loop arcs and anchors, gene symbols and biotypes on genes, and peak identifiers on target features. When hovered, the selected element is highlighted while others dim for visual focus. Requires the `ggiraph` package.
+
 ### Parameter Strategy & Core Inputs
 
 The function provides fine-grained control over genomic locus selection, data filtering, and visual aesthetics through the following arguments:

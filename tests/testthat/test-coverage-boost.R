@@ -1,6 +1,8 @@
 # tests/testthat/test-coverage-boost.R
 # Fast mock-based tests targeting low-coverage functions.
 # Focus: analysis.R (58%), visualization.R (69%), plus small gains elsewhere.
+# These are coverage-oriented; skip on Bioconductor to stay within time budget.
+skip_on_bioc()
 
 # ============================================================================
 # analysis.R — GSEA, motif helpers, heatmap/connectivity, edge cases

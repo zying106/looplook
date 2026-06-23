@@ -157,17 +157,17 @@
 }
 
 #' Internal: Integrate Optional Target BED Annotation
-#' @keywords internal
-#' @noRd
 # --- .annotate_target_bed helpers ---
-
+#' @keywords internal
 #' Internal: Read, annotate, and resolve gene conflicts for target BED
+
 #'
 #' Reads a BED file, converts to GRanges, runs ChIPseeker annotation,
 #' resolves gene conflicts, and harmonises seqlevels with loop anchors.
 #'
 #' @return A list(gr_bed, bed_info, n_peaks), or NULL if the BED is empty.
 #' @keywords internal
+#' @noRd
 #' @noRd
 .prepare_target_bed_granges <- function(
     target_bed, txdb_obj, org_db_pkg, tss_region,
@@ -4290,9 +4290,8 @@ refine_loop_anchors_by_chromatin <- function(
 #' @param subtitle Character or NULL. Custom subtitle. NULL uses the default
 #'   expression-refinement subtitle. Default: \code{NULL}.
 #' @return A \code{ggplot} object.
-#' @keywords internal
-#' @noRd
 #' Internal: Build Loop-Type UpSet Plot
+#' @keywords internal
 #'
 #' Replaces the rose/coxcomb chart with an UpSet-style combinatorial view.
 #' Each loop type (e.g. "E-P", "dual-E") is an intersection of two anchor-
@@ -4308,6 +4307,7 @@ refine_loop_anchors_by_chromatin <- function(
 #' @return A \code{ggplot} object assembled with \code{patchwork}.
 #' Internal: Build Rose Plot (Expression Refinement)
 #' @keywords internal
+#' @noRd
 #' @noRd
 .build_rose_plot <- function(loop_df, custom_colors, project_name, subtitle = NULL) {
     rose_data <- loop_df %>%

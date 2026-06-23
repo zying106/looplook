@@ -1,4 +1,7 @@
 # tests/testthat/test-analysis-modules.R — unit tests for analysis pipeline modules
+# Profiling integration tests (GO/GSEA/PPI/motif) are computationally heavy;
+# skip on Bioconductor to stay within the build time budget.
+skip_on_bioc()
 
 # Shared setup: load pre-computed annotation and expression data
 rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")

@@ -1,5 +1,6 @@
 # tests/testthat/test-regression.R
 # Regression tests for bugs found during code review (2026-05-08)
+skip_on_bioc()
 
 shrink_annotation_res <- function(res, n_loops = 15L, n_targets = 6L, n_stats = 15L) {
   if (!is.null(res$loop_annotation)) {

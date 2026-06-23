@@ -335,9 +335,67 @@
 #' @param anchor_color Default anchor colour.
 #' @param score_to_alpha Map score to transparency.
 #' @param min_score Optional score floor.
+#' Internal: Add Interactive Tooltips and Dense Bezier Curves
 #' @return A named list of all data frames and plot parameters.
 #' @keywords internal
+#'
+#' Enriches track data with hover tooltip columns and interpolates dense
+#' bezier points for smooth interactive loop paths.
+#'
+#' @param d Track data list from \code{\link{prepare_track_data}}.
+#' @return The input list with tooltip columns and \code{bez_dense} added.
+#' @keywords internal
 #' @noRd
+#' @noRd
+.add_track_tooltips <- function(d) {
+    if (nrow(d$bez_df) > 0 && nrow(d$anchors) > 0) {
+        a1 <- d$anchors[!duplicated(d$anchors$loop_i), ]
+        a2 <- d$anchors[duplicated(d$anchors$loop_i), ]
+        names(a1) <- paste0(names(a1), "1")
+        names(a2) <- paste0(names(a2), "2")
+        anchor_lu <- merge(a1[, c("loop_i1","chr1","start1","end1")],
+                           a2[, c("loop_i2","chr2","start2","end2")],
+                           by.x = "loop_i1", by.y = "loop_i2")
+        d$bez_df <- merge(d$bez_df, anchor_lu, by.x = "loop_i", by.y = "loop_i1", all.x = TRUE)
+        d$bez_df$tooltip <- sprintf("chr%s:%s-%s <-> chr%s:%s-%s | score=%.1f",
+            d$bez_df$chr1, as.integer(d$bez_df$start1), as.integer(d$bez_df$end1),
+            d$bez_df$chr2, as.integer(d$bez_df$start2), as.integer(d$bez_df$end2),
+            d$bez_df$score)
+        dense_list <- lapply(split(d$bez_df, d$bez_df$loop_i), function(sub) {
+            if (nrow(sub) < 3) return(sub)
+            t_vals <- seq(0, 1, length.out = 30)
+            x0 <- sub$x[1]; x1 <- sub$x[2]; x2 <- sub$x[3]
+            y0 <- sub$y[1]; y1 <- sub$y[2]; y2 <- sub$y[3]
+            bx <- (1 - t_vals)^2 * x0 + 2 * (1 - t_vals) * t_vals * x1 + t_vals^2 * x2
+            by <- (1 - t_vals)^2 * y0 + 2 * (1 - t_vals) * t_vals * y1 + t_vals^2 * y2
+            data.frame(loop_i = sub$loop_i[1], x = bx, y = by,
+                color = sub$final_color[1], tooltip = sub$tooltip[1],
+                arc_level = sub$arc_level[1], score = sub$score[1],
+                stringsAsFactors = FALSE)
+        })
+        d$bez_dense <- do.call(rbind, dense_list)
+    }
+    if (nrow(d$anchors) > 0) {
+        d$anchors$tooltip <- sprintf("%s:%s-%s | score=%.1f",
+            d$anchors$chr, as.integer(d$anchors$start), as.integer(d$anchors$end), d$anchors$score)
+    }
+    if (!is.null(d$overlap_df_plot) && nrow(d$overlap_df_plot) > 0) {
+        d$overlap_df_plot$peak_id <- sprintf("Peak_%d", seq_len(nrow(d$overlap_df_plot)))
+        d$overlap_df_plot$tooltip <- sprintf("%s: %s:%s-%s",
+            d$overlap_df_plot$peak_id, d$overlap_df_plot$chr,
+            as.integer(d$overlap_df_plot$start), as.integer(d$overlap_df_plot$end))
+    }
+    if (nrow(d$genes_df) > 0) {
+        d$genes_df$tooltip <- if ("gene_biotype" %in% colnames(d$genes_df)) {
+            sprintf("%s (%s)", d$genes_df$final_label, d$genes_df$gene_biotype)
+        } else {
+            d$genes_df$final_label
+        }
+    }
+    d
+}
+
+
 prepare_track_data <- function(
   bedpe_file, target_bed, chr, from, to, species,
   max_levels, base_anchor_height, loop_color, anchor_color, score_to_alpha,
@@ -479,7 +537,11 @@ prepare_track_data <- function(
 #' @param save_file Character. Optional path to save the plot via
 #'   \code{ggplot2::ggsave()}. When set, the plot is written to this file and
 #'   the same \code{ggplot} object is still returned.
-#' @return A \code{ggplot} object. If \code{save_file} is provided, the plot is
+#' @param interactive Logical. If \code{TRUE}, returns a \code{\link[ggiraph]{girafe}}
+#'   interactive plot with hover tooltips on loop arcs, anchors, genes, and
+#'   target features. Requires the \pkg{ggiraph} package. Default: \code{FALSE}.
+#' @return A \code{ggplot} object (or \code{\link[ggiraph]{girafe}} object when
+#'   \code{interactive = TRUE}). If \code{save_file} is provided, the plot is
 #'   also written to disk via \code{ggplot2::ggsave()}.
 #' @importFrom dplyr %>%
 #' @importFrom ggplot2 ggplot geom_rect geom_segment annotate coord_cartesian
@@ -524,7 +586,8 @@ plot_peaks_interactions <- function(
   intron_color = "black",
   score_to_alpha = TRUE,
   min_score = NULL,
-  save_file = NULL
+  save_file = NULL,
+  interactive = FALSE
 ) {
     d <- prepare_track_data(
         bedpe_file, target_bed, chr, from, to, species,
@@ -556,6 +619,8 @@ plot_peaks_interactions <- function(
         }
     }
 
+    if (isTRUE(interactive)) d <- .add_track_tooltips(d)
+
     p <- ggplot2::ggplot() +
         ggplot2::geom_hline(yintercept = -0.04, linetype = "dashed", color = "grey85", linewidth = 0.5) +
         ggplot2::geom_hline(yintercept = -0.18, linetype = "dashed", color = "grey85", linewidth = 0.5) +
@@ -576,49 +641,100 @@ plot_peaks_interactions <- function(
     )
 
     if (!is.null(d$overlap_df_plot)) {
-        p <- p + ggplot2::geom_rect(
-            data = d$overlap_df_plot,
-            ggplot2::aes(xmin = start, xmax = end, ymin = ymin, ymax = ymax),
-            fill = overlap_color, alpha = 1
-        )
-    }
-
-    if (nrow(d$genes_df) > 0) {
-        p <- p +
-            ggplot2::geom_segment(
-                data = d$genes_df,
-                ggplot2::aes(
-                    x = pmax(start, from), xend = pmin(end, to),
-                    y = y_mid, yend = y_mid
-                ), color = intron_color, linewidth = 0.5
-            ) +
-            ggplot2::geom_segment(
-                data = d$genes_df,
-                ggplot2::aes(
-                    x = ifelse(strand == "+", pmin(end, to), pmax(start, from)),
-                    xend = ifelse(strand == "+", pmin(end, to), pmax(start, from)),
-                    y = y_mid, yend = y_mid
-                ),
-                arrow = ggplot2::arrow(length = ggplot2::unit(0.15, "cm"), type = "open"),
-                color = intron_color, linewidth = 0.5
-            )
-
-        if (nrow(d$feature_df) > 0) {
-            p <- p + ggplot2::geom_rect(
-                data = d$feature_df,
-                ggplot2::aes(
-                    xmin = pmax(start, from), xmax = pmin(end, to),
-                    ymin = ymin, ymax = ymax
-                ), fill = exon_color, color = NA
+        if (isTRUE(interactive) && requireNamespace("ggiraph", quietly = TRUE)) {
+            p <- p + ggiraph::geom_rect_interactive(
+                data = d$overlap_df_plot,
+                ggplot2::aes(xmin = start, xmax = end, ymin = ymin, ymax = ymax,
+                             tooltip = tooltip, data_id = tooltip),
+                fill = overlap_color, alpha = 1
             )
         } else {
             p <- p + ggplot2::geom_rect(
-                data = d$genes_df,
-                ggplot2::aes(
-                    xmin = pmax(start, from), xmax = pmin(end, to),
-                    ymin = y_mid - 0.025, ymax = y_mid + 0.025
-                ), fill = exon_color
+                data = d$overlap_df_plot,
+                ggplot2::aes(xmin = start, xmax = end, ymin = ymin, ymax = ymax),
+                fill = overlap_color, alpha = 1
             )
+        }
+    }
+
+    if (nrow(d$genes_df) > 0) {
+        if (isTRUE(interactive) && requireNamespace("ggiraph", quietly = TRUE)) {
+            p <- p +
+                ggiraph::geom_segment_interactive(
+                    data = d$genes_df,
+                    ggplot2::aes(
+                        x = pmax(start, from), xend = pmin(end, to),
+                        y = y_mid, yend = y_mid, tooltip = tooltip, data_id = tooltip
+                    ), color = intron_color, linewidth = 0.5
+                ) +
+                ggiraph::geom_segment_interactive(
+                    data = d$genes_df,
+                    ggplot2::aes(
+                        x = ifelse(strand == "+", pmin(end, to), pmax(start, from)),
+                        xend = ifelse(strand == "+", pmin(end, to), pmax(start, from)),
+                        y = y_mid, yend = y_mid, tooltip = tooltip, data_id = tooltip
+                    ),
+                    arrow = ggplot2::arrow(length = ggplot2::unit(0.15, "cm"), type = "open"),
+                    color = intron_color, linewidth = 0.5
+                )
+        } else {
+            p <- p +
+                ggplot2::geom_segment(
+                    data = d$genes_df,
+                    ggplot2::aes(
+                        x = pmax(start, from), xend = pmin(end, to),
+                        y = y_mid, yend = y_mid
+                    ), color = intron_color, linewidth = 0.5
+                ) +
+                ggplot2::geom_segment(
+                    data = d$genes_df,
+                    ggplot2::aes(
+                        x = ifelse(strand == "+", pmin(end, to), pmax(start, from)),
+                        xend = ifelse(strand == "+", pmin(end, to), pmax(start, from)),
+                        y = y_mid, yend = y_mid
+                    ),
+                    arrow = ggplot2::arrow(length = ggplot2::unit(0.15, "cm"), type = "open"),
+                    color = intron_color, linewidth = 0.5
+                )
+        }
+
+        if (nrow(d$feature_df) > 0) {
+            if (isTRUE(interactive) && requireNamespace("ggiraph", quietly = TRUE)) {
+                p <- p + ggiraph::geom_rect_interactive(
+                    data = d$feature_df,
+                    ggplot2::aes(
+                        xmin = pmax(start, from), xmax = pmin(end, to),
+                        ymin = ymin, ymax = ymax, tooltip = gene_id, data_id = gene_id
+                    ), fill = exon_color, color = NA
+                )
+            } else {
+                p <- p + ggplot2::geom_rect(
+                    data = d$feature_df,
+                    ggplot2::aes(
+                        xmin = pmax(start, from), xmax = pmin(end, to),
+                        ymin = ymin, ymax = ymax
+                    ), fill = exon_color, color = NA
+                )
+            }
+        } else {
+            if (isTRUE(interactive) && requireNamespace("ggiraph", quietly = TRUE)) {
+                p <- p + ggiraph::geom_rect_interactive(
+                    data = d$genes_df,
+                    ggplot2::aes(
+                        xmin = pmax(start, from), xmax = pmin(end, to),
+                        ymin = y_mid - 0.025, ymax = y_mid + 0.025,
+                        tooltip = tooltip, data_id = tooltip
+                    ), fill = exon_color
+                )
+            } else {
+                p <- p + ggplot2::geom_rect(
+                    data = d$genes_df,
+                    ggplot2::aes(
+                        xmin = pmax(start, from), xmax = pmin(end, to),
+                        ymin = y_mid - 0.025, ymax = y_mid + 0.025
+                    ), fill = exon_color
+                )
+            }
         }
         p <- p + ggrepel::geom_text_repel(
             data = d$genes_df,
@@ -630,21 +746,40 @@ plot_peaks_interactions <- function(
     }
 
     if (nrow(d$bez_df) > 0) {
-        p <- p +
-            ggplot2::geom_rect(
-                data = d$anchors,
-                ggplot2::aes(
-                    xmin = start, xmax = end, ymin = ymin, ymax = ymax,
-                    fill = final_fill
-                ), color = NA
-            ) +
-            ggplot2::scale_fill_identity() +
-            ggforce::geom_bezier(
-                data = d$bez_df,
-                ggplot2::aes(x = x, y = y, group = loop_i, color = final_color),
-                linewidth = 0.6
-            ) +
-            ggplot2::scale_color_identity()
+        if (isTRUE(interactive) && requireNamespace("ggiraph", quietly = TRUE)) {
+            p <- p +
+                ggiraph::geom_rect_interactive(
+                    data = d$anchors,
+                    ggplot2::aes(
+                        xmin = start, xmax = end, ymin = ymin, ymax = ymax,
+                        fill = final_fill, tooltip = tooltip, data_id = tooltip
+                    ), color = NA
+                ) +
+                ggplot2::scale_fill_identity() +
+                ggiraph::geom_path_interactive(
+                    data = d$bez_dense,
+                    ggplot2::aes(x = x, y = y, group = loop_i,
+                                 color = color, tooltip = tooltip, data_id = tooltip),
+                    linewidth = 0.6
+                ) +
+                ggplot2::scale_color_identity()
+        } else {
+            p <- p +
+                ggplot2::geom_rect(
+                    data = d$anchors,
+                    ggplot2::aes(
+                        xmin = start, xmax = end, ymin = ymin, ymax = ymax,
+                        fill = final_fill
+                    ), color = NA
+                ) +
+                ggplot2::scale_fill_identity() +
+                ggforce::geom_bezier(
+                    data = d$bez_df,
+                    ggplot2::aes(x = x, y = y, group = loop_i, color = final_color),
+                    linewidth = 0.6
+                ) +
+                ggplot2::scale_color_identity()
+        }
     }
 
     p <- p +
@@ -669,6 +804,12 @@ plot_peaks_interactions <- function(
 
     if (!is.null(save_file)) {
         ggplot2::ggsave(save_file, plot = p, width = 10, height = 5)
+    }
+    if (isTRUE(interactive) && requireNamespace("ggiraph", quietly = TRUE)) {
+        return(ggiraph::girafe(ggobj = p, width_svg = 10, height_svg = 5,
+            options = list(ggiraph::opts_tooltip(css = "background:#333;color:#fff;padding:6px 10px;border-radius:4px;font-size:12px;"),
+                           ggiraph::opts_hover(css = "stroke-width:3px;opacity:1;filter:brightness(0.5);"),
+                           ggiraph::opts_hover_inv(css = "opacity:0.15;"))))
     }
     return(p)
 }

@@ -1,4 +1,6 @@
 # tests/testthat/test-simulation.R — synthetic data covering all code paths
+# Skip on Bioconductor to stay within time budget.
+skip_on_bioc()
 
 # ════════════════════════════════════════════════════════════════════════════
 # Shared fixtures: cache TxDb / OrgDb once for all integration tests

@@ -23,7 +23,8 @@ plot_peaks_interactions(
   intron_color = "black",
   score_to_alpha = TRUE,
   min_score = NULL,
-  save_file = NULL
+  save_file = NULL,
+  interactive = FALSE
 )
 }
 \arguments{
@@ -82,9 +83,14 @@ transparency.}
 \item{save_file}{Character. Optional path to save the plot via
 \code{ggplot2::ggsave()}. When set, the plot is written to this file and
 the same \code{ggplot} object is still returned.}
+
+\item{interactive}{Logical. If \code{TRUE}, returns a \code{\link[ggiraph]{girafe}}
+interactive plot with hover tooltips on loop arcs, anchors, genes, and
+target features. Requires the \pkg{ggiraph} package. Default: \code{FALSE}.}
 }
 \value{
-A \code{ggplot} object. If \code{save_file} is provided, the plot is
+A \code{ggplot} object (or \code{\link[ggiraph]{girafe}} object when
+\code{interactive = TRUE}). If \code{save_file} is provided, the plot is
 also written to disk via \code{ggplot2::ggsave()}.
 }
 \description{
