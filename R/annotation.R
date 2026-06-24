@@ -3014,7 +3014,7 @@ refine_loop_anchors_by_expression <- function(
 #'         chromatin -> \code{"E"} (enhancer identity confirmed; matches the
 #'         P->E rule to guarantee the same outcome whether expression or
 #'         chromatin refinement runs first).
-#'   \item eP + promoter_like (H3K4me3+, H3K27me3-) -> \code{"P"} (revert).
+#'   \item eP + promoter_like (H3K4me3+, irrespective of H3K27me3 status) -> \code{"P"} (revert).
 #'   \item eG + promoter_like -> \code{"G"} (revert).
 #'   \item E + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-function).
 #'   \item E + H3K4me3(+) without H3K4me1 -> \code{"P"} (unannotated promoter).
@@ -5128,7 +5128,7 @@ validate_epeG_by_chromatin <- function(
     }
     n_promoter_like <- sum(grepl("promoter_like", result$evidence, fixed = TRUE))
     if (n_promoter_like > 0) {
-        log_message(sprintf("  %-16s: %d anchors (H3K4me3+ H3K27me3- active marks; may reflect promoter signal)", "promoter-like", n_promoter_like))
+        log_message(sprintf("  %-16s: %d anchors (H3K4me3+ promoter signal; may reflect active or bivalent promoter)", "promoter-like", n_promoter_like))
     }
     log_message("--- End Validation ---")
 

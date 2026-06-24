@@ -106,7 +106,7 @@ H3K4me1 alone).
 chromatin -> \code{"E"} (enhancer identity confirmed; matches the
 P->E rule to guarantee the same outcome whether expression or
 chromatin refinement runs first).
-\item eP + promoter_like (H3K4me3+, H3K27me3-) -> \code{"P"} (revert).
+\item eP + promoter_like (H3K4me3+, irrespective of H3K27me3 status) -> \code{"P"} (revert).
 \item eG + promoter_like -> \code{"G"} (revert).
 \item E + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-function).
 \item E + H3K4me3(+) without H3K4me1 -> \code{"P"} (unannotated promoter).
