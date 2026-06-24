@@ -67,10 +67,11 @@ cell-type-specific transcriptional programs.
     ENCODE active-enhancer criteria across five confidence levels
     (gold_standard to uncertain), and anchor types are updated based on
     mark combinations — for instance, an eP anchor with H3K4me3+
-    H3K27me3− promoter-like chromatin is reverted to P, while a P anchor
-    with H3K4me1+ H3K4me3+ dual marks is upgraded to dual-function.
-    Reclassification is fully auditable through per-anchor chromatin
-    state, confidence, and before/after type columns.
+    promoter-like chromatin (regardless of H3K27me3 status) is reverted
+    to P, while a P anchor with H3K4me1+ H3K4me3+ dual marks is upgraded
+    to dual-function. Reclassification is fully auditable through
+    per-anchor chromatin state, confidence, and before/after type
+    columns.
 
 5.  **Replicate Consolidation and Multi-Source Consensus**: Employs
     graph-theoretic connected-component clustering to harmonize

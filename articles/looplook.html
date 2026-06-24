@@ -254,10 +254,10 @@ chromatin mark data (ChIP-seq, CUT&amp;Tag, ATAC-seq). Anchors are
 scored against ENCODE active-enhancer criteria across five confidence
 levels (gold_standard to uncertain), and anchor types are updated based
 on mark combinations — for instance, an eP anchor with H3K4me3+
-H3K27me3− promoter-like chromatin is reverted to P, while a P anchor
-with H3K4me1+ H3K4me3+ dual marks is upgraded to dual-function.
-Reclassification is fully auditable through per-anchor chromatin state,
-confidence, and before/after type columns.</p></li>
+promoter-like chromatin (regardless of H3K27me3 status) is reverted to
+P, while a P anchor with H3K4me1+ H3K4me3+ dual marks is upgraded to
+dual-function. Reclassification is fully auditable through per-anchor
+chromatin state, confidence, and before/after type columns.</p></li>
 <li><p><strong>Replicate Consolidation and Multi-Source
 Consensus</strong>: Employs graph-theoretic connected-component
 clustering to harmonize biological replicates and suppress technical

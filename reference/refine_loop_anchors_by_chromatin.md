@@ -136,7 +136,8 @@ output).
   rule to guarantee the same outcome whether expression or chromatin
   refinement runs first).
 
-- eP + promoter_like (H3K4me3+, H3K27me3-) -\> `"P"` (revert).
+- eP + promoter_like (H3K4me3+, irrespective of H3K27me3 status) -\>
+  `"P"` (revert).
 
 - eG + promoter_like -\> `"G"` (revert).
 
