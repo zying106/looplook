@@ -9,6 +9,7 @@ filter_chromatin_loops(
   blacklist_species = NULL,
   region_of_interest = NULL,
   roi_mode = c("any", "both"),
+  min_score = NULL,
   quiet = FALSE
 )
 }
@@ -25,6 +26,11 @@ of interest, or \code{NULL} to skip ROI filtering.}
 \item{roi_mode}{Character. \code{"any"} (default): keep loops where
 \emph{either} anchor overlaps the ROI. \code{"both"}: keep loops where
 \emph{both} anchors overlap the ROI.}
+
+\item{min_score}{Numeric or \code{NULL}. Minimum interaction score to
+retain a loop. Loops with \code{score < min_score} are discarded.
+Assumes higher scores = better interactions. Default: \code{NULL}
+(no score filtering).}
 
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages.
 Default: \code{FALSE}.}
@@ -47,4 +53,9 @@ gi_clean <- filter_chromatin_loops(gi, blacklist_species = "hg38", quiet = TRUE)
 # ROI (any anchor) with custom BED
 roi_path <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
 gi_roi <- filter_chromatin_loops(gi, region_of_interest = roi_path, roi_mode = "any", quiet = TRUE)
+
+# Score + blacklist + ROI (both)
+gi_strict <- filter_chromatin_loops(gi, min_score = 5,
+    blacklist_species = "hg38", region_of_interest = roi_path,
+    roi_mode = "both", quiet = TRUE)
 }

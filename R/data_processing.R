@@ -276,6 +276,10 @@ reduce_ginteractions <- function(gi, gap = 1000) {
 #' @param roi_mode Character. \code{"any"} (default): keep loops where
 #'   \emph{either} anchor overlaps the ROI. \code{"both"}: keep loops where
 #'   \emph{both} anchors overlap the ROI.
+#' @param min_score Numeric or \code{NULL}. Minimum interaction score to
+#'   retain a loop. Loops with \code{score < min_score} are discarded.
+#'   Assumes higher scores = better interactions. Default: \code{NULL}
+#'   (no score filtering).
 #' @param quiet Logical. If \code{TRUE}, suppress progress messages.
 #'   Default: \code{FALSE}.
 #' @return A filtered \code{\link[InteractionSet]{GInteractions}} object.
@@ -292,18 +296,51 @@ reduce_ginteractions <- function(gi, gap = 1000) {
 #' # ROI (any anchor) with custom BED
 #' roi_path <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
 #' gi_roi <- filter_chromatin_loops(gi, region_of_interest = roi_path, roi_mode = "any", quiet = TRUE)
+#'
+#' # Score + blacklist + ROI (both)
+#' gi_strict <- filter_chromatin_loops(gi, min_score = 5,
+#'     blacklist_species = "hg38", region_of_interest = roi_path,
+#'     roi_mode = "both", quiet = TRUE)
 filter_chromatin_loops <- function(
   gi,
   blacklist_species = NULL,
   region_of_interest = NULL,
   roi_mode = c("any", "both"),
+  min_score = NULL,
   quiet = FALSE
 ) {
     roi_mode <- match.arg(roi_mode)
     log_message <- function(...) {
         if (!quiet) message(...)
     }
+
+    # Parameter validation (mirrors consolidate_chromatin_loops)
+    if (!is.null(blacklist_species)) {
+        if (!is.character(blacklist_species) || length(blacklist_species) != 1L ||
+            is.na(blacklist_species) || !nzchar(blacklist_species))
+            stop("`blacklist_species` must be a non-empty string or NULL", call. = FALSE)
+    }
+    if (!is.null(region_of_interest)) {
+        if (!is.character(region_of_interest) || length(region_of_interest) != 1L ||
+            is.na(region_of_interest) || !nzchar(region_of_interest))
+            stop("`region_of_interest` must be a non-empty file path or NULL", call. = FALSE)
+        if (!file.exists(region_of_interest))
+            stop("`region_of_interest` file not found: ", region_of_interest, call. = FALSE)
+    }
+
+    if (!inherits(gi, "GInteractions"))
+        stop("`gi` must be a GInteractions object", call. = FALSE)
     if (length(gi) == 0) return(gi)
+
+    # --- score filter ---
+    if (!is.null(min_score)) {
+        if (!is.numeric(min_score) || length(min_score) != 1L || is.na(min_score))
+            stop("`min_score` must be a single number or NULL", call. = FALSE)
+        keep <- S4Vectors::mcols(gi)$score >= min_score
+        gi <- gi[keep]
+        log_message(">>> Score filter (>= ", min_score, "): retained ", length(gi), " loops")
+        if (length(gi) == 0) return(gi)
+    }
 
     # --- blacklist ---
     if (!is.null(blacklist_species)) {

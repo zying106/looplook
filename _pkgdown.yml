@@ -91,8 +91,9 @@ reference:
     desc: "Foundational data-cleaning engine for merging and standardizing 3D interactomes."
     contents:
       - consolidate_chromatin_loops
-      - bedpe_to_gi            # 新增：文件格式转换工具
-      - reduce_ginteractions   # 新增：GenomicInteractions 简化工具
+      - filter_chromatin_loops
+      - bedpe_to_gi
+      - reduce_ginteractions
 
   - title: "Module 2: 3D-Guided Peak Annotation"
     desc: "The core mapping engine for resolving 1D-to-3D spatial target assignments."
@@ -100,7 +101,7 @@ reference:
       - annotate_peaks_and_loops
       - resolve_gene_conflicts
 
-  - title: "Module 3: Expression-Aware & Chromatin-Guided Refinement"
+  - title: "Module 3: Expression-Aware & Chromatin-Aware Refinement"
     desc: "Advanced logic for eliminating transcriptionally silent contacts and validating regulatory elements."
     contents:
       - refine_loop_anchors_by_expression
