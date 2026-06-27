@@ -216,6 +216,8 @@ The module supports **multi-source consensus** integration across independent ex
 \strong{Score direction: All score-based filtering assumes higher scores = better interactions.} If your BEDPE score column contains p-values (values in [0, 1]), convert them to `-log10(p-value)` before using `min_raw_score` or `min_score`. The function will warn if it auto-detects a p-value-like column, but explicit conversion is the safest approach.
 * **`quiet`**: Logical. If `TRUE`, suppress progress messages while preserving warnings (default: `FALSE`).
 
+For **single-sample filtering** (without replicate merging), use `filter_chromatin_loops()` — it applies the same blacklist and ROI logic to an existing `GInteractions` object. See `?filter_chromatin_loops` for details.
+
 The exported BEDPE file (when `write_output = TRUE` and `out_file` is set) contains 10 columns: the standard BEDPE fields (chr1, start1, end1, chr2, start2, end2, name, score) plus two metadata columns:
 - **`n_members`** (column 9): Number of raw loops merged into this consensus entry, giving a sense of cluster size. In intersect mode this is `1` (no merging, each retained loop stands alone); in consensus/union modes it reflects the number of loops clustered.
 - **`n_reps`** (column 10): Number of input files that support this entry, useful for filtering by replication evidence.

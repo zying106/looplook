@@ -260,6 +260,98 @@ reduce_ginteractions <- function(gi, gap = 1000) {
     list(gi = gi_red, membership = dt$cluster)
 }
 
+#' Filter Chromatin Loops by Blacklist and/or Region of Interest
+#'
+#' Applies optional blacklist and region-of-interest (ROI) filtering to a
+#' single \code{\link[InteractionSet]{GInteractions}} object. This is the
+#' single-sample counterpart of \code{\link{consolidate_chromatin_loops}}
+#' without the merge/consensus step.
+#'
+#' @param gi A \code{\link[InteractionSet]{GInteractions}} object.
+#' @param blacklist_species Character. Species/build for built-in ENCODE
+#'   blacklist (\code{"hg38"}, \code{"hg19"}, \code{"mm10"}, \code{"mm9"}),
+#'   a path to a custom BED file, or \code{NULL} to skip blacklist filtering.
+#' @param region_of_interest Character. Path to a BED file defining regions
+#'   of interest, or \code{NULL} to skip ROI filtering.
+#' @param roi_mode Character. \code{"any"} (default): keep loops where
+#'   \emph{either} anchor overlaps the ROI. \code{"both"}: keep loops where
+#'   \emph{both} anchors overlap the ROI.
+#' @param quiet Logical. If \code{TRUE}, suppress progress messages.
+#'   Default: \code{FALSE}.
+#' @return A filtered \code{\link[InteractionSet]{GInteractions}} object.
+#' @importFrom GenomicRanges findOverlaps
+#' @importFrom InteractionSet anchors
+#' @importFrom S4Vectors queryHits
+#' @export
+#' @examples
+#' gi <- bedpe_to_gi(system.file("extdata", "example_loops_1.bedpe", package = "looplook"))
+#'
+#' # Blacklist only
+#' gi_clean <- filter_chromatin_loops(gi, blacklist_species = "hg38", quiet = TRUE)
+#'
+#' # ROI (any anchor) with custom BED
+#' roi_path <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
+#' gi_roi <- filter_chromatin_loops(gi, region_of_interest = roi_path, roi_mode = "any", quiet = TRUE)
+filter_chromatin_loops <- function(
+  gi,
+  blacklist_species = NULL,
+  region_of_interest = NULL,
+  roi_mode = c("any", "both"),
+  quiet = FALSE
+) {
+    roi_mode <- match.arg(roi_mode)
+    log_message <- function(...) {
+        if (!quiet) message(...)
+    }
+    if (length(gi) == 0) return(gi)
+
+    # --- blacklist ---
+    if (!is.null(blacklist_species)) {
+        known_lists <- list(
+            "hg38" = "hg38-blacklist.v2.bed",
+            "hg19" = "hg19-blacklist.v2.bed",
+            "mm10" = "mm10-blacklist.v2.bed",
+            "mm9"  = "mm9-blacklist.v2.bed"
+        )
+        bl_path <- if (blacklist_species %in% names(known_lists)) {
+            system.file("extdata", known_lists[[blacklist_species]], package = "looplook")
+        } else {
+            blacklist_species
+        }
+        if (!file.exists(bl_path)) stop("Blacklist file not found: ", blacklist_species)
+        log_message(">>> Filtering blacklist: ", basename(bl_path))
+        bl <- read_simple_bed(bl_path, quiet = quiet)
+        bl <- .harmonize_seqlevels(bl, InteractionSet::anchors(gi, "first"), "blacklist")
+        h1 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "first"),  bl)
+        h2 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "second"), bl)
+        bad <- unique(c(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2)))
+        if (length(bad)) gi <- gi[-bad]
+        log_message("    Retained ", length(gi), " loops after blacklist")
+    }
+
+    # --- region of interest ---
+    if (!is.null(region_of_interest)) {
+        if (!file.exists(region_of_interest)) stop("ROI file not found: ", region_of_interest)
+        log_message(">>> Filtering ROI (", roi_mode, "): ", basename(region_of_interest))
+        tg <- read_simple_bed(region_of_interest, quiet = quiet)
+        tg <- .harmonize_seqlevels(tg, InteractionSet::anchors(gi, "first"), "ROI")
+        h1 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "first"),  tg)
+        h2 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "second"), tg)
+        keep <- if (roi_mode == "any") {
+            base::union(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2))
+        } else {
+            base::intersect(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2))
+        }
+        if (length(keep) > 0) {
+            gi <- gi[keep]
+        } else {
+            gi <- gi[0]
+        }
+        log_message("    Retained ", length(gi), " loops after ROI")
+    }
+    gi
+}
+
 #' Read a Simple BED File into a GRanges Object
 #'
 #' Reads the first three columns of a BED file (chrom, start, end) and returns a
@@ -797,76 +889,14 @@ consolidate_chromatin_loops <- function(
         keep <- S4Vectors::mcols(result_gi)$score >= min_score
         result_gi <- result_gi[keep]
     }
-
-    if (!is.null(blacklist_species)) {
-        known_lists <- list(
-            "hg38" = "hg38-blacklist.v2.bed",
-            "hg19" = "hg19-blacklist.v2.bed",
-            "mm10" = "mm10-blacklist.v2.bed",
-            "mm9"  = "mm9-blacklist.v2.bed"
+    if (!is.null(blacklist_species) || !is.null(region_of_interest)) {
+        result_gi <- filter_chromatin_loops(
+            result_gi,
+            blacklist_species   = blacklist_species,
+            region_of_interest  = region_of_interest,
+            roi_mode            = roi_mode,
+            quiet               = quiet
         )
-        blacklist_path <- NULL
-        if (blacklist_species %in% names(known_lists)) {
-            blacklist_path <- system.file(
-                "extdata", known_lists[[blacklist_species]], package = "looplook"
-            )
-        }
-        if (is.null(blacklist_path) || blacklist_path == "") {
-            blacklist_path <- blacklist_species
-        }
-        if (file.exists(blacklist_path)) {
-            log_message(">>> Filtering blacklist: ", basename(blacklist_path))
-            bl <- read_simple_bed(blacklist_path, quiet = quiet)
-            bl <- .harmonize_seqlevels(
-                bl, InteractionSet::anchors(result_gi, "first"), "blacklist"
-            )
-            h1 <- InteractionSet::findOverlaps(
-                InteractionSet::anchors(result_gi, "first"), bl
-            )
-            h2 <- InteractionSet::findOverlaps(
-                InteractionSet::anchors(result_gi, "second"), bl
-            )
-            bad <- unique(c(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2)))
-            if (length(bad)) result_gi <- result_gi[-bad]
-        } else {
-            stop("Blacklist file not found: ", blacklist_species, call. = FALSE)
-        }
-    }
-
-    if (!is.null(region_of_interest)) {
-        log_message(">>> Filtering by region of interest (", roi_mode, "): ",
-                     basename(region_of_interest))
-        if (file.exists(region_of_interest)) {
-            tg <- read_simple_bed(region_of_interest, quiet = quiet)
-            tg <- .harmonize_seqlevels(
-                tg, InteractionSet::anchors(result_gi, "first"), "ROI"
-            )
-            h1 <- InteractionSet::findOverlaps(
-                InteractionSet::anchors(result_gi, "first"), tg
-            )
-            h2 <- InteractionSet::findOverlaps(
-                InteractionSet::anchors(result_gi, "second"), tg
-            )
-            keep <- if (roi_mode == "any") {
-                base::union(
-                    S4Vectors::queryHits(h1), S4Vectors::queryHits(h2)
-                )
-            } else {
-                base::intersect(
-                    S4Vectors::queryHits(h1), S4Vectors::queryHits(h2)
-                )
-            }
-            if (length(keep) > 0) {
-                result_gi <- result_gi[keep]
-                log_message("    Kept ", length(result_gi),
-                            " loops overlapping ROI.")
-            } else {
-                log_message("    No loops overlapped with the ROI. Returning empty set.")
-                result_gi <- result_gi[0]
-            }
-        } else {
-            warning("Region of interest file not found: ", region_of_interest)
-        }
     }
     result_gi
 }
