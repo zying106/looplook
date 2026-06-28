@@ -239,6 +239,13 @@ column, but explicit conversion is the safest approach. \* **`quiet`**:
 Logical. If `TRUE`, suppress progress messages while preserving warnings
 (default: `FALSE`).
 
+For **single-sample filtering** (without replicate merging), use
+[`filter_chromatin_loops()`](https://zying106.github.io/looplook/reference/filter_chromatin_loops.md)
+— it applies the same blacklist and ROI logic to an existing
+`GInteractions` object. See
+[`?filter_chromatin_loops`](https://zying106.github.io/looplook/reference/filter_chromatin_loops.md)
+for details.
+
 The exported BEDPE file (when `write_output = TRUE` and `out_file` is
 set) contains 10 columns: the standard BEDPE fields (chr1, start1, end1,
 chr2, start2, end2, name, score) plus two metadata columns: -
@@ -1863,7 +1870,7 @@ functional enhancer activity. Validate with orthogonal chromatin data
 ``` r
 
 sessionInfo()
-#> R version 4.6.0 (2026-04-24)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.4 LTS
 #> 
@@ -1901,7 +1908,7 @@ sessionInfo()
 #>  [23] bslib_0.11.0                htmlwidgets_1.6.4          
 #>  [25] desc_1.4.3                  plyr_1.8.9                 
 #>  [27] cachem_1.1.0                GenomicAlignments_1.48.0   
-#>  [29] igraph_2.3.2                lifecycle_1.0.5            
+#>  [29] igraph_2.3.3                lifecycle_1.0.5            
 #>  [31] pkgconfig_2.0.3             Matrix_1.7-5               
 #>  [33] R6_2.6.1                    fastmap_1.2.0              
 #>  [35] MatrixGenerics_1.24.0       digest_0.6.39              
@@ -1911,19 +1918,19 @@ sessionInfo()
 #>  [43] Hmisc_5.2-6                 GenomicRanges_1.64.0       
 #>  [45] RSQLite_3.53.2              httr_1.4.8                 
 #>  [47] polyclip_1.10-7             abind_1.4-8                
-#>  [49] compiler_4.6.0              bit64_4.8.2                
+#>  [49] compiler_4.6.1              bit64_4.8.2                
 #>  [51] fontquiver_0.2.1            withr_3.0.3                
 #>  [53] backports_1.5.1             htmlTable_2.5.0            
 #>  [55] S7_0.2.2                    BiocParallel_1.46.0        
 #>  [57] DBI_1.3.0                   UpSetR_1.4.1               
 #>  [59] ggforce_0.5.0               maps_3.4.3                 
 #>  [61] MASS_7.3-65                 DelayedArray_0.38.2        
-#>  [63] rjson_0.2.23                tools_4.6.0                
+#>  [63] rjson_0.2.23                tools_4.6.1                
 #>  [65] foreign_0.8-91              otel_0.2.0                 
 #>  [67] zip_3.0.0                   nnet_7.3-20                
 #>  [69] karyoploteR_1.38.0          glue_1.8.1                 
 #>  [71] restfulr_0.0.17             InteractionSet_1.40.0      
-#>  [73] grid_4.6.0                  checkmate_2.3.4            
+#>  [73] grid_4.6.1                  checkmate_2.3.4            
 #>  [75] cluster_2.1.8.2             generics_0.1.4             
 #>  [77] gtable_0.3.6                BSgenome_1.80.0            
 #>  [79] tidyr_1.3.2                 ensembldb_2.36.1           
@@ -1935,10 +1942,10 @@ sessionInfo()
 #>  [91] bit_4.6.0                   biovizBase_1.60.0          
 #>  [93] tidyselect_1.2.1            fontLiberation_0.1.0       
 #>  [95] Biostrings_2.80.1           knitr_1.51                 
-#>  [97] fontBitstreamVera_0.1.1     gridExtra_2.3              
+#>  [97] fontBitstreamVera_0.1.1     gridExtra_2.3.1            
 #>  [99] bookdown_0.47               ProtGenerics_1.44.0        
 #> [101] IRanges_2.46.0              Seqinfo_1.2.0              
-#> [103] SummarizedExperiment_1.42.0 stats4_4.6.0               
+#> [103] SummarizedExperiment_1.42.0 stats4_4.6.1               
 #> [105] xfun_0.59                   Biobase_2.72.0             
 #> [107] matrixStats_1.5.0           stringi_1.8.7              
 #> [109] UCSC.utils_1.8.0            lazyeval_0.2.3             
@@ -1950,7 +1957,7 @@ sessionInfo()
 #> [121] jquerylib_0.1.4             dichromat_2.0-0.1          
 #> [123] Rcpp_1.1.1-1.1              GenomeInfoDb_1.48.0        
 #> [125] png_0.1-9                   XML_3.99-0.23              
-#> [127] parallel_4.6.0              pkgdown_2.2.0              
+#> [127] parallel_4.6.1              pkgdown_2.2.0              
 #> [129] ggplot2_4.0.3               blob_1.3.0                 
 #> [131] dotCall64_1.2               AnnotationFilter_1.36.0    
 #> [133] bitops_1.0-9                viridisLite_0.4.3          

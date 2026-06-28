@@ -793,6 +793,8 @@ interactomes.
 - [`consolidate_chromatin_loops()`](https://zying106.github.io/looplook/reference/consolidate_chromatin_loops.md)
   : Consolidate and Integrate Chromatin Loops from Replicates or
   Multiple Sources
+- [`filter_chromatin_loops()`](https://zying106.github.io/looplook/reference/filter_chromatin_loops.md)
+  : Filter Chromatin Loops by Blacklist and/or Region of Interest
 - [`bedpe_to_gi()`](https://zying106.github.io/looplook/reference/bedpe_to_gi.md)
   : Read BEDPE File into a GInteractions Object
 - [`reduce_ginteractions()`](https://zying106.github.io/looplook/reference/reduce_ginteractions.md)
@@ -810,7 +812,7 @@ assignments.
   : Internal: Resolve Gene Conflicts via Biotype Priority Then
   Expression
 
-## Module 3: Expression-Aware & Chromatin-Guided Refinement
+## Module 3: Expression-Aware & Chromatin-Aware Refinement
 
 Advanced logic for eliminating transcriptionally silent contacts and
 validating regulatory elements.
