@@ -1,10 +1,10 @@
 # Orthogonal validation of eP/eG reclassification by chromatin marks
 
 Validates the expression-aware eP/eG reclassification produced by
-[`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
-using orthogonal chromatin data (ATAC-seq, ChIP-seq). Each eP/eG anchor
-is tested for overlap with user-supplied mark BED files and assigned a
-confidence level based on the ENCODE active-enhancer signature.
+[`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md),
+or the raw P/G/E classification from
+[`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md),
+against user-supplied chromatin mark BED files.
 
 ## Usage
 
@@ -24,129 +24,106 @@ validate_epeG_by_chromatin(
 
 - annotation_res:
 
-  List. Output from
+  List. The raw foundational output object returned by
   [`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
-  or
+  or the refined output from
   [`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md).
-  When the refined output is provided, all anchors classified as `eP` or
-  `eG` are validated. When the raw annotation is provided, all `P`, `G`,
-  and `E` anchors are evaluated (chromatin evidence may reclassify E to
-  P or dual). Anchors are tested for overlap with chromatin mark BED
-  files and assigned confidence levels based on ENCODE active-enhancer
-  criteria.
 
 - chromatin_beds:
 
-  Named list of BED file paths. Names must be mark identifiers: any of
-  `"H3K4me1"`, `"H3K27ac"`, `"ATAC"`, `"H3K27me3"`, `"H3K4me3"`.
-  Additional names are ignored with a warning.
+  Named list of BED file paths. Accepts up to five canonical histone
+  marks: `H3K4me1`, `H3K27ac`, `ATAC`, `H3K27me3`, and `H3K4me3`.
+  Unknown names are dropped with a warning; unmatched case is resolved
+  to the canonical names. An empty list classifies every anchor as
+  `"uncertain"`.
 
 - anchor_gap:
 
-  Integer. Maximum gap (bp) between an anchor and a chromatin peak for
-  them to be considered overlapping. Default: `200`.
+  Integer. Gap tolerance for mark overlap. Default `200`.
 
 - anchor_min_overlap:
 
-  Integer. Minimum overlap (bp) required. Default: `100`.
+  Integer. Minimum overlap for mark overlap. Default `100`.
 
 - candidate_types:
 
-  Character vector or `NULL`. Candidate anchor types to validate. `NULL`
-  (default): `c("eP","eG")` for refined input, `c("P","G","E")` for raw.
-  Set to `c("P","G","E","eP","eG")` to cover all positional categories.
+  Character vector or `NULL`. Anchor types to validate. `NULL`
+  (default): `c("eP","eG")` for refined input, `c("P","G","E")` for raw
+  annotation.
 
 - species:
 
-  Character. Genome assembly for seqlevel harmonization. Default:
-  `"hg38"`.
+  Character. Genome assembly. `"hg38"` (default), `"hg19"`, `"mm10"`, or
+  `"mm9"`.
 
 - quiet:
 
-  Logical. Suppress progress messages. Default: `FALSE`.
+  Logical. Suppress messages. Default: `FALSE`.
 
 ## Value
 
-A data frame with one row per candidate anchor (eP/eG when the input is
-refined, P/G when the input is raw from `annotate_peaks_and_loops`):
+A data frame with columns:
 
-- `anchor_id`:
+- anchor_id, chr, start, end, anchor_type, anchor_gene, cluster_id:
 
-  Anchor identifier.
+  Anchor identifiers.
 
-- `chr`, `start`, `end`:
+- H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3:
 
-  Anchor coordinates.
+  Logical or `NA`. `TRUE` = overlap, `FALSE` = tested but absent, `NA` =
+  not tested.
 
-- `anchor_type`:
+- confidence:
 
-  Original type (P or G) before reclassification.
+  Factor: `gold_standard` \> `high_confidence` \> `supported` \> `weak`
+  \> `uncertain`.
 
-- `anchor_gene`:
+- evidence:
 
-  Gene symbol(s) at this anchor.
-
-- `cluster_id`:
-
-  Loop cluster identifier.
-
-- `H3K4me1`, `H3K27ac`, `ATAC`:
-
-  Logical. TRUE if the anchor overlaps the corresponding positive mark.
-
-- `H3K27me3`, `H3K4me3`:
-
-  Logical. TRUE if the anchor overlaps the corresponding negative mark.
-
-- `confidence`:
-
-  Factor with levels: `"gold_standard"`, `"high_confidence"`,
-  `"supported"`, `"weak"`, `"uncertain"`.
-
-- `evidence`:
-
-  Human-readable summary of which marks supported the classification.
+  Human-readable string of the constituting marks (e.g.
+  `"H3K4me1+; H3K27ac+; H3K4me3-; H3K27me3-"`). Anchors with
+  tested-positive H3K4me3 at `supported` confidence are annotated with a
+  `"promoter_like"` tag.
 
 ## Details
 
-**Confidence levels (ENCODE active-enhancer criteria):**
+Confidence levels follow ENCODE active-enhancer criteria. Each anchor is
+classified into the highest applicable level:
 
-- `"gold_standard"`: All five marks align with the canonical
-  active-enhancer signature: H3K4me1(+), H3K27ac(+), ATAC(+),
-  H3K4me3(-), H3K27me3(-). Requires all five marks to be provided.
+- gold_standard:
 
-- `"high_confidence"`: H3K4me1(+) and (H3K27ac(+) or ATAC(+)), and
-  H3K4me3(-) if tested. Anchors with H3K4me3(+) are classified as
-  `"supported"` with a `"promoter_like"` evidence tag.
+  All 5 marks tested: H3K4me1+, H3K27ac+, ATAC+, H3K27me3-, H3K4me3-.
 
-- `"supported"`: At least one enhancer-associated mark (H3K4me1,
-  H3K27ac, or ATAC) is present. Anchors with H3K4me3(+) – regardless of
-  H3K27me3 status – receive a `"promoter_like"` tag, indicating promoter
-  signal that warrants reversion to P or dual-function classification by
-  [`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md).
+- high_confidence:
 
-- `"weak"`: Only exclusion marks are informative (H3K27me3(-) or
-  H3K4me3(-)) without positive enhancer evidence.
+  H3K4me1+ and (H3K27ac+ or ATAC+); H3K4me3 must be absent when tested.
 
-- `"uncertain"`: No chromatin data provided or no overlaps detected.
+- supported:
 
-**Mark semantics:**
+  Any of H3K4me1, H3K27ac, or ATAC positive. Anchors with H3K4me3+
+  (regardless of H3K27me3 status) receive a `"promoter_like"` evidence
+  tag.
 
-- *Positive marks* (presence = supporting evidence): `H3K4me1`,
-  `H3K27ac`, `ATAC`.
+- weak:
 
-- *Negative marks* (absence = supporting evidence): `H3K27me3`,
-  `H3K4me3`.
+  Tested negative markers (H3K27me3-, H3K4me3-) present but no active
+  marks.
+
+- uncertain:
+
+  Marks tested but none identified; or no marks tested at all.
+
+Marks not provided are recorded as `NA` and never treated as negative
+evidence. Case-insensitive name matching allows flexible input (e.g.,
+`h3k4me1` normalised to `H3K4me1`).
 
 ## Examples
 
 ``` r
-# Load pre-computed annotation result
-rdata_path <- system.file("extdata", "analysis_results.RData",
-                          package = "looplook")
-temp_env <- new.env()
-load(rdata_path, envir = temp_env)
-raw_annotation <- temp_env[[ls(temp_env)[1]]]
+rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
+tmp <- new.env()
+load(rdata_path, envir = tmp)
+raw_annotation <- tmp[[ls(tmp)[1]]]
 
 # Create dummy chromatin BED files for demonstration
 bed_dir <- tempdir()

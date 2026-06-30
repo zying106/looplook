@@ -139,7 +139,10 @@ transcriptional activity) and do not depend on ordering.</p>
 <span>  recompute_targets <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  write_output <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  sankey_colors <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  sankey_colors <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  chromatin_bw <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  bw_ratio_threshold <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  enhancer_bed <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -219,6 +222,41 @@ anchor types (<code>"P"</code>, <code>"E"</code>, <code>"G"</code>, <code>"eP"</
 <code>P = "#0072B2"</code> (blue), <code>eP = "#009E73"</code> (bluish-green),
 <code>G = "#CC79A7"</code> (reddish-purple), <code>eG = "#56B4E9"</code> (sky blue).</p></dd>
 
+
+<dt id="arg-chromatin-bw">chromatin_bw<a class="anchor" aria-label="anchor" href="#arg-chromatin-bw"></a></dt>
+<dd><p>Named list of bigWig file paths, or <code>NULL</code>.
+When provided, H3K4me1/H3K4me3 signal ratios are computed for
+dual-positive anchors to distinguish true dual-function elements
+(ratio &gt;= 3) from promoter-proximal H3K4me1 shoulders (ratio &lt; 3,
+reclassified to P).  Requires the <span class="pkg">rtracklayer</span> package.
+The list must include named elements <code>"H3K4me1"</code> and
+<code>"H3K4me3"</code>.  Default: <code>NULL</code> (BED-only mode — all
+H3K4me3-positive anchors are classified as P).
+<strong>Strongly recommended</strong> when ChIP-seq data are available:
+bigWig signals provide the quantitative H3K4me1/H3K4me3 ratio needed
+to distinguish true dual-function elements from promoter-proximal
+H3K4me1 shoulders.  Use the companion script
+<code>inst/scripts/diagnose_h3k4me_ratio.R</code> to explore the ratio
+distribution in your data and choose an appropriate threshold.</p></dd>
+
+
+<dt id="arg-bw-ratio-threshold">bw_ratio_threshold<a class="anchor" aria-label="anchor" href="#arg-bw-ratio-threshold"></a></dt>
+<dd><p>Numeric. Minimum H3K4me1/H3K4me3 ratio to
+classify a dual-positive anchor as true <code>"dual"</code>.  Anchors
+below this threshold are reclassified as <code>"P"</code> (promoter
+shoulder).  Default: <code>3</code> (H3K4me1 signal must be at least
+3× H3K4me3 to override promoter identity).  Only used when
+<code>chromatin_bw</code> is provided.</p></dd>
+
+
+<dt id="arg-enhancer-bed">enhancer_bed<a class="anchor" aria-label="anchor" href="#arg-enhancer-bed"></a></dt>
+<dd><p>Character or <code>NULL</code>. Path to a BED file of
+known enhancer regions (e.g., FANTOM5, ENCODE cCREs).  Anchors
+overlapping these regions receive high-confidence enhancer
+classification: <code>"E"</code> when H3K4me3 is absent, <code>"dual"</code>
+when H3K4me3 is also present.  This curated evidence takes priority
+over chromatin-mark-derived confidence levels.  Default: <code>NULL</code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -241,7 +279,13 @@ producing chromatin-aware <code>target_annotation</code> and
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p><strong>Reclassification rules (minimum input: H3K4me1 + H3K4me3):</strong></p><ul><li><p>P + H3K4me1(+) and H3K4me3(+) -&gt; <code>"dual"</code> (dual-function).</p></li>
+    <p><strong>Reclassification rules (minimum input: H3K4me1 + H3K4me3):</strong></p><ul><li><p>Enhancer BED overlap (highest priority): overlapped anchors become
+<code>"E"</code> (H3K4me3 absent) or <code>"dual"</code> (H3K4me3 present).</p></li>
+<li><p>P + H3K4me1(+) and H3K4me3(+) -&gt; <code>"dual"</code> (dual-function) or
+<code>"P"</code> (when H3K4me1 is likely a promoter shoulder; this is
+resolved by bigWig ratio &gt;= 3 when <code>chromatin_bw</code> is provided).</p></li>
+<li><p>eP/eG + gold_standard or high_confidence + active/primed enhancer
+chromatin -&gt; <code>"E"</code> (enhancer identity confirmed).</p></li>
 <li><p>P + H3K4me1(+) and H3K4me3(-) <em>and</em> (H3K27ac(+) or ATAC(+))
 -&gt; <code>"E"</code> (conservative: requires active-mark confirmation beyond
 H3K4me1 alone).</p></li>

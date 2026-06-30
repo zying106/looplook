@@ -24,7 +24,10 @@ refine_loop_anchors_by_chromatin(
   recompute_targets = TRUE,
   write_output = TRUE,
   quiet = FALSE,
-  sankey_colors = NULL
+  sankey_colors = NULL,
+  chromatin_bw = NULL,
+  bw_ratio_threshold = 3,
+  enhancer_bed = NULL
 )
 ```
 
@@ -103,6 +106,39 @@ refine_loop_anchors_by_chromatin(
   (blue), `eP = "#009E73"` (bluish-green), `G = "#CC79A7"`
   (reddish-purple), `eG = "#56B4E9"` (sky blue).
 
+- chromatin_bw:
+
+  Named list of bigWig file paths, or `NULL`. When provided,
+  H3K4me1/H3K4me3 signal ratios are computed for dual-positive anchors
+  to distinguish true dual-function elements (ratio \>= 3) from
+  promoter-proximal H3K4me1 shoulders (ratio \< 3, reclassified to P).
+  Requires the rtracklayer package. The list must include named elements
+  `"H3K4me1"` and `"H3K4me3"`. Default: `NULL` (BED-only mode — all
+  H3K4me3-positive anchors are classified as P). **Strongly
+  recommended** when ChIP-seq data are available: bigWig signals provide
+  the quantitative H3K4me1/H3K4me3 ratio needed to distinguish true
+  dual-function elements from promoter-proximal H3K4me1 shoulders. Use
+  the companion script `inst/scripts/diagnose_h3k4me_ratio.R` to explore
+  the ratio distribution in your data and choose an appropriate
+  threshold.
+
+- bw_ratio_threshold:
+
+  Numeric. Minimum H3K4me1/H3K4me3 ratio to classify a dual-positive
+  anchor as true `"dual"`. Anchors below this threshold are reclassified
+  as `"P"` (promoter shoulder). Default: `3` (H3K4me1 signal must be at
+  least 3× H3K4me3 to override promoter identity). Only used when
+  `chromatin_bw` is provided.
+
+- enhancer_bed:
+
+  Character or `NULL`. Path to a BED file of known enhancer regions
+  (e.g., FANTOM5, ENCODE cCREs). Anchors overlapping these regions
+  receive high-confidence enhancer classification: `"E"` when H3K4me3 is
+  absent, `"dual"` when H3K4me3 is also present. This curated evidence
+  takes priority over chromatin-mark-derived confidence levels. Default:
+  `NULL`.
+
 ## Value
 
 An invisible named list with updated `loop_annotation`,
@@ -125,7 +161,15 @@ output).
 
 **Reclassification rules (minimum input: H3K4me1 + H3K4me3):**
 
-- P + H3K4me1(+) and H3K4me3(+) -\> `"dual"` (dual-function).
+- Enhancer BED overlap (highest priority): overlapped anchors become
+  `"E"` (H3K4me3 absent) or `"dual"` (H3K4me3 present).
+
+- P + H3K4me1(+) and H3K4me3(+) -\> `"dual"` (dual-function) or `"P"`
+  (when H3K4me1 is likely a promoter shoulder; this is resolved by
+  bigWig ratio \>= 3 when `chromatin_bw` is provided).
+
+- eP/eG + gold_standard or high_confidence + active/primed enhancer
+  chromatin -\> `"E"` (enhancer identity confirmed).
 
 - P + H3K4me1(+) and H3K4me3(-) *and* (H3K27ac(+) or ATAC(+)) -\> `"E"`
   (conservative: requires active-mark confirmation beyond H3K4me1

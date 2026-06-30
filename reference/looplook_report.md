@@ -46,6 +46,9 @@ looplook_report(
   metadata_file = NULL,
   precomputed_res = NULL,
   chromatin_beds = list(),
+  chromatin_bw = NULL,
+  bw_ratio_threshold = 3,
+  enhancer_bed = NULL,
   output_file = NULL,
   quiet = FALSE,
   seed = NULL,
@@ -219,6 +222,23 @@ looplook_report(
   with confidence-level distribution for eP/eG anchors. Default:
   [`list()`](https://rdrr.io/r/base/list.html) (skip).
 
+- chromatin_bw:
+
+  Named list of bigWig file paths, or `NULL`. Passed to
+  [`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md).
+  Requires `"H3K4me1"` and `"H3K4me3"`. **Strongly recommended** for
+  resolving true dual-function elements. Default: `NULL`.
+
+- bw_ratio_threshold:
+
+  Numeric. Minimum H3K4me1/H3K4me3 ratio for dual classification.
+  Default: `3`.
+
+- enhancer_bed:
+
+  Character or `NULL`. Path to a curated enhancer BED file (e.g.
+  FANTOM5, ENCODE cCREs). Default: `NULL`.
+
 - output_file:
 
   Character. Output HTML file name. `NULL` derives from `project_name`.
@@ -274,15 +294,15 @@ if (requireNamespace("rmarkdown", quietly = TRUE) &&
     )
     file.exists(report_path)
 }
-#> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
+#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
 #> [1] TRUE
 ```

@@ -2022,36 +2022,44 @@ on expression-refined output to test eP/eG anchors.</p>
 <p>Reclassification rules (minimum input: H3K4me1 + H3K4me3):</p>
 <ul>
 <li>
-<strong>P + H3K4me1⁺ H3K4me3⁺ → <code>dual</code></strong>:
-Promoter-enhancer dual-function element</li>
+<strong>Enhancer BED overlap (highest priority):</strong> Known
+enhancer regions (<code>enhancer_bed</code> parameter, e.g. FANTOM5 or
+ENCODE cCREs). Overlapping anchors become <code>E</code> (H3K4me3⁻) or
+<code>dual</code> (H3K4me3⁺).</li>
+<li>
+<strong>P + H3K4me1⁺ H3K4me3⁺:</strong> Resolved by bigWig ratio
+(<code>chromatin_bw</code>) when available — <code>dual</code> if
+H3K4me1/H3K4me3 ≥ 3, otherwise <code>P</code> (H3K4me3 dominates).
+Without bigWig, H3K4me3⁺ always defaults to <code>P</code>.</li>
+<li>
+<strong>E/G + H3K4me1⁺ H3K4me3⁺:</strong> Same bigWig resolution as
+P above.</li>
+<li>
+<strong>E/G + H3K4me3⁺ H3K4me1⁻ → <code>P</code></strong>:
+Unannotated or internal promoter.</li>
 <li>
 <strong>P + H3K4me1⁺ H3K4me3⁻ + (H3K27ac⁺ or ATAC⁺) →
 <code>E</code></strong>: Conservative reclassification requiring
-active-mark confirmation</li>
+active-mark confirmation.</li>
 <li>
-<strong>E + H3K4me3⁺ H3K4me1⁻ → <code>P</code></strong>: Unannotated
-promoter or ncRNA gene</li>
-<li>
-<strong>E + H3K4me1⁺ H3K4me3⁺ → <code>dual</code></strong>:
-Dual-function locus in distal region</li>
-<li>
-<strong>G + H3K4me1⁺ H3K4me3⁺ → <code>dual</code></strong> /
-<strong>G + H3K4me3⁺ H3K4me1⁻ → <code>P</code></strong>: Gene-body
-enhancer or internal promoter</li>
-<li>
-<strong>eP/eG + gold_standard or high_confidence + active/primed
-enhancer chromatin → <code>E</code></strong>: Enhancer identity
-confirmed by chromatin; matches the P→E rule to guarantee the same
-outcome regardless of refinement order</li>
+<strong>G + H3K4me1⁺ H3K4me3⁻ + (H3K27ac⁺ or ATAC⁺) →
+<code>E</code></strong>: Intronic enhancer.</li>
 <li>
 <strong>eP/eG + promoter_like →
 <code>P</code>/<code>G</code></strong>: Revert to active promoter/gene
 body; original gene symbols restored</li>
 <li>
-<strong>eP/eG + dual_like → <code>dual</code></strong>: Confirm
-dual-function; original gene symbols restored</li>
+<strong>eP/eG + dual_like</strong>: Resolved by bigWig ratio when
+available — <code>dual</code> if H3K4me1/H3K4me3 ≥ 3, otherwise
+<code>P</code>/<code>G</code>. Without bigWig, H3K4me3⁺ defaults to
+<code>P</code>/<code>G</code> (original gene symbols restored).</li>
 <li>Anchor types not matching any rule remain unchanged.</li>
 </ul>
+<p>Optional parameters <code>chromatin_bw</code> (bigWig paths for
+H3K4me1 and H3K4me3) and <code>enhancer_bed</code> (curated enhancer
+regions) provide quantitative and literature-based evidence to refine
+dual-classification further. Without these, H3K4me3 always takes
+priority — anchors with this mark are classified as P or G.</p>
 <p>The chromatin state of each anchor is also inferred (highest-priority
 match first): <code>conflicting_marks</code> &gt; <code>dual_like</code>
 &gt; <code>active_enhancer_like</code> &gt;

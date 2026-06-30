@@ -152,6 +152,9 @@ interpretation-ready HTML document suitable for sharing with collaborators.</p>
 <span>  metadata_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  precomputed_res <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  chromatin_bw <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  bw_ratio_threshold <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  enhancer_bed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  output_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -316,6 +319,23 @@ When non-empty, a <em>Chromatin Validation</em> section appears in the report
 with confidence-level distribution for eP/eG anchors. Default: <code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code> (skip).</p></dd>
 
 
+<dt id="arg-chromatin-bw">chromatin_bw<a class="anchor" aria-label="anchor" href="#arg-chromatin-bw"></a></dt>
+<dd><p>Named list of bigWig file paths, or <code>NULL</code>. Passed
+to <code><a href="refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></code>. Requires <code>"H3K4me1"</code>
+and <code>"H3K4me3"</code>. <strong>Strongly recommended</strong> for resolving true
+dual-function elements. Default: <code>NULL</code>.</p></dd>
+
+
+<dt id="arg-bw-ratio-threshold">bw_ratio_threshold<a class="anchor" aria-label="anchor" href="#arg-bw-ratio-threshold"></a></dt>
+<dd><p>Numeric. Minimum H3K4me1/H3K4me3 ratio for dual
+classification. Default: <code>3</code>.</p></dd>
+
+
+<dt id="arg-enhancer-bed">enhancer_bed<a class="anchor" aria-label="anchor" href="#arg-enhancer-bed"></a></dt>
+<dd><p>Character or <code>NULL</code>. Path to a curated enhancer
+BED file (e.g. FANTOM5, ENCODE cCREs). Default: <code>NULL</code>.</p></dd>
+
+
 <dt id="arg-output-file">output_file<a class="anchor" aria-label="anchor" href="#arg-output-file"></a></dt>
 <dd><p>Character. Output HTML file name. <code>NULL</code> derives from <code>project_name</code>.</p></dd>
 
@@ -369,16 +389,16 @@ results.</p>
 <span class="r-in"><span>    <span class="op">)</span></span></span>
 <span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">report_path</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpbUX3nd/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
 </code></pre></div>
     </div>

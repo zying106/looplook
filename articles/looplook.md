@@ -1102,24 +1102,30 @@ on expression-refined output to test eP/eG anchors.
 
 Reclassification rules (minimum input: H3K4me1 + H3K4me3):
 
-- **P + H3K4me1⁺ H3K4me3⁺ → `dual`**: Promoter-enhancer dual-function
-  element
+- **Enhancer BED overlap (highest priority):** Known enhancer regions
+  (`enhancer_bed` parameter, e.g. FANTOM5 or ENCODE cCREs). Overlapping
+  anchors become `E` (H3K4me3⁻) or `dual` (H3K4me3⁺).
+- **P + H3K4me1⁺ H3K4me3⁺:** Resolved by bigWig ratio (`chromatin_bw`)
+  when available — `dual` if H3K4me1/H3K4me3 ≥ 3, otherwise `P` (H3K4me3
+  dominates). Without bigWig, H3K4me3⁺ always defaults to `P`.
+- **E/G + H3K4me1⁺ H3K4me3⁺:** Same bigWig resolution as P above.
+- **E/G + H3K4me3⁺ H3K4me1⁻ → `P`**: Unannotated or internal promoter.
 - **P + H3K4me1⁺ H3K4me3⁻ + (H3K27ac⁺ or ATAC⁺) → `E`**: Conservative
-  reclassification requiring active-mark confirmation
-- **E + H3K4me3⁺ H3K4me1⁻ → `P`**: Unannotated promoter or ncRNA gene
-- **E + H3K4me1⁺ H3K4me3⁺ → `dual`**: Dual-function locus in distal
-  region
-- **G + H3K4me1⁺ H3K4me3⁺ → `dual`** / **G + H3K4me3⁺ H3K4me1⁻ → `P`**:
-  Gene-body enhancer or internal promoter
-- **eP/eG + gold_standard or high_confidence + active/primed enhancer
-  chromatin → `E`**: Enhancer identity confirmed by chromatin; matches
-  the P→E rule to guarantee the same outcome regardless of refinement
-  order
+  reclassification requiring active-mark confirmation.
+- **G + H3K4me1⁺ H3K4me3⁻ + (H3K27ac⁺ or ATAC⁺) → `E`**: Intronic
+  enhancer.
 - **eP/eG + promoter_like → `P`/`G`**: Revert to active promoter/gene
   body; original gene symbols restored
-- **eP/eG + dual_like → `dual`**: Confirm dual-function; original gene
-  symbols restored
+- **eP/eG + dual_like**: Resolved by bigWig ratio when available —
+  `dual` if H3K4me1/H3K4me3 ≥ 3, otherwise `P`/`G`. Without bigWig,
+  H3K4me3⁺ defaults to `P`/`G` (original gene symbols restored).
 - Anchor types not matching any rule remain unchanged.
+
+Optional parameters `chromatin_bw` (bigWig paths for H3K4me1 and
+H3K4me3) and `enhancer_bed` (curated enhancer regions) provide
+quantitative and literature-based evidence to refine dual-classification
+further. Without these, H3K4me3 always takes priority — anchors with
+this mark are classified as P or G.
 
 The chromatin state of each anchor is also inferred (highest-priority
 match first): `conflicting_marks` \> `dual_like` \>
