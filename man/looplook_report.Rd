@@ -42,6 +42,9 @@ looplook_report(
   metadata_file = NULL,
   precomputed_res = NULL,
   chromatin_beds = list(),
+  chromatin_bw = NULL,
+  bw_ratio_threshold = 3,
+  enhancer_bed = NULL,
   output_file = NULL,
   quiet = FALSE,
   seed = NULL,
@@ -127,6 +130,17 @@ When provided, annotation is skipped and refinement starts from this object.}
 mark validation (passed to \code{\link{refine_loop_anchors_by_expression}}).
 When non-empty, a \emph{Chromatin Validation} section appears in the report
 with confidence-level distribution for eP/eG anchors. Default: \code{list()} (skip).}
+
+\item{chromatin_bw}{Named list of bigWig file paths, or \code{NULL}. Passed
+to \code{\link{refine_loop_anchors_by_chromatin}}. Requires \code{"H3K4me1"}
+and \code{"H3K4me3"}. \strong{Strongly recommended} for resolving true
+dual-function elements. Default: \code{NULL}.}
+
+\item{bw_ratio_threshold}{Numeric. Minimum H3K4me1/H3K4me3 ratio for dual
+classification. Default: \code{3}.}
+
+\item{enhancer_bed}{Character or \code{NULL}. Path to a curated enhancer
+BED file (e.g. FANTOM5, ENCODE cCREs). Default: \code{NULL}.}
 
 \item{output_file}{Character. Output HTML file name. \code{NULL} derives from \code{project_name}.}
 

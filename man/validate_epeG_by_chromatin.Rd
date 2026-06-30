@@ -15,100 +15,66 @@ validate_epeG_by_chromatin(
 )
 }
 \arguments{
-\item{annotation_res}{List. Output from
-\code{\link{annotate_peaks_and_loops}} or
-\code{\link{refine_loop_anchors_by_expression}}.
-When the refined output is provided, all anchors classified as
-\code{eP} or \code{eG} are validated. When the raw annotation
-is provided, all \code{P}, \code{G}, and \code{E} anchors are
-evaluated (chromatin evidence may reclassify E to P or dual).
-Anchors are tested for overlap with chromatin mark BED files and
-assigned confidence levels based on ENCODE active-enhancer criteria.}
+\item{annotation_res}{List. The raw foundational output object returned by
+\code{\link{annotate_peaks_and_loops}} or the refined output from
+\code{\link{refine_loop_anchors_by_expression}}.}
 
-\item{chromatin_beds}{Named list of BED file paths. Names must be
-mark identifiers: any of \code{"H3K4me1"}, \code{"H3K27ac"},
-\code{"ATAC"}, \code{"H3K27me3"}, \code{"H3K4me3"}.
-Additional names are ignored with a warning.}
+\item{chromatin_beds}{Named list of BED file paths. Accepts up to five
+canonical histone marks: \code{H3K4me1}, \code{H3K27ac}, \code{ATAC},
+\code{H3K27me3}, and \code{H3K4me3}. Unknown names are dropped with a
+warning; unmatched case is resolved to the canonical names. An empty
+list classifies every anchor as \code{"uncertain"}.}
 
-\item{anchor_gap}{Integer. Maximum gap (bp) between an anchor and a
-chromatin peak for them to be considered overlapping. Default: \code{200}.}
+\item{anchor_gap}{Integer. Gap tolerance for mark overlap.  Default
+\code{200}.}
 
-\item{anchor_min_overlap}{Integer. Minimum overlap (bp) required.
-Default: \code{100}.}
+\item{anchor_min_overlap}{Integer. Minimum overlap for mark overlap.
+Default \code{100}.}
 
-\item{candidate_types}{Character vector or \code{NULL}. Candidate anchor
-types to validate. \code{NULL} (default): \code{c("eP","eG")} for refined
-input, \code{c("P","G","E")} for raw.  Set to \code{c("P","G","E","eP","eG")}
-to cover all positional categories.}
+\item{candidate_types}{Character vector or \code{NULL}. Anchor types to
+validate. \code{NULL} (default): \code{c("eP","eG")} for refined input,
+\code{c("P","G","E")} for raw annotation.}
 
-\item{species}{Character. Genome assembly for seqlevel harmonization.
-Default: \code{"hg38"}.}
+\item{species}{Character. Genome assembly. \code{"hg38"} (default),
+\code{"hg19"}, \code{"mm10"}, or \code{"mm9"}.}
 
-\item{quiet}{Logical. Suppress progress messages. Default: \code{FALSE}.}
+\item{quiet}{Logical. Suppress messages. Default: \code{FALSE}.}
 }
 \value{
-A data frame with one row per candidate anchor (eP/eG when the input
-is refined, P/G when the input is raw from \code{annotate_peaks_and_loops}):
+A data frame with columns:
 \describe{
-\item{\code{anchor_id}}{Anchor identifier.}
-\item{\code{chr}, \code{start}, \code{end}}{Anchor coordinates.}
-\item{\code{anchor_type}}{Original type (P or G) before reclassification.}
-\item{\code{anchor_gene}}{Gene symbol(s) at this anchor.}
-\item{\code{cluster_id}}{Loop cluster identifier.}
-\item{\code{H3K4me1}, \code{H3K27ac}, \code{ATAC}}{Logical. TRUE if
-the anchor overlaps the corresponding positive mark.}
-\item{\code{H3K27me3}, \code{H3K4me3}}{Logical. TRUE if the anchor
-overlaps the corresponding negative mark.}
-\item{\code{confidence}}{Factor with levels:
-\code{"gold_standard"}, \code{"high_confidence"}, \code{"supported"},
-\code{"weak"}, \code{"uncertain"}.}
-\item{\code{evidence}}{Human-readable summary of which marks supported
-the classification.}
+\item{anchor_id, chr, start, end, anchor_type, anchor_gene, cluster_id}{Anchor identifiers.}
+\item{H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3}{Logical or \code{NA}. \code{TRUE} = overlap, \code{FALSE} = tested but absent, \code{NA} = not tested.}
+\item{confidence}{Factor: \code{gold_standard} > \code{high_confidence} > \code{supported} > \code{weak} > \code{uncertain}.}
+\item{evidence}{Human-readable string of the constituting marks (e.g. \code{"H3K4me1+; H3K27ac+; H3K4me3-; H3K27me3-"}). Anchors with tested-positive H3K4me3 at \code{supported} confidence are annotated with a \code{"promoter_like"} tag.}
 }
 }
 \description{
 Validates the expression-aware eP/eG reclassification produced by
-\code{\link{refine_loop_anchors_by_expression}} using orthogonal chromatin
-data (ATAC-seq, ChIP-seq). Each eP/eG anchor is tested for overlap with
-user-supplied mark BED files and assigned a confidence level based on the
-ENCODE active-enhancer signature.
+\code{\link{refine_loop_anchors_by_expression}}, or the raw P/G/E
+classification from \code{\link{annotate_peaks_and_loops}}, against
+user-supplied chromatin mark BED files.
 }
 \details{
-\strong{Confidence levels (ENCODE active-enhancer criteria):}
-\itemize{
-\item \code{"gold_standard"}: All five marks align with the canonical
-active-enhancer signature: H3K4me1(+), H3K27ac(+), ATAC(+),
-H3K4me3(-), H3K27me3(-). Requires all five marks to be provided.
-\item \code{"high_confidence"}: H3K4me1(+) and (H3K27ac(+) or ATAC(+)),
-and H3K4me3(-) if tested. Anchors with H3K4me3(+) are classified as
-\code{"supported"} with a \code{"promoter_like"} evidence tag.
-\item \code{"supported"}: At least one enhancer-associated mark
-(H3K4me1, H3K27ac, or ATAC) is present. Anchors with H3K4me3(+)
--- regardless of H3K27me3 status -- receive a \code{"promoter_like"}
-tag, indicating promoter signal that warrants reversion to P or
-dual-function classification by
-\code{\link{refine_loop_anchors_by_chromatin}}.
-\item \code{"weak"}: Only exclusion marks are informative
-(H3K27me3(-) or H3K4me3(-)) without positive enhancer evidence.
-\item \code{"uncertain"}: No chromatin data provided or no overlaps
-detected.
+Confidence levels follow ENCODE active-enhancer criteria.  Each
+anchor is classified into the highest applicable level:
+\describe{
+\item{gold_standard}{All 5 marks tested: H3K4me1+, H3K27ac+, ATAC+, H3K27me3-, H3K4me3-.}
+\item{high_confidence}{H3K4me1+ and (H3K27ac+ or ATAC+); H3K4me3 must be absent when tested.}
+\item{supported}{Any of H3K4me1, H3K27ac, or ATAC positive. Anchors with H3K4me3+
+(regardless of H3K27me3 status) receive a \code{"promoter_like"} evidence tag.}
+\item{weak}{Tested negative markers (H3K27me3-, H3K4me3-) present but no active marks.}
+\item{uncertain}{Marks tested but none identified; or no marks tested at all.}
 }
-
-\strong{Mark semantics:}
-\itemize{
-\item \emph{Positive marks} (presence = supporting evidence):
-\code{H3K4me1}, \code{H3K27ac}, \code{ATAC}.
-\item \emph{Negative marks} (absence = supporting evidence):
-\code{H3K27me3}, \code{H3K4me3}.
-}
+Marks not provided are recorded as \code{NA} and never treated as negative evidence.
+Case-insensitive name matching allows flexible input (e.g., \code{h3k4me1}
+normalised to \code{H3K4me1}).
 }
 \examples{
-# Load pre-computed annotation result
-rdata_path <- system.file("extdata", "analysis_results.RData",
-                          package = "looplook")
-temp_env <- new.env()
-load(rdata_path, envir = temp_env)
-raw_annotation <- temp_env[[ls(temp_env)[1]]]
+rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
+tmp <- new.env()
+load(rdata_path, envir = tmp)
+raw_annotation <- tmp[[ls(tmp)[1]]]
 
 # Create dummy chromatin BED files for demonstration
 bed_dir <- tempdir()

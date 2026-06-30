@@ -47,6 +47,9 @@ params:
   metadata_file: null
   precomputed_res: null
   chromatin_beds: !r list()
+  chromatin_bw: !r NULL
+  bw_ratio_threshold: 3
+  enhancer_bed: !r NULL
   seed: null
 ---
 
@@ -540,7 +543,10 @@ if (has_chromatin && !is.null(chromatin_input)) {
       species = params$species,
       write_output = FALSE,
       quiet = TRUE,
-      recompute_targets = TRUE
+      recompute_targets = TRUE,
+      chromatin_bw = params$chromatin_bw,
+      bw_ratio_threshold = params$bw_ratio_threshold,
+      enhancer_bed = params$enhancer_bed
     ),
     error = function(e) {
       chromatin_error <<- conditionMessage(e)
@@ -845,7 +851,7 @@ cat(sprintf('<div class="plot-container"><iframe src="target_sankey.html" width=
 # Chromatin refinement plot descriptions
 chromatin_plot_desc <- list(
   Chromatin_Dumbbell = "Anchor-type distribution before vs. after chromatin-aware reclassification. Dark green (right dot) shows the refined counts after mark-evidence reclassification; grey (left dot) shows original counts. New categories (e.g., dual, P appearing from eP) indicate chromatin-driven corrections of the expression-only classification.",
-  Chromatin_Sankey = "Flow diagram tracing each anchor's reclassification path. Left column (Before): original anchor types after expression refinement. Right column (After): updated types after chromatin-aware reclassification. Each coloured block represents one anchor type (eP = bluish-green, eG = sky blue, P = blue, G = reddish-purple, E = orange, dual = red); block height is proportional to anchor count. Gradient links trace flows between types. Key transitions: eP to P (promoter-like chromatin reversion), eP to dual (dual-function upgrade).",
+  Chromatin_Sankey = "Flow diagram tracing each anchor's reclassification path. Left column (Before): original anchor types. Right column (After): updated types after chromatin-aware reclassification. Each coloured block represents one anchor type (eP = bluish-green, eG = sky blue, P = blue, G = reddish-purple, E = orange, dual = red); block height is proportional to anchor count. Key transitions: eP to P (promoter-like chromatin reversion), dual reclassification via bigWig ratio (H3K4me1/H3K4me3 >= 3). Without bigWig, H3K4me3-positive anchors default to P.",
   Chromatin_MarkHeatmap = "Aggregated heatmap showing the percentage of anchors in each reclassification group that overlap each chromatin mark. Cell colour encodes % positive (white = 0%, dark green = 100%). One row per reclassification type, one column per mark. This compact view reveals which marks drive specific reclassification decisions — for example, H3K4me3 enrichment in eP→P reversions, or H3K27me3 co-occurrence in eP→dual upgrades.",
   Chromatin_UpSet = "UpSet plot showing the combinatorial landscape of loop types after chromatin-aware reclassification. Top panel: intersection size (log10 scale) for each loop-type combination (e.g., E-P, dual-P). Bottom panel: dot-and-line matrix indicating which anchor types participate in each combination, with self-loop arcs for E-E, P-P, and dual-dual types."
 )

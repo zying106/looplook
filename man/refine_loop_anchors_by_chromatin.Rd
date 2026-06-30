@@ -17,7 +17,10 @@ refine_loop_anchors_by_chromatin(
   recompute_targets = TRUE,
   write_output = TRUE,
   quiet = FALSE,
-  sankey_colors = NULL
+  sankey_colors = NULL,
+  chromatin_bw = NULL,
+  bw_ratio_threshold = 3,
+  enhancer_bed = NULL
 )
 }
 \arguments{
@@ -67,6 +70,35 @@ anchor types (\code{"P"}, \code{"E"}, \code{"G"}, \code{"eP"},
 \code{E = "#E69F00"} (orange), \code{dual = "#CC0000"} (red),
 \code{P = "#0072B2"} (blue), \code{eP = "#009E73"} (bluish-green),
 \code{G = "#CC79A7"} (reddish-purple), \code{eG = "#56B4E9"} (sky blue).}
+
+\item{chromatin_bw}{Named list of bigWig file paths, or \code{NULL}.
+When provided, H3K4me1/H3K4me3 signal ratios are computed for
+dual-positive anchors to distinguish true dual-function elements
+(ratio >= 3) from promoter-proximal H3K4me1 shoulders (ratio < 3,
+reclassified to P).  Requires the \pkg{rtracklayer} package.
+The list must include named elements \code{"H3K4me1"} and
+\code{"H3K4me3"}.  Default: \code{NULL} (BED-only mode — all
+H3K4me3-positive anchors are classified as P).
+\strong{Strongly recommended} when ChIP-seq data are available:
+bigWig signals provide the quantitative H3K4me1/H3K4me3 ratio needed
+to distinguish true dual-function elements from promoter-proximal
+H3K4me1 shoulders.  Use the companion script
+\code{inst/scripts/diagnose_h3k4me_ratio.R} to explore the ratio
+distribution in your data and choose an appropriate threshold.}
+
+\item{bw_ratio_threshold}{Numeric. Minimum H3K4me1/H3K4me3 ratio to
+classify a dual-positive anchor as true \code{"dual"}.  Anchors
+below this threshold are reclassified as \code{"P"} (promoter
+shoulder).  Default: \code{3} (H3K4me1 signal must be at least
+3× H3K4me3 to override promoter identity).  Only used when
+\code{chromatin_bw} is provided.}
+
+\item{enhancer_bed}{Character or \code{NULL}. Path to a BED file of
+known enhancer regions (e.g., FANTOM5, ENCODE cCREs).  Anchors
+overlapping these regions receive high-confidence enhancer
+classification: \code{"E"} when H3K4me3 is absent, \code{"dual"}
+when H3K4me3 is also present.  This curated evidence takes priority
+over chromatin-mark-derived confidence levels.  Default: \code{NULL}.}
 }
 \value{
 An invisible named list with updated \code{loop_annotation},
@@ -98,7 +130,13 @@ transcriptional activity) and do not depend on ordering.
 \details{
 \strong{Reclassification rules (minimum input: H3K4me1 + H3K4me3):}
 \itemize{
-\item P + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-function).
+\item Enhancer BED overlap (highest priority): overlapped anchors become
+\code{"E"} (H3K4me3 absent) or \code{"dual"} (H3K4me3 present).
+\item P + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-function) or
+\code{"P"} (when H3K4me1 is likely a promoter shoulder; this is
+resolved by bigWig ratio >= 3 when \code{chromatin_bw} is provided).
+\item eP/eG + gold_standard or high_confidence + active/primed enhancer
+chromatin -> \code{"E"} (enhancer identity confirmed).
 \item P + H3K4me1(+) and H3K4me3(-) \emph{and} (H3K27ac(+) or ATAC(+))
 -> \code{"E"} (conservative: requires active-mark confirmation beyond
 H3K4me1 alone).

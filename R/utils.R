@@ -65,7 +65,8 @@ if (getRversion() >= "2.15.1") {
         "anchor_type", "anchor_gene", "confidence", "evidence",
         "priority", "combination", "log_count", "present", "count",
         "set_counts", "bin_mat", "bar_df",
-        "tooltip", "color", "data_id"
+        "tooltip", "color", "data_id",
+        "is_true_dual", "is_enhancer_bed"
     ))
 }
 

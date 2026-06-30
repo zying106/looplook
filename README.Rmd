@@ -166,7 +166,7 @@ While expression data identify transcriptionally active anchors, orthogonal chro
 
 **`validate_epeG_by_chromatin()`** — Tests eP/eG (or P/G/E) anchors against user-supplied chromatin mark BED files. Each anchor is scored against ENCODE active-enhancer criteria: `gold_standard` (H3K4me1+, H3K27ac+, ATAC+, H3K4me3-, H3K27me3-), `high_confidence`, `supported`, `weak`, or `uncertain`.
 
-**`refine_loop_anchors_by_chromatin()`** — Applies chromatin-mark evidence to **reclassify** anchors and update loop topologies. Reclassification rules (minimum input H3K4me1 + H3K4me3): P + dual marks → `dual`; P + enhancer marks → `E`; eP/eG + promoter marks → `P`/`G` (revert); E + H3K4me3 only → `P` (unannotated promoter); and more. Supports `recompute_targets = TRUE` to rebuild target gene links with updated anchor types, producing chromatin-aware `target_annotation` and `target_gene_links`.
+**`refine_loop_anchors_by_chromatin()`** — Applies chromatin-mark evidence to **reclassify** anchors and update loop topologies. H3K4me3-positive anchors default to P or G; true dual-function elements require either bigWig confirmation (H3K4me1/H3K4me3 ≥ 3 via `chromatin_bw`) or overlap with a curated enhancer BED (`enhancer_bed`). Also supports: P + enhancer marks → `E`; eP/eG + promoter marks → `P`/`G` (revert); E + H3K4me3 only → `P` (unannotated promoter). Supports `recompute_targets = TRUE` to rebuild target gene links with updated anchor types, producing chromatin-aware `target_annotation` and `target_gene_links`.
 
 ```{r, eval=FALSE}
 # Validate eP/eG anchors against chromatin marks

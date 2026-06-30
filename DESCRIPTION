@@ -89,6 +89,7 @@ Suggests:
     kableExtra,
     knitr,
     rmarkdown,
+    rtracklayer,
     png,
     BSgenome,
     htmltools,

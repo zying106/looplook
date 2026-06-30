@@ -1762,6 +1762,14 @@ run_distal_motif_analysis <- function(
 #'   mark validation (passed to \code{\link{refine_loop_anchors_by_expression}}).
 #'   When non-empty, a \emph{Chromatin Validation} section appears in the report
 #'   with confidence-level distribution for eP/eG anchors. Default: \code{list()} (skip).
+#' @param chromatin_bw Named list of bigWig file paths, or \code{NULL}. Passed
+#'   to \code{\link{refine_loop_anchors_by_chromatin}}. Requires \code{"H3K4me1"}
+#'   and \code{"H3K4me3"}. \strong{Strongly recommended} for resolving true
+#'   dual-function elements. Default: \code{NULL}.
+#' @param bw_ratio_threshold Numeric. Minimum H3K4me1/H3K4me3 ratio for dual
+#'   classification. Default: \code{3}.
+#' @param enhancer_bed Character or \code{NULL}. Path to a curated enhancer
+#'   BED file (e.g. FANTOM5, ENCODE cCREs). Default: \code{NULL}.
 #' @param unit_type Character. Expression unit label for plot annotations. Default \code{"TPM"}.
 #' @param tss_region Numeric vector of length 2. TSS flanking region in bp. Default \code{c(-2000, 2000)}.
 #' @param neighbor_hop Integer. k-hop ego-network expansion order for loop connectivity analysis. Default \code{0}.
@@ -1855,6 +1863,9 @@ looplook_report <- function(
   metadata_file = NULL,
   precomputed_res = NULL,
   chromatin_beds = list(),
+  chromatin_bw = NULL,
+  bw_ratio_threshold = 3,
+  enhancer_bed = NULL,
   output_file = NULL,
   quiet = FALSE,
   seed = NULL,
@@ -1944,7 +1955,9 @@ looplook_report <- function(
             metadata_file = metadata_file,
             precomputed_res = precomputed_res,
             chromatin_beds = chromatin_beds,
-            seed = seed
+            chromatin_bw = chromatin_bw,
+            bw_ratio_threshold = bw_ratio_threshold,
+            enhancer_bed = enhancer_bed,            seed = seed
         ),
         output_dir = out_dir,
         output_file = output_file,

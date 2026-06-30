@@ -370,11 +370,10 @@ test_that("recompute_targets=FALSE yields NULL target tables", {
     )
 }
 
-test_that("P + H3K4me1+ H3K4me3+ H3K27ac+ H3K27me3- → dual", {
+test_that("P + H3K4me1+ H3K4me3+ H3K27ac+ H3K27me3- (no bw) → P", {
     tv <- .make_toy_validation("P", TRUE, TRUE, TRUE, TRUE, FALSE)
     rm <- looplook:::.chromatin_reclassify(tv$validation)
-    expect_equal(rm$new_type[1], "dual")
-    expect_true(rm$changed[1])
+    expect_equal(rm$new_type[1], "P")  # H3K4me3+ dominates without bigWig
 })
 
 test_that("P + H3K4me1+ H3K4me3- H3K27ac+ → E (conservative)", {
@@ -398,11 +397,10 @@ test_that("E + H3K4me3+ H3K4me1- → P (unannotated promoter)", {
     expect_true(rm$changed[1])
 })
 
-test_that("E + H3K4me1+ H3K4me3+ → dual", {
+test_that("E + H3K4me1+ H3K4me3+ (no bw) → P (unannotated promoter)", {
     tv <- .make_toy_validation("E", TRUE, TRUE, TRUE, TRUE, FALSE)
     rm <- looplook:::.chromatin_reclassify(tv$validation)
-    expect_equal(rm$new_type[1], "dual")
-    expect_true(rm$changed[1])
+    expect_equal(rm$new_type[1], "P")  # H3K4me3+ defaults to P without bigWig
 })
 
 test_that("G + H3K4me1+ H3K4me3- H3K27ac+ → E (conservative intronic enhancer)", {
@@ -419,11 +417,10 @@ test_that("G + H3K4me1+ only → stays G (not enough evidence)", {
     expect_false(rm$changed[1])
 })
 
-test_that("eP + dual_like → dual", {
+test_that("eP + dual_like (no bw) → P (H3K4me3+ falls back to P)", {
     tv <- .make_toy_validation("eP", TRUE, TRUE, TRUE, TRUE, FALSE)
     rm <- looplook:::.chromatin_reclassify(tv$validation)
-    expect_equal(rm$new_type[1], "dual")
-    expect_true(rm$changed[1])
+    expect_equal(rm$new_type[1], "P")  # H3K4me3+ defaults to P without bigWig
 })
 
 test_that("eP + H3K4me3+ only (promoter_like) → P", {

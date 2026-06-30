@@ -3006,7 +3006,13 @@ refine_loop_anchors_by_expression <- function(
 #' @details
 #' \strong{Reclassification rules (minimum input: H3K4me1 + H3K4me3):}
 #' \itemize{
-#'   \item P + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-function).
+#'   \item Enhancer BED overlap (highest priority): overlapped anchors become
+#'         \code{"E"} (H3K4me3 absent) or \code{"dual"} (H3K4me3 present).
+#'   \item P + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-function) or
+#'         \code{"P"} (when H3K4me1 is likely a promoter shoulder; this is
+#'         resolved by bigWig ratio >= 3 when \code{chromatin_bw} is provided).
+#'   \item eP/eG + gold_standard or high_confidence + active/primed enhancer
+#'         chromatin -> \code{"E"} (enhancer identity confirmed).
 #'   \item P + H3K4me1(+) and H3K4me3(-) \emph{and} (H3K27ac(+) or ATAC(+))
 #'         -> \code{"E"} (conservative: requires active-mark confirmation beyond
 #'         H3K4me1 alone).
@@ -3104,6 +3110,32 @@ refine_loop_anchors_by_expression <- function(
 #'   \code{E = "#E69F00"} (orange), \code{dual = "#CC0000"} (red),
 #'   \code{P = "#0072B2"} (blue), \code{eP = "#009E73"} (bluish-green),
 #'   \code{G = "#CC79A7"} (reddish-purple), \code{eG = "#56B4E9"} (sky blue).
+#' @param chromatin_bw Named list of bigWig file paths, or \code{NULL}.
+#'   When provided, H3K4me1/H3K4me3 signal ratios are computed for
+#'   dual-positive anchors to distinguish true dual-function elements
+#'   (ratio >= 3) from promoter-proximal H3K4me1 shoulders (ratio < 3,
+#'   reclassified to P).  Requires the \pkg{rtracklayer} package.
+#'   The list must include named elements \code{"H3K4me1"} and
+#'   \code{"H3K4me3"}.  Default: \code{NULL} (BED-only mode — all
+#'   H3K4me3-positive anchors are classified as P).
+#'   \strong{Strongly recommended} when ChIP-seq data are available:
+#'   bigWig signals provide the quantitative H3K4me1/H3K4me3 ratio needed
+#'   to distinguish true dual-function elements from promoter-proximal
+#'   H3K4me1 shoulders.  Use the companion script
+#'   \code{inst/scripts/diagnose_h3k4me_ratio.R} to explore the ratio
+#'   distribution in your data and choose an appropriate threshold.
+#' @param bw_ratio_threshold Numeric. Minimum H3K4me1/H3K4me3 ratio to
+#'   classify a dual-positive anchor as true \code{"dual"}.  Anchors
+#'   below this threshold are reclassified as \code{"P"} (promoter
+#'   shoulder).  Default: \code{3} (H3K4me1 signal must be at least
+#'   3× H3K4me3 to override promoter identity).  Only used when
+#'   \code{chromatin_bw} is provided.
+#' @param enhancer_bed Character or \code{NULL}. Path to a BED file of
+#'   known enhancer regions (e.g., FANTOM5, ENCODE cCREs).  Anchors
+#'   overlapping these regions receive high-confidence enhancer
+#'   classification: \code{"E"} when H3K4me3 is absent, \code{"dual"}
+#'   when H3K4me3 is also present.  This curated evidence takes priority
+#'   over chromatin-mark-derived confidence levels.  Default: \code{NULL}.
 #' @param candidate_types Character vector or \code{NULL}. Anchor types to
 #'   validate and reclassify. \code{NULL} (default): auto-selects
 #'   \code{c("eP","eG")} for refined input, \code{c("P","G","E")} for raw.
@@ -3181,11 +3213,33 @@ refine_loop_anchors_by_chromatin <- function(
     recompute_targets = TRUE,
     write_output = TRUE,
     quiet = FALSE,
-    sankey_colors = NULL
+    sankey_colors = NULL,
+    chromatin_bw = NULL,
+    bw_ratio_threshold = 3,
+    enhancer_bed = NULL
 ) {
     species <- match.arg(species, c("hg38", "hg19", "mm10", "mm9"))
     if (!grepl("_Chromatin$", project_name)) project_name <- paste0(project_name, "_Chromatin")
     log_message <- function(...) { if (!quiet) message(...) }
+
+    # Validate bw_ratio_threshold
+    if (!is.numeric(bw_ratio_threshold) || length(bw_ratio_threshold) != 1L ||
+        is.na(bw_ratio_threshold) || bw_ratio_threshold <= 0)
+        stop("`bw_ratio_threshold` must be a single positive number (e.g. 3)", call. = FALSE)
+
+    # Validate chromatin_bw — optional named list of bigWig paths
+    if (!is.null(chromatin_bw)) {
+        if (!is.list(chromatin_bw) || is.null(names(chromatin_bw)))
+            stop("`chromatin_bw` must be a named list of bigWig file paths (e.g. list(H3K4me1='path.bw', H3K4me3='path.bw'))", call. = FALSE)
+        if (!all(c("H3K4me1", "H3K4me3") %in% names(chromatin_bw)))
+            stop("`chromatin_bw` must include 'H3K4me1' and 'H3K4me3'", call. = FALSE)
+        for (nm in names(chromatin_bw)) {
+            if (!file.exists(chromatin_bw[[nm]]))
+                stop("bigWig file not found for '", nm, "': ", chromatin_bw[[nm]], call. = FALSE)
+        }
+        if (!requireNamespace("rtracklayer", quietly = TRUE))
+            warning("Package 'rtracklayer' is required for bigWig processing; falling back to BED-only mode.", call. = FALSE)
+    }
 
     log_message(">>> [Chromatin Refinement] Project: ", project_name)
     if (length(chromatin_beds) == 0) {
@@ -3232,9 +3286,46 @@ refine_loop_anchors_by_chromatin <- function(
         epeG_anchors, mark_matrix, provided_marks, known_marks
     )
 
+    # --- 2b. Compute bigWig ratio for dual-positive anchors (optional) ---
+    bw_ratio <- NULL
+    if (!is.null(chromatin_bw) && requireNamespace("rtracklayer", quietly = TRUE)) {
+        log_message(">>> Computing H3K4me1 / H3K4me3 ratio from bigWig ...")
+        bw_ratio <- .compute_bw_ratio(
+            .with_known_upstream_noise_suppressed(
+                GenomicRanges::makeGRangesFromDataFrame(epeG_anchors, keep.extra.columns = TRUE)
+            ),
+            mark_matrix,
+            chromatin_bw[["H3K4me1"]],
+            chromatin_bw[["H3K4me3"]]
+        )
+        log_message(sprintf("    Ratio available for %d dual-positive anchors", length(bw_ratio)))
+    }
+
+    # --- 2c. External enhancer BED (optional) ---
+    enhancer_anchors <- character(0)
+    if (!is.null(enhancer_bed)) {
+        if (!file.exists(enhancer_bed))
+            stop("enhancer_bed file not found: ", enhancer_bed, call. = FALSE)
+        log_message(">>> Overlapping with external enhancer BED: ", basename(enhancer_bed))
+        enh_gr <- read_simple_bed(enhancer_bed, quiet = quiet)
+        enh_gr <- .harmonize_seqlevels(enh_gr,
+            .with_known_upstream_noise_suppressed(
+                GenomicRanges::makeGRangesFromDataFrame(epeG_anchors, keep.extra.columns = TRUE)
+            ), "enhancer BED")
+        gh <- GenomicRanges::findOverlaps(
+            .with_known_upstream_noise_suppressed(
+                GenomicRanges::makeGRangesFromDataFrame(epeG_anchors, keep.extra.columns = TRUE)
+            ), enh_gr, maxgap = anchor_gap)
+        enhancer_anchors <- epeG_anchors$anchor_id[unique(S4Vectors::queryHits(gh))]
+        log_message(sprintf("    %d / %d anchors overlap known enhancers",
+            length(enhancer_anchors), nrow(epeG_anchors)))
+    }
+
     # --- 3. Reclassify anchors based on chromatin evidence ---
     log_message(">>> Reclassifying anchors by chromatin evidence...")
-    reclass_map <- .chromatin_reclassify(validation)
+    reclass_map <- .chromatin_reclassify(validation, bw_ratio = bw_ratio,
+        enhancer_anchors = enhancer_anchors,
+        bw_ratio_threshold = bw_ratio_threshold)
     log_message(sprintf("    Reclassified %d / %d anchors", sum(reclass_map$changed), nrow(reclass_map)))
 
     # --- 4. Apply reclassification to loop_annotation ---
@@ -3398,7 +3489,9 @@ refine_loop_anchors_by_chromatin <- function(
 #' Internal: Build reclassification map from chromatin validation
 #' @keywords internal
 #' @noRd
-.chromatin_reclassify <- function(validation) {
+.chromatin_reclassify <- function(validation, bw_ratio = NULL,
+                                   enhancer_anchors = character(0),
+                                   bw_ratio_threshold = 3) {
     # Build booleans from mark columns (vectorised).
     # isTRUE(x) becomes !is.na(x) & x; isTRUE(!is.na(x) && !x) becomes !is.na(x) & !x.
     out <- data.frame(
@@ -3423,6 +3516,23 @@ refine_loop_anchors_by_chromatin <- function(
             is_promoter_like = grepl("promoter_like", validation$evidence, fixed = TRUE),
             conf_chr = as.character(validation$confidence),
 
+            # --- bigWig dual resolution ---
+            # Dual-positive (H3K4me1+ H3K4me3+) without quantitative evidence
+            # defaults to P because H3K4me3 is the defining promoter mark.
+            # With bigWig: ratio >= 3 (H3K4me1 dominates) → true dual;
+            # ratio < 3 → H3K4me3 promoter shoulder → P.
+            is_true_dual = if (!is.null(bw_ratio)) {
+                ratio <- bw_ratio[as.character(anchor_id)]
+                !is.na(ratio) & ratio >= bw_ratio_threshold
+            } else {
+                FALSE  # never dual without quantitative evidence
+            },
+
+            # External enhancer BED overlap — curated knowledge, high confidence
+            is_enhancer_bed = !is.null(enhancer_anchors) &&
+                length(enhancer_anchors) > 0 &&
+                as.character(anchor_id) %in% enhancer_anchors,
+
             # --- chromatin_state inference (first match wins) ---
             chromatin_state = dplyr::case_when(
                 h3k27me3_p & (h3k4me1_p | h3k27ac_p | h3k4me3_p) ~ "conflicting_marks",
@@ -3439,10 +3549,17 @@ refine_loop_anchors_by_chromatin <- function(
 
             # --- anchor-type reclassification (first match wins) ---
             new_type = dplyr::case_when(
-                old_type == "P" & h3k4me1_p & h3k4me3_p ~ "dual",
+                # Enhancer BED — high-confidence curated knowledge
+                is_enhancer_bed & h3k4me3_p ~ "dual",
+                is_enhancer_bed & h3k4me3_n ~ "E",
+                # Dual-positive with bigWig resolution: true dual (ratio >= 3) or P
+                old_type == "P" & h3k4me1_p & h3k4me3_p & is_true_dual ~ "dual",
+                old_type == "P" & h3k4me1_p & h3k4me3_p ~ "P",
                 old_type == "P" & h3k4me1_p & h3k4me3_n &
                     (h3k27ac_p | atac_p) ~ "E",
-                old_type %in% c("eP","eG") & chromatin_state == "dual_like" ~ "dual",
+                old_type %in% c("eP","eG") & chromatin_state == "dual_like" & is_true_dual ~ "dual",
+                old_type %in% c("eP","eG") & chromatin_state == "dual_like" ~
+                    dplyr::if_else(old_type == "eP", "P", "G"),
                 old_type == "eP" &
                     conf_chr %in% c("gold_standard","high_confidence") &
                     chromatin_state %in% c("active_enhancer_like","primed_enhancer_like") ~ "E",
@@ -3453,9 +3570,11 @@ refine_loop_anchors_by_chromatin <- function(
                     (chromatin_state == "promoter_like" | is_promoter_like) ~ "P",
                 old_type == "eG" &
                     (chromatin_state == "promoter_like" | is_promoter_like) ~ "G",
-                old_type == "E" & h3k4me1_p & h3k4me3_p ~ "dual",
+                old_type == "E" & h3k4me1_p & h3k4me3_p & is_true_dual ~ "dual",
+                old_type == "E" & h3k4me1_p & h3k4me3_p ~ "P",
                 old_type == "E" & h3k4me3_p & h3k4me1_n ~ "P",
-                old_type == "G" & h3k4me1_p & h3k4me3_p ~ "dual",
+                old_type == "G" & h3k4me1_p & h3k4me3_p & is_true_dual ~ "dual",
+                old_type == "G" & h3k4me1_p & h3k4me3_p ~ "P",
                 old_type == "G" & h3k4me3_p & h3k4me1_n ~ "P",
                 old_type == "G" & h3k4me1_p & h3k4me3_n &
                     (h3k27ac_p | atac_p) ~ "E",
@@ -3466,7 +3585,7 @@ refine_loop_anchors_by_chromatin <- function(
         ) %>%
         dplyr::select(-h3k4me1_p, -h3k4me3_p, -h3k4me3_n, -h3k4me1_n,
                       -h3k27ac_p, -h3k27me3_p, -atac_p,
-                      -is_promoter_like, -conf_chr)
+                      -is_promoter_like, -conf_chr, -is_true_dual, -is_enhancer_bed)
     out
 }
 
@@ -5055,6 +5174,125 @@ format_annotation_columns <- function(df) {
 #' temp_env <- new.env()
 #' load(rdata_path, envir = temp_env)
 #' raw_annotation <- temp_env[[ls(temp_env)[1]]]
+#'
+#' # Create dummy chromatin BED files for demonstration
+#' bed_dir <- tempdir()
+#' writeLines("chr6\t10410000\t10413000", file.path(bed_dir, "H3K4me1.bed"))
+#' writeLines("chr6\t10411000\t10414000", file.path(bed_dir, "H3K27ac.bed"))
+#'
+#' # Run validation (using raw annotation; pass refined for eP/eG only)
+#' result <- validate_epeG_by_chromatin(
+#'     annotation_res = raw_annotation,
+#'     chromatin_beds = list(
+#'         H3K4me1 = file.path(bed_dir, "H3K4me1.bed"),
+#'         H3K27ac = file.path(bed_dir, "H3K27ac.bed")
+#'     ),
+#'     quiet = TRUE
+#' )
+#' table(result$confidence)
+#'
+#' Internal: Compute H3K4me1 / H3K4me3 Signal Ratio from bigWig
+#'
+#' Extracts mean bigWig signal per anchor and computes the H3K4me1/H3K4me3
+#' ratio.  Used by \code{\link{refine_loop_anchors_by_chromatin}} to
+#' distinguish true dual-function elements (ratio >= 3) from promoter-proximal
+#' H3K4me1 shoulders (ratio < 3).  Only computes for anchors where BOTH
+#' marks are BED-positive.
+#'
+#' @param gr_anchors A GRanges of candidate anchors with \code{anchor_id}.
+#' @param mark_matrix Data frame with logical columns H3K4me1, H3K4me3.
+#' @param bw_me1 Path to H3K4me1 bigWig file.
+#' @param bw_me3 Path to H3K4me3 bigWig file.
+#' @return Named numeric vector of H3K4me1/H3K4me3 ratios, keyed by anchor_id.
+#' @keywords internal
+#' @noRd
+.compute_bw_ratio <- function(gr_anchors, mark_matrix, bw_me1, bw_me3) {
+    if (!requireNamespace("rtracklayer", quietly = TRUE))
+        stop("Package 'rtracklayer' is required to read bigWig files. Install with BiocManager::install('rtracklayer').")
+    if (!file.exists(bw_me1)) stop("bigWig file not found: ", bw_me1)
+    if (!file.exists(bw_me3)) stop("bigWig file not found: ", bw_me3)
+
+    dual_idx <- which(isTRUE(mark_matrix$H3K4me1) & isTRUE(mark_matrix$H3K4me3))
+    if (length(dual_idx) == 0) return(setNames(numeric(0), character(0)))
+
+    gr_dual <- gr_anchors[dual_idx]
+
+    sig1 <- tryCatch(rtracklayer::import.bw(bw_me1, which = gr_dual),
+                     error = function(e) stop("Failed to read ", bw_me1, ": ", e$message))
+    sig3 <- tryCatch(rtracklayer::import.bw(bw_me3, which = gr_dual),
+                     error = function(e) stop("Failed to read ", bw_me3, ": ", e$message))
+
+    # Mean signal per anchor (NA where no overlap)
+    v1 <- rep(NA_real_, length(gr_dual))
+    v3 <- rep(NA_real_, length(gr_dual))
+    h1 <- GenomicRanges::findOverlaps(gr_dual, sig1)
+    h3 <- GenomicRanges::findOverlaps(gr_dual, sig3)
+    if (length(h1) > 0) v1[unique(S4Vectors::queryHits(h1))] <-
+        tapply(sig1$score[S4Vectors::subjectHits(h1)], S4Vectors::queryHits(h1), mean)
+    if (length(h3) > 0) v3[unique(S4Vectors::queryHits(h3))] <-
+        tapply(sig3$score[S4Vectors::subjectHits(h3)], S4Vectors::queryHits(h3), mean)
+
+    ratio <- v1 / (v3 + 1e-6)
+    ratio[is.na(ratio)] <- 0  # no signal = no enhancer evidence
+    setNames(ratio, gr_dual$anchor_id)
+}
+
+#' @title Orthogonal validation of eP/eG reclassification by chromatin marks
+#'
+#' @description
+#' Validates the expression-aware eP/eG reclassification produced by
+#' \code{\link{refine_loop_anchors_by_expression}}, or the raw P/G/E
+#' classification from \code{\link{annotate_peaks_and_loops}}, against
+#' user-supplied chromatin mark BED files.
+#'
+#' @param annotation_res List. The raw foundational output object returned by
+#'   \code{\link{annotate_peaks_and_loops}} or the refined output from
+#'   \code{\link{refine_loop_anchors_by_expression}}.
+#' @param chromatin_beds Named list of BED file paths. Accepts up to five
+#'   canonical histone marks: \code{H3K4me1}, \code{H3K27ac}, \code{ATAC},
+#'   \code{H3K27me3}, and \code{H3K4me3}. Unknown names are dropped with a
+#'   warning; unmatched case is resolved to the canonical names. An empty
+#'   list classifies every anchor as \code{"uncertain"}.
+#' @param anchor_gap Integer. Gap tolerance for mark overlap.  Default
+#'   \code{200}.
+#' @param anchor_min_overlap Integer. Minimum overlap for mark overlap.
+#'   Default \code{100}.
+#' @param candidate_types Character vector or \code{NULL}. Anchor types to
+#'   validate. \code{NULL} (default): \code{c("eP","eG")} for refined input,
+#'   \code{c("P","G","E")} for raw annotation.
+#' @param species Character. Genome assembly. \code{"hg38"} (default),
+#'   \code{"hg19"}, \code{"mm10"}, or \code{"mm9"}.
+#' @param quiet Logical. Suppress messages. Default: \code{FALSE}.
+#'
+#' @return A data frame with columns:
+#' \describe{
+#'   \item{anchor_id, chr, start, end, anchor_type, anchor_gene, cluster_id}{Anchor identifiers.}
+#'   \item{H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3}{Logical or \code{NA}. \code{TRUE} = overlap, \code{FALSE} = tested but absent, \code{NA} = not tested.}
+#'   \item{confidence}{Factor: \code{gold_standard} > \code{high_confidence} > \code{supported} > \code{weak} > \code{uncertain}.}
+#'   \item{evidence}{Human-readable string of the constituting marks (e.g. \code{"H3K4me1+; H3K27ac+; H3K4me3-; H3K27me3-"}). Anchors with tested-positive H3K4me3 at \code{supported} confidence are annotated with a \code{"promoter_like"} tag.}
+#' }
+#'
+#' @details
+#' Confidence levels follow ENCODE active-enhancer criteria.  Each
+#' anchor is classified into the highest applicable level:
+#' \describe{
+#'   \item{gold_standard}{All 5 marks tested: H3K4me1+, H3K27ac+, ATAC+, H3K27me3-, H3K4me3-.}
+#'   \item{high_confidence}{H3K4me1+ and (H3K27ac+ or ATAC+); H3K4me3 must be absent when tested.}
+#'   \item{supported}{Any of H3K4me1, H3K27ac, or ATAC positive. Anchors with H3K4me3+
+#'     (regardless of H3K27me3 status) receive a \code{"promoter_like"} evidence tag.}
+#'   \item{weak}{Tested negative markers (H3K27me3-, H3K4me3-) present but no active marks.}
+#'   \item{uncertain}{Marks tested but none identified; or no marks tested at all.}
+#' }
+#' Marks not provided are recorded as \code{NA} and never treated as negative evidence.
+#' Case-insensitive name matching allows flexible input (e.g., \code{h3k4me1}
+#' normalised to \code{H3K4me1}).
+#'
+#' @export
+#' @examples
+#' rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
+#' tmp <- new.env()
+#' load(rdata_path, envir = tmp)
+#' raw_annotation <- tmp[[ls(tmp)[1]]]
 #'
 #' # Create dummy chromatin BED files for demonstration
 #' bed_dir <- tempdir()
