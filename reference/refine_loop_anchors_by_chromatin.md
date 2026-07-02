@@ -319,6 +319,8 @@ res_chromatin <- refine_loop_anchors_by_chromatin(
     write_output = FALSE,
     quiet = TRUE
 )
+#> Chromatin Sankey skipped: install 'networkD3' and 'htmlwidgets' packages.
+#> Chromatin MarkHeatmap skipped: install 'ComplexHeatmap' and 'circlize' packages.
 table(res_chromatin$loop_annotation$loop_type)
 #> 
 #> E-E E-P G-G G-P P-P 
