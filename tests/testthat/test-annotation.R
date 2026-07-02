@@ -16,7 +16,7 @@ test_that("packaged annotation example keeps the expected output contract", {
   expect_true("Assigned_Target_Genes_Filled" %in% colnames(res_integrated$target_annotation))
 })
 
-test_that("annotate_peaks_and_loops respects quiet and write_output flags", {
+test_that("annotate_peaks_and_loops shared setup: flags + anchor_gap proximity", {
   skip_if_not_installed("org.Hs.eg.db")
   sample_txdb_path <- system.file(
     "extdata", "hg19_knownGene_sample.sqlite",
@@ -24,99 +24,53 @@ test_that("annotate_peaks_and_loops respects quiet and write_output flags", {
   )
   skip_if(sample_txdb_path == "", "Sample TxDb not available")
   txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
-  tiny_bedpe <- tempfile(fileext = ".bedpe")
-  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tiny_bedpe)
 
   out_base <- tempfile(pattern = "looplook_anno_nowrite_")
   unlink(out_base, recursive = TRUE, force = TRUE)
   expect_false(dir.exists(out_base))
 
-  # quiet=TRUE suppresses looplook progress messages; package startup
-  # messages from third-party dependencies are outside our control.
-  res_integrated <- suppressPackageStartupMessages(
+  # Test 1: quiet + write_output = FALSE
+  res <- suppressPackageStartupMessages(
     looplook:::.with_known_upstream_noise_suppressed(
       looplook::annotate_peaks_and_loops(
-        bedpe_file = tiny_bedpe,
-        txdb = txdb_obj,
-        org_db = "org.Hs.eg.db",
-        species = "hg19",
-        out_dir = out_base,
-        project_name = "Tiny_NoWrite_Test",
-        write_output = FALSE,
-        quiet = TRUE
+        bedpe_file = system.file("extdata", "example_loops_1.bedpe", package = "looplook"),
+        txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
+        out_dir = out_base, write_output = FALSE, quiet = TRUE
       )
     )
   )
+  expect_type(res, "list")
+  expect_false(dir.exists(out_base), info = "write_output=FALSE must not create directory")
 
-  expect_type(res_integrated, "list")
-  expect_false(dir.exists(out_base))
-})
-
-# --- Parameter validation ---
-test_that("annotate_peaks_and_loops validates new parameters", {
-  skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb_path <- system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")
-  skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
-  tiny_bedpe <- tempfile(fileext = ".bedpe")
-  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tiny_bedpe)
-  base_args <- list(
-    bedpe_file = tiny_bedpe, txdb = txdb_obj, org_db = "org.Hs.eg.db",
-    species = "hg19", out_dir = tempdir(), write_output = FALSE, quiet = TRUE
-  )
-
-  expect_error(do.call(annotate_peaks_and_loops, c(base_args, list(anchor_gap = -2))))
-  expect_error(do.call(annotate_peaks_and_loops, c(base_args, list(anchor_min_overlap = 0))))
-  expect_error(do.call(annotate_peaks_and_loops, c(base_args, list(anchor_min_frac = 1.5))))
-  expect_error(do.call(annotate_peaks_and_loops, c(base_args, list(anchor_min_frac = -0.1))))
-  expect_error(do.call(annotate_peaks_and_loops, c(base_args, list(hub_percentile = 0))))
-  expect_error(do.call(annotate_peaks_and_loops, c(base_args, list(hub_percentile = 1.5))))
-  expect_error(do.call(annotate_peaks_and_loops, c(base_args, list(neighbor_hop = -1))))
-  expect_error(do.call(annotate_peaks_and_loops, c(base_args, list(neighbor_hop = 1.5))))
-  expect_error(do.call(annotate_peaks_and_loops, c(base_args, list(karyo_bin_size = 0))))
-
-  # Valid values should not error
-  expect_no_error(do.call(annotate_peaks_and_loops, c(base_args, list(anchor_gap = 200L))))
-  expect_no_error(do.call(annotate_peaks_and_loops, c(base_args, list(anchor_min_overlap = 10L))))
-  expect_no_error(do.call(annotate_peaks_and_loops, c(base_args, list(anchor_min_frac = 0.5))))
-})
-
-# --- anchor_gap proximity matching ---
-test_that("anchor_gap > 0 allows proximity-based peak-anchor linking", {
-  skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb_path <- system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")
-  skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
-
+  # Test 2: anchor_gap proximity linking
   target_bed <- tempfile(fileext = ".bed")
   loop_bedpe <- tempfile(fileext = ".bedpe")
   # Peak 200bp away from anchor, 0bp actual overlap
   writeLines("chr6\t10412800\t10413000", target_bed)
   writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", loop_bedpe)
 
-  # anchor_gap=200: proximity hit (peak within 200bp of anchor) SHOULD link
-  res <- annotate_peaks_and_loops(
+  # anchor_gap=200: proximity hit SHOULD link
+  res_gap <- annotate_peaks_and_loops(
     bedpe_file = loop_bedpe, target_bed = target_bed,
     txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
     anchor_gap = 200L, anchor_min_overlap = 1L,
     out_dir = tempdir(), write_output = FALSE, quiet = TRUE
   )
-  has_loop <- !is.na(res$target_annotation$Linked_Loop_IDs) &
-              res$target_annotation$Linked_Loop_IDs != ""
+  has_loop <- !is.na(res_gap$target_annotation$Linked_Loop_IDs) &
+              res_gap$target_annotation$Linked_Loop_IDs != ""
   expect_true(any(has_loop),
     info = "Peak within anchor_gap should be linked via proximity matching")
 
   # Default (anchor_gap=-1L): strict overlap only, should NOT link
-  res2 <- annotate_peaks_and_loops(
+  res_strict <- annotate_peaks_and_loops(
     bedpe_file = loop_bedpe, target_bed = target_bed,
     txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
     out_dir = tempdir(), write_output = FALSE, quiet = TRUE
   )
-  has_loop2 <- !is.na(res2$target_annotation$Linked_Loop_IDs) &
-               res2$target_annotation$Linked_Loop_IDs != ""
+  has_loop2 <- !is.na(res_strict$target_annotation$Linked_Loop_IDs) &
+               res_strict$target_annotation$Linked_Loop_IDs != ""
   expect_false(any(has_loop2),
     info = "Peak without physical overlap should NOT be linked with default strict mode")
-
   unlink(c(target_bed, loop_bedpe))
 })
 

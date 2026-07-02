@@ -32,8 +32,8 @@ list classifies every anchor as \code{"uncertain"}.}
 Default \code{100}.}
 
 \item{candidate_types}{Character vector or \code{NULL}. Anchor types to
-validate. \code{NULL} (default): \code{c("eP","eG")} for refined input,
-\code{c("P","G","E")} for raw annotation.}
+validate. \code{NULL} (default): uses all five types
+\code{c("P","G","E","eP","eG")} regardless of input source.}
 
 \item{species}{Character. Genome assembly. \code{"hg38"} (default),
 \code{"hg19"}, \code{"mm10"}, or \code{"mm9"}.}

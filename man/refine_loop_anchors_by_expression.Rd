@@ -47,7 +47,9 @@ sequencing depths. The effective expression cutoff is reported in the log.}
 
 \item{unit_type}{Character. Expression unit for plot labels (e.g., \code{"TPM"}). Default: \code{"TPM"}.}
 
-\item{species}{Character. Genome assembly. One of \code{"hg38"}, \code{"hg19"}, \code{"mm10"}, \code{"mm9"}. Default: \code{"hg38"}. Extensible to other species via \code{species_txdb_pkg()} and related helpers.}
+\item{species}{Character. Genome assembly string. Default: \code{"hg38"}.
+For non-human/non-mouse species, pass \code{annotation_res} produced by
+\code{\link{annotate_peaks_and_loops}} with custom \code{txdb}/\code{org_db}.}
 
 \item{out_dir}{Character. Output directory for the Excel results file. Default: \code{"./results/filtered"}.}
 
@@ -57,7 +59,12 @@ sequencing depths. The effective expression cutoff is reported in the log.}
 
 \item{karyo_bin_size}{Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default: \code{1e5} (100 kb). Typical range: 5e4-5e5 depending on genome size and resolution.}
 
-\item{reclassify_by_expression}{Logical. If \code{TRUE} (default), silent promoters (P) and gene bodies (G) are reclassified as eP/eG.}
+\item{reclassify_by_expression}{Logical. If \code{TRUE} (default), silent
+promoters (P) and gene bodies (G) are reclassified as eP/eG. If
+\code{FALSE}, anchor \emph{types} are left unchanged, but anchor genes
+that fall outside the active whitelist are still stripped to \code{NA}
+(only the identity label is preserved, not the gene assignment). To
+retain genes unchanged, omit the \code{expr_matrix_file} argument.}
 
 \item{hub_percentile}{Numeric (0-1). Node-degree quantile for hub detection. Default: \code{0.95}.}
 
@@ -74,22 +81,28 @@ skip this parameter to avoid redundant BED file reads.}
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.}
 }
 \value{
-An invisible named list:
+A named list:
 \itemize{
 \item \code{loop_annotation} -- Full refined 3D network with updated \code{loop_type}
 (e.g., eP-P) and two target gene columns:
 \itemize{
 \item \code{Active_Target_Genes}: Expression-filtered active-only targets (no fallback).
-\item \code{Putative_Target_Genes}: Display column; may include linear nearest-gene
-fallback when \code{Active_Target_Genes} is empty.
+\item \code{Putative_Target_Genes}: Display column; may include
+\emph{loop-anchor} fallback when \code{Active_Target_Genes} is
+empty (uses the promoter/gene-body gene of any looped anchor, not
+the linear nearest-gene fallback). The linear nearest-gene
+fallback applies only to the \code{Regulated_promoter_genes_Filled}
+and \code{Assigned_Target_Genes_Filled} columns of
+\code{target_annotation} (see \code{annotate_peaks_and_loops}).
 }
 Refinement status columns:
 \code{Has_Active_Target}, \code{Retained_In_Functional_Network}, and
 \code{Refinement_Action} (\code{"retained_active_target"},
 \code{"reclassified_silent_anchor"}, \code{"expression_filtered_no_active_target"},
 or \code{"structural_only_no_active_target"}).
-All structural loops are preserved; filter on \code{Retained_In_Functional_Network}
-for the high-confidence active subset.
+All structural loop rows are preserved (anchor types/genes are
+reclassified in place for silent elements); filter on
+\code{Retained_In_Functional_Network} for the high-confidence active subset.
 \item \code{anchor_loci_annotation} -- Filtered non-redundant anchor-locus annotations with expressed targets.
 \item \code{anchor_annotation} -- Backward-compatible alias of \code{anchor_loci_annotation}.
 \item \code{promoter_centric_stats} -- Gene-level connectivity statistics.
@@ -155,7 +168,9 @@ sheet with only loops where \code{Retained_In_Functional_Network == TRUE}.
 Integrates quantitative RNA-seq data (e.g., TPM/FPKM) with 3D structural data
 to reclassify regulatory elements and annotate functional status, deriving a
 functionally interpretable regulatory network from physical chromatin contacts.
-All structural loops are preserved; refinement status columns indicate which
+All structural loop rows are preserved; anchor type and gene assignments
+are reclassified in place (silent promoters have their gene set to NA and
+type downgraded to eP/eG). Refinement status columns indicate which
 loops belong to the high-confidence active subset.
 }
 \details{
@@ -163,7 +178,7 @@ loops belong to the high-confidence active subset.
 \itemize{
 \item \strong{Target Filtration:} Parses merged gene assignments (e.g., \code{"GeneA;GeneB"}), evaluates individual genes against a defined expression threshold, and retains only transcriptionally active targets.
 \item \strong{Biological Reclassification:} Reclassifies physically annotated promoters (\code{P}) and gene bodies (\code{G}) lacking active transcription as \emph{expression-filtered silent} regulatory elements (\code{eP}, \code{eG}). \strong{Important:} \code{eP}/\code{eG} labels indicate transcriptional silence at the reference gene -- they do \strong{not} constitute evidence of enhancer activity. Orthogonal chromatin data (ATAC-seq, H3K27ac, H3K4me1) are required for functional enhancer interpretation. The labels are retained for backward compatibility; interpret them as "inactive-P" / "inactive-G" rather than "enhancer-P" / "enhancer-G".
-\item \strong{Expression-Aware Connectivity Statistics:} Recomputes promoter-centric and distal-element connectivity after expression-aware anchor refinement, while preserving all structural loops in the refined loop annotation. This separates the complete physical contact map from the high-confidence active subset.
+\item \strong{Expression-Aware Connectivity Statistics:} Recomputes promoter-centric and distal-element connectivity after expression-aware anchor refinement, while preserving all structural loop rows in the refined loop annotation (anchor types and genes are reclassified in place for silent elements). This separates the complete physical contact map from the high-confidence active subset.
 \item \strong{External Target Refinement:} Filters auxiliary target mapping columns (e.g., \code{Assigned_Target_Genes_Filled}) based on expression criteria, ensuring that mapped 1D genomic features are exclusively linked to active genes.
 \item \strong{Target Provenance Preservation:} Recomputes \code{*_Filled}
 membership flags in \code{target_gene_links} after expression filtering,
@@ -174,14 +189,16 @@ such as \code{local_promoter_overlap}, \code{direct_opposite_promoter}, and
 }
 
 \strong{Design Philosophy:}
-This function does not discard structural loops based on expression state.
+This function does not discard structural loop rows based on expression state.
 Hi-C, HiChIP, and PLAC-seq capture 3D chromatin contacts; RNA-seq captures
 current transcriptional state. A silent promoter may reflect cell-state,
 time-point, or technical factors rather than absence of physical contact.
-All structural loops are retained with refinement status columns, and a
-high-confidence functional subset is provided via
-\code{Retained_In_Functional_Network} and the \emph{Functional Loop Annotation}
-Excel sheet.
+However, anchor gene assignments and types are reclassified in place:
+\code{anchor1_gene}/\code{anchor2_gene} may be set to \code{NA} and anchor
+types downgraded (e.g. \code{P -> eP}, \code{G -> eG}) for silent regulatory
+elements. All rows are retained; a high-confidence functional subset is
+provided via \code{Retained_In_Functional_Network} and the
+\emph{Functional Loop Annotation} Excel sheet.
 
 \strong{Interpretation of eP/eG labels:}
 \code{eP} and \code{eG} are \strong{expression-filtered silent states}, not

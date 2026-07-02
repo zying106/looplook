@@ -143,7 +143,10 @@
         loops$score <- as.numeric(loops$score)
         if (!is.null(min_score)) {
             loops <- loops %>% dplyr::filter(score >= min_score)
-            if (nrow(loops) == 0) stop("All loops filtered by min_score.")
+            if (nrow(loops) == 0) {
+                warning("All loops filtered by min_score; track will be empty.", call. = FALSE)
+                return(list(loops = loops[0,], has_score = FALSE))
+            }
         }
     }
 
@@ -335,9 +338,12 @@
 #' @param anchor_color Default anchor colour.
 #' @param score_to_alpha Map score to transparency.
 #' @param min_score Optional score floor.
-#' Internal: Add Interactive Tooltips and Dense Bezier Curves
 #' @return A named list of all data frames and plot parameters.
 #' @keywords internal
+#' @noRd
+NULL
+
+#' Internal: Add Interactive Tooltips and Dense Bezier Curves
 #'
 #' Enriches track data with hover tooltip columns and interpolates dense
 #' bezier points for smooth interactive loop paths.
@@ -345,7 +351,6 @@
 #' @param d Track data list from \code{\link{prepare_track_data}}.
 #' @return The input list with tooltip columns and \code{bez_dense} added.
 #' @keywords internal
-#' @noRd
 #' @noRd
 .add_track_tooltips <- function(d) {
     if (nrow(d$bez_df) > 0 && nrow(d$anchors) > 0) {

@@ -98,7 +98,8 @@
 #'   \code{chr1, start1, end1, chr2, start2, end2}.
 #' @param score_col Integer or \code{NULL}. Column index to use as interaction
 #'   score (e.g. PET count, -log10(p-value)). If \code{NULL} (default), column 8
-#'   is tried first, then column 7; if neither is numeric, scores default to 0.
+#'   is tried first, then column 7; a column must have >=50\% values parseable
+#'   as numeric to be used; if neither qualifies, scores default to 0.
 #'   Set explicitly when the score column position differs from the standard or
 #'   when auto-detection picks the wrong column. Note: downstream filtering
 #'   parameters such as \code{min_score} in
@@ -336,7 +337,18 @@ filter_chromatin_loops <- function(
     if (!is.null(min_score)) {
         if (!is.numeric(min_score) || length(min_score) != 1L || is.na(min_score))
             stop("`min_score` must be a single number or NULL", call. = FALSE)
-        keep <- S4Vectors::mcols(gi)$score >= min_score
+        # NA-guard: consolidated union-mode output can carry score = NA when
+        # every source had an NA score for a cluster. NA >= min_score is NA,
+        # which data.table / AtomicList indexing silently coerce to FALSE,
+        # dropping the cluster without diagnostic. Treat NA scores as
+        # "fails the floor" but make the drop explicit and counted.
+        scores <- S4Vectors::mcols(gi)$score
+        na_drop <- is.na(scores)
+        keep <- !na_drop & scores >= min_score
+        if (any(na_drop)) {
+            log_message("    Score filter: dropped ", sum(na_drop),
+                        " loop(s) with NA score (no numeric mean across sources).")
+        }
         gi <- gi[keep]
         log_message(">>> Score filter (>= ", min_score, "): retained ", length(gi), " loops")
         if (length(gi) == 0) return(gi)
@@ -479,7 +491,7 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #' The function supports three modes:
 #' \itemize{
 #'   \item \code{"consensus"}: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in >= min_consensus biological replicates.
-#'   \item \code{"intersect"}: Reference-based filtering. Retains loops in File 1 whose anchors overlap with loops in every other file within the specified \code{gap} tolerance. Coordinates and scores are inherited from File 1 without merging.
+#'   \item \code{"intersect"}: Reference-based filtering. Retains loops in File 1 whose anchors overlap with loops in every other file within the specified \code{gap} tolerance. Coordinates and scores are inherited from File 1 without merging. \strong{Important: Intersect mode is NOT symmetric.} The output depends on which file is listed first — loops are retained from File 1 only. Changing file order may produce different results.
 #'   \item \code{"union"}: Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.
 #' }
 #'
@@ -509,7 +521,7 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #' @param mode Character. Choose one of the following: "consensus", "intersect", "union". Merge strategy:
 #'   \itemize{
 #'     \item \code{"consensus"}: Graph-based clustering to find a consensus set supported by a majority of samples (default). Formerly "reproducible".
-#'     \item \code{"intersect"}: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files).
+#'     \item \code{"intersect"}: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files). The result is \strong{not} symmetric: the first input file serves as the reference, and changing file order changes results.
 #'     \item \code{"union"}: Merges all detected loops into a comprehensive map.
 #'   }
 #' @param min_consensus Integer. Minimum number of replicates a loop must appear in
@@ -560,7 +572,9 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #'   \describe{
 #'     \item{\code{score}}{Replicate-balanced consensus score.}
 #'     \item{\code{n_members}}{Number of raw loops merged into this entry
-#'       (1 for intersect mode where no coordinate merging occurs).}
+#'       (1 for intersect mode where no coordinate merging occurs). For
+#'       \code{"intersect"} mode, results are \strong{not symmetric} — changing file
+#'       order changes output.}
 #'     \item{\code{n_reps}}{Number of input files that support this entry.}
 #'     \item{\code{cluster_id}}{Connected-component cluster identifier.}
 #'   }
@@ -790,7 +804,7 @@ consolidate_chromatin_loops <- function(
 #' @noRd
 .consolidate_intersect <- function(gi_list, gap, n_reps, log_message) {
     log_message(">>> Intersect mode: Reference-based filtering (No Coordinate Merging)")
-    log_message("    Base: File 1. Criterion: Must overlap with ALL other files.")
+    log_message("    Base: File 1 (first input). Output coordinates and scores come exclusively from File 1.")
     current_gi <- gi_list[[1]]
     for (i in 2:n_reps) {
         if (length(current_gi) == 0) break
@@ -804,6 +818,12 @@ consolidate_chromatin_loops <- function(
     S4Vectors::mcols(current_gi)$n_reps <- n_reps
     S4Vectors::mcols(current_gi)$n_members <- 1L
     S4Vectors::mcols(current_gi)$cluster_id <- as.character(seq_along(current_gi))
+    # Erase per-source label so the schema matches cluster-mode output
+    # (dt_to_gi already drops `source` for consensus/union). The intersect
+    # output represents a multi-source consensus and must not carry a
+    # single-source label inherited from File 1.
+    if ("source" %in% colnames(S4Vectors::mcols(current_gi)))
+        S4Vectors::mcols(current_gi)$source <- NULL
     current_gi
 }
 
@@ -816,9 +836,21 @@ consolidate_chromatin_loops <- function(
 ) {
     log_message(">>> Clustering mode (Union/Consensus): Merging coordinates via Graph")
 
-    # Seqlevels consistency check across input files.
+    # Seqlevels consistency check and harmonization across input files.
     # chr1 vs 1, or mixed UCSC/Ensembl styles, cause silent false negatives
     # in the string-based chr matching inside cluster_loops_dt().
+    # Actively harmonize all files to the style of the first non-empty file.
+    ref_idx <- which(vapply(gi_list, function(x) length(x) > 0, logical(1)))[1]
+    if (!is.na(ref_idx)) {
+        ref_anchors <- InteractionSet::anchors(gi_list[[ref_idx]], "first")
+        for (i in seq_along(gi_list)) {
+            if (i == ref_idx || length(gi_list[[i]]) == 0) next
+            anchors_i <- InteractionSet::anchors(gi_list[[i]], "first")
+            .harmonize_seqlevels(anchors_i, ref_anchors, paste0("File ", i))
+        }
+    }
+
+    # Fallback: re-check after harmonization attempt
     sl_styles <- unique(vapply(gi_list, function(gi) {
         tryCatch(GenomeInfoDb::seqlevelsStyle(InteractionSet::anchors(gi, "first"))[1],
                  error = function(e) NA_character_)
@@ -829,7 +861,8 @@ consolidate_chromatin_loops <- function(
                 paste(sl_styles, collapse = ", "), ". ",
                 "Loop clustering uses string-based chromosome matching. ",
                 "Mismatched styles (e.g. 'chr1' vs '1') will produce ",
-                "false negatives. Harmonise your input files first.",
+                "false negatives. Automatic harmonization failed. ",
+                "Please harmonise your input files manually.",
                 call. = FALSE)
     }
 
@@ -852,7 +885,18 @@ consolidate_chromatin_loops <- function(
             }
         }
         log_message(">>> Consensus mode: Keeping clusters in >= ", min_consensus, " replicates")
-        reduced_dt <- reduced_dt[n_reps >= min_consensus]
+        # Defensive NA guard. reduce_clusters_dt() leaves n_reps = NA only if a
+        # cluster has zero supporting sources (pathological: every row was
+        # stripped upstream). With the new reduce_clusters_dt() this branch
+        # should not trigger, but we keep the guard so future regressions
+        # cannot silently drop clusters via NA-propagation in the comparison.
+        keep <- !is.na(reduced_dt$n_reps) & reduced_dt$n_reps >= min_consensus
+        n_dropped_nareps <- sum(!keep & is.na(reduced_dt$n_reps))
+        if (n_dropped_nareps > 0) {
+            log_message("    Dropped ", n_dropped_nareps,
+                        " cluster(s) with NA n_reps (no supporting source).")
+        }
+        reduced_dt <- reduced_dt[keep]
     } else {
         log_message(">>> Union mode: Keeping all clusters")
     }
@@ -923,7 +967,16 @@ consolidate_chromatin_loops <- function(
     region_of_interest, roi_mode, quiet, log_message
 ) {
     if (!is.null(min_score)) {
-        keep <- S4Vectors::mcols(result_gi)$score >= min_score
+        # NA-guard mirrors filter_chromatin_loops(): union-mode consolidated
+        # clusters can carry score = NA when all sources had NA per-row
+        # scores; NA >= min_score would silently drop them via NA -> FALSE.
+        scores <- S4Vectors::mcols(result_gi)$score
+        na_drop <- is.na(scores)
+        if (any(na_drop)) {
+            log_message("    Score filter: dropped ", sum(na_drop),
+                        " loop(s) with NA score (no numeric mean across sources).")
+        }
+        keep <- !na_drop & scores >= min_score
         result_gi <- result_gi[keep]
     }
     if (!is.null(blacklist_species) || !is.null(region_of_interest)) {
@@ -1018,10 +1071,21 @@ reduce_clusters_dt <- function(dt) {
         n_members = .N
     ), by = cluster]
 
-    cluster_scores <- dt[, .(
-        score = .mean_or_na(score)
-    ), by = .(cluster, source)][!is.na(score), .(
-        score = .mean_or_na(score),
+    # Per-source mean first (collapses each replicate's rows within a cluster).
+    src_means <- dt[, .(
+        src_mean = .mean_or_na(score)
+    ), by = .(cluster, source)]
+
+    # Replicate support counts EVERY source that contributed rows to the
+    # cluster, regardless of whether its score was NA. A row in the BEDPE
+    # already represents a called loop, so a replicate with NA score still
+    # "detected" the interaction and should count toward n_reps. The mean
+    # score, by contrast, drops NA per-source means (.mean_or_na strips NAs).
+    # Without this, a cluster whose every source has an NA score ends up with
+    # n_reps = NA after the all.x = TRUE merge, and is silently dropped by
+    # downstream `n_reps >= min_consensus` filters (NA >= k is NA -> FALSE).
+    cluster_scores <- src_means[, .(
+        score = .mean_or_na(src_mean),
         n_reps = .N
     ), by = cluster]
 
@@ -1062,10 +1126,21 @@ dt_to_gi <- function(dt) {
     gi <- .with_known_upstream_noise_suppressed(
         InteractionSet::GInteractions(gr1, gr2, mode = "strict")
     )
-    S4Vectors::mcols(gi)$cluster_id <- dt$cluster
+    # cluster_id stored as character so the metadata schema is identical
+    # across consolidation modes (.consolidate_intersect also emits
+    # as.character(seq_along(...))). Avoids silent integer-vs-character
+    # mismatch if a user combines gi objects from different modes.
+    S4Vectors::mcols(gi)$cluster_id <- as.character(dt$cluster)
     S4Vectors::mcols(gi)$n_members <- dt$n_members
     S4Vectors::mcols(gi)$score <- dt$score
     S4Vectors::mcols(gi)$n_reps <- dt$n_reps
+    # Erase the per-source label carried by bedpe_to_gi / .consolidate_read_files
+    # so the consolidated output has a consistent schema regardless of mode:
+    # cluster mode already drops it via dt_to_gi; intersect mode otherwise
+    # keeps the File-1 `source = 1L`, which is misleading because the
+    # output is a multi-source consensus, not a single-sample object.
+    if ("source" %in% colnames(S4Vectors::mcols(gi)))
+        S4Vectors::mcols(gi)$source <- NULL
     gi
 }
 
@@ -1424,11 +1499,10 @@ cluster_loops_dt <- function(dt, gap) {
 
     n_loops <- nrow(dt)
     if (n_loops > 50000) {
-        warning(
+        message(
             "Clustering ", n_loops, " loops with gap = ", gap, " bp. ",
             "Large datasets may require significant memory. ",
-            "Consider pre-filtering or reducing gap.",
-            call. = FALSE
+            "Consider pre-filtering or reducing gap."
         )
     }
 
@@ -1456,7 +1530,7 @@ if (getRversion() >= "2.15.1") {
     utils::globalVariables(c(
         "V1", "V2", "V3", "V4", "V5", "V6", "V7",
         "chr1", "start1", "end1", "chr2", "start2", "end2",
-        "idx", "i.idx", "cluster", "score", "source", "n_members", "n_reps",
+        "idx", "i.idx", "cluster", "score", "source", "n_members", "n_reps", "src_mean",
         "a1_l", "a1_r", "a2_l", "a2_r", ".N", ".I", ".SD", ".SDcols", "..coord_cols"
     ))
 }

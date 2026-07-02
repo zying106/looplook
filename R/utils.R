@@ -494,7 +494,7 @@ species_txdb_pkg <- function(species) {
         hg19 = "TxDb.Hsapiens.UCSC.hg19.knownGene",
         mm10 = "TxDb.Mmusculus.UCSC.mm10.knownGene",
         mm9  = "TxDb.Mmusculus.UCSC.mm9.knownGene",
-        stop("Species not supported: ", species)
+        NULL
     )
 }
 
@@ -510,8 +510,8 @@ species_orgdb_pkg <- function(species) {
         hg38 = "org.Hs.eg.db",
         hg19 = "org.Hs.eg.db",
         mm10 = "org.Mm.eg.db",
-        mm9 = "org.Mm.eg.db",
-        stop("Species not supported: ", species)
+        mm9  = "org.Mm.eg.db",
+        NULL
     )
 }
 
@@ -532,7 +532,7 @@ species_bsgenome_pkg <- function(species) {
     )
 }
 
-#' Internal: Resolve Gene Conflicts via Biotype Priority Then Expression
+#' Resolve Gene Conflicts via Biotype Priority Then Expression
 #'
 #' For each genomic range, identifies all promoter-overlapping genes,
 #' resolves conflicts using a two-stage strategy: (1) biotype priority
@@ -1228,6 +1228,27 @@ load_expression_matrix <- function(expr_matrix_file, sample_columns = NULL) {
             call. = FALSE
         )
     }
+
+    # Case-collision check: distinct gene IDs that collide after toupper()
+    # (e.g. MARCH1 vs march1, or MIR vs mir). toupper-based matching in
+    # clean_anchor() and resolve_gene_conflicts() cannot distinguish them.
+    upper_ids <- toupper(gene_ids[nzchar(gene_ids)])
+    collision_upper <- unique(upper_ids[duplicated(upper_ids)])
+    if (length(collision_upper) > 0) {
+        examples <- vapply(utils::head(collision_upper, 3), function(u) {
+            orig <- unique(gene_ids[nzchar(gene_ids) & toupper(gene_ids) == u])
+            paste(orig, collapse = " / ")
+        }, character(1))
+        warning(
+            "Expression matrix contains ", length(collision_upper),
+            " gene identifier(s) that collide after case-insensitive matching (toupper). ",
+            "Example(s): ", paste(examples, collapse = "; "), ". ",
+            "These distinct identifiers cannot be distinguished by toupper-based matching ",
+            "used in clean_anchor() and resolve_gene_conflicts(). ",
+            "Normalise gene identifier case before analysis.",
+            call. = FALSE
+        )
+    }
     sample_names <- colnames(d)[-1]
     if (any(is.na(sample_names)) || any(!nzchar(sample_names))) {
         stop("Expression matrix contains empty sample column names.")
@@ -1456,11 +1477,20 @@ draw_karyo_heatmap_internal <- function(gr_data, title_prefix, bin_size, sat_lev
         pp$leftmargin <- 0.08
         pp$rightmargin <- 0.08
         pp$data1height <- 100
-        kp <- .with_known_upstream_noise_suppressed(
-            suppressMessages(
-                karyoploteR::plotKaryotype(genome = plot_species, plot.type = 1, chromosomes = valid_chroms, plot.params = pp, main = NULL)
-            )
+        kp <- tryCatch(
+            .with_known_upstream_noise_suppressed(
+                suppressMessages(
+                    karyoploteR::plotKaryotype(genome = plot_species, plot.type = 1, chromosomes = valid_chroms, plot.params = pp, main = NULL)
+                )
+            ),
+            error = function(e) {
+                message("Karyotype plot skipped: genome '", plot_species,
+                        "' is not supported by karyoploteR. ",
+                        "Install karyoploteR data for this genome or skip with show_karyo=FALSE.")
+                return(NULL)
+            }
         )
+        if (is.null(kp)) return(invisible(NULL))
         karyoploteR::kpRect(kp, data = tiles, y0 = 0, y1 = 1, col = S4Vectors::mcols(tiles)$color, border = NA)
         main_title <- paste0("Loop Analysis: ", title_prefix, "\n(Genomic Load: Median ~", round(median_val / bin_size_mb, 1), " ", unit_label, "/MB)")
         graphics::mtext(main_title, side = 3, line = 1, outer = TRUE, cex = 1.2, font = 2)

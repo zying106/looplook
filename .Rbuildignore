@@ -1,5 +1,5 @@
 ^looplook\.Rproj$
-^\.Rproj\.user
+^\.Rproj\.user$
 ^LICENSE\.md$
 ^\.github$
 ^README\.Rmd$
@@ -30,4 +30,9 @@
 ^Library$
 ^looplook_algorithm.*\.(md|docx)$
 coverage
-^\.Rproj\.user$
+^\.git$
+^looplook\.Rcheck$
+^coverage_report\.html$
+\.DS_Store$
+^\.gitignore$
+^looplook\.html$

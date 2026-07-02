@@ -145,8 +145,8 @@ test_that("cluster_loops_dt detects overlap not containment", {
   expect_equal(length(unique(result$cluster)), 1L)
 })
 
-# --- reduce_clusters_dt: n_reps excludes NA-score sources ---
-test_that("reduce_clusters_dt excludes NA-score sources from n_reps", {
+# --- reduce_clusters_dt: n_reps counts every contributing source, even NA-score ones ---
+test_that("reduce_clusters_dt counts NA-score sources toward n_reps", {
   dt <- data.table::data.table(
     cluster = c(1L, 1L, 1L),
     chr1 = "chr1", start1 = c(100L, 110L, 120L), end1 = c(200L, 210L, 220L),
@@ -155,9 +155,45 @@ test_that("reduce_clusters_dt excludes NA-score sources from n_reps", {
     source = c(1L, 1L, 2L)
   )
   result <- looplook:::reduce_clusters_dt(dt)
-  # source 1: mean(5, NA→removed)=5; source 2: mean(3)=3
-  # n_reps should be 2 (both have valid scores)
+  # source 1 contributes rows to this cluster (one row has score=5, one row score=NA);
+  # source 2 contributes one row with score=3.
+  # Per-source means: source 1 -> mean(5) = 5 (NA stripped); source 2 -> mean(3) = 3.
+  # Replicate-balanced score = mean(5, 3) = 4.
+  # n_reps MUST count both sources (2), regardless of per-row NA scores, because
+  # the existence of a row in the BEDPE already means the replicate detected the loop.
   expect_equal(result$n_reps, 2L)
+  expect_equal(result$score, 4)
+})
+
+test_that("reduce_clusters_dt: cluster with all-NA scores still has integer n_reps (not NA)", {
+  dt <- data.table::data.table(
+    cluster = c(1L, 1L),
+    chr1 = "chr1", start1 = c(100L, 110L), end1 = c(200L, 210L),
+    chr2 = "chr1", start2 = c(1000L, 1010L), end2 = c(2000L, 2010L),
+    score = c(NA_real_, NA_real_),
+    source = c(1L, 2L)
+  )
+  result <- looplook:::reduce_clusters_dt(dt)
+  # n_reps must be 2 (both sources contributed rows), NOT NA.
+  # Previously this produced n_reps = NA and downstream consensus filters
+  # silently dropped the cluster via NA >= k -> NA -> FALSE.
+  expect_equal(result$n_reps, 2L)
+  expect_true(is.na(result$score))
+})
+
+# --- filter_chromatin_loops / .consolidate_post_filters: NA-score guard ---
+test_that("filter_chromatin_loops min_score drops NA-score loops explicitly (not via NA>=k)", {
+  dt <- data.table::data.table(
+    cluster = c(1L, 2L), chr1 = "chr1", start1 = c(100L, 200L), end1 = c(150L, 250L),
+    chr2 = "chr1", start2 = c(1000L, 2000L), end2 = c(1500L, 2500L),
+    score = c(NA_real_, 5), source = c(1L, 1L),
+    n_members = c(1L, 1L), n_reps = c(1L, 1L)
+  )
+  gi <- looplook:::dt_to_gi(dt)
+  res <- filter_chromatin_loops(gi, min_score = 4, quiet = TRUE)
+  # NA-score loop must be dropped, but explicitly (no NA leaks into result).
+  expect_equal(length(res), 1L)
+  expect_true(all(!is.na(S4Vectors::mcols(res)$score)))
 })
 
 # --- bedpe_to_gi: validation and score detection ---
@@ -635,4 +671,33 @@ test_that("cluster_loops_dt handles multi-chromosome data without idx error", {
   result <- looplook:::cluster_loops_dt(dt, gap = 0L)
   expect_equal(nrow(result), 3L)
   expect_equal(length(unique(result$cluster)), 2L)  # chr1-chr1 pairs merge, chr2 stays alone
+})
+
+# --- Schema closure: cluster_id type + source metadata identical across modes ---
+test_that("consolidate_chromatin_loops emits identical mcols schema across all modes", {
+  loop1 <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
+  loop2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
+  skip_if(loop1 == "" || loop2 == "")
+
+  gi_int <- looplook:::consolidate_chromatin_loops(c(loop1, loop2), mode = "intersect",
+                                                   gap = 1000, quiet = TRUE, write_output = FALSE)
+  gi_con <- looplook:::consolidate_chromatin_loops(c(loop1, loop2), mode = "consensus",
+                                                   gap = 1000, quiet = TRUE, write_output = FALSE)
+  gi_uni <- looplook:::consolidate_chromatin_loops(c(loop1, loop2), mode = "union",
+                                                   gap = 1000, quiet = TRUE, write_output = FALSE)
+  # All three modes must:
+  #  (1) emit character cluster_id (no integer vs character mismatch if user
+  #      combines gi across modes)
+  #  (2) NOT retain the per-source label (output is a multi-source consensus)
+  #  (3) carry the same mcols column set
+  expect_equal(class(S4Vectors::mcols(gi_int)$cluster_id), "character")
+  expect_equal(class(S4Vectors::mcols(gi_con)$cluster_id), "character")
+  expect_equal(class(S4Vectors::mcols(gi_uni)$cluster_id), "character")
+  expect_false("source" %in% colnames(S4Vectors::mcols(gi_int)))
+  expect_false("source" %in% colnames(S4Vectors::mcols(gi_con)))
+  expect_false("source" %in% colnames(S4Vectors::mcols(gi_uni)))
+  expect_setequal(colnames(S4Vectors::mcols(gi_int)),
+                  colnames(S4Vectors::mcols(gi_con)))
+  expect_setequal(colnames(S4Vectors::mcols(gi_int)),
+                  colnames(S4Vectors::mcols(gi_uni)))
 })

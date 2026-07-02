@@ -40,7 +40,14 @@ Additional columns beyond 6 are retained in the output; anchor swapping only aff
 
 \item{org_db}{An \code{OrgDb} object, a package name string, or \code{NULL} to auto-resolve from \code{species}. Default: \code{NULL}.}
 
-\item{species}{Character. Genome assembly used when \code{txdb} and \code{org_db} are \code{NULL}. One of \code{"hg38"}, \code{"hg19"}, \code{"mm10"}, \code{"mm9"}. Default: \code{"hg38"}. For other species, pass \code{txdb} and \code{org_db} as objects or package name strings directly (e.g. \code{txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene}, \code{org_db = "org.Dm.eg.db"}); \code{species} is then only used for karyotype ideograms.}
+\item{species}{Character. Genome assembly string (e.g. \code{"hg38"},
+\code{"mm10"}, \code{"danRer11"}, \code{"dm6"}). Default: \code{"hg38"}.
+When \code{txdb} and \code{org_db} are \code{NULL}, auto-resolved from
+built-in species (hg38/hg19/mm10/mm9); for any other species you must
+pass \code{txdb} and \code{org_db} as objects or package name strings
+directly (e.g. \code{txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene},
+\code{org_db = "org.Dm.eg.db"}). The \code{species} string is also used
+for karyotype ideograms and JASPAR motif species filtering.}
 
 \item{tss_region}{Numeric vector of length 2. Promoter window around the TSS in bp. Default: \code{c(-2000, 2000)} (±2 kb; typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).}
 
@@ -100,7 +107,7 @@ Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")}
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.}
 }
 \value{
-An invisible named list:
+A named list:
 \itemize{
 \item \code{target_annotation} -- Target features (peaks) with gene assignments.
 Key columns include:
@@ -143,7 +150,11 @@ via the \code{*_Filled} linear nearest-gene fallback mechanism.
 Logical membership flags indicating which target annotation column(s)
 this gene appears in.
 }
-\item \code{loop_annotation} -- Annotated 3D interactome with \code{Putative_Target_Genes}.
+\item \code{loop_annotation} -- Annotated 3D interactome with
+\code{Putative_Target_Genes} (genes from P/G-type anchors connected
+through the loop network; for G-P loops, preferentially selects
+P-side genes). Does not include linear nearest-gene fallback at
+this stage (added by \code{\link{refine_loop_anchors_by_expression}}).
 \item \code{anchor_loci_annotation} -- Non-redundant anchor-locus genomic classifications after within-cluster interval reduction.
 \item \code{anchor_annotation} -- Backward-compatible alias of \code{anchor_loci_annotation}.
 \item \code{promoter_centric_stats} -- Gene-level connectivity statistics.

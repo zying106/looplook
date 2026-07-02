@@ -48,15 +48,18 @@ rose chart. Dumbbell and mark-enrichment heatmap use fixed academic
 palettes. Default: \code{"Paired"}.}
 
 \item{candidate_types}{Character vector or \code{NULL}. Anchor types to
-validate and reclassify. \code{NULL} (default): auto-selects
-\code{c("eP","eG")} for refined input, \code{c("P","G","E")} for raw.
-Set explicitly to \code{c("P","G","E","eP","eG")} for full-range analysis.}
+validate and reclassify. \code{NULL} (default): uses all five types
+\code{c("P","G","E","eP","eG")} regardless of input source. Chromatin
+evidence can reclassify any anchor type (e.g. P→dual, E→P), so
+restricting to expression-silenced types alone would miss biologically
+important transitions.
+Set to a subset to limit reclassification scope.}
 
 \item{recompute_targets}{Logical. If \code{TRUE} (default), re-run target gene
 assignment using updated anchor types. Requires the input
 \code{annotation_res} to contain the \code{looplook_anchor_state}
 attribute (present when using \code{\link{annotate_peaks_and_loops}}
-output). Default \code{FALSE}.}
+output). Default \code{TRUE}.}
 
 \item{write_output}{Logical. Write Excel workbook. Default \code{TRUE}.}
 
@@ -102,21 +105,21 @@ over chromatin-mark-derived confidence levels.  Default: \code{NULL}.}
 }
 \value{
 An invisible named list with updated \code{loop_annotation},
-\code{anchor_loci_annotation}, \code{promoter_centric_stats},
-\code{distal_element_stats}, \code{chromatin_validation},
+\code{anchor_loci_annotation}, \code{anchor_annotation} (alias of
+\code{anchor_loci_annotation}), \code{promoter_centric_stats},
+\code{distal_element_stats}, \code{chromatin_validation}
+(includes \code{chromatin_state}, \code{positional_type} and
+\code{final_type} columns per anchor),
 \code{plots} (\code{Chromatin_Dumbbell}: anchor-type before/after
-comparison; \code{Chromatin_UpSet}: loop-type UpSet plot (dot matrix + log10 bar chart)),
+comparison; \code{Chromatin_Sankey}: anchor-type reclassification flow;
+\code{Chromatin_MarkHeatmap}: percentage of anchors positive for each
+mark per reclassification group; \code{Chromatin_UpSet}: loop-type UpSet
+plot (dot matrix + log10 bar chart)),
 \code{plot_list} (alias of \code{plots}), \code{qc_summary},
-and \code{metadata}. When \code{recompute_targets = TRUE} (default),
-target links are rebuilt from chromatin-updated anchor states,
-producing chromatin-aware \code{target_annotation} and
-\code{target_gene_links}. Set to \code{FALSE} to preserve
-pre-chromatin target assignments and use
-\code{target_source = "loops"} for downstream profiling.
-producing chromatin-aware \code{target_annotation} and
-\code{target_gene_links}.  The input must carry the
-\code{looplook_anchor_state} attribute (present when using
-\code{\link{annotate_peaks_and_loops}} output).
+\code{metadata}, and when \code{recompute_targets = TRUE},
+chromatin-aware \code{target_annotation} and
+\code{target_gene_links}. Set \code{recompute_targets = FALSE} to
+preserve pre-chromatin target assignments.
 }
 \description{
 Refines loop anchor types (P, E, G, eP, eG) using chromatin mark evidence
@@ -188,6 +191,21 @@ enhancer-like and dual-like classifications.
 
 After reclassification, \code{loop_type} is recomputed from the updated
 anchor types.
+
+\strong{Bivalent / conflicting-mark domains:} Anchors with H3K27me3+
+coexisting alongside active marks (H3K4me3+, H3K4me1+, or H3K27ac+)
+receive \code{chromatin_state = "conflicting_marks"}. This is common in
+stem-cell and developmental contexts, where H3K4me3+/H3K27me3+ bivalent
+domains poise genes for activation while maintaining transcriptional
+silence. The reclassification rules do \emph{not} override positional
+anchor types for conflicting-mark anchors alone: active histone marks
+(e.g.\ H3K4me3) carry stronger weight for promoter/enhancer identity
+than H3K27me3. To distinguish active from poised promoters, use
+\code{\link{refine_loop_anchors_by_expression}} after chromatin
+refinement -- silent genes at bivalent promoters will be reclassified
+from \code{P} to \code{eP}. The \code{chromatin_state} column in
+\code{chromatin_validation} remains available for independent filtering
+of conflicting-mark anchors.
 
 \strong{Pipeline guidance:}
 The two refinement modules serve distinct roles in a complete analysis:

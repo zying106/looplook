@@ -29,7 +29,7 @@ consolidate_chromatin_loops(
 \item{mode}{Character. Choose one of the following: "consensus", "intersect", "union". Merge strategy:
 \itemize{
 \item \code{"consensus"}: Graph-based clustering to find a consensus set supported by a majority of samples (default). Formerly "reproducible".
-\item \code{"intersect"}: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files).
+\item \code{"intersect"}: Strict reference-based filtering (keeps loops in File 1 supported by ALL other files). The result is \strong{not} symmetric: the first input file serves as the reference, and changing file order changes results.
 \item \code{"union"}: Merges all detected loops into a comprehensive map.
 }}
 
@@ -93,7 +93,9 @@ A filtered \code{\link[InteractionSet]{GInteractions}} object with metadata colu
 \describe{
 \item{\code{score}}{Replicate-balanced consensus score.}
 \item{\code{n_members}}{Number of raw loops merged into this entry
-(1 for intersect mode where no coordinate merging occurs).}
+(1 for intersect mode where no coordinate merging occurs). For
+\code{"intersect"} mode, results are \strong{not symmetric} — changing file
+order changes output.}
 \item{\code{n_reps}}{Number of input files that support this entry.}
 \item{\code{cluster_id}}{Connected-component cluster identifier.}
 }
@@ -114,7 +116,7 @@ This function consolidates chromatin loops from multiple BEDPE files. It is desi
 The function supports three modes:
 \itemize{
 \item \code{"consensus"}: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in >= min_consensus biological replicates.
-\item \code{"intersect"}: Reference-based filtering. Retains loops in File 1 whose anchors overlap with loops in every other file within the specified \code{gap} tolerance. Coordinates and scores are inherited from File 1 without merging.
+\item \code{"intersect"}: Reference-based filtering. Retains loops in File 1 whose anchors overlap with loops in every other file within the specified \code{gap} tolerance. Coordinates and scores are inherited from File 1 without merging. \strong{Important: Intersect mode is NOT symmetric.} The output depends on which file is listed first — loops are retained from File 1 only. Changing file order may produce different results.
 \item \code{"union"}: Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.
 }
 

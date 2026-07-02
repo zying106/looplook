@@ -52,13 +52,15 @@ looplook_report(
 )
 }
 \arguments{
-\item{bedpe_file}{Path to a BEDPE file of chromatin loops.}
+\item{bedpe_file}{Path to a BEDPE file of chromatin loops. Default \code{NULL}
+(requires \code{precomputed_res} instead).}
 
 \item{target_bed}{Optional path to a BED file of genomic features.}
 
 \item{expr_matrix_file}{Optional path to a normalised expression matrix.}
 
-\item{sample_columns}{Sample columns in the expression matrix to average.}
+\item{sample_columns}{Sample columns in the expression matrix to average.
+Default \code{NULL} (all columns).}
 
 \item{species}{Genome assembly (\code{"hg38"}, \code{"hg19"}, \code{"mm10"}, \code{"mm9"}).}
 
@@ -66,11 +68,13 @@ looplook_report(
 
 \item{out_dir}{Output directory. Created if missing.}
 
-\item{threshold}{Numeric. Expression threshold for active gene classification.}
+\item{threshold}{Numeric. Expression threshold for active gene classification.
+Default \code{1.0}.}
 
 \item{unit_type}{Character. Expression unit label for plot annotations. Default \code{"TPM"}.}
 
-\item{reclassify_by_expression}{Logical. Reclassify silent promoters as eP/eG.}
+\item{reclassify_by_expression}{Logical. Reclassify silent promoters as eP/eG.
+Default \code{TRUE}.}
 
 \item{tss_region}{Numeric vector of length 2. TSS flanking region in bp. Default \code{c(-2000, 2000)}.}
 
@@ -92,7 +96,8 @@ looplook_report(
 
 \item{stat_test}{Character. Statistical test for violin comparisons. Default \code{"wilcox.test"}.}
 
-\item{run_go}{Logical. Run GO enrichment (requires clusterProfiler).}
+\item{run_go}{Logical. Run GO enrichment (requires clusterProfiler).
+Default \code{FALSE}.}
 
 \item{run_ppi}{Logical. Run protein-protein interaction network analysis. Default \code{FALSE}.}
 

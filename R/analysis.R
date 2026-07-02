@@ -25,24 +25,44 @@
 #' @param annotation_res List. The result object returned by \code{\link{annotate_peaks_and_loops}}.
 #' @param diff_file Character. Path to the differential expression file (CSV/TSV).
 #' @param lfc_col Character. The column name in \code{diff_file} representing Log2 Fold Change.
+#'   Default \code{"log2FoldChange"}.
 #' @param expr_matrix_file Character. Path to the normalized expression matrix.
 #' @param metadata_file Character. Path to the sample metadata file.
 #' @param target_source Character vector. Source of target genes to analyze.
-#' @param target_mapping_mode Character. Mapping strategy: \code{"all"} (any anchor-gene connection) or \code{"promoter"} (require direct promoter contact).
+#'   Default \code{c("loops", "targets")}.
+#' @param target_mapping_mode Character. Mapping strategy: \code{"all"} (any
+#'   anchor-gene connection), \code{"promoter"} (require direct promoter
+#'   contact), or \code{"active"} (only expression-filtered active target
+#'   genes; available only with \code{target_source = "loops"} after running
+#'   \code{\link{refine_loop_anchors_by_expression}}). Default \code{"all"}.
 #' @param loop_types Character vector. The specific loop types to analyze.
+#'   Default \code{c("E-P", "P-P")}.
 #' @param include_Filled Logical. If \code{TRUE}, utilizes the comprehensively merged gene assignment.
+#'   Default \code{TRUE}.
 #' @param use_nearest_gene Logical. If \code{TRUE}, bypasses 3D loop-based gene assignment.
+#'   Default \code{FALSE}.
 #' @param group_order Character vector. Optional factor levels to sort sample groups.
+#'   Default \code{NULL}.
 #' @param project_name Character. Prefix for all output files and plot titles.
+#'   Default \code{"Analysis"}.
 #' @param org_db Character. Organism annotation database (e.g., "org.Hs.eg.db").
+#'   Default \code{"org.Hs.eg.db"}.
 #' @param run_motif Logical. Whether to perform Transcription Factor Binding Site motif analysis.
+#'   Default \code{FALSE}.
 #' @param genome_id Character. Reference genome assembly for motif sequence extraction.
+#'   Default \code{"hg38"}.
 #' @param motif_p_thresh Numeric. P-value threshold for scanning.
+#'   Default \code{1e-4}.
 #' @param motif_ntop Numeric. Number of top enriched motifs to output.
+#'   Default \code{5}.
 #' @param run_go Logical. Whether to perform Gene Ontology (GO) enrichment.
+#'   Default \code{FALSE}.
 #' @param run_ppi Logical. Whether to construct Protein-Protein Interaction networks.
+#'   Default \code{FALSE}.
 #' @param ppi_score Numeric. Minimum combined confidence score for STRING edges.
+#'   Default \code{400}.
 #' @param ppi_nSample Numeric. Maximum number of genes to include in PPI.
+#'   Default \code{400}.
 #' @param heatmap_nSample Numeric. Maximum number of genes to plot in heatmap.
 #'   Default \code{99999} (effectively no limit). Reduce to \code{20-50} for
 #'   readable heatmaps.
@@ -51,8 +71,11 @@
 #'   used). When the gene set is large, set to a smaller value (e.g. \code{20})
 #'   to reduce enrichment bias. Set to \code{NULL} to always use the full set.
 #' @param cnet_nSample Numeric. Number of top GO terms to display in cnetplot.
+#'   Default \code{50}.
 #' @param stat_test Character. Statistical test for LFC comparisons.
+#'   Default \code{"wilcox.test"}.
 #' @param cor_method Character. Method for sample correlation matrices.
+#'   Default \code{"pearson"}.
 #' @param seed Integer or NULL. Random seed for reproducible GSEA down-sampling
 #'   and motif GC-matched background sampling. When \code{NULL} (default),
 #'   the global RNG state is used; set to a positive integer for fully
@@ -107,7 +130,7 @@ profile_target_genes <- function(
   expr_matrix_file,
   metadata_file,
   target_source = c("loops", "targets"),
-  target_mapping_mode = c("all", "promoter"),
+  target_mapping_mode = c("all", "promoter", "active"),
   loop_types = c("E-P", "P-P"),
   include_Filled = TRUE,
   use_nearest_gene = FALSE,
@@ -279,6 +302,21 @@ read_robust_general <- function(f, header = FALSE, row_name = NULL, desc = "file
 
 #' @title Extract Target Gene Sets from Annotation Results
 #' @description Parses loop and target annotations to extract valid gene lists.
+#' @param annotation_res List. Annotation result from
+#'   \code{annotate_peaks_and_loops} or
+#'   \code{refine_loop_anchors_by_expression}.
+#' @param src Character vector. One or both of \code{"targets"} and
+#'   \code{"loops"} to select the annotation source.
+#' @param active_loop_types Character vector or \code{NULL}. Loop types to
+#'   include when \code{src} includes \code{"loops"}. \code{NULL} uses all.
+#' @param include_Filled Logical. Whether to use the \code{*_Filled} (linear
+#'   nearest-gene fallback-augmented) columns for the \code{"targets"} branch.
+#'   Default \code{TRUE}.
+#' @param use_nearest_gene Logical. If \code{TRUE}, bypasses 3D-loop
+#'   assignment and uses the linear nearest-gene column directly.
+#'   Default \code{FALSE}.
+#' @param target_mapping_mode Character. One of \code{"all"},
+#'   \code{"promoter"}, or \code{"active"}. Default \code{"all"}.
 #' @return A named list of character vectors, each containing target gene symbols.
 #' @keywords internal
 #' @noRd
@@ -293,6 +331,16 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
                 target_col <- "SYMBOL"
             } else if ("geneId" %in% colnames(bed_info)) target_col <- "geneId"
             if (is.null(target_col)) stop("Targets: 'SYMBOL' or 'geneId' required when use_nearest_gene is TRUE.")
+        } else if (target_mapping_mode == "active") {
+            # The active-only column lives on loop_annotation, not on the
+            # target_annotation table; bed_info only carries the loop-backed
+            # Assigned_Target_Genes (which already fall back to anchor genes
+            # via .refine_target_annotations). For strict active-only
+            # profiling, the user must switch to target_source = "loops".
+            stop("Targets: target_mapping_mode = 'active' is not supported on the 'targets' branch. ",
+                 "Active_Target_Genes lives on loop_annotation; rerun with ",
+                 "target_source = 'loops' and target_mapping_mode = 'active'.",
+                 call. = FALSE)
         } else {
             base_col <- if (target_mapping_mode == "promoter") "Regulated_promoter_genes" else "Assigned_Target_Genes"
             desired_col <- if (include_Filled) paste0(base_col, "_Filled") else base_col
@@ -308,10 +356,22 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
         }
     }
 
-    if ("loops" %in% src && !is.null(annotation_res$loop_annotation)) {
+    if ("loops" %in% src && !is.null(annotation_res$loop_annotation) &&
+        nrow(annotation_res$loop_annotation) > 0) {
         loop_df <- annotation_res$loop_annotation
-        gene_col <- "Putative_Target_Genes"
-        if (!gene_col %in% colnames(loop_df)) stop("Loops: Required column '", gene_col, "' not found.")
+        # "active": only loops whose Active_Target_Genes (strict whitelist
+        # intersection, NO loop-anchor fallback) is non-empty. Requires the
+        # column to exist; it is produced by refine_loop_anchors_by_expression.
+        # Default/other modes use Putative_Target_Genes, which fills empty rows
+        # with promoter/gene-body anchors that were reclassified, giving a
+        # structurally complete but less strict target list.
+        gene_col <- if (target_mapping_mode == "active") "Active_Target_Genes" else "Putative_Target_Genes"
+        if (!gene_col %in% colnames(loop_df)) {
+            stop("Loops: Required column '", gene_col, "' not found. ",
+                 if (target_mapping_mode == "active")
+                     "Run refine_loop_anchors_by_expression first to generate Active_Target_Genes.",
+                 call. = FALSE)
+        }
         use_types <- if (is.null(active_loop_types)) unique(loop_df$loop_type) else intersect(active_loop_types, unique(loop_df$loop_type))
         if (length(use_types) > 0) {
             for (lt in use_types) {
@@ -528,6 +588,14 @@ run_lfc_violin <- function(target_genes, global_glist, stat_test = c("wilcox.tes
 }
 
 #' @title Run Custom Gene Set Enrichment Analysis (GSEA)
+#' @param target_genes Character vector of target gene symbols.
+#' @param global_glist Named numeric vector (gene-level ranking metric,
+#'   e.g. log2 fold change). Names are gene symbols; values are the
+#'   ranking statistic sorted descending.
+#' @param gsea_nSample Integer or \code{NULL}. Maximum number of target
+#'   genes to sample for enrichment. \code{NULL} uses all targets.
+#' @param current_proj_name Character. Prefix for plot titles and
+#'   file names.
 #' @return A list with \code{result} (data frame) and \code{plot} (ggplot) elements.
 #' @keywords internal
 #' @noRd
@@ -654,6 +722,17 @@ run_gsea_analysis <- function(target_genes, global_glist, gsea_nSample, current_
 }
 
 #' @title Perform GO Enrichment and Generate Network Plot
+#' @param genes Character vector of gene symbols (or ENTREZ IDs on
+#'   second attempt after mapping failure) to test for GO over-representation.
+#' @param org_db Character. Organism annotation database package name
+#'   (e.g. \code{"org.Hs.eg.db"}).
+#' @param universe_genes Named numeric vector (gene-level ranking metric)
+#'   used as the background universe. Names must match the \code{genes}
+#'   identifier convention.
+#' @param cnet_nSample Integer. Number of top GO terms to display in the
+#'   cnetplot network. Default \code{50}.
+#' @param project_name Character. Prefix for plot titles. Default
+#'   \code{"Analysis"}.
 #' @importFrom methods slot<-
 #' @return A list with \code{result} (data frame) and \code{plot} (ggplot) elements.
 #' @keywords internal
@@ -778,6 +857,17 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 }
 
 #' @title Construct and Visualize STRING PPI Network
+#' @param target_genes Character vector of target gene symbols for PPI
+#'   network construction.
+#' @param global_glist Named numeric vector (gene-level ranking metric).
+#'   Used to colour nodes by LFC and rank by connectivity.
+#' @param org_db Character. Organism annotation database package name
+#'   (e.g. \code{"org.Hs.eg.db"}). Used to resolve STRING species ID.
+#' @param ppi_score Numeric. Minimum STRING combined confidence score
+#'   for edge inclusion. Default \code{400}.
+#' @param ppi_ntop Integer. Maximum number of top-ranked target genes
+#'   to include in the PPI construction. Default \code{400}.
+#' @param current_proj_name Character. Prefix for plot titles.
 #' @importFrom utils capture.output
 #' @return A \code{ggplot} object representing the PPI network, or \code{NULL} if no interactions found.
 #' @keywords internal
@@ -1104,6 +1194,30 @@ plot_summary_go_lollipop <- function(all_go_results, base_project_name) {
 }
 
 #' @title Generate Expression Heatmap and Connectivity Plots
+#' @param target_genes Character vector of target gene symbols to
+#'   include in the heatmap and connectivity analysis.
+#' @param tpm_mat_raw Numeric matrix of normalised expression values
+#'   (genes x samples) with gene symbols as row names.
+#' @param meta_raw Data frame with columns \code{SampleID} and
+#'   \code{Group} defining sample groups.
+#' @param loop_stats_df Data frame. Promoter-centric statistics from
+#'   \code{refine_loop_anchors_by_expression} or
+#'   \code{annotate_peaks_and_loops}.
+#' @param global_glist Named numeric vector (gene-level ranking metric)
+#'   used to sort genes for heatmap display.
+#' @param heatmap_ntop Integer. Maximum number of top genes to include
+#'   in the heatmap.
+#' @param cor_method Character. Correlation method for the heatmap
+#'   sample annotation (passed to \code{cor}).
+#' @param current_proj_name Character. Prefix for plot titles.
+#' @param source_type Character. Source label (e.g. \code{"loops"} or
+#'   \code{"targets"}) for legend titles.
+#' @param target_col Character or \code{NULL}. Column name in
+#'   \code{loop_stats_df} to use as connectivity degree. \code{NULL}
+#'   auto-detects \code{Total_Loops}, \code{Loop_Degree}, or
+#'   \code{degree}.
+#' @param skip_heatmap Logical. If \code{TRUE}, skip the ComplexHeatmap
+#'   rendering and only produce connectivity plots. Default \code{FALSE}.
 #' @return A named list of plot objects (Heatmap, Scatter, Raincloud_LFC, Raincloud_Expr).
 #' @keywords internal
 #' @noRd
@@ -1422,6 +1536,28 @@ run_heatmap_and_connectivity <- function(target_genes, tpm_mat_raw, meta_raw, lo
 
     fg_gc <- .calc_gc_fraction(BSgenome::getSeq(genome_obj, fg_gr))
     bg_gc <- .calc_gc_fraction(BSgenome::getSeq(genome_obj, bg_gr))
+
+    # Detect foreground anchors with non-finite GC (zero-length sequences
+    # from chromosome-boundary trimming or gap regions). These cannot be
+    # GC-matched; they are included in the final set but excluded from the
+    # GC bin proportion calculation.  Warn if they are a material fraction.
+    n_na_fg <- sum(!is.finite(fg_gc))
+    if (n_na_fg > 0) {
+        na_frac <- n_na_fg / length(fg_gc)
+        if (na_frac >= 0.01) {
+            warning(
+                n_na_fg, " of ", length(fg_gc), " foreground anchors (",
+                round(na_frac * 100, 1), "%) have non-finite GC content ",
+                "and cannot be GC-matched. GC bin proportions are derived ",
+                "from the remaining ", length(fg_gc) - n_na_fg,
+                " finite-GC anchors. If this fraction is high, inspect your ",
+                "anchor regions for zero-width sequences (e.g. at chromosome ",
+                "boundaries or assembly gaps).",
+                call. = FALSE
+            )
+        }
+    }
+
     finite_gc <- c(fg_gc[is.finite(fg_gc)], bg_gc[is.finite(bg_gc)])
     if (length(finite_gc) < 2 || length(unique(finite_gc)) < 2) {
         return(bg_gr[sample(seq_along(bg_gr), target_n)])
@@ -1491,6 +1627,18 @@ run_heatmap_and_connectivity <- function(target_genes, tpm_mat_raw, meta_raw, lo
 }
 
 #' @title Run Dual Motif Analysis for Loop Anchors
+#' @param target_genes Character vector of target gene symbols to anchor
+#'   the foreground set.
+#' @param loop_df Data frame. Loop annotation from
+#'   \code{refine_loop_anchors_by_expression} or
+#'   \code{annotate_peaks_and_loops}.
+#' @param genome_id Character. Genome assembly ID (e.g. \code{"hg38"},
+#'   \code{"mm10"}).
+#' @param pval_thresh Numeric. P-value cutoff for
+#'   \code{motifmatchr::matchMotifs}. Default \code{1e-4}.
+#' @param current_proj_name Character. Prefix for plot titles and file names.
+#' @param top_n Integer. Number of top enriched motifs to display as
+#'   sequence logos. Default \code{5}.
 #' @param jaspar_db A JASPAR database object (e.g., \code{JASPAR2020::JASPAR2020} or \code{JASPAR2024::JASPAR2024}). Default: \code{NULL} (auto-resolves to \code{JASPAR2020::JASPAR2020} if installed).
 #' @param jaspar_collection Character. JASPAR collection to query (e.g., \code{"CORE"}, \code{"CNE"}). Default: \code{"CORE"}.
 #' @param motif_max_bg Integer passed to \code{\link{.sample_gc_matched_background}}. Default \code{2000L}.
@@ -1517,7 +1665,7 @@ run_distal_motif_analysis <- function(
     }
     bs_pkg <- species_bsgenome_pkg(genome_id)
     if (is.null(bs_pkg)) stop("Unsupported genome: ", genome_id)
-    species_id <- if (grepl("mm", genome_id)) 10090 else 9606
+    species_id <- if (grepl("mm", genome_id)) 10090 else if (grepl("hg", genome_id)) 9606 else NULL
     genome_obj <- get0(bs_pkg, envir = asNamespace(bs_pkg))
     if (!is.data.frame(loop_df)) loop_df <- as.data.frame(loop_df)
 
@@ -1626,8 +1774,13 @@ run_distal_motif_analysis <- function(
 
     fg_seq <- BSgenome::getSeq(genome_obj, fg_gr)
     bg_seq <- BSgenome::getSeq(genome_obj, bg_gr)
-    pfm_list <- TFBSTools::getMatrixSet(jaspar_db, list(species = species_id, collection = jaspar_collection))
-    if (length(pfm_list) == 0) pfm_list <- TFBSTools::getMatrixSet(jaspar_db, list(collection = jaspar_collection))
+    pfm_list <- if (!is.null(species_id)) {
+        TFBSTools::getMatrixSet(jaspar_db, list(species = species_id, collection = jaspar_collection))
+    } else {
+        TFBSTools::getMatrixSet(jaspar_db, list(collection = jaspar_collection))
+    }
+    if (length(pfm_list) == 0 && !is.null(species_id))
+        pfm_list <- TFBSTools::getMatrixSet(jaspar_db, list(collection = jaspar_collection))
     if (length(pfm_list) == 0) {
         return(NULL)
     }
@@ -1642,11 +1795,15 @@ run_distal_motif_analysis <- function(
             ft <- fisher.test(matrix(c(a, b, length(fg_seq) - a, length(bg_seq) - b), nrow = 2), alternative = "greater")
             data.frame(MotifID = m, MotifName = TFBSTools::name(pfm_list[[m]]), Pvalue = ft$p.value, OddsRatio = ft$estimate, FG_Hits = a, FG_Total = length(fg_seq), BG_Hits = b, BG_Total = length(bg_seq))
         } else {
-            NULL
+            # a == 0: no foreground hits. Assign Pvalue = 1 so this motif
+            # still counts toward the total hypothesis tests (M) in BH
+            # correction. Excluding it would shrink the BH denominator and
+            # systematically inflate the FDR.
+            data.frame(MotifID = m, MotifName = if (m %in% names(pfm_list)) TFBSTools::name(pfm_list[[m]]) else m, Pvalue = 1, OddsRatio = 0, FG_Hits = 0L, FG_Total = length(fg_seq), BG_Hits = b, BG_Total = length(bg_seq))
         }
     })
 
-    res_df <- do.call(rbind, Filter(Negate(is.null), results_list))
+    res_df <- do.call(rbind, results_list)
     if (!is.null(res_df) && nrow(res_df) > 0) {
         res_df$FDR <- p.adjust(res_df$Pvalue, method = "BH")
         res_df <- res_df[order(res_df$Pvalue), ]
@@ -1742,16 +1899,21 @@ run_distal_motif_analysis <- function(
 #' \code{set.seed()} before \code{looplook_report()} for fully reproducible
 #' results.
 #'
-#' @param bedpe_file Path to a BEDPE file of chromatin loops.
+#' @param bedpe_file Path to a BEDPE file of chromatin loops. Default \code{NULL}
+#'   (requires \code{precomputed_res} instead).
 #' @param target_bed Optional path to a BED file of genomic features.
 #' @param expr_matrix_file Optional path to a normalised expression matrix.
 #' @param sample_columns Sample columns in the expression matrix to average.
+#'   Default \code{NULL} (all columns).
 #' @param species Genome assembly (\code{"hg38"}, \code{"hg19"}, \code{"mm10"}, \code{"mm9"}).
 #' @param project_name Character. Project prefix for the report title.
 #' @param out_dir Output directory. Created if missing.
 #' @param threshold Numeric. Expression threshold for active gene classification.
+#'   Default \code{1.0}.
 #' @param reclassify_by_expression Logical. Reclassify silent promoters as eP/eG.
+#'   Default \code{TRUE}.
 #' @param run_go Logical. Run GO enrichment (requires clusterProfiler).
+#'   Default \code{FALSE}.
 #' @param diff_file Optional differential expression result file.
 #' @param lfc_col Column name for log2 fold change in \code{diff_file}.
 #' @param metadata_file Optional sample metadata file.
@@ -1871,7 +2033,8 @@ looplook_report <- function(
   seed = NULL,
   ...
 ) {
-    species <- match.arg(species, c("hg38", "hg19", "mm10", "mm9"))
+    if (!is.character(species) || length(species) != 1L || is.na(species) || !nzchar(species))
+        stop("`species` must be a single non-empty string", call. = FALSE)
     normalize_report_path <- function(path) {
         if (!is.character(path) || length(path) != 1L || is.na(path) || !nzchar(path)) {
             return(path)

@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{resolve_gene_conflicts}
 \alias{resolve_gene_conflicts}
-\title{Internal: Resolve Gene Conflicts via Biotype Priority Then Expression}
+\title{Resolve Gene Conflicts via Biotype Priority Then Expression}
 \usage{
 resolve_gene_conflicts(
   current_anno_df,

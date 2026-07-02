@@ -11,7 +11,7 @@ profile_target_genes(
   expr_matrix_file,
   metadata_file,
   target_source = c("loops", "targets"),
-  target_mapping_mode = c("all", "promoter"),
+  target_mapping_mode = c("all", "promoter", "active"),
   loop_types = c("E-P", "P-P"),
   include_Filled = TRUE,
   use_nearest_gene = FALSE,
@@ -39,43 +39,63 @@ profile_target_genes(
 
 \item{diff_file}{Character. Path to the differential expression file (CSV/TSV).}
 
-\item{lfc_col}{Character. The column name in \code{diff_file} representing Log2 Fold Change.}
+\item{lfc_col}{Character. The column name in \code{diff_file} representing Log2 Fold Change.
+Default \code{"log2FoldChange"}.}
 
 \item{expr_matrix_file}{Character. Path to the normalized expression matrix.}
 
 \item{metadata_file}{Character. Path to the sample metadata file.}
 
-\item{target_source}{Character vector. Source of target genes to analyze.}
+\item{target_source}{Character vector. Source of target genes to analyze.
+Default \code{c("loops", "targets")}.}
 
-\item{target_mapping_mode}{Character. Mapping strategy: \code{"all"} (any anchor-gene connection) or \code{"promoter"} (require direct promoter contact).}
+\item{target_mapping_mode}{Character. Mapping strategy: \code{"all"} (any
+anchor-gene connection), \code{"promoter"} (require direct promoter
+contact), or \code{"active"} (only expression-filtered active target
+genes; available only with \code{target_source = "loops"} after running
+\code{\link{refine_loop_anchors_by_expression}}). Default \code{"all"}.}
 
-\item{loop_types}{Character vector. The specific loop types to analyze.}
+\item{loop_types}{Character vector. The specific loop types to analyze.
+Default \code{c("E-P", "P-P")}.}
 
-\item{include_Filled}{Logical. If \code{TRUE}, utilizes the comprehensively merged gene assignment.}
+\item{include_Filled}{Logical. If \code{TRUE}, utilizes the comprehensively merged gene assignment.
+Default \code{TRUE}.}
 
-\item{use_nearest_gene}{Logical. If \code{TRUE}, bypasses 3D loop-based gene assignment.}
+\item{use_nearest_gene}{Logical. If \code{TRUE}, bypasses 3D loop-based gene assignment.
+Default \code{FALSE}.}
 
-\item{group_order}{Character vector. Optional factor levels to sort sample groups.}
+\item{group_order}{Character vector. Optional factor levels to sort sample groups.
+Default \code{NULL}.}
 
-\item{project_name}{Character. Prefix for all output files and plot titles.}
+\item{project_name}{Character. Prefix for all output files and plot titles.
+Default \code{"Analysis"}.}
 
-\item{org_db}{Character. Organism annotation database (e.g., "org.Hs.eg.db").}
+\item{org_db}{Character. Organism annotation database (e.g., "org.Hs.eg.db").
+Default \code{"org.Hs.eg.db"}.}
 
-\item{run_motif}{Logical. Whether to perform Transcription Factor Binding Site motif analysis.}
+\item{run_motif}{Logical. Whether to perform Transcription Factor Binding Site motif analysis.
+Default \code{FALSE}.}
 
-\item{genome_id}{Character. Reference genome assembly for motif sequence extraction.}
+\item{genome_id}{Character. Reference genome assembly for motif sequence extraction.
+Default \code{"hg38"}.}
 
-\item{motif_p_thresh}{Numeric. P-value threshold for scanning.}
+\item{motif_p_thresh}{Numeric. P-value threshold for scanning.
+Default \code{1e-4}.}
 
-\item{motif_ntop}{Numeric. Number of top enriched motifs to output.}
+\item{motif_ntop}{Numeric. Number of top enriched motifs to output.
+Default \code{5}.}
 
-\item{run_go}{Logical. Whether to perform Gene Ontology (GO) enrichment.}
+\item{run_go}{Logical. Whether to perform Gene Ontology (GO) enrichment.
+Default \code{FALSE}.}
 
-\item{run_ppi}{Logical. Whether to construct Protein-Protein Interaction networks.}
+\item{run_ppi}{Logical. Whether to construct Protein-Protein Interaction networks.
+Default \code{FALSE}.}
 
-\item{ppi_score}{Numeric. Minimum combined confidence score for STRING edges.}
+\item{ppi_score}{Numeric. Minimum combined confidence score for STRING edges.
+Default \code{400}.}
 
-\item{ppi_nSample}{Numeric. Maximum number of genes to include in PPI.}
+\item{ppi_nSample}{Numeric. Maximum number of genes to include in PPI.
+Default \code{400}.}
 
 \item{heatmap_nSample}{Numeric. Maximum number of genes to plot in heatmap.
 Default \code{99999} (effectively no limit). Reduce to \code{20-50} for
@@ -86,11 +106,14 @@ Default \code{99999} (effectively no down-sampling; all target genes are
 used). When the gene set is large, set to a smaller value (e.g. \code{20})
 to reduce enrichment bias. Set to \code{NULL} to always use the full set.}
 
-\item{cnet_nSample}{Numeric. Number of top GO terms to display in cnetplot.}
+\item{cnet_nSample}{Numeric. Number of top GO terms to display in cnetplot.
+Default \code{50}.}
 
-\item{stat_test}{Character. Statistical test for LFC comparisons.}
+\item{stat_test}{Character. Statistical test for LFC comparisons.
+Default \code{"wilcox.test"}.}
 
-\item{cor_method}{Character. Method for sample correlation matrices.}
+\item{cor_method}{Character. Method for sample correlation matrices.
+Default \code{"pearson"}.}
 
 \item{seed}{Integer or NULL. Random seed for reproducible GSEA down-sampling
 and motif GC-matched background sampling. When \code{NULL} (default),

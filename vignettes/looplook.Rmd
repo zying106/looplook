@@ -1134,6 +1134,49 @@ BiocManager::install("TxDb.Mmusculus.UCSC.mm10.knownGene")
 BiocManager::install("org.Mm.eg.db")
 ```
 
+### Using non-human / non-mouse species
+
+looplook supports any species with a Bioconductor `TxDb` and `OrgDb` package.
+Pass them explicitly via the `txdb` and `org_db` parameters, and set `species` to
+any genome assembly string (used for karyotype ideograms and motif filtering):
+
+```{r, eval = FALSE}
+# Drosophila melanogaster (dm6)
+annotate_peaks_and_loops(
+  bedpe_file  = "dm6_loops.bedpe",
+  target_bed  = "dm6_peaks.bed",
+  species     = "dm6",
+  txdb        = TxDb.Dmelanogaster.UCSC.dm6.ensGene,
+  org_db      = "org.Dm.eg.db"
+)
+
+# Danio rerio (danRer11)
+annotate_peaks_and_loops(
+  bedpe_file  = "drerio_loops.bedpe",
+  species     = "danRer11",
+  txdb        = TxDb.Drerio.UCSC.danRer11.refGene,
+  org_db      = "org.Dr.eg.db"
+)
+```
+
+Refinement and profiling functions consume the `annotation_res` object produced above,
+so no species-specific parameters are needed downstream:
+
+```{r, eval = FALSE}
+refined <- refine_loop_anchors_by_expression(annotation_res = anno, ...)
+result  <- profile_target_genes(annotation_res = refined, ...)
+```
+
+**Limitations for non-built-in species:**
+
+| Feature | Status | Workaround |
+|---------|--------|------------|
+| Anchor classification, gene assignment, expression & chromatin refinement, profiling | Fully supported | — |
+| Blacklist filtering | Not built-in | Pass your own blacklist BED via `region_of_interest` with `roi_mode = "any"` and `invert = TRUE` (see `?filter_chromatin_loops`) |
+| Karyotype ideograms | Skipped with message if genome unknown | No crash; output slot set to `NULL`. Install karyoploteR data for your genome, or disable with `show_karyo = FALSE` |
+| BSgenome (motif analysis) | Warning + auto-disabled if unavailable | Install the corresponding `BSgenome.*` package |
+| JASPAR motif species filter | Depends on JASPAR | Set `jaspar_collection` manually; JASPAR covers major model organisms |
+
 ## Input Data
 
 ### BEDPE file must have at least 6 columns
