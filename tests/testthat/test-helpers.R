@@ -263,13 +263,13 @@ test_that("species_txdb_pkg returns correct package names", {
   expect_equal(looplook:::species_txdb_pkg("hg19"), "TxDb.Hsapiens.UCSC.hg19.knownGene")
   expect_equal(looplook:::species_txdb_pkg("mm10"), "TxDb.Mmusculus.UCSC.mm10.knownGene")
   expect_equal(looplook:::species_txdb_pkg("mm9"), "TxDb.Mmusculus.UCSC.mm9.knownGene")
-  expect_error(looplook:::species_txdb_pkg("invalid"), "Species not supported")
+  expect_null(looplook:::species_txdb_pkg("invalid"))
 })
 
 test_that("species_orgdb_pkg returns correct package names", {
   expect_equal(looplook:::species_orgdb_pkg("hg38"), "org.Hs.eg.db")
   expect_equal(looplook:::species_orgdb_pkg("mm10"), "org.Mm.eg.db")
-  expect_error(looplook:::species_orgdb_pkg("invalid"), "Species not supported")
+  expect_null(looplook:::species_orgdb_pkg("invalid"))
 })
 
 test_that("species_bsgenome_pkg returns correct package names", {
