@@ -1,4 +1,4 @@
-# Internal: Resolve Gene Conflicts via Biotype Priority Then Expression
+# Resolve Gene Conflicts via Biotype Priority Then Expression
 
 For each genomic range, identifies all promoter-overlapping genes,
 resolves conflicts using a two-stage strategy: (1) biotype priority

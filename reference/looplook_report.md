@@ -60,7 +60,8 @@ looplook_report(
 
 - bedpe_file:
 
-  Path to a BEDPE file of chromatin loops.
+  Path to a BEDPE file of chromatin loops. Default `NULL` (requires
+  `precomputed_res` instead).
 
 - target_bed:
 
@@ -72,7 +73,8 @@ looplook_report(
 
 - sample_columns:
 
-  Sample columns in the expression matrix to average.
+  Sample columns in the expression matrix to average. Default `NULL`
+  (all columns).
 
 - species:
 
@@ -88,7 +90,8 @@ looplook_report(
 
 - threshold:
 
-  Numeric. Expression threshold for active gene classification.
+  Numeric. Expression threshold for active gene classification. Default
+  `1.0`.
 
 - unit_type:
 
@@ -97,7 +100,7 @@ looplook_report(
 
 - reclassify_by_expression:
 
-  Logical. Reclassify silent promoters as eP/eG.
+  Logical. Reclassify silent promoters as eP/eG. Default `TRUE`.
 
 - tss_region:
 
@@ -148,7 +151,8 @@ looplook_report(
 
 - run_go:
 
-  Logical. Run GO enrichment (requires clusterProfiler).
+  Logical. Run GO enrichment (requires clusterProfiler). Default
+  `FALSE`.
 
 - run_ppi:
 
@@ -294,15 +298,15 @@ if (requireNamespace("rmarkdown", quietly = TRUE) &&
     )
     file.exists(report_path)
 }
-#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
-#> The magick package is required to crop "/tmp/RtmpQ9DN00/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
+#> The magick package is required to crop "/tmp/Rtmpz5YkXN/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.
+#> The magick package is required to crop "/tmp/Rtmpz5YkXN/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.
+#> The magick package is required to crop "/tmp/Rtmpz5YkXN/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.
+#> The magick package is required to crop "/tmp/Rtmpz5YkXN/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.
+#> The magick package is required to crop "/tmp/Rtmpz5YkXN/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.
+#> The magick package is required to crop "/tmp/Rtmpz5YkXN/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.
+#> The magick package is required to crop "/tmp/Rtmpz5YkXN/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.
+#> The magick package is required to crop "/tmp/Rtmpz5YkXN/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.
+#> The magick package is required to crop "/tmp/Rtmpz5YkXN/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.
+#> The magick package is required to crop "/tmp/Rtmpz5YkXN/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.
 #> [1] TRUE
 ```

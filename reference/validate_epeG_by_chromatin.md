@@ -48,8 +48,8 @@ validate_epeG_by_chromatin(
 - candidate_types:
 
   Character vector or `NULL`. Anchor types to validate. `NULL`
-  (default): `c("eP","eG")` for refined input, `c("P","G","E")` for raw
-  annotation.
+  (default): uses all five types `c("P","G","E","eP","eG")` regardless
+  of input source.
 
 - species:
 

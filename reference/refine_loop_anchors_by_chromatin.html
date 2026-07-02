@@ -191,9 +191,12 @@ palettes. Default: <code>"Paired"</code>.</p></dd>
 
 <dt id="arg-candidate-types">candidate_types<a class="anchor" aria-label="anchor" href="#arg-candidate-types"></a></dt>
 <dd><p>Character vector or <code>NULL</code>. Anchor types to
-validate and reclassify. <code>NULL</code> (default): auto-selects
-<code>c("eP","eG")</code> for refined input, <code>c("P","G","E")</code> for raw.
-Set explicitly to <code>c("P","G","E","eP","eG")</code> for full-range analysis.</p></dd>
+validate and reclassify. <code>NULL</code> (default): uses all five types
+<code>c("P","G","E","eP","eG")</code> regardless of input source. Chromatin
+evidence can reclassify any anchor type (e.g. P→dual, E→P), so
+restricting to expression-silenced types alone would miss biologically
+important transitions.
+Set to a subset to limit reclassification scope.</p></dd>
 
 
 <dt id="arg-recompute-targets">recompute_targets<a class="anchor" aria-label="anchor" href="#arg-recompute-targets"></a></dt>
@@ -201,7 +204,7 @@ Set explicitly to <code>c("P","G","E","eP","eG")</code> for full-range analysis.
 assignment using updated anchor types. Requires the input
 <code>annotation_res</code> to contain the <code>looplook_anchor_state</code>
 attribute (present when using <code><a href="annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></code>
-output). Default <code>FALSE</code>.</p></dd>
+output). Default <code>TRUE</code>.</p></dd>
 
 
 <dt id="arg-write-output">write_output<a class="anchor" aria-label="anchor" href="#arg-write-output"></a></dt>
@@ -261,21 +264,21 @@ over chromatin-mark-derived confidence levels.  Default: <code>NULL</code>.</p><
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An invisible named list with updated <code>loop_annotation</code>,
-<code>anchor_loci_annotation</code>, <code>promoter_centric_stats</code>,
-<code>distal_element_stats</code>, <code>chromatin_validation</code>,
+<code>anchor_loci_annotation</code>, <code>anchor_annotation</code> (alias of
+<code>anchor_loci_annotation</code>), <code>promoter_centric_stats</code>,
+<code>distal_element_stats</code>, <code>chromatin_validation</code>
+(includes <code>chromatin_state</code>, <code>positional_type</code> and
+<code>final_type</code> columns per anchor),
 <code>plots</code> (<code>Chromatin_Dumbbell</code>: anchor-type before/after
-comparison; <code>Chromatin_UpSet</code>: loop-type UpSet plot (dot matrix + log10 bar chart)),
+comparison; <code>Chromatin_Sankey</code>: anchor-type reclassification flow;
+<code>Chromatin_MarkHeatmap</code>: percentage of anchors positive for each
+mark per reclassification group; <code>Chromatin_UpSet</code>: loop-type UpSet
+plot (dot matrix + log10 bar chart)),
 <code>plot_list</code> (alias of <code>plots</code>), <code>qc_summary</code>,
-and <code>metadata</code>. When <code>recompute_targets = TRUE</code> (default),
-target links are rebuilt from chromatin-updated anchor states,
-producing chromatin-aware <code>target_annotation</code> and
-<code>target_gene_links</code>. Set to <code>FALSE</code> to preserve
-pre-chromatin target assignments and use
-<code>target_source = "loops"</code> for downstream profiling.
-producing chromatin-aware <code>target_annotation</code> and
-<code>target_gene_links</code>.  The input must carry the
-<code>looplook_anchor_state</code> attribute (present when using
-<code><a href="annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></code> output).</p>
+<code>metadata</code>, and when <code>recompute_targets = TRUE</code>,
+chromatin-aware <code>target_annotation</code> and
+<code>target_gene_links</code>. Set <code>recompute_targets = FALSE</code> to
+preserve pre-chromatin target assignments.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -329,6 +332,20 @@ enhancer-like and dual-like classifications.</p></li>
 <code>eP</code> and <code>eG</code> anchors.</p>
 <p>After reclassification, <code>loop_type</code> is recomputed from the updated
 anchor types.</p>
+<p><strong>Bivalent / conflicting-mark domains:</strong> Anchors with H3K27me3+
+coexisting alongside active marks (H3K4me3+, H3K4me1+, or H3K27ac+)
+receive <code>chromatin_state = "conflicting_marks"</code>. This is common in
+stem-cell and developmental contexts, where H3K4me3+/H3K27me3+ bivalent
+domains poise genes for activation while maintaining transcriptional
+silence. The reclassification rules do <em>not</em> override positional
+anchor types for conflicting-mark anchors alone: active histone marks
+(e.g.\ H3K4me3) carry stronger weight for promoter/enhancer identity
+than H3K27me3. To distinguish active from poised promoters, use
+<code><a href="refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></code> after chromatin
+refinement – silent genes at bivalent promoters will be reclassified
+from <code>P</code> to <code>eP</code>. The <code>chromatin_state</code> column in
+<code>chromatin_validation</code> remains available for independent filtering
+of conflicting-mark anchors.</p>
 <p><strong>Pipeline guidance:</strong>
 The two refinement modules serve distinct roles in a complete analysis:</p><ul><li><p><strong>Expression-aware refinement</strong> evaluates transcriptional activity
 (is the gene expressed?) and produces activity-aware metrics

@@ -76,9 +76,11 @@ refine_loop_anchors_by_chromatin(
 - candidate_types:
 
   Character vector or `NULL`. Anchor types to validate and reclassify.
-  `NULL` (default): auto-selects `c("eP","eG")` for refined input,
-  `c("P","G","E")` for raw. Set explicitly to `c("P","G","E","eP","eG")`
-  for full-range analysis.
+  `NULL` (default): uses all five types `c("P","G","E","eP","eG")`
+  regardless of input source. Chromatin evidence can reclassify any
+  anchor type (e.g. P→dual, E→P), so restricting to expression-silenced
+  types alone would miss biologically important transitions. Set to a
+  subset to limit reclassification scope.
 
 - recompute_targets:
 
@@ -86,7 +88,7 @@ refine_loop_anchors_by_chromatin(
   updated anchor types. Requires the input `annotation_res` to contain
   the `looplook_anchor_state` attribute (present when using
   [`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
-  output). Default `FALSE`.
+  output). Default `TRUE`.
 
 - write_output:
 
@@ -142,20 +144,19 @@ refine_loop_anchors_by_chromatin(
 ## Value
 
 An invisible named list with updated `loop_annotation`,
-`anchor_loci_annotation`, `promoter_centric_stats`,
-`distal_element_stats`, `chromatin_validation`, `plots`
-(`Chromatin_Dumbbell`: anchor-type before/after comparison;
-`Chromatin_UpSet`: loop-type UpSet plot (dot matrix + log10 bar chart)),
-`plot_list` (alias of `plots`), `qc_summary`, and `metadata`. When
-`recompute_targets = TRUE` (default), target links are rebuilt from
-chromatin-updated anchor states, producing chromatin-aware
-`target_annotation` and `target_gene_links`. Set to `FALSE` to preserve
-pre-chromatin target assignments and use `target_source = "loops"` for
-downstream profiling. producing chromatin-aware `target_annotation` and
-`target_gene_links`. The input must carry the `looplook_anchor_state`
-attribute (present when using
-[`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
-output).
+`anchor_loci_annotation`, `anchor_annotation` (alias of
+`anchor_loci_annotation`), `promoter_centric_stats`,
+`distal_element_stats`, `chromatin_validation` (includes
+`chromatin_state`, `positional_type` and `final_type` columns per
+anchor), `plots` (`Chromatin_Dumbbell`: anchor-type before/after
+comparison; `Chromatin_Sankey`: anchor-type reclassification flow;
+`Chromatin_MarkHeatmap`: percentage of anchors positive for each mark
+per reclassification group; `Chromatin_UpSet`: loop-type UpSet plot (dot
+matrix + log10 bar chart)), `plot_list` (alias of `plots`),
+`qc_summary`, `metadata`, and when `recompute_targets = TRUE`,
+chromatin-aware `target_annotation` and `target_gene_links`. Set
+`recompute_targets = FALSE` to preserve pre-chromatin target
+assignments.
 
 ## Details
 
@@ -239,6 +240,21 @@ tests `P`, `G`, and `E` anchors. Expression-refined input tests `eP` and
 
 After reclassification, `loop_type` is recomputed from the updated
 anchor types.
+
+**Bivalent / conflicting-mark domains:** Anchors with H3K27me3+
+coexisting alongside active marks (H3K4me3+, H3K4me1+, or H3K27ac+)
+receive `chromatin_state = "conflicting_marks"`. This is common in
+stem-cell and developmental contexts, where H3K4me3+/H3K27me3+ bivalent
+domains poise genes for activation while maintaining transcriptional
+silence. The reclassification rules do *not* override positional anchor
+types for conflicting-mark anchors alone: active histone marks (e.g.\\
+H3K4me3) carry stronger weight for promoter/enhancer identity than
+H3K27me3. To distinguish active from poised promoters, use
+[`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
+after chromatin refinement – silent genes at bivalent promoters will be
+reclassified from `P` to `eP`. The `chromatin_state` column in
+`chromatin_validation` remains available for independent filtering of
+conflicting-mark anchors.
 
 **Pipeline guidance:** The two refinement modules serve distinct roles
 in a complete analysis:

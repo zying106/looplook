@@ -22,7 +22,10 @@ The function supports three modes:
 - `"intersect"`: Reference-based filtering. Retains loops in File 1
   whose anchors overlap with loops in every other file within the
   specified `gap` tolerance. Coordinates and scores are inherited from
-  File 1 without merging.
+  File 1 without merging. **Important: Intersect mode is NOT
+  symmetric.** The output depends on which file is listed first — loops
+  are retained from File 1 only. Changing file order may produce
+  different results.
 
 - `"union"`: Retains all chromatin interactions across the entire
   cohort, ideal for exploratory pan-tissue analyses.
@@ -98,7 +101,9 @@ consolidate_chromatin_loops(
     "reproducible".
 
   - `"intersect"`: Strict reference-based filtering (keeps loops in File
-    1 supported by ALL other files).
+    1 supported by ALL other files). The result is **not** symmetric:
+    the first input file serves as the reference, and changing file
+    order changes results.
 
   - `"union"`: Merges all detected loops into a comprehensive map.
 
@@ -206,7 +211,8 @@ object with metadata columns:
 - `n_members`:
 
   Number of raw loops merged into this entry (1 for intersect mode where
-  no coordinate merging occurs).
+  no coordinate merging occurs). For `"intersect"` mode, results are
+  **not symmetric** — changing file order changes output.
 
 - `n_reps`:
 
@@ -243,9 +249,9 @@ res_intersect <- consolidate_chromatin_loops(
 #>     File 1: 300 loops
 #>     File 2: 300 loops
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
-#>     Base: File 1. Criterion: Must overlap with ALL other files.
+#>     Base: File 1 (first input). Output coordinates and scores come exclusively from File 1.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmpQ9DN00/file9d951874df66.bedpe
+#> Finished! Saved to /tmp/Rtmpz5YkXN/file9db542162947.bedpe
 #> Finished! Final loops: 12
 
 # Example B: Consensus Mode (formerly Reproducible)
@@ -280,7 +286,7 @@ res_consensus <- consolidate_chromatin_loops(
 #>     #4: max_span = 11,840 bp, n_members = 2, n_reps = 2
 #>   Chaining: 0/12 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpQ9DN00/file9d95e95b9ad.bedpe
+#> Finished! Saved to /tmp/Rtmpz5YkXN/file9db528b307f7.bedpe
 #> Finished! Final loops: 12
 
 # Example C: Union Mode
@@ -314,7 +320,7 @@ res_union <- consolidate_chromatin_loops(
 #>     #427: max_span = 26,620 bp, n_members = 1, n_reps = 1
 #>   Chaining: 0/586 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpQ9DN00/file9d957bea9372.bedpe
+#> Finished! Saved to /tmp/Rtmpz5YkXN/file9db55d9f0a35.bedpe
 #> Finished! Final loops: 586
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -353,7 +359,7 @@ res_clean <- consolidate_chromatin_loops(
 #>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2
 #>   Chaining: 0/7 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpQ9DN00/file9d957df9dd97.bedpe
+#> Finished! Saved to /tmp/Rtmpz5YkXN/file9db512ebe08c.bedpe
 #> Finished! Final loops: 4
 
 # Inspect results

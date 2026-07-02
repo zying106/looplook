@@ -127,7 +127,7 @@ protein-protein interaction (PPI) network construction.</p>
 <span>  <span class="va">expr_matrix_file</span>,</span>
 <span>  <span class="va">metadata_file</span>,</span>
 <span>  target_source <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"loops"</span>, <span class="st">"targets"</span><span class="op">)</span>,</span>
-<span>  target_mapping_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"promoter"</span><span class="op">)</span>,</span>
+<span>  target_mapping_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"promoter"</span>, <span class="st">"active"</span><span class="op">)</span>,</span>
 <span>  loop_types <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"E-P"</span>, <span class="st">"P-P"</span><span class="op">)</span>,</span>
 <span>  include_Filled <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  use_nearest_gene <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -164,7 +164,8 @@ protein-protein interaction (PPI) network construction.</p>
 
 
 <dt id="arg-lfc-col">lfc_col<a class="anchor" aria-label="anchor" href="#arg-lfc-col"></a></dt>
-<dd><p>Character. The column name in <code>diff_file</code> representing Log2 Fold Change.</p></dd>
+<dd><p>Character. The column name in <code>diff_file</code> representing Log2 Fold Change.
+Default <code>"log2FoldChange"</code>.</p></dd>
 
 
 <dt id="arg-expr-matrix-file">expr_matrix_file<a class="anchor" aria-label="anchor" href="#arg-expr-matrix-file"></a></dt>
@@ -176,67 +177,86 @@ protein-protein interaction (PPI) network construction.</p>
 
 
 <dt id="arg-target-source">target_source<a class="anchor" aria-label="anchor" href="#arg-target-source"></a></dt>
-<dd><p>Character vector. Source of target genes to analyze.</p></dd>
+<dd><p>Character vector. Source of target genes to analyze.
+Default <code>c("loops", "targets")</code>.</p></dd>
 
 
 <dt id="arg-target-mapping-mode">target_mapping_mode<a class="anchor" aria-label="anchor" href="#arg-target-mapping-mode"></a></dt>
-<dd><p>Character. Mapping strategy: <code>"all"</code> (any anchor-gene connection) or <code>"promoter"</code> (require direct promoter contact).</p></dd>
+<dd><p>Character. Mapping strategy: <code>"all"</code> (any
+anchor-gene connection), <code>"promoter"</code> (require direct promoter
+contact), or <code>"active"</code> (only expression-filtered active target
+genes; available only with <code>target_source = "loops"</code> after running
+<code><a href="refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></code>). Default <code>"all"</code>.</p></dd>
 
 
 <dt id="arg-loop-types">loop_types<a class="anchor" aria-label="anchor" href="#arg-loop-types"></a></dt>
-<dd><p>Character vector. The specific loop types to analyze.</p></dd>
+<dd><p>Character vector. The specific loop types to analyze.
+Default <code>c("E-P", "P-P")</code>.</p></dd>
 
 
 <dt id="arg-include-filled">include_Filled<a class="anchor" aria-label="anchor" href="#arg-include-filled"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, utilizes the comprehensively merged gene assignment.</p></dd>
+<dd><p>Logical. If <code>TRUE</code>, utilizes the comprehensively merged gene assignment.
+Default <code>TRUE</code>.</p></dd>
 
 
 <dt id="arg-use-nearest-gene">use_nearest_gene<a class="anchor" aria-label="anchor" href="#arg-use-nearest-gene"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, bypasses 3D loop-based gene assignment.</p></dd>
+<dd><p>Logical. If <code>TRUE</code>, bypasses 3D loop-based gene assignment.
+Default <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-group-order">group_order<a class="anchor" aria-label="anchor" href="#arg-group-order"></a></dt>
-<dd><p>Character vector. Optional factor levels to sort sample groups.</p></dd>
+<dd><p>Character vector. Optional factor levels to sort sample groups.
+Default <code>NULL</code>.</p></dd>
 
 
 <dt id="arg-project-name">project_name<a class="anchor" aria-label="anchor" href="#arg-project-name"></a></dt>
-<dd><p>Character. Prefix for all output files and plot titles.</p></dd>
+<dd><p>Character. Prefix for all output files and plot titles.
+Default <code>"Analysis"</code>.</p></dd>
 
 
 <dt id="arg-org-db">org_db<a class="anchor" aria-label="anchor" href="#arg-org-db"></a></dt>
-<dd><p>Character. Organism annotation database (e.g., "org.Hs.eg.db").</p></dd>
+<dd><p>Character. Organism annotation database (e.g., "org.Hs.eg.db").
+Default <code>"org.Hs.eg.db"</code>.</p></dd>
 
 
 <dt id="arg-run-motif">run_motif<a class="anchor" aria-label="anchor" href="#arg-run-motif"></a></dt>
-<dd><p>Logical. Whether to perform Transcription Factor Binding Site motif analysis.</p></dd>
+<dd><p>Logical. Whether to perform Transcription Factor Binding Site motif analysis.
+Default <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-genome-id">genome_id<a class="anchor" aria-label="anchor" href="#arg-genome-id"></a></dt>
-<dd><p>Character. Reference genome assembly for motif sequence extraction.</p></dd>
+<dd><p>Character. Reference genome assembly for motif sequence extraction.
+Default <code>"hg38"</code>.</p></dd>
 
 
 <dt id="arg-motif-p-thresh">motif_p_thresh<a class="anchor" aria-label="anchor" href="#arg-motif-p-thresh"></a></dt>
-<dd><p>Numeric. P-value threshold for scanning.</p></dd>
+<dd><p>Numeric. P-value threshold for scanning.
+Default <code>1e-4</code>.</p></dd>
 
 
 <dt id="arg-motif-ntop">motif_ntop<a class="anchor" aria-label="anchor" href="#arg-motif-ntop"></a></dt>
-<dd><p>Numeric. Number of top enriched motifs to output.</p></dd>
+<dd><p>Numeric. Number of top enriched motifs to output.
+Default <code>5</code>.</p></dd>
 
 
 <dt id="arg-run-go">run_go<a class="anchor" aria-label="anchor" href="#arg-run-go"></a></dt>
-<dd><p>Logical. Whether to perform Gene Ontology (GO) enrichment.</p></dd>
+<dd><p>Logical. Whether to perform Gene Ontology (GO) enrichment.
+Default <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-run-ppi">run_ppi<a class="anchor" aria-label="anchor" href="#arg-run-ppi"></a></dt>
-<dd><p>Logical. Whether to construct Protein-Protein Interaction networks.</p></dd>
+<dd><p>Logical. Whether to construct Protein-Protein Interaction networks.
+Default <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-ppi-score">ppi_score<a class="anchor" aria-label="anchor" href="#arg-ppi-score"></a></dt>
-<dd><p>Numeric. Minimum combined confidence score for STRING edges.</p></dd>
+<dd><p>Numeric. Minimum combined confidence score for STRING edges.
+Default <code>400</code>.</p></dd>
 
 
 <dt id="arg-ppi-nsample">ppi_nSample<a class="anchor" aria-label="anchor" href="#arg-ppi-nsample"></a></dt>
-<dd><p>Numeric. Maximum number of genes to include in PPI.</p></dd>
+<dd><p>Numeric. Maximum number of genes to include in PPI.
+Default <code>400</code>.</p></dd>
 
 
 <dt id="arg-heatmap-nsample">heatmap_nSample<a class="anchor" aria-label="anchor" href="#arg-heatmap-nsample"></a></dt>
@@ -253,15 +273,18 @@ to reduce enrichment bias. Set to <code>NULL</code> to always use the full set.<
 
 
 <dt id="arg-cnet-nsample">cnet_nSample<a class="anchor" aria-label="anchor" href="#arg-cnet-nsample"></a></dt>
-<dd><p>Numeric. Number of top GO terms to display in cnetplot.</p></dd>
+<dd><p>Numeric. Number of top GO terms to display in cnetplot.
+Default <code>50</code>.</p></dd>
 
 
 <dt id="arg-stat-test">stat_test<a class="anchor" aria-label="anchor" href="#arg-stat-test"></a></dt>
-<dd><p>Character. Statistical test for LFC comparisons.</p></dd>
+<dd><p>Character. Statistical test for LFC comparisons.
+Default <code>"wilcox.test"</code>.</p></dd>
 
 
 <dt id="arg-cor-method">cor_method<a class="anchor" aria-label="anchor" href="#arg-cor-method"></a></dt>
-<dd><p>Character. Method for sample correlation matrices.</p></dd>
+<dd><p>Character. Method for sample correlation matrices.
+Default <code>"pearson"</code>.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>

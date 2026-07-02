@@ -3,8 +3,10 @@
 Integrates quantitative RNA-seq data (e.g., TPM/FPKM) with 3D structural
 data to reclassify regulatory elements and annotate functional status,
 deriving a functionally interpretable regulatory network from physical
-chromatin contacts. All structural loops are preserved; refinement
-status columns indicate which loops belong to the high-confidence active
+chromatin contacts. All structural loop rows are preserved; anchor type
+and gene assignments are reclassified in place (silent promoters have
+their gene set to NA and type downgraded to eP/eG). Refinement status
+columns indicate which loops belong to the high-confidence active
 subset.
 
 ## Usage
@@ -76,9 +78,10 @@ refine_loop_anchors_by_expression(
 
 - species:
 
-  Character. Genome assembly. One of `"hg38"`, `"hg19"`, `"mm10"`,
-  `"mm9"`. Default: `"hg38"`. Extensible to other species via
-  `species_txdb_pkg()` and related helpers.
+  Character. Genome assembly string. Default: `"hg38"`. For
+  non-human/non-mouse species, pass `annotation_res` produced by
+  [`annotate_peaks_and_loops`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
+  with custom `txdb`/`org_db`.
 
 - out_dir:
 
@@ -104,7 +107,11 @@ refine_loop_anchors_by_expression(
 - reclassify_by_expression:
 
   Logical. If `TRUE` (default), silent promoters (P) and gene bodies (G)
-  are reclassified as eP/eG.
+  are reclassified as eP/eG. If `FALSE`, anchor *types* are left
+  unchanged, but anchor genes that fall outside the active whitelist are
+  still stripped to `NA` (only the identity label is preserved, not the
+  gene assignment). To retain genes unchanged, omit the
+  `expr_matrix_file` argument.
 
 - hub_percentile:
 
@@ -136,7 +143,7 @@ refine_loop_anchors_by_expression(
 
 ## Value
 
-An invisible named list:
+A named list:
 
 - `loop_annotation` – Full refined 3D network with updated `loop_type`
   (e.g., eP-P) and two target gene columns:
@@ -144,15 +151,21 @@ An invisible named list:
   - `Active_Target_Genes`: Expression-filtered active-only targets (no
     fallback).
 
-  - `Putative_Target_Genes`: Display column; may include linear
-    nearest-gene fallback when `Active_Target_Genes` is empty.
+  - `Putative_Target_Genes`: Display column; may include *loop-anchor*
+    fallback when `Active_Target_Genes` is empty (uses the
+    promoter/gene-body gene of any looped anchor, not the linear
+    nearest-gene fallback). The linear nearest-gene fallback applies
+    only to the `Regulated_promoter_genes_Filled` and
+    `Assigned_Target_Genes_Filled` columns of `target_annotation` (see
+    `annotate_peaks_and_loops`).
 
   Refinement status columns: `Has_Active_Target`,
   `Retained_In_Functional_Network`, and `Refinement_Action`
   (`"retained_active_target"`, `"reclassified_silent_anchor"`,
   `"expression_filtered_no_active_target"`, or
-  `"structural_only_no_active_target"`). All structural loops are
-  preserved; filter on `Retained_In_Functional_Network` for the
+  `"structural_only_no_active_target"`). All structural loop rows are
+  preserved (anchor types/genes are reclassified in place for silent
+  elements); filter on `Retained_In_Functional_Network` for the
   high-confidence active subset.
 
 - `anchor_loci_annotation` – Filtered non-redundant anchor-locus
@@ -268,8 +281,9 @@ with only loops where `Retained_In_Functional_Network == TRUE`.
 - **Expression-Aware Connectivity Statistics:** Recomputes
   promoter-centric and distal-element connectivity after
   expression-aware anchor refinement, while preserving all structural
-  loops in the refined loop annotation. This separates the complete
-  physical contact map from the high-confidence active subset.
+  loop rows in the refined loop annotation (anchor types and genes are
+  reclassified in place for silent elements). This separates the
+  complete physical contact map from the high-confidence active subset.
 
 - **External Target Refinement:** Filters auxiliary target mapping
   columns (e.g., `Assigned_Target_Genes_Filled`) based on expression
@@ -283,14 +297,17 @@ with only loops where `Retained_In_Functional_Network == TRUE`.
   such as `local_promoter_overlap`, `direct_opposite_promoter`, and
   `linear_fallback` are preserved.
 
-**Design Philosophy:** This function does not discard structural loops
-based on expression state. Hi-C, HiChIP, and PLAC-seq capture 3D
+**Design Philosophy:** This function does not discard structural loop
+rows based on expression state. Hi-C, HiChIP, and PLAC-seq capture 3D
 chromatin contacts; RNA-seq captures current transcriptional state. A
 silent promoter may reflect cell-state, time-point, or technical factors
-rather than absence of physical contact. All structural loops are
-retained with refinement status columns, and a high-confidence
-functional subset is provided via `Retained_In_Functional_Network` and
-the *Functional Loop Annotation* Excel sheet.
+rather than absence of physical contact. However, anchor gene
+assignments and types are reclassified in place:
+`anchor1_gene`/`anchor2_gene` may be set to `NA` and anchor types
+downgraded (e.g. `P -> eP`, `G -> eG`) for silent regulatory elements.
+All rows are retained; a high-confidence functional subset is provided
+via `Retained_In_Functional_Network` and the *Functional Loop
+Annotation* Excel sheet.
 
 **Interpretation of eP/eG labels:** `eP` and `eG` are
 **expression-filtered silent states**, not functional enhancer
@@ -353,6 +370,6 @@ res_reclassified <- refine_loop_anchors_by_expression(
 #> Warning: 100% of P/G anchors were reclassified to eP/eG. eP/eG labels indicate transcriptionally inactive promoter/gene-body states; enhancer activity requires orthogonal chromatin evidence. Validate with orthogonal chromatin data (ATAC-seq, H3K27ac) before interpreting eP/eG anchors as functional enhancers.
 print(table(res_reclassified$loop_annotation$loop_type))
 #> 
-#>   E-E  E-eP  G-eP  P-eG eP-eP 
+#>   E-E  E-eP  eG-P  eP-G eP-eP 
 #>     1     2     1     1     1 
 ```

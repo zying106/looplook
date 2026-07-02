@@ -166,7 +166,14 @@ Additional columns beyond 6 are retained in the output; anchor swapping only aff
 
 
 <dt id="arg-species">species<a class="anchor" aria-label="anchor" href="#arg-species"></a></dt>
-<dd><p>Character. Genome assembly used when <code>txdb</code> and <code>org_db</code> are <code>NULL</code>. One of <code>"hg38"</code>, <code>"hg19"</code>, <code>"mm10"</code>, <code>"mm9"</code>. Default: <code>"hg38"</code>. For other species, pass <code>txdb</code> and <code>org_db</code> as objects or package name strings directly (e.g. <code>txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene</code>, <code>org_db = "org.Dm.eg.db"</code>); <code>species</code> is then only used for karyotype ideograms.</p></dd>
+<dd><p>Character. Genome assembly string (e.g. <code>"hg38"</code>,
+<code>"mm10"</code>, <code>"danRer11"</code>, <code>"dm6"</code>). Default: <code>"hg38"</code>.
+When <code>txdb</code> and <code>org_db</code> are <code>NULL</code>, auto-resolved from
+built-in species (hg38/hg19/mm10/mm9); for any other species you must
+pass <code>txdb</code> and <code>org_db</code> as objects or package name strings
+directly (e.g. <code>txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene</code>,
+<code>org_db = "org.Dm.eg.db"</code>). The <code>species</code> string is also used
+for karyotype ideograms and JASPAR motif species filtering.</p></dd>
 
 
 <dt id="arg-tss-region">tss_region<a class="anchor" aria-label="anchor" href="#arg-tss-region"></a></dt>
@@ -264,7 +271,7 @@ Default: <code>c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")<
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An invisible named list:</p><ul><li><p><code>target_annotation</code> – Target features (peaks) with gene assignments.
+    <p>A named list:</p><ul><li><p><code>target_annotation</code> – Target features (peaks) with gene assignments.
 Key columns include:</p><ul><li><p><code>All_Loop_Connected_Genes</code>: All genes from loop-connected anchors (P/G types).</p></li>
 <li><p><code>Regulated_promoter_genes</code>: Promoter genes supported by loop-anchor context.</p></li>
 <li><p><code>Assigned_Target_Genes</code>: Promoter-first 3D assignment (prioritises P &gt; G &gt; E).</p></li>
@@ -301,7 +308,11 @@ via the <code>*_Filled</code> linear nearest-gene fallback mechanism.</p></li>
 Logical membership flags indicating which target annotation column(s)
 this gene appears in.</p></li>
 </ul></li>
-<li><p><code>loop_annotation</code> – Annotated 3D interactome with <code>Putative_Target_Genes</code>.</p></li>
+<li><p><code>loop_annotation</code> – Annotated 3D interactome with
+<code>Putative_Target_Genes</code> (genes from P/G-type anchors connected
+through the loop network; for G-P loops, preferentially selects
+P-side genes). Does not include linear nearest-gene fallback at
+this stage (added by <code><a href="refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></code>).</p></li>
 <li><p><code>anchor_loci_annotation</code> – Non-redundant anchor-locus genomic classifications after within-cluster interval reduction.</p></li>
 <li><p><code>anchor_annotation</code> – Backward-compatible alias of <code>anchor_loci_annotation</code>.</p></li>
 <li><p><code>promoter_centric_stats</code> – Gene-level connectivity statistics.</p></li>

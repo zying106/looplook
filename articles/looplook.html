@@ -2781,6 +2781,85 @@ not installed. These are Bioconductor packages, not CRAN.</p>
 <code class="sourceCode R"><span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"TxDb.Mmusculus.UCSC.mm10.knownGene"</span><span class="op">)</span></span>
 <span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"org.Mm.eg.db"</span><span class="op">)</span></span></code></pre></div>
 </div>
+<div class="section level4">
+<h4 id="using-non-human-non-mouse-species">Using non-human / non-mouse species<a class="anchor" aria-label="anchor" href="#using-non-human-non-mouse-species"></a>
+</h4>
+<p>looplook supports any species with a Bioconductor <code>TxDb</code>
+and <code>OrgDb</code> package. Pass them explicitly via the
+<code>txdb</code> and <code>org_db</code> parameters, and set
+<code>species</code> to any genome assembly string (used for karyotype
+ideograms and motif filtering):</p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Drosophila melanogaster (dm6)</span></span>
+<span><span class="fu"><a href="../reference/annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></span><span class="op">(</span></span>
+<span>  bedpe_file  <span class="op">=</span> <span class="st">"dm6_loops.bedpe"</span>,</span>
+<span>  target_bed  <span class="op">=</span> <span class="st">"dm6_peaks.bed"</span>,</span>
+<span>  species     <span class="op">=</span> <span class="st">"dm6"</span>,</span>
+<span>  txdb        <span class="op">=</span> <span class="va">TxDb.Dmelanogaster.UCSC.dm6.ensGene</span>,</span>
+<span>  org_db      <span class="op">=</span> <span class="st">"org.Dm.eg.db"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Danio rerio (danRer11)</span></span>
+<span><span class="fu"><a href="../reference/annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></span><span class="op">(</span></span>
+<span>  bedpe_file  <span class="op">=</span> <span class="st">"drerio_loops.bedpe"</span>,</span>
+<span>  species     <span class="op">=</span> <span class="st">"danRer11"</span>,</span>
+<span>  txdb        <span class="op">=</span> <span class="va">TxDb.Drerio.UCSC.danRer11.refGene</span>,</span>
+<span>  org_db      <span class="op">=</span> <span class="st">"org.Dr.eg.db"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>Refinement and profiling functions consume the
+<code>annotation_res</code> object produced above, so no
+species-specific parameters are needed downstream:</p>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">refined</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span>annotation_res <span class="op">=</span> <span class="va">anno</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="va">result</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/profile_target_genes.html">profile_target_genes</a></span><span class="op">(</span>annotation_res <span class="op">=</span> <span class="va">refined</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<p><strong>Limitations for non-built-in species:</strong></p>
+<table class="table">
+<colgroup>
+<col width="31%">
+<col width="27%">
+<col width="41%">
+</colgroup>
+<thead><tr class="header">
+<th>Feature</th>
+<th>Status</th>
+<th>Workaround</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Anchor classification, gene assignment, expression &amp; chromatin
+refinement, profiling</td>
+<td>Fully supported</td>
+<td>—</td>
+</tr>
+<tr class="even">
+<td>Blacklist filtering</td>
+<td>Not built-in</td>
+<td>Pass your own blacklist BED via <code>region_of_interest</code> with
+<code>roi_mode = "any"</code> and <code>invert = TRUE</code> (see
+<code><a href="../reference/filter_chromatin_loops.html">?filter_chromatin_loops</a></code>)</td>
+</tr>
+<tr class="odd">
+<td>Karyotype ideograms</td>
+<td>Skipped with message if genome unknown</td>
+<td>No crash; output slot set to <code>NULL</code>. Install karyoploteR
+data for your genome, or disable with
+<code>show_karyo = FALSE</code>
+</td>
+</tr>
+<tr class="even">
+<td>BSgenome (motif analysis)</td>
+<td>Warning + auto-disabled if unavailable</td>
+<td>Install the corresponding <code>BSgenome.*</code> package</td>
+</tr>
+<tr class="odd">
+<td>JASPAR motif species filter</td>
+<td>Depends on JASPAR</td>
+<td>Set <code>jaspar_collection</code> manually; JASPAR covers major
+model organisms</td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 <div class="section level3">
 <h3 id="input-data">Input Data<a class="anchor" aria-label="anchor" href="#input-data"></a>
@@ -2803,7 +2882,7 @@ are optional and retained in the output.</p>
 start position is greater than or equal to the end position.</p>
 <p><strong>Solution:</strong> Filter out invalid rows before
 importing:</p>
-<div class="sourceCode" id="cb28"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a><span class="fu">awk</span> <span class="st">'$2 &lt; $3 &amp;&amp; $5 &lt; $6'</span> input.bedpe <span class="op">&gt;</span> clean.bedpe</span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a><span class="fu">awk</span> <span class="st">'$2 &lt; $3 &amp;&amp; $5 &lt; $6'</span> input.bedpe <span class="op">&gt;</span> clean.bedpe</span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="expression-matrix-contains-non-numeric-values">Expression matrix contains non-numeric values<a class="anchor" aria-label="anchor" href="#expression-matrix-contains-non-numeric-values"></a>
@@ -2829,7 +2908,7 @@ Expression matrix uses Ensembl IDs (ENSG00000141510) but OrgDb returns
 gene symbols (TP53) - Case mismatch: expression matrix has “tp53” but
 OrgDb returns “TP53”</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check current gene names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">expr_matrix</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -2856,7 +2935,7 @@ practice to use consistent naming.</p>
 <p><strong>Cause:</strong> The connected-component clustering algorithm
 has O(N²) worst-case complexity per chromosome pair.</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Pre-filter low-confidence loops</span></span>
 <span><span class="fu"><a href="../reference/consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></span><span class="op">(</span></span>
 <span>  files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rep1.bedpe"</span>, <span class="st">"rep2.bedpe"</span><span class="op">)</span>,</span>
@@ -2874,7 +2953,7 @@ has O(N²) worst-case complexity per chromosome pair.</p>
 transitively merge distant loops through intermediate anchors (A-B + B-C
 merges A and C).</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Option 1: Drop chained clusters</span></span>
 <span><span class="fu"><a href="../reference/consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></span><span class="op">(</span><span class="va">...</span>, chaining_policy <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span>
 <span></span>
@@ -2900,7 +2979,7 @@ merges A and C).</p>
 the data.</p>
 <p><strong>Solution:</strong> Lower the threshold or disable
 pre-filtering:</p>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check score distribution first</span></span>
 <span><span class="va">gi</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bedpe_to_gi.html">bedpe_to_gi</a></span><span class="op">(</span><span class="st">"my_loops.bedpe"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu">mcols</span><span class="op">(</span><span class="va">gi</span><span class="op">)</span><span class="op">$</span><span class="va">score</span><span class="op">)</span></span>
@@ -2916,7 +2995,7 @@ pre-filtering:</p>
 different genome builds (e.g., hg38 vs hg19) or different chromosome
 naming conventions (chr1 vs 1).</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check chromosome names</span></span>
 <span><span class="fu">seqlevelsStyle</span><span class="op">(</span><span class="va">gr_peaks</span><span class="op">)</span>   <span class="co"># Should match</span></span>
 <span><span class="fu">seqlevelsStyle</span><span class="op">(</span><span class="va">gr_anchors</span><span class="op">)</span>  <span class="co"># Should match</span></span>
@@ -2935,7 +3014,7 @@ naming conventions (chr1 vs 1).</p>
 <p><strong>Cause:</strong> The expression threshold is too high, or the
 expression matrix does not match the gene annotation.</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check expression distribution</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log2</a></span><span class="op">(</span><span class="va">vals</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Expression Distribution"</span><span class="op">)</span></span>
 <span></span>
@@ -2955,7 +3034,7 @@ chromatin data (ATAC-seq, H3K27ac) before biological interpretation.</p>
 <div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
@@ -3003,7 +3082,7 @@ chromatin data (ATAC-seq, H3K27ac) before biological interpretation.</p>
 <span><span class="co">#&gt;  [39] S4Vectors_0.50.1            regioneR_1.44.0            </span></span>
 <span><span class="co">#&gt;  [41] bezier_1.1.2                textshaping_1.0.5          </span></span>
 <span><span class="co">#&gt;  [43] Hmisc_5.2-6                 GenomicRanges_1.64.0       </span></span>
-<span><span class="co">#&gt;  [45] RSQLite_3.53.2              httr_1.4.8                 </span></span>
+<span><span class="co">#&gt;  [45] RSQLite_3.53.3              httr_1.4.8                 </span></span>
 <span><span class="co">#&gt;  [47] polyclip_1.10-7             abind_1.4-8                </span></span>
 <span><span class="co">#&gt;  [49] compiler_4.6.1              bit64_4.8.2                </span></span>
 <span><span class="co">#&gt;  [51] fontquiver_0.2.1            withr_3.0.3                </span></span>

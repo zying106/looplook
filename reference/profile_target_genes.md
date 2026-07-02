@@ -17,7 +17,7 @@ profile_target_genes(
   expr_matrix_file,
   metadata_file,
   target_source = c("loops", "targets"),
-  target_mapping_mode = c("all", "promoter"),
+  target_mapping_mode = c("all", "promoter", "active"),
   loop_types = c("E-P", "P-P"),
   include_Filled = TRUE,
   use_nearest_gene = FALSE,
@@ -55,7 +55,7 @@ profile_target_genes(
 - lfc_col:
 
   Character. The column name in `diff_file` representing Log2 Fold
-  Change.
+  Change. Default `"log2FoldChange"`.
 
 - expr_matrix_file:
 
@@ -67,70 +67,84 @@ profile_target_genes(
 
 - target_source:
 
-  Character vector. Source of target genes to analyze.
+  Character vector. Source of target genes to analyze. Default
+  `c("loops", "targets")`.
 
 - target_mapping_mode:
 
-  Character. Mapping strategy: `"all"` (any anchor-gene connection) or
-  `"promoter"` (require direct promoter contact).
+  Character. Mapping strategy: `"all"` (any anchor-gene connection),
+  `"promoter"` (require direct promoter contact), or `"active"` (only
+  expression-filtered active target genes; available only with
+  `target_source = "loops"` after running
+  [`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)).
+  Default `"all"`.
 
 - loop_types:
 
-  Character vector. The specific loop types to analyze.
+  Character vector. The specific loop types to analyze. Default
+  `c("E-P", "P-P")`.
 
 - include_Filled:
 
   Logical. If `TRUE`, utilizes the comprehensively merged gene
-  assignment.
+  assignment. Default `TRUE`.
 
 - use_nearest_gene:
 
-  Logical. If `TRUE`, bypasses 3D loop-based gene assignment.
+  Logical. If `TRUE`, bypasses 3D loop-based gene assignment. Default
+  `FALSE`.
 
 - group_order:
 
   Character vector. Optional factor levels to sort sample groups.
+  Default `NULL`.
 
 - project_name:
 
-  Character. Prefix for all output files and plot titles.
+  Character. Prefix for all output files and plot titles. Default
+  `"Analysis"`.
 
 - org_db:
 
   Character. Organism annotation database (e.g., "org.Hs.eg.db").
+  Default `"org.Hs.eg.db"`.
 
 - run_motif:
 
   Logical. Whether to perform Transcription Factor Binding Site motif
-  analysis.
+  analysis. Default `FALSE`.
 
 - genome_id:
 
   Character. Reference genome assembly for motif sequence extraction.
+  Default `"hg38"`.
 
 - motif_p_thresh:
 
-  Numeric. P-value threshold for scanning.
+  Numeric. P-value threshold for scanning. Default `1e-4`.
 
 - motif_ntop:
 
-  Numeric. Number of top enriched motifs to output.
+  Numeric. Number of top enriched motifs to output. Default `5`.
 
 - run_go:
 
-  Logical. Whether to perform Gene Ontology (GO) enrichment.
+  Logical. Whether to perform Gene Ontology (GO) enrichment. Default
+  `FALSE`.
 
 - run_ppi:
 
   Logical. Whether to construct Protein-Protein Interaction networks.
+  Default `FALSE`.
 
 - ppi_score:
 
-  Numeric. Minimum combined confidence score for STRING edges.
+  Numeric. Minimum combined confidence score for STRING edges. Default
+  `400`.
 
 - ppi_nSample:
 
-  Numeric. Maximum number of genes to include in PPI.
+  Numeric. Maximum number of genes to include in PPI. Default `400`.
 
 - heatmap_nSample:
 
@@ -146,15 +160,17 @@ profile_target_genes(
 
 - cnet_nSample:
 
-  Numeric. Number of top GO terms to display in cnetplot.
+  Numeric. Number of top GO terms to display in cnetplot. Default `50`.
 
 - stat_test:
 
-  Character. Statistical test for LFC comparisons.
+  Character. Statistical test for LFC comparisons. Default
+  `"wilcox.test"`.
 
 - cor_method:
 
-  Character. Method for sample correlation matrices.
+  Character. Method for sample correlation matrices. Default
+  `"pearson"`.
 
 - seed:
 

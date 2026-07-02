@@ -809,8 +809,7 @@ assignments.
   : Spatial mapping of 1D genomic features to 3D chromatin interaction
   targets
 - [`resolve_gene_conflicts()`](https://zying106.github.io/looplook/reference/resolve_gene_conflicts.md)
-  : Internal: Resolve Gene Conflicts via Biotype Priority Then
-  Expression
+  : Resolve Gene Conflicts via Biotype Priority Then Expression
 
 ## Module 3: Expression-Aware & Chromatin-Aware Refinement
 

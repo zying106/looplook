@@ -1683,6 +1683,52 @@ BiocManager::install("TxDb.Mmusculus.UCSC.mm10.knownGene")
 BiocManager::install("org.Mm.eg.db")
 ```
 
+#### Using non-human / non-mouse species
+
+looplook supports any species with a Bioconductor `TxDb` and `OrgDb`
+package. Pass them explicitly via the `txdb` and `org_db` parameters,
+and set `species` to any genome assembly string (used for karyotype
+ideograms and motif filtering):
+
+``` r
+
+# Drosophila melanogaster (dm6)
+annotate_peaks_and_loops(
+  bedpe_file  = "dm6_loops.bedpe",
+  target_bed  = "dm6_peaks.bed",
+  species     = "dm6",
+  txdb        = TxDb.Dmelanogaster.UCSC.dm6.ensGene,
+  org_db      = "org.Dm.eg.db"
+)
+
+# Danio rerio (danRer11)
+annotate_peaks_and_loops(
+  bedpe_file  = "drerio_loops.bedpe",
+  species     = "danRer11",
+  txdb        = TxDb.Drerio.UCSC.danRer11.refGene,
+  org_db      = "org.Dr.eg.db"
+)
+```
+
+Refinement and profiling functions consume the `annotation_res` object
+produced above, so no species-specific parameters are needed downstream:
+
+``` r
+
+refined <- refine_loop_anchors_by_expression(annotation_res = anno, ...)
+result  <- profile_target_genes(annotation_res = refined, ...)
+```
+
+**Limitations for non-built-in species:**
+
+| Feature | Status | Workaround |
+|----|----|----|
+| Anchor classification, gene assignment, expression & chromatin refinement, profiling | Fully supported | — |
+| Blacklist filtering | Not built-in | Pass your own blacklist BED via `region_of_interest` with `roi_mode = "any"` and `invert = TRUE` (see [`?filter_chromatin_loops`](https://zying106.github.io/looplook/reference/filter_chromatin_loops.md)) |
+| Karyotype ideograms | Skipped with message if genome unknown | No crash; output slot set to `NULL`. Install karyoploteR data for your genome, or disable with `show_karyo = FALSE` |
+| BSgenome (motif analysis) | Warning + auto-disabled if unavailable | Install the corresponding `BSgenome.*` package |
+| JASPAR motif species filter | Depends on JASPAR | Set `jaspar_collection` manually; JASPAR covers major model organisms |
+
 ### Input Data
 
 #### BEDPE file must have at least 6 columns
@@ -1922,7 +1968,7 @@ sessionInfo()
 #>  [39] S4Vectors_0.50.1            regioneR_1.44.0            
 #>  [41] bezier_1.1.2                textshaping_1.0.5          
 #>  [43] Hmisc_5.2-6                 GenomicRanges_1.64.0       
-#>  [45] RSQLite_3.53.2              httr_1.4.8                 
+#>  [45] RSQLite_3.53.3              httr_1.4.8                 
 #>  [47] polyclip_1.10-7             abind_1.4-8                
 #>  [49] compiler_4.6.1              bit64_4.8.2                
 #>  [51] fontquiver_0.2.1            withr_3.0.3                

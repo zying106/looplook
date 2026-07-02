@@ -87,19 +87,19 @@ print(res$gi)
 #>   [297]      chr1 147271365-147274896 ---      chr1 147290757-147294529 |
 #>   [298]      chr1 108639597-108642391 ---      chr1 109098570-109102247 |
 #>   [299]      chr1   11011475-11014295 ---      chr1   12745039-12747130 |
-#>         cluster_id n_members     score    n_reps
-#>          <numeric> <integer> <numeric> <integer>
-#>     [1]          1         1         1         1
-#>     [2]          2         1         1         1
-#>     [3]          3         1         2         1
-#>     [4]          4         1         1         1
-#>     [5]          5         1         3         1
-#>     ...        ...       ...       ...       ...
-#>   [295]        295         1        12         1
-#>   [296]        296         1         7         1
-#>   [297]        297         1         4         1
-#>   [298]        298         1         1         1
-#>   [299]        299         1         1         1
+#>          cluster_id n_members     score    n_reps
+#>         <character> <integer> <numeric> <integer>
+#>     [1]           1         1         1         1
+#>     [2]           2         1         1         1
+#>     [3]           3         1         2         1
+#>     [4]           4         1         1         1
+#>     [5]           5         1         3         1
+#>     ...         ...       ...       ...       ...
+#>   [295]         295         1        12         1
+#>   [296]         296         1         7         1
+#>   [297]         297         1         4         1
+#>   [298]         298         1         1         1
+#>   [299]         299         1         1         1
 #>   -------
 #>   regions: 384 ranges and 0 metadata columns
 #>   seqinfo: 1 sequence from an unspecified genome; no seqlengths

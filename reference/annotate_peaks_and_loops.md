@@ -72,12 +72,14 @@ annotate_peaks_and_loops(
 
 - species:
 
-  Character. Genome assembly used when `txdb` and `org_db` are `NULL`.
-  One of `"hg38"`, `"hg19"`, `"mm10"`, `"mm9"`. Default: `"hg38"`. For
-  other species, pass `txdb` and `org_db` as objects or package name
-  strings directly (e.g. `txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene`,
-  `org_db = "org.Dm.eg.db"`); `species` is then only used for karyotype
-  ideograms.
+  Character. Genome assembly string (e.g. `"hg38"`, `"mm10"`,
+  `"danRer11"`, `"dm6"`). Default: `"hg38"`. When `txdb` and `org_db`
+  are `NULL`, auto-resolved from built-in species (hg38/hg19/mm10/mm9);
+  for any other species you must pass `txdb` and `org_db` as objects or
+  package name strings directly (e.g.
+  `txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene`,
+  `org_db = "org.Dm.eg.db"`). The `species` string is also used for
+  karyotype ideograms and JASPAR motif species filtering.
 
 - tss_region:
 
@@ -215,7 +217,7 @@ annotate_peaks_and_loops(
 
 ## Value
 
-An invisible named list:
+A named list:
 
 - `target_annotation` – Target features (peaks) with gene assignments.
   Key columns include:
@@ -276,7 +278,10 @@ An invisible named list:
     gene appears in.
 
 - `loop_annotation` – Annotated 3D interactome with
-  `Putative_Target_Genes`.
+  `Putative_Target_Genes` (genes from P/G-type anchors connected through
+  the loop network; for G-P loops, preferentially selects P-side genes).
+  Does not include linear nearest-gene fallback at this stage (added by
+  [`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)).
 
 - `anchor_loci_annotation` – Non-redundant anchor-locus genomic
   classifications after within-cluster interval reduction.
