@@ -4257,12 +4257,15 @@ refine_loop_anchors_by_chromatin <- function(
 #' @noRd
 .build_sankey_plot <- function(bed_info, whitelist, project_name) {
     if (is.null(bed_info)) {
+        message("Target Sankey skipped: no target BED data. Provide a target_bed to annotate_peaks_and_loops.")
         return(NULL)
     }
     if (!"SANKEY_RAW_GENES" %in% colnames(bed_info)) {
+        message("Target Sankey skipped: missing SANKEY_RAW_GENES column.")
         return(NULL)
     }
     if (!requireNamespace("networkD3", quietly = TRUE) || !requireNamespace("htmlwidgets", quietly = TRUE)) {
+        message("Target Sankey skipped: install 'networkD3' and 'htmlwidgets' packages.")
         return(NULL)
     }
 
@@ -4324,6 +4327,7 @@ refine_loop_anchors_by_chromatin <- function(
                 !is.na(L2_Raw) & L2_Raw != ""
         )
     if (nrow(sankey_df) == 0) {
+        message("Target Sankey skipped: no rows with valid L1/L2/L3 classification.")
         return(NULL)
     }
 
@@ -4343,6 +4347,7 @@ refine_loop_anchors_by_chromatin <- function(
                 !is.na(.data$L3_Label) & .data$L3_Label != ""
         )
     if (nrow(sankey_df) == 0) {
+        message("Target Sankey skipped: all rows filtered after label mapping.")
         return(NULL)
     }
 
@@ -4352,6 +4357,7 @@ refine_loop_anchors_by_chromatin <- function(
         unlist(sankey_df$L3_Label, use.names = FALSE)
     ))
     if (length(nodes) < 2) {
+        message("Target Sankey skipped: fewer than 2 unique nodes after filtering.")
         return(NULL)
     }
     nodes <- data.frame(name = nodes, stringsAsFactors = FALSE)
@@ -4457,6 +4463,7 @@ refine_loop_anchors_by_chromatin <- function(
     if (is.null(txdb_pkg) || is.null(org_db) ||
         !requireNamespace(txdb_pkg, quietly = TRUE) ||
         !requireNamespace(org_db, quietly = TRUE)) {
+        message("Refinement karyotype plots skipped: TxDb/OrgDb packages not available.")
         return(plot_list)
     }
     txdb_obj <- utils::getFromNamespace(txdb_pkg, txdb_pkg)
@@ -4825,6 +4832,7 @@ refine_loop_anchors_by_chromatin <- function(
     }
     if (!requireNamespace("networkD3", quietly = TRUE) ||
         !requireNamespace("htmlwidgets", quietly = TRUE)) {
+        message("Chromatin Sankey skipped: install 'networkD3' and 'htmlwidgets' packages.")
         return(NULL)
     }
 
@@ -4835,7 +4843,10 @@ refine_loop_anchors_by_chromatin <- function(
         dplyr::summarise(count = dplyr::n(), .groups = "drop") %>%
         dplyr::filter(count > 0)
 
-    if (nrow(flow_df) == 0) return(NULL)
+    if (nrow(flow_df) == 0) {
+        message("Chromatin Sankey skipped: no reclassification flows to display.")
+        return(NULL)
+    }
 
     # Compute per-type totals for labels
     old_totals <- flow_df %>%
@@ -5022,17 +5033,24 @@ refine_loop_anchors_by_chromatin <- function(
 .build_chromatin_mark_heatmap <- function(validation, reclass_map, project_name) {
     if (!requireNamespace("ComplexHeatmap", quietly = TRUE) ||
         !requireNamespace("circlize", quietly = TRUE)) {
+        message("Chromatin MarkHeatmap skipped: install 'ComplexHeatmap' and 'circlize' packages.")
         return(NULL)
     }
     if (is.null(validation) || nrow(validation) == 0) return(NULL)
     if (is.null(reclass_map) || nrow(reclass_map) == 0) return(NULL)
 
     changed_ids <- reclass_map$anchor_id[reclass_map$changed]
-    if (length(changed_ids) == 0) return(NULL)
+    if (length(changed_ids) == 0) {
+        message("Chromatin MarkHeatmap skipped: no anchors were reclassified.")
+        return(NULL)
+    }
 
     mark_cols <- c("H3K4me1", "H3K27ac", "ATAC", "H3K4me3", "H3K27me3")
     available_marks <- intersect(mark_cols, colnames(validation))
-    if (length(available_marks) == 0) return(NULL)
+    if (length(available_marks) == 0) {
+        message("Chromatin MarkHeatmap skipped: no mark columns found in validation data.")
+        return(NULL)
+    }
 
     df <- validation %>%
         dplyr::filter(anchor_id %in% changed_ids) %>%

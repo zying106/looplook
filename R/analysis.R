@@ -1769,6 +1769,7 @@ run_distal_motif_analysis <- function(
     bg_gr <- GenomicRanges::trim(bg_gr)
     bg_gr <- .sample_gc_matched_background(fg_gr, bg_gr, genome_obj, max_bg = max_bg, gc_bins = gc_bins)
     if (length(fg_gr) == 0 || length(bg_gr) == 0) {
+        message("Motif enrichment skipped: no valid foreground or background regions after trimming.")
         return(NULL)
     }
 
@@ -1782,6 +1783,7 @@ run_distal_motif_analysis <- function(
     if (length(pfm_list) == 0 && !is.null(species_id))
         pfm_list <- TFBSTools::getMatrixSet(jaspar_db, list(collection = jaspar_collection))
     if (length(pfm_list) == 0) {
+        message("Motif enrichment skipped: no motifs found in JASPAR database.")
         return(NULL)
     }
 
@@ -1839,25 +1841,32 @@ run_distal_motif_analysis <- function(
         return(NULL)
     }
     if (!requireNamespace("TFBSTools", quietly = TRUE)) {
+        message("Motif family annotation skipped: install 'TFBSTools' package.")
         return(NULL)
     }
     if (is.null(jaspar_db)) {
-        if (!requireNamespace("JASPAR2020", quietly = TRUE)) return(NULL)
+        if (!requireNamespace("JASPAR2020", quietly = TRUE)) {
+            message("Motif family annotation skipped: install 'JASPAR2020' package.")
+            return(NULL)
+        }
         jaspar_db <- JASPAR2020::JASPAR2020
     }
     top_df <- head(res_df[order(res_df$Pvalue), ], top_n)
     pfm_list <- TFBSTools::getMatrixSet(jaspar_db, opts = list(ID = top_df$MotifID))
     if (length(pfm_list) == 0) {
+        message("Motif logo plot skipped: no PFM matrices found for top motifs.")
         return(NULL)
     }
 
     plot_list <- list()
     for (i in seq_along(top_df$MotifID)) if (top_df$MotifID[i] %in% names(pfm_list)) plot_list[[paste0(top_df$MotifName[i], " (", top_df$MotifID[i], ")")]] <- TFBSTools::Matrix(pfm_list[[top_df$MotifID[i]]])
     if (length(plot_list) == 0) {
+        message("Motif logo plot skipped: no matching PFM matrices for top motifs.")
         return(NULL)
     }
 
     if (!requireNamespace("ggseqlogo", quietly = TRUE)) {
+        message("Motif logo plot skipped: install 'ggseqlogo' package.")
         return(NULL)
     }
     return(ggseqlogo::ggseqlogo(plot_list, ncol = 1) + ggplot2::theme_classic() + ggplot2::theme(axis.text.x = ggplot2::element_blank(), strip.text = ggplot2::element_text(size = 10, face = "bold", hjust = 0), strip.background = ggplot2::element_rect(fill = "grey95", color = NA)) + ggplot2::labs(y = "Bits", title = paste0("Top ", top_n, " Enriched Motifs (SeqLogo)")))
@@ -1875,10 +1884,14 @@ run_distal_motif_analysis <- function(
         return(res_df)
     }
     if (!requireNamespace("TFBSTools", quietly = TRUE)) {
+        message("Motif family annotation skipped: install 'TFBSTools' package.")
         return(res_df)
     }
     if (is.null(jaspar_db)) {
-        if (!requireNamespace("JASPAR2020", quietly = TRUE)) return(res_df)
+        if (!requireNamespace("JASPAR2020", quietly = TRUE)) {
+            message("Motif family annotation skipped: install 'JASPAR2020' package.")
+            return(res_df)
+        }
         jaspar_db <- JASPAR2020::JASPAR2020
     }
     meta_df <- do.call(rbind, lapply(TFBSTools::getMatrixSet(jaspar_db, list(collection = jaspar_collection)), function(x) data.frame(MotifID = TFBSTools::ID(x), Family = paste(if (is.null(TFBSTools::tags(x)$family)) "Unknown" else TFBSTools::tags(x)$family, collapse = "; "), stringsAsFactors = FALSE)))
