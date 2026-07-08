@@ -225,6 +225,139 @@ Promoter–Promoter), and quantification of node connectivity to identify
 cliques</strong> — candidate regulatory domains that may drive
 cell-type-specific transcriptional programs.</p>
 <div class="section level3">
+<h3 id="a-triple-layer-annotation-framework">A Triple-Layer Annotation Framework<a class="anchor" aria-label="anchor" href="#a-triple-layer-annotation-framework"></a>
+</h3>
+<p><code>looplook</code>’s core methodological contribution is a
+<strong>three-layer orthogonal annotation framework</strong> that
+classifies each loop anchor — the fundamental unit connecting 3D
+contacts to downstream peak and feature annotation — by integrating
+independent categories of experimental evidence:</p>
+<ul>
+<li>
+<strong>Positional annotation</strong> provides the baseline anchor
+assignment from genomic coordinates.</li>
+<li>
+<strong>Expression-aware refinement</strong> adds
+transcriptional-activity context.</li>
+<li>
+<strong>Chromatin-state reclassification</strong> supplies
+orthogonal histone-mark validation.</li>
+</ul>
+<p>These anchor-level classifications propagate through the loop network
+to determine target-gene assignments for every auxiliary feature
+(ChIP-seq peaks, ATAC-seq regions, GWAS variants). Because the layers
+function independently, users may deploy <strong>any subset matched to
+their available data modalities</strong> — a single layer for
+exploratory annotation, two for partial orthogonal support, or all three
+for maximally resolved regulatory-element classification.</p>
+<table class="table">
+<colgroup>
+<col width="21%">
+<col width="27%">
+<col width="30%">
+<col width="21%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Layer</th>
+<th align="left">Evidence</th>
+<th align="center">Question</th>
+<th align="left">Output</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left"><strong>Positional Annotation</strong></td>
+<td align="left">Genomic coordinates (TSS / gene-body overlap)</td>
+<td align="center"><em>Where is it?</em></td>
+<td align="left">P / G / E</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>Expression-Aware Refinement</strong></td>
+<td align="left">Transcriptomic data (CAGE-seq, RNA-seq, TT-seq)</td>
+<td align="center"><em>Is it active?</em></td>
+<td align="left">eP / eG (silent → downgraded)</td>
+</tr>
+<tr class="odd">
+<td align="left"><strong>Chromatin-Aware Reclassification</strong></td>
+<td align="left">Chromatin state (ChIP-seq, CUT&amp;Tag, ATAC-seq)</td>
+<td align="center"><em>What is it?</em></td>
+<td align="left">dual / P / E corrected</td>
+</tr>
+</tbody>
+</table>
+<p>Each layer uses orthogonal experimental evidence. Positional
+annotation gives the candidate, expression tells you whether the
+regulatory element is currently in use, and chromatin tells you what
+regulatory class it actually belongs to.</p>
+<p><strong>Why three layers matter — a concrete example:</strong></p>
+<p>Consider an anchor located in an intergenic region near <em>MYC</em>.
+Positional annotation classifies it as <strong>E</strong>
+(enhancer-like) — it does not overlap an annotated TSS. But is it truly
+an enhancer?</p>
+<table style="width:100%;" class="table">
+<colgroup>
+<col width="17%">
+<col width="20%">
+<col width="20%">
+<col width="18%">
+<col width="22%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Scenario</th>
+<th align="center">Positional</th>
+<th align="center">Expression</th>
+<th align="center">Chromatin</th>
+<th align="left">Correct call</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">Silent gene body</td>
+<td align="center">E</td>
+<td align="center">Gene silent → eP</td>
+<td align="center">H3K4me3+ → <strong>P</strong>
+</td>
+<td align="left">
+<strong>P</strong> — an unannotated promoter</td>
+</tr>
+<tr class="even">
+<td align="left">Active enhancer</td>
+<td align="center">E</td>
+<td align="center">eRNA detected → active</td>
+<td align="center">H3K4me1+ H3K27ac+ ATAC+ → <strong>E</strong>
+</td>
+<td align="left">
+<strong>E</strong> — confirmed active enhancer</td>
+</tr>
+<tr class="odd">
+<td align="left">Poised promoter (bivalent)</td>
+<td align="center">E</td>
+<td align="center">Gene silent → eP</td>
+<td align="center">H3K4me3+ H3K27me3+ → conflicting → keep
+<strong>eP</strong>
+</td>
+<td align="left">
+<strong>eP</strong> — poised, not yet active</td>
+</tr>
+<tr class="even">
+<td align="left">Dual-function element</td>
+<td align="center">P</td>
+<td align="center">Gene active → P</td>
+<td align="center">H3K4me1+ H3K4me3+ bigWig ratio≥3 (default) →
+<strong>dual</strong>
+</td>
+<td align="left">
+<strong>dual</strong> — promoter + enhancer</td>
+</tr>
+</tbody>
+</table>
+<p>Positional annotation alone offers limited resolution: it provides a
+plausible first-pass classification but cannot reliably discriminate
+among distinct regulatory states. Expression data narrows the candidate
+pool to transcriptionally active elements, while chromatin-state
+evidence identifies the intrinsic regulatory identity of each anchor.
+Used together, the three layers can yield substantially more reliable
+classifications than any single data modality alone.</p>
+</div>
+<div class="section level3">
 <h3 id="key-features">Key Features<a class="anchor" aria-label="anchor" href="#key-features"></a>
 </h3>
 <ol style="list-style-type: decimal">
@@ -3121,16 +3254,16 @@ chromatin data (ATAC-seq, H3K27ac) before biological interpretation.</p>
 <span><span class="co">#&gt; [117] BiocManager_1.30.27         cli_3.6.6                  </span></span>
 <span><span class="co">#&gt; [119] rpart_4.1.27                systemfonts_1.3.2          </span></span>
 <span><span class="co">#&gt; [121] jquerylib_0.1.4             dichromat_2.0-0.1          </span></span>
-<span><span class="co">#&gt; [123] Rcpp_1.1.1-1.1              GenomeInfoDb_1.48.0        </span></span>
+<span><span class="co">#&gt; [123] Rcpp_1.1.2                  GenomeInfoDb_1.48.0        </span></span>
 <span><span class="co">#&gt; [125] png_0.1-9                   XML_3.99-0.23              </span></span>
-<span><span class="co">#&gt; [127] parallel_4.6.1              pkgdown_2.2.0              </span></span>
+<span><span class="co">#&gt; [127] parallel_4.6.1              pkgdown_2.2.1              </span></span>
 <span><span class="co">#&gt; [129] ggplot2_4.0.3               blob_1.3.0                 </span></span>
 <span><span class="co">#&gt; [131] dotCall64_1.2               AnnotationFilter_1.36.0    </span></span>
 <span><span class="co">#&gt; [133] bitops_1.0-9                viridisLite_0.4.3          </span></span>
 <span><span class="co">#&gt; [135] ggiraph_0.9.6               VariantAnnotation_1.58.0   </span></span>
 <span><span class="co">#&gt; [137] scales_1.4.0                openxlsx_4.2.8.1           </span></span>
 <span><span class="co">#&gt; [139] purrr_1.2.2                 crayon_1.5.3               </span></span>
-<span><span class="co">#&gt; [141] bamsignals_1.44.1           rlang_1.2.0                </span></span>
+<span><span class="co">#&gt; [141] bamsignals_1.44.1           rlang_1.3.0                </span></span>
 <span><span class="co">#&gt; [143] KEGGREST_1.52.2</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -3144,7 +3277,7 @@ chromatin data (ATAC-seq, H3K27ac) before biological interpretation.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

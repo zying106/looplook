@@ -37,6 +37,60 @@ connectivity to identify **dense regulatory hubs** and **enhancer
 cliques** — candidate regulatory domains that may drive
 cell-type-specific transcriptional programs.
 
+### A Triple-Layer Annotation Framework
+
+`looplook`’s core methodological contribution is a **three-layer
+orthogonal annotation framework** that classifies each loop anchor — the
+fundamental unit connecting 3D contacts to downstream peak and feature
+annotation — by integrating independent categories of experimental
+evidence:
+
+- **Positional annotation** provides the baseline anchor assignment from
+  genomic coordinates.
+- **Expression-aware refinement** adds transcriptional-activity context.
+- **Chromatin-state reclassification** supplies orthogonal histone-mark
+  validation.
+
+These anchor-level classifications propagate through the loop network to
+determine target-gene assignments for every auxiliary feature (ChIP-seq
+peaks, ATAC-seq regions, GWAS variants). Because the layers function
+independently, users may deploy **any subset matched to their available
+data modalities** — a single layer for exploratory annotation, two for
+partial orthogonal support, or all three for maximally resolved
+regulatory-element classification.
+
+| Layer | Evidence | Question | Output |
+|:---|:---|:--:|:---|
+| **Positional Annotation** | Genomic coordinates (TSS / gene-body overlap) | *Where is it?* | P / G / E |
+| **Expression-Aware Refinement** | Transcriptomic data (CAGE-seq, RNA-seq, TT-seq) | *Is it active?* | eP / eG (silent → downgraded) |
+| **Chromatin-Aware Reclassification** | Chromatin state (ChIP-seq, CUT&Tag, ATAC-seq) | *What is it?* | dual / P / E corrected |
+
+Each layer uses orthogonal experimental evidence. Positional annotation
+gives the candidate, expression tells you whether the regulatory element
+is currently in use, and chromatin tells you what regulatory class it
+actually belongs to.
+
+**Why three layers matter — a concrete example:**
+
+Consider an anchor located in an intergenic region near *MYC*.
+Positional annotation classifies it as **E** (enhancer-like) — it does
+not overlap an annotated TSS. But is it truly an enhancer?
+
+| Scenario | Positional | Expression | Chromatin | Correct call |
+|:---|:--:|:--:|:--:|:---|
+| Silent gene body | E | Gene silent → eP | H3K4me3+ → **P** | **P** — an unannotated promoter |
+| Active enhancer | E | eRNA detected → active | H3K4me1+ H3K27ac+ ATAC+ → **E** | **E** — confirmed active enhancer |
+| Poised promoter (bivalent) | E | Gene silent → eP | H3K4me3+ H3K27me3+ → conflicting → keep **eP** | **eP** — poised, not yet active |
+| Dual-function element | P | Gene active → P | H3K4me1+ H3K4me3+ bigWig ratio≥3 (default) → **dual** | **dual** — promoter + enhancer |
+
+Positional annotation alone offers limited resolution: it provides a
+plausible first-pass classification but cannot reliably discriminate
+among distinct regulatory states. Expression data narrows the candidate
+pool to transcriptionally active elements, while chromatin-state
+evidence identifies the intrinsic regulatory identity of each anchor.
+Used together, the three layers can yield substantially more reliable
+classifications than any single data modality alone.
+
 ### Key Features
 
 1.  **3D-Guided Multi-Omics Integration**: Maps auxiliary genomic
@@ -2007,15 +2061,15 @@ sessionInfo()
 #> [117] BiocManager_1.30.27         cli_3.6.6                  
 #> [119] rpart_4.1.27                systemfonts_1.3.2          
 #> [121] jquerylib_0.1.4             dichromat_2.0-0.1          
-#> [123] Rcpp_1.1.1-1.1              GenomeInfoDb_1.48.0        
+#> [123] Rcpp_1.1.2                  GenomeInfoDb_1.48.0        
 #> [125] png_0.1-9                   XML_3.99-0.23              
-#> [127] parallel_4.6.1              pkgdown_2.2.0              
+#> [127] parallel_4.6.1              pkgdown_2.2.1              
 #> [129] ggplot2_4.0.3               blob_1.3.0                 
 #> [131] dotCall64_1.2               AnnotationFilter_1.36.0    
 #> [133] bitops_1.0-9                viridisLite_0.4.3          
 #> [135] ggiraph_0.9.6               VariantAnnotation_1.58.0   
 #> [137] scales_1.4.0                openxlsx_4.2.8.1           
 #> [139] purrr_1.2.2                 crayon_1.5.3               
-#> [141] bamsignals_1.44.1           rlang_1.2.0                
+#> [141] bamsignals_1.44.1           rlang_1.3.0                
 #> [143] KEGGREST_1.52.2
 ```
