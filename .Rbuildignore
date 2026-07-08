@@ -36,3 +36,6 @@ coverage
 \.DS_Store$
 ^\.gitignore$
 ^looplook\.html$
+^docs/
+^results/
+^lib/

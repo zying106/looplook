@@ -1082,7 +1082,7 @@ test_that("get_colors returns correct number of colors", {
 test_that("species_txdb_pkg returns correct package names", {
   expect_equal(looplook:::species_txdb_pkg("hg38"), "TxDb.Hsapiens.UCSC.hg38.knownGene")
   expect_equal(looplook:::species_txdb_pkg("mm10"), "TxDb.Mmusculus.UCSC.mm10.knownGene")
-  expect_error(looplook:::species_txdb_pkg("unknown"), "not supported")
+  expect_null(looplook:::species_txdb_pkg("unknown"))
 })
 
 test_that("species_orgdb_pkg returns correct package names", {

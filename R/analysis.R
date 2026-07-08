@@ -690,7 +690,7 @@ run_gsea_analysis <- function(target_genes, global_glist, gsea_nSample, current_
             ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
             ggplot2::scale_x_continuous(expand = c(0, 0), limits = c(0, max_rank)) +
             ggplot2::theme_bw() +
-            ggplot2::labs(x = NULL, y = "ES", title = paste0(current_proj_name, "\nNES: ", round(nes_val, 3), "  P: ", formatC(pval_val, format = "e", digits = 2))) +
+            ggplot2::labs(x = NULL, y = "ES", title = paste0(current_proj_name, "\nNES: ", round(nes_val, 3), "  nominal P: ", formatC(pval_val, format = "e", digits = 2))) +
             ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), panel.grid = ggplot2::element_blank(), plot.title = ggplot2::element_text(hjust = 0.5, face = "bold", size = 10))
 
         hit_data <- d[d$position == 1, ]
@@ -1165,13 +1165,15 @@ plot_summary_go_lollipop <- function(all_go_results, base_project_name) {
             ggplot2::stat_summary(ggplot2::aes(x = .data$Conn_Group_num,
                 y = .data[[y_var]]), fun = median, fun.min = median, fun.max = median,
                 geom = "crossbar", width = 0.1, color = "black", linewidth = 0.4) +
-            ggdist::stat_slab(ggplot2::aes(x = .data$Conn_Group_slab,
+            {if (requireNamespace("ggdist", quietly = TRUE))
+              ggdist::stat_slab(ggplot2::aes(x = .data$Conn_Group_slab,
                 y = .data[[y_var]], fill = .data$Conn_Group),
-                adjust = density_adjust, width = 0.35, justification = 0, normalize = "groups", alpha = 0.3, color = NA) +
-            ggdist::stat_slab(ggplot2::aes(x = .data$Conn_Group_slab,
+                adjust = density_adjust, width = 0.35, justification = 0, normalize = "groups", alpha = 0.3, color = NA)} +
+            {if (requireNamespace("ggdist", quietly = TRUE))
+              ggdist::stat_slab(ggplot2::aes(x = .data$Conn_Group_slab,
                 y = .data[[y_var]], color = .data$Conn_Group),
                 adjust = density_adjust, width = 0.35, justification = 0, normalize = "groups",
-                fill = NA, alpha = 0.5, linewidth = 0.4) +
+                fill = NA, alpha = 0.5, linewidth = 0.4)} +
             ggplot2::scale_x_continuous(
                 breaks = seq_along(levels(plot_df_rc$Conn_Group)),
                 labels = levels(plot_df_rc$Conn_Group)) +

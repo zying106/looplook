@@ -25,6 +25,44 @@ Numerous studies have demonstrated that many distal regulatory elements physical
 
 Beyond its utility as a tool for integrative target annotation, `looplook` can be used as a **standalone utility for loop analysis** per se. Even in the absence of auxiliary omics data, it systematically annotates the 3D chromatin interactome itself, **classifying complex spatial topologies** (e.g., Enhancer-Promoter, Promoter-Promoter interactions) and **quantifying node connectivity** to uncover **dense regulatory hubs and enhancer cliques** that may represent candidate regulatory domains driving cell-type-specific transcriptional programs.
 
+## A Triple-Layer Annotation Framework
+
+`looplook`'s core methodological contribution is a **three-layer orthogonal annotation framework** that classifies each loop anchor — the fundamental unit connecting 3D contacts to downstream peak and feature annotation — by integrating independent categories of experimental evidence:
+
+- **Positional annotation** provides the baseline anchor assignment from genomic coordinates.
+- **Expression-aware refinement** adds transcriptional-activity context.
+- **Chromatin-state reclassification** supplies orthogonal histone-mark validation.
+
+These anchor-level classifications propagate through the loop network to determine target-gene assignments for every auxiliary feature (ChIP-seq peaks, ATAC-seq regions, GWAS variants). Because the layers function independently, users may deploy **any subset matched to their available data modalities** — a single layer for exploratory annotation, two for partial orthogonal support, or all three for maximally resolved regulatory-element classification.
+
+```
+                           ┌───────────────────────────┐
+                           │  POSITIONAL ANNOTATION    │
+                           │  Genomic coordinates      │
+                           │  (TSS/gene-body overlap)  │
+                           │                           │
+                           │     "Where is it?"        │
+                           │     → P / G / E           │
+                           └─────────┬─────┬───────────┘
+                                     │     │
+                        ┌────────────┘     └───────────┐
+                        ▼                              ▼
+           ┌──────────────────────────┐       ┌───────────────────────────┐
+           │  EXPRESSION REFINEMENT   │       │ CHROMATIN RECLASSIFICATION│
+           │  Transcriptomic data     │       │  Chromatin state          │
+           │  (CAGE-seq, RNA-seq,     │◄─────►│  (ChIP-seq, CUT&Tag,      │
+           │   TT-seq, SLAM-seq)      │       │   ATAC-seq)               │
+           │                          │       │                           │
+           │     "Is it active?"      │       │     "What is it?"         │
+           │    → eP / eG (silenced)  │       │  → dual / P / E corrected │
+           └──────────┬───────────────┘       └──────────┬────────────────┘
+                      │                                  │
+                      └────────────────┬─────────────────┘
+                                       │
+                   Three layers = one integrated framework
+           each adds orthogonal evidence, each can correct the others
+```
+
 ---
 
 ## Installation

@@ -25,3 +25,5 @@ README.html
 vignettes/*.html
 figure/
 lib/
+coverage_report.html
+doc/looplook.html

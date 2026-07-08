@@ -75,7 +75,6 @@ test_that("run_go_enrichment returns list with result and plot", {
   skip_if_not(has_data, "Pre-computed RData not available")
   skip_if_not_installed("clusterProfiler")
   skip_if_not_installed("org.Hs.eg.db")
-  library(org.Hs.eg.db)
 
   # Use small gene set for speed
   small_targets <- head(target_genes, 8)
