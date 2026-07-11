@@ -3433,7 +3433,7 @@ refine_loop_anchors_by_chromatin <- function(
 
     # --- 6. Summary ---
     log_message("--- Chromatin Refinement Summary ---")
-    tab <- table(validation$confidence, useNA = "ifany")
+    tab <- table(validation$enhancer_evidence, useNA = "ifany")
     for (lvl in names(tab)) {
         log_message(sprintf("  %-16s: %d anchors", lvl, tab[lvl]))
     }
@@ -3506,10 +3506,10 @@ refine_loop_anchors_by_chromatin <- function(
     qc_summary <- data.frame(
         n_candidate_anchors = nrow(validation),
         n_reclassified      = sum(reclass_map$changed),
-        n_gold_standard     = sum(validation$confidence == "gold_standard"),
-        n_high_confidence   = sum(validation$confidence == "high_confidence"),
-        n_supported         = sum(validation$confidence == "supported"),
-        n_weak              = sum(validation$confidence == "weak"),
+        n_gold_standard     = sum(validation$enhancer_evidence == "gold_standard"),
+        n_high_confidence   = sum(validation$enhancer_evidence == "high_confidence"),
+        n_supported         = sum(validation$enhancer_evidence == "supported"),
+        n_weak              = sum(validation$enhancer_evidence == "weak"),
         n_dual              = sum(reclass_map$new_type == "dual"),
         n_promoter_like     = n_promoter_like,
         stringsAsFactors = FALSE
@@ -3609,7 +3609,7 @@ refine_loop_anchors_by_chromatin <- function(
             h3k4me3_n  = !is.na(validation$H3K4me3)  & !validation$H3K4me3,
             h3k4me1_n  = !is.na(validation$H3K4me1)  & !validation$H3K4me1,
             is_promoter_like = validation$is_promoter_like,
-            conf_chr = as.character(validation$confidence),
+            conf_chr = as.character(validation$enhancer_evidence),
 
             # --- bigWig dual resolution ---
             # Dual-positive (H3K4me1+ H3K4me3+) without quantitative evidence
@@ -3855,7 +3855,7 @@ refine_loop_anchors_by_chromatin <- function(
     )
     if (!is.null(annotation_res$chromatin_validation)) {
         cv <- annotation_res$chromatin_validation
-        conf_map <- setNames(as.character(cv$confidence), cv$anchor_id)
+        conf_map <- setNames(as.character(cv$enhancer_evidence), cv$anchor_id)
         evid_map <- setNames(cv$evidence, cv$anchor_id)
         new_links$chromatin_confidence <- conf_map[new_links$anchor_id]
         new_links$chromatin_evidence    <- evid_map[new_links$anchor_id]
@@ -4744,6 +4744,13 @@ refine_loop_anchors_by_chromatin <- function(
     if (requireNamespace("patchwork", quietly = TRUE)) {
         p_combined <- (p_side | (p_bar / p_dot)) +
             patchwork::plot_layout(widths = c(1, 6), heights = c(3, 2))
+        # Avoid patchwork ≤1.3.x plot_filler class bug that breaks
+        # grid.draw / ggsave: replace filler panels and strip filler
+        # class from the top-level object.
+        p_combined$patches$plots <- lapply(p_combined$patches$plots, function(x) {
+            if (inherits(x, "plot_filler")) patchwork::plot_spacer() else x
+        })
+        class(p_combined) <- setdiff(class(p_combined), "plot_filler")
         return(p_combined)
     }
     # fallback: bar only (no side panel or dot matrix)
@@ -5301,7 +5308,7 @@ format_annotation_columns <- function(df) {
 #'     the anchor overlaps the corresponding positive mark.}
 #'   \item{\code{H3K27me3}, \code{H3K4me3}}{Logical. TRUE if the anchor
 #'     overlaps the corresponding negative mark.}
-#'   \item{\code{confidence}}{Factor with levels:
+#'   \item{\code{enhancer_evidence}}{Factor with levels:
 #'     \code{"gold_standard"}, \code{"high_confidence"}, \code{"supported"},
 #'     \code{"weak"}, \code{"uncertain"}.}
 #'   \item{\code{evidence}}{Human-readable summary of which marks supported
@@ -5335,7 +5342,7 @@ format_annotation_columns <- function(df) {
 #'     ),
 #'     quiet = TRUE
 #' )
-#' table(result$confidence)
+#' table(result$enhancer_evidence)
 #'
 #' Internal: Compute H3K4me1 / H3K4me3 Signal Ratio from bigWig
 #'
@@ -5415,15 +5422,15 @@ format_annotation_columns <- function(df) {
 #' @param candidate_types Character vector or \code{NULL}. Anchor types to
 #'   validate. \code{NULL} (default): uses all five types
 #'   \code{c("P","G","E","eP","eG")} regardless of input source.
-#' @param species Character. Genome assembly. \code{"hg38"} (default),
-#'   \code{"hg19"}, \code{"mm10"}, or \code{"mm9"}.
+#' @param species Character. Genome assembly string. Default: \code{"hg38"}.
+#'   Accepts any assembly string; used for seqlevel harmonization.
 #' @param quiet Logical. Suppress messages. Default: \code{FALSE}.
 #'
 #' @return A data frame with columns:
 #' \describe{
 #'   \item{anchor_id, chr, start, end, anchor_type, anchor_gene, cluster_id}{Anchor identifiers.}
 #'   \item{H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3}{Logical or \code{NA}. \code{TRUE} = overlap, \code{FALSE} = tested but absent, \code{NA} = not tested.}
-#'   \item{confidence}{Factor: \code{gold_standard} > \code{high_confidence} > \code{supported} > \code{weak} > \code{uncertain}.}
+#'   \item{enhancer_evidence}{Factor: \code{gold_standard} > \code{high_confidence} > \code{supported} > \code{weak} > \code{uncertain}.}
 #'   \item{evidence}{Human-readable string of the constituting marks (e.g. \code{"H3K4me1+; H3K27ac+; H3K4me3-; H3K27me3-"}). Anchors with tested-positive H3K4me3 at \code{supported} confidence are annotated with a \code{"promoter_like"} tag.}
 #' }
 #'
@@ -5463,7 +5470,7 @@ format_annotation_columns <- function(df) {
 #'     ),
 #'     quiet = TRUE
 #' )
-#' table(result$confidence)
+#' table(result$enhancer_evidence)
 #'
 validate_epeG_by_chromatin <- function(
     annotation_res,
@@ -5515,7 +5522,7 @@ validate_epeG_by_chromatin <- function(
 
     # ---- 6. Summary ----
     log_message("--- Validation Summary ---")
-    tab <- table(result$confidence, useNA = "ifany")
+    tab <- table(result$enhancer_evidence, useNA = "ifany")
     for (lvl in names(tab)) {
         log_message(sprintf("  %-16s: %d anchors", lvl, tab[lvl]))
     }
@@ -5526,12 +5533,12 @@ validate_epeG_by_chromatin <- function(
     log_message("--- End Validation ---")
 
     out <- result %>%
-        dplyr::arrange(confidence, anchor_id) %>%
+        dplyr::arrange(enhancer_evidence, anchor_id) %>%
         dplyr::select(
             anchor_id, chr, start, end,
             anchor_type, anchor_gene, cluster_id,
             H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3,
-            confidence, evidence
+            enhancer_evidence, evidence
         )
     attr(out, "looplook_metadata") <- list(
         package = "looplook",
@@ -5562,8 +5569,8 @@ validate_epeG_by_chromatin <- function(
         cluster_id = character(),
         H3K4me1 = logical(), H3K27ac = logical(), ATAC = logical(),
         H3K27me3 = logical(), H3K4me3 = logical(),
-        confidence = factor(levels = c("gold_standard", "high_confidence",
-                                       "supported", "weak", "uncertain")),
+        enhancer_evidence = factor(levels = c("gold_standard", "high_confidence",
+                                              "supported", "weak", "uncertain")),
         evidence = character(),
         is_promoter_like = logical(),
         stringsAsFactors = FALSE
@@ -5648,6 +5655,10 @@ validate_epeG_by_chromatin <- function(
         }
         log_message(sprintf("  Overlapping with %s ...", mark))
         mark_gr <- read_simple_bed(bed_path, quiet = TRUE)
+        if (length(mark_gr) == 0) {
+            message("    BED file for ", mark, " contains zero peaks; ",
+                    "all anchors will be marked as tested-but-absent (FALSE).")
+        }
         mark_gr <- .harmonize_seqlevels(mark_gr, gr_anchors, mark)
         hits <- GenomicRanges::findOverlaps(gr_anchors, mark_gr, maxgap = anchor_gap)
         if (anchor_min_overlap > 1L && length(hits) > 0) {
@@ -5688,13 +5699,13 @@ validate_epeG_by_chromatin <- function(
         isTRUE(result$H3K4me1[i]) || isTRUE(result$H3K27ac[i]) || isTRUE(result$ATAC[i])
     }, logical(1))
     has_negative_excl <- vapply(seq_len(nrow(result)), function(i) {
-        .is_absent <- function(x) !is.na(x) && !x
-        .is_absent(result$H3K27me3[i]) && .is_absent(result$H3K4me3[i])
+        (!is.na(result$H3K27me3[i]) && !result$H3K27me3[i]) &&
+        (!is.na(result$H3K4me3[i]) && !result$H3K4me3[i])
     }, logical(1))
     all_five <- length(provided_marks) == 5
     .is_absent <- function(x) !is.na(x) && !x
 
-    result$confidence <- vapply(seq_len(nrow(result)), function(i) {
+    result$enhancer_evidence <- vapply(seq_len(nrow(result)), function(i) {
         h3k4me1_t <- !is.na(result$H3K4me1[i]); h3k27ac_t <- !is.na(result$H3K27ac[i])
         atac_t    <- !is.na(result$ATAC[i])
         h3k27me3_t <- !is.na(result$H3K27me3[i]); h3k4me3_t <- !is.na(result$H3K4me3[i])
@@ -5718,7 +5729,7 @@ validate_epeG_by_chromatin <- function(
         return("uncertain")
     }, character(1))
 
-    result$confidence <- factor(result$confidence,
+    result$enhancer_evidence <- factor(result$enhancer_evidence,
         levels = c("gold_standard", "high_confidence", "supported", "weak", "uncertain"))
 
     result$evidence <- vapply(seq_len(nrow(result)), function(i) {
@@ -5736,14 +5747,14 @@ validate_epeG_by_chromatin <- function(
         # of whether H3K27me3 is absent (active promoter) or present (bivalent/
         # poised promoter -- hallmark of silenced developmental genes). Both
         # should be reverted to P by chromatin reclassification, not kept as eP.
-        if (result$confidence[i] == "supported" &&
+        if (result$enhancer_evidence[i] == "supported" &&
             isTRUE(result$H3K4me3[i])) {
             parts <- c(parts, "promoter_like")
         }
         if (length(parts) == 0) return("no_data")
         paste(parts, collapse = "; ")
     }, character(1))
-    result$is_promoter_like <- result$confidence %in% "supported" &
+    result$is_promoter_like <- result$enhancer_evidence %in% "supported" &
         !is.na(result$H3K4me3) & result$H3K4me3
     result
 }

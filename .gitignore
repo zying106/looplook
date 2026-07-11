@@ -27,3 +27,7 @@ figure/
 lib/
 coverage_report.html
 doc/looplook.html
+README.log
+inst/scripts/*.pdf
+inst/scripts/*.pptx
+inst/scripts/*.js

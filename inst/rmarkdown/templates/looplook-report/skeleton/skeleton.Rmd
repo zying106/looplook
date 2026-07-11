@@ -578,9 +578,13 @@ cat(metric_container(list(
   metric_card(paste0(elapsed, " min"), "computation time", "bg-purple")
 )))
 
-dominant_type <- names(sort(table(la$loop_type), decreasing=TRUE))[1]
-cat(sprintf("\nOf the **%s** features analyzed, **%s%%** were successfully linked to target genes via spatial chromatin contacts. The dominant interaction topology observed is **%s**.\n",
-  comma(n_targets), pct_linked, dominant_type))
+dominant_type <- names(sort(table(
+  if (!is.null(refined) && !is.null(refined$loop_annotation))
+    refined$loop_annotation$loop_type else la$loop_type
+), decreasing=TRUE))[1]
+refinement_note <- if (!is.null(refined)) " (after refinement)" else ""
+cat(sprintf("\nOf the **%s** features analyzed, **%s%%** were successfully linked to target genes via spatial chromatin contacts. The dominant interaction topology observed is **%s**%s.\n",
+  comma(n_targets), pct_linked, dominant_type, refinement_note))
 ```
 
 ## Global Topology Summary
@@ -735,8 +739,8 @@ cat(sprintf("<strong>%s complete.</strong> Applied a %s threshold of <strong>%.1
 if (has_chromatin && !is.null(chromatin_refined)) {
   n_dual <- sum(chromatin_refined$loop_annotation$loop_type == "dual" |
                 grepl("dual", chromatin_refined$loop_annotation$loop_type))
-  n_reclass <- sum(grepl("Reclassified", names(table(chromatin_refined$chromatin_validation$confidence))))
-  cv_summary <- table(chromatin_refined$chromatin_validation$confidence)
+  n_reclass <- sum(grepl("Reclassified", names(table(chromatin_refined$chromatin_validation$enhancer_evidence))))
+  cv_summary <- table(chromatin_refined$chromatin_validation$enhancer_evidence)
   .get_cv <- function(tbl, nm) if (nm %in% names(tbl)) tbl[[nm]] else 0L
   cat('<div class="status-box status-info">')
   cat(sprintf("<strong>Chromatin refinement complete.</strong> "))
@@ -1003,7 +1007,7 @@ for (nm in chr_plot_nms) {
 ```{r chromatin-validation, results='asis', eval=!is.null(chromatin_refined) && !is.null(chromatin_refined$chromatin_validation) && nrow(chromatin_refined$chromatin_validation) > 0}
 cv <- chromatin_refined$chromatin_validation
 cat("\n## Orthogonal Chromatin Validation\n\n")
-cv_tab <- table(cv$confidence)
+cv_tab <- table(cv$enhancer_evidence)
 cv_levels <- c("gold_standard", "high_confidence", "supported", "weak", "uncertain")
 cv_colors <- c("gold_standard"="#1B5E20", "high_confidence"="#2E7D32", "supported"="#66BB6A",
                "weak"="#FFB300", "uncertain"="#BDBDBD")

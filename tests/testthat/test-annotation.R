@@ -85,7 +85,7 @@ test_that("validate_epeG_by_chromatin: no marks → all uncertain", {
 
   val <- validate_epeG_by_chromatin(res, chromatin_beds = list(), quiet = TRUE)
   skip_if(nrow(val) == 0, "No P/G anchors in pre-computed data")
-  expect_true(all(val$confidence == "uncertain"))
+  expect_true(all(val$enhancer_evidence == "uncertain"))
   expect_true(all(is.na(val$H3K4me1) & is.na(val$H3K27ac) &
                   is.na(val$ATAC) & is.na(val$H3K27me3) & is.na(val$H3K4me3)))
 })
@@ -108,7 +108,7 @@ test_that("validate_epeG_by_chromatin: missing negative marks → not weak", {
   skip_if(nrow(val) == 0, "No P/G anchors in pre-computed data")
   expect_true(all(is.na(val$H3K27me3)))
   expect_true(all(is.na(val$H3K4me3)))
-  expect_false(any(val$confidence == "weak"),
+  expect_false(any(val$enhancer_evidence == "weak"),
     info = "Missing negative marks should not produce 'weak' classification")
   unlink(h3k4me1)
 })
@@ -124,7 +124,7 @@ test_that(".assign_chromatin_confidence: gold_standard (all 5 marks aligned)", {
   mm$H3K27me3 <- FALSE; mm$H3K4me3 <- FALSE
 
   res <- looplook:::.assign_chromatin_confidence(anchors, mm, known_marks, known_marks)
-  expect_equal(as.character(res$confidence), "gold_standard")
+  expect_equal(as.character(res$enhancer_evidence), "gold_standard")
   expect_false(any(is.na(res[, known_marks])))
 })
 
@@ -140,7 +140,7 @@ test_that(".assign_chromatin_confidence: high_confidence (H3K4me1 + H3K27ac)", {
 
   res <- looplook:::.assign_chromatin_confidence(anchors, mm,
     c("H3K4me1", "H3K27ac"), known_marks)
-  expect_equal(as.character(res$confidence), "high_confidence")
+  expect_equal(as.character(res$enhancer_evidence), "high_confidence")
 })
 
 test_that(".assign_chromatin_confidence: supported (one positive mark)", {
@@ -152,7 +152,7 @@ test_that(".assign_chromatin_confidence: supported (one positive mark)", {
   mm$ATAC <- TRUE  # only ATAC positive, no H3K4me1
 
   res <- looplook:::.assign_chromatin_confidence(anchors, mm, c("ATAC"), known_marks)
-  expect_equal(as.character(res$confidence), "supported")
+  expect_equal(as.character(res$enhancer_evidence), "supported")
 })
 
 test_that(".assign_chromatin_confidence: weak (negative marks tested, no positives)", {
@@ -165,7 +165,7 @@ test_that(".assign_chromatin_confidence: weak (negative marks tested, no positiv
 
   res <- looplook:::.assign_chromatin_confidence(anchors, mm,
     c("H3K27me3", "H3K4me3"), known_marks)
-  expect_equal(as.character(res$confidence), "weak")
+  expect_equal(as.character(res$enhancer_evidence), "weak")
 })
 
 test_that(".assign_chromatin_confidence: uncertain (all marks absent, NA cols OK)", {
@@ -176,7 +176,7 @@ test_that(".assign_chromatin_confidence: uncertain (all marks absent, NA cols OK
   mm <- as.data.frame(matrix(NA, nrow = 1, ncol = 5, dimnames = list(NULL, known_marks)))
 
   res <- looplook:::.assign_chromatin_confidence(anchors, mm, character(0), known_marks)
-  expect_equal(as.character(res$confidence), "uncertain")
+  expect_equal(as.character(res$enhancer_evidence), "uncertain")
   # All mark columns should be NA
   expect_true(all(is.na(res[, known_marks])))
 })
@@ -192,7 +192,7 @@ test_that(".assign_chromatin_confidence: NA negative marks do not produce weak",
 
   res <- looplook:::.assign_chromatin_confidence(anchors, mm,
     c("H3K4me1", "H3K27ac", "ATAC"), known_marks)
-  expect_equal(as.character(res$confidence), "uncertain")
+  expect_equal(as.character(res$enhancer_evidence), "uncertain")
   expect_true(all(is.na(res$H3K27me3)))
   expect_true(all(is.na(res$H3K4me3)))
 })
@@ -209,7 +209,7 @@ test_that(".assign_chromatin_confidence: gold_standard fails with missing mark",
   res <- looplook:::.assign_chromatin_confidence(anchors, mm,
     c("H3K4me1", "H3K27ac", "ATAC", "H3K27me3"), known_marks)
   # Not gold_standard (only 4 marks provided)
-  expect_equal(as.character(res$confidence), "high_confidence")
+  expect_equal(as.character(res$enhancer_evidence), "high_confidence")
 })
 
 # --- .record_database_versions ---

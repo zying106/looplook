@@ -62,7 +62,7 @@ if (getRversion() >= "2.15.1") {
         "Mean_Expression",
         "Passes_Expression_Filter", "retained_after_refinement",
         "H3K4me1", "H3K27ac", "ATAC", "H3K27me3", "H3K4me3",
-        "anchor_type", "anchor_gene", "confidence", "evidence",
+        "anchor_type", "anchor_gene", "enhancer_evidence", "evidence",
         "priority", "combination", "log_count", "present", "count",
         "set_counts", "bin_mat", "bar_df",
         "tooltip", "color", "data_id",
@@ -789,7 +789,7 @@ resolve_gene_conflicts <- function(
             protein     = "protein",
             small_ncRNA = "miRNA|snoRNA|snRNA|rRNA|scaRNA",
             antisense   = "antisense",
-            lncRNA      = "lncRNA|ncrna",
+            lncRNA      = "lncRNA|ncrna|sense_",
             pseudogene  = "pseudo"
         )
         default_order <- c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")

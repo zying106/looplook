@@ -1050,12 +1050,12 @@ gi_to_dt <- function(gi) {
         score = if (!is.null(S4Vectors::mcols(gi)$score)) {
             S4Vectors::mcols(gi)$score
         } else {
-            0
+            rep(0, length(gi))
         },
         source = if (!is.null(S4Vectors::mcols(gi)$source)) {
             S4Vectors::mcols(gi)$source
         } else {
-            1L
+            rep(1L, length(gi))
         }
     )
 }

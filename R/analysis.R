@@ -63,6 +63,11 @@
 #'   Default \code{400}.
 #' @param ppi_nSample Numeric. Maximum number of genes to include in PPI.
 #'   Default \code{400}.
+#' @param ppi_species_id Integer or \code{NULL}. NCBI taxonomy ID for STRING
+#'   PPI analysis (e.g.\ 9606 for human, 10090 for mouse). \code{NULL} (default)
+#'   attempts automatic inference from the OrgDb package name. Set explicitly
+#'   for species whose OrgDb naming is not recognised. See
+#'   \url{https://string-db.org} for a complete taxonomy list.
 #' @param heatmap_nSample Numeric. Maximum number of genes to plot in heatmap.
 #'   Default \code{99999} (effectively no limit). Reduce to \code{20-50} for
 #'   readable heatmaps.
@@ -145,6 +150,7 @@ profile_target_genes <- function(
   run_ppi = FALSE,
   ppi_score = 400,
   ppi_nSample = 400,
+  ppi_species_id = NULL,
   heatmap_nSample = 99999,
   gsea_nSample = 99999,
   cnet_nSample = 50,
@@ -252,7 +258,8 @@ profile_target_genes <- function(
             cnet_nSample = cnet_nSample,
             run_ppi = run_ppi,
             ppi_score = ppi_score,
-            ppi_nSample = ppi_nSample
+            ppi_nSample = ppi_nSample,
+            ppi_species_id = ppi_species_id
         )
         analysis_queue <- task_results$analysis_queue
         source_go_results <- task_results$go_results
@@ -399,7 +406,7 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
     stat_test, gsea_nSample, heatmap_nSample, cor_method,
     run_motif, genome_id, motif_p_thresh, motif_ntop,
     run_go, org_db, cnet_nSample,
-    run_ppi, ppi_score, ppi_nSample
+    run_ppi, ppi_score, ppi_nSample, ppi_species_id
 ) {
     go_results <- list()
     plots <- list()
@@ -527,7 +534,7 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
             p_ppi <- .safe_run("PPI",
                 run_ppi_analysis(
                     target_genes, global_glist, org_db, ppi_score,
-                    ppi_nSample, current_proj_name
+                    ppi_nSample, current_proj_name, ppi_species_id
                 )
             )
             if (!is.null(p_ppi)) task_plots$PPI_Network <- p_ppi
@@ -752,6 +759,12 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
         multiVals = "first"
     ))
     valid_entrez <- na.omit(gene_entrez)
+    n_dropped <- length(clean_genes) - length(valid_entrez)
+    if (n_dropped > 0) {
+        message(sprintf("GO: %d of %d genes (%.1f%%) could not be mapped to ENTREZID.",
+                        n_dropped, length(clean_genes),
+                        100 * n_dropped / length(clean_genes)))
+    }
 
     use_symbol_mode <- length(valid_entrez) < 5 || (length(valid_entrez) / length(clean_genes) < 0.1)
 
@@ -872,8 +885,15 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 #' @return A \code{ggplot} object representing the PPI network, or \code{NULL} if no interactions found.
 #' @keywords internal
 #' @noRd
-run_ppi_analysis <- function(target_genes, global_glist, org_db, ppi_score, ppi_ntop, current_proj_name) {
-    # Resolve STRING species ID from OrgDb package name (more robust than grepl)
+run_ppi_analysis <- function(target_genes, global_glist, org_db, ppi_score, ppi_ntop, current_proj_name, ppi_species_id = NULL) {
+    # Resolve STRING species ID from OrgDb package name.
+    # If ppi_species_id is explicitly provided (NCBI taxonomy ID), use it
+    # directly. Otherwise, try inference from the OrgDb package name.
+    if (!is.null(ppi_species_id)) {
+        if (!is.numeric(ppi_species_id) || length(ppi_species_id) != 1L || is.na(ppi_species_id))
+            stop("`ppi_species_id` must be a single NCBI taxonomy ID integer", call. = FALSE)
+        species_id <- as.integer(ppi_species_id)
+    } else {
     species_map <- c(
         "org.Hs.eg.db" = 9606L,   # human
         "org.Mm.eg.db" = 10090L,  # mouse
@@ -896,15 +916,17 @@ run_ppi_analysis <- function(target_genes, global_glist, org_db, ppi_score, ppi_
                       else if (grepl("\\.[Dd]m\\.", org_pkg_name)) 7227L
                       else NULL
         if (is.null(species_id)) {
-            stop("Could not resolve STRING species ID for OrgDb '", org_pkg_name,
-                 "'. PPI analysis requires a recognised OrgDb package name ",
-                 "(e.g. 'org.Hs.eg.db', 'org.Mm.eg.db').",
-                 call. = FALSE)
+            warning("Could not resolve STRING species ID for OrgDb '", org_pkg_name,
+                    "'. PPI analysis skipped. Supported OrgDbs include: ",
+                    "org.Hs.eg.db, org.Mm.eg.db, org.Rn.eg.db, org.Dm.eg.db.",
+                    call. = FALSE)
+            return(NULL)
         }
         warning("Inferred STRING species ID ", species_id, " for '", org_pkg_name,
                 "'. If this is incorrect, verify the OrgDb package.",
                 call. = FALSE)
     }
+    }  # end else (ppi_species_id not provided)
 
     string_db_obj <- tryCatch(
         suppressMessages(

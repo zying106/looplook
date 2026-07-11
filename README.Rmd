@@ -90,7 +90,7 @@ In 3D genomics analyses, individual replicates typically exhibit **certain degre
 * **`blacklist_species`**: Automatically excludes chromatin loops overlapping with high-variance, artifact-prone genomic regions (e.g., centromeres, telomeres) by integrating the official ENCODE blacklist for specified species (e.g., `"hg38"`, `"mm10"`).
 * **`region_of_interest`**: Accepts an **auxiliary BED file** (e.g., a specific disease-associated locus or ChIP-seq peak set) to filter for loops with physical connectivity to the target genomic region.
 
-```{r}
+```{r, eval = requireNamespace("looplook", quietly = TRUE)}
 library(looplook)
 out_dir <- tempdir()
 
@@ -117,7 +117,7 @@ This module serves as the **core target mapping engine**. It resolves locus assi
 * **`neighbor_hop`**: An advanced topological parameter for 3D chromatin interactome network traversal. Target gene assignment uses `neighbor_hop + 1` graph steps to capture genes at opposite anchors. A value of 0 restricts loop topology to direct contacts (target genes searched within 1-hop); a value of 1 (Hub Mode) extends both to secondary network effects.
 * **`tss_region`**: Defines the **spatial boundary of gene promoters** relative to the Transcription Start Site (TSS).
 
-```{r}
+```{r, eval = requireNamespace("looplook", quietly = TRUE)}
 # Annotate chromatin loops and map features to target genes via 3D contacts
 # When TxDb/OrgDb are installed, runs the full pipeline; otherwise loads pre-computed result
 if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
@@ -169,7 +169,7 @@ Physical proximity is a structural prerequisite, but not a direct proxy for acti
 * `threshold_mode` (new): `"absolute"` (default): `threshold` is a direct expression cutoff. `"quantile"`: `threshold` is a quantile of the expression distribution (e.g., `0.75` selects the top 25% most highly expressed genes), adapting to different sequencing depths.
 * `reclassify_by_expression`: When enabled (`TRUE`), **transcriptionally silent promoters** are not simply discarded; instead, they are biologically reclassified to enhancer-like regulatory elements. This correction refines the **regulatory topology** (e.g., reclassifying a functionally silent **P-P** loop into a curated **eP-P** loop). **Important:** `eP`/`eG` labels indicate transcriptional silence, not functional enhancer activity. Orthogonal chromatin data are required for functional interpretation.
 
-```{r}
+```{r, eval = requireNamespace("looplook", quietly = TRUE)}
 expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
 
 refined_res <- refine_loop_anchors_by_expression(
@@ -216,7 +216,7 @@ val <- validate_epeG_by_chromatin(
     ATAC     = "atac_peaks.bed"
   )
 )
-table(val$confidence)
+table(val$enhancer_evidence)
 
 # Chromatin-aware reclassification with target link recomputation
 cr <- refine_loop_anchors_by_chromatin(
@@ -250,7 +250,7 @@ This module provides a fully automated, end-to-end multi-omics analysis pipeline
     * **`FALSE` (Pure Spatial Mode)**: Strictly isolates and analyzes only the **3D interactome**.
 * **`use_nearest_gene` (The Control)** Serves as a **classical baseline reference**. If set to `TRUE`, the engine bypasses 3D spatial topology and strictly assigns genomic features to their nearest linear genes, facilitating a direct comparison to demonstrate the **novel functional insights** gained from 3D-guided mapping.
 
-```{r}
+```{r, eval = requireNamespace("looplook", quietly = TRUE)}
 diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
 meta_path <- system.file("extdata", "example_coldata.txt", package = "looplook")
 
@@ -286,7 +286,7 @@ This module precisely renders the **local** 3D chromatin spatial interactome thr
 * **`species`**
     Specifies the **organism of interest**, directing the function to automatically load the corresponding `TxDb` and `OrgDb` Bioconductor packages. This ensures **precise rendering of gene tracks**, including exon-intron structures and strand directionality.
 
-```{r}
+```{r, eval = requireNamespace("looplook", quietly = TRUE)}
 bedpe_path <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
 bed_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
 

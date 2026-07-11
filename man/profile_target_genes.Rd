@@ -26,6 +26,7 @@ profile_target_genes(
   run_ppi = FALSE,
   ppi_score = 400,
   ppi_nSample = 400,
+  ppi_species_id = NULL,
   heatmap_nSample = 99999,
   gsea_nSample = 99999,
   cnet_nSample = 50,
@@ -96,6 +97,12 @@ Default \code{400}.}
 
 \item{ppi_nSample}{Numeric. Maximum number of genes to include in PPI.
 Default \code{400}.}
+
+\item{ppi_species_id}{Integer or \code{NULL}. NCBI taxonomy ID for STRING
+PPI analysis (e.g.\ 9606 for human, 10090 for mouse). \code{NULL} (default)
+attempts automatic inference from the OrgDb package name. Set explicitly
+for species whose OrgDb naming is not recognised. See
+\url{https://string-db.org} for a complete taxonomy list.}
 
 \item{heatmap_nSample}{Numeric. Maximum number of genes to plot in heatmap.
 Default \code{99999} (effectively no limit). Reduce to \code{20-50} for

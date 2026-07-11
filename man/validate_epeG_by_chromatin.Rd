@@ -35,8 +35,8 @@ Default \code{100}.}
 validate. \code{NULL} (default): uses all five types
 \code{c("P","G","E","eP","eG")} regardless of input source.}
 
-\item{species}{Character. Genome assembly. \code{"hg38"} (default),
-\code{"hg19"}, \code{"mm10"}, or \code{"mm9"}.}
+\item{species}{Character. Genome assembly string. Default: \code{"hg38"}.
+Accepts any assembly string; used for seqlevel harmonization.}
 
 \item{quiet}{Logical. Suppress messages. Default: \code{FALSE}.}
 }
@@ -45,7 +45,7 @@ A data frame with columns:
 \describe{
 \item{anchor_id, chr, start, end, anchor_type, anchor_gene, cluster_id}{Anchor identifiers.}
 \item{H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3}{Logical or \code{NA}. \code{TRUE} = overlap, \code{FALSE} = tested but absent, \code{NA} = not tested.}
-\item{confidence}{Factor: \code{gold_standard} > \code{high_confidence} > \code{supported} > \code{weak} > \code{uncertain}.}
+\item{enhancer_evidence}{Factor: \code{gold_standard} > \code{high_confidence} > \code{supported} > \code{weak} > \code{uncertain}.}
 \item{evidence}{Human-readable string of the constituting marks (e.g. \code{"H3K4me1+; H3K27ac+; H3K4me3-; H3K27me3-"}). Anchors with tested-positive H3K4me3 at \code{supported} confidence are annotated with a \code{"promoter_like"} tag.}
 }
 }
@@ -90,6 +90,6 @@ result <- validate_epeG_by_chromatin(
     ),
     quiet = TRUE
 )
-table(result$confidence)
+table(result$enhancer_evidence)
 
 }

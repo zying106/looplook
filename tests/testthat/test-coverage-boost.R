@@ -1814,9 +1814,9 @@ test_that("refine_loop_anchors_by_chromatin: recompute_targets=TRUE path runs wi
   expect_type(result, "list")
   expect_true("chromatin_validation" %in% names(result))
   expect_equal(
-    as.character(unique(result$chromatin_validation$confidence)),
+    as.character(unique(result$chromatin_validation$enhancer_evidence)),
     "weak",
-    info = "Anchors with zero mark overlap have 'weak' confidence"
+    info = "Anchors with zero mark overlap have 'weak' enhancer evidence"
   )
   expect_true("loop_annotation" %in% names(result))
   expect_true("qc_summary" %in% names(result))
