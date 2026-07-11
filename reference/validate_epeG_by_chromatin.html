@@ -163,8 +163,8 @@ validate. <code>NULL</code> (default): uses all five types
 
 
 <dt id="arg-species">species<a class="anchor" aria-label="anchor" href="#arg-species"></a></dt>
-<dd><p>Character. Genome assembly. <code>"hg38"</code> (default),
-<code>"hg19"</code>, <code>"mm10"</code>, or <code>"mm9"</code>.</p></dd>
+<dd><p>Character. Genome assembly string. Default: <code>"hg38"</code>.
+Accepts any assembly string; used for seqlevel harmonization.</p></dd>
 
 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
@@ -179,7 +179,7 @@ validate. <code>NULL</code> (default): uses all five types
 <dt>H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3</dt>
 <dd><p>Logical or <code>NA</code>. <code>TRUE</code> = overlap, <code>FALSE</code> = tested but absent, <code>NA</code> = not tested.</p></dd>
 
-<dt>confidence</dt>
+<dt>enhancer_evidence</dt>
 <dd><p>Factor: <code>gold_standard</code> &gt; <code>high_confidence</code> &gt; <code>supported</code> &gt; <code>weak</code> &gt; <code>uncertain</code>.</p></dd>
 
 <dt>evidence</dt>
@@ -237,7 +237,7 @@ normalised to <code>H3K4me1</code>).</p>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span>   suppressWarnings() to suppress this warning.)</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>The 2 combined objects have no sequence levels in common. (Use</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span>   suppressWarnings() to suppress this warning.)</span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">confidence</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">enhancer_evidence</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   gold_standard high_confidence       supported            weak       uncertain </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>               0               0               0               0             385 </span>

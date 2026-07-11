@@ -1,11 +1,24 @@
-# looplook: Integrative Suite for Target Assignment and Functional Annotation of Chromatin Interactions
+# looplook: A Triple-Layer Orthogonal Annotation Framework for Chromatin Interactions
 
-looplook is a versatile R package for target assignment and functional
-annotation of chromatin interactions. It leverages customizable genomic
-feature integration, expression-aware refinement, and connected
-components clustering to prioritize biologically relevant chromatin
-interactions. The package also provides flexible tools for multi-omics
-data integration, functional annotation, and data visualization.
+looplook classifies loop anchors — the fundamental units connecting 3D
+chromatin contacts to downstream peak and feature annotation — through a
+**three-layer orthogonal annotation framework** in which each layer
+integrates an independent category of experimental evidence:
+
+- **Positional annotation** provides the baseline anchor assignment from
+  genomic coordinates (TSS and gene-body overlap).
+
+- **Expression-aware refinement** adds transcriptional-activity context
+  from transcriptomic data (CAGE-seq, RNA-seq, TT-seq, SLAM-seq).
+
+- **Chromatin-state reclassification** supplies orthogonal histone-mark
+  validation (ChIP-seq, CUT&Tag, ATAC-seq).
+
+These anchor-level classifications propagate through the loop network to
+determine target-gene assignments for every auxiliary feature (ChIP-seq
+peaks, ATAC-seq regions, GWAS variants). Because the layers function
+independently, users may deploy any subset matched to their available
+data modalities.
 
 ## Value
 

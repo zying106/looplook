@@ -53,8 +53,8 @@ validate_epeG_by_chromatin(
 
 - species:
 
-  Character. Genome assembly. `"hg38"` (default), `"hg19"`, `"mm10"`, or
-  `"mm9"`.
+  Character. Genome assembly string. Default: `"hg38"`. Accepts any
+  assembly string; used for seqlevel harmonization.
 
 - quiet:
 
@@ -73,7 +73,7 @@ A data frame with columns:
   Logical or `NA`. `TRUE` = overlap, `FALSE` = tested but absent, `NA` =
   not tested.
 
-- confidence:
+- enhancer_evidence:
 
   Factor: `gold_standard` \> `high_confidence` \> `supported` \> `weak`
   \> `uncertain`.
@@ -143,7 +143,7 @@ result <- validate_epeG_by_chromatin(
 #>   suppressWarnings() to suppress this warning.)
 #> Warning: The 2 combined objects have no sequence levels in common. (Use
 #>   suppressWarnings() to suppress this warning.)
-table(result$confidence)
+table(result$enhancer_evidence)
 #> 
 #>   gold_standard high_confidence       supported            weak       uncertain 
 #>               0               0               0               0             385 

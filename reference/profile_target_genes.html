@@ -142,6 +142,7 @@ protein-protein interaction (PPI) network construction.</p>
 <span>  run_ppi <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  ppi_score <span class="op">=</span> <span class="fl">400</span>,</span>
 <span>  ppi_nSample <span class="op">=</span> <span class="fl">400</span>,</span>
+<span>  ppi_species_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  heatmap_nSample <span class="op">=</span> <span class="fl">99999</span>,</span>
 <span>  gsea_nSample <span class="op">=</span> <span class="fl">99999</span>,</span>
 <span>  cnet_nSample <span class="op">=</span> <span class="fl">50</span>,</span>
@@ -257,6 +258,14 @@ Default <code>400</code>.</p></dd>
 <dt id="arg-ppi-nsample">ppi_nSample<a class="anchor" aria-label="anchor" href="#arg-ppi-nsample"></a></dt>
 <dd><p>Numeric. Maximum number of genes to include in PPI.
 Default <code>400</code>.</p></dd>
+
+
+<dt id="arg-ppi-species-id">ppi_species_id<a class="anchor" aria-label="anchor" href="#arg-ppi-species-id"></a></dt>
+<dd><p>Integer or <code>NULL</code>. NCBI taxonomy ID for STRING
+PPI analysis (e.g.\ 9606 for human, 10090 for mouse). <code>NULL</code> (default)
+attempts automatic inference from the OrgDb package name. Set explicitly
+for species whose OrgDb naming is not recognised. See
+<a href="https://string-db.org" class="external-link">https://string-db.org</a> for a complete taxonomy list.</p></dd>
 
 
 <dt id="arg-heatmap-nsample">heatmap_nSample<a class="anchor" aria-label="anchor" href="#arg-heatmap-nsample"></a></dt>

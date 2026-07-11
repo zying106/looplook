@@ -64,8 +64,8 @@ Package-level documentation and one-click HTML report generation.
 
 - [`looplook-package`](https://zying106.github.io/looplook/reference/looplook-package.md)
   [`looplook`](https://zying106.github.io/looplook/reference/looplook-package.md)
-  : looplook: Integrative Suite for Target Assignment and Functional
-  Annotation of Chromatin Interactions
+  : looplook: A Triple-Layer Orthogonal Annotation Framework for
+  Chromatin Interactions
 - [`looplook_report()`](https://zying106.github.io/looplook/reference/looplook_report.md)
   : Render a Publication-Ready 3D Annotation Report
 

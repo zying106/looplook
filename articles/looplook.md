@@ -118,13 +118,16 @@ classifications than any single data modality alone.
 4.  **Chromatin-Aware Anchor Reclassification**: Validates and
     systematically reclassifies loop anchors using orthogonal chromatin
     mark data (ChIP-seq, CUT&Tag, ATAC-seq). Anchors are scored against
-    ENCODE active-enhancer criteria across five confidence levels
-    (gold_standard to uncertain), and anchor types are updated based on
-    mark combinations — for instance, an eP anchor with H3K4me3+
+    ENCODE active-enhancer criteria across five evidence levels
+    (gold_standard to uncertain). these levels assess enhancer-like
+    chromatin evidence, not overall classification confidence — a strong
+    promoter (H3K4me3+) may receive only because the criteria are
+    enhancer-oriented. Anchor types are updated based on mark
+    combinations — for instance, an eP anchor with H3K4me3+
     promoter-like chromatin (regardless of H3K27me3 status) is reverted
     to P, while a P anchor with H3K4me1+ H3K4me3+ dual marks is upgraded
     to dual-function. Reclassification is fully auditable through
-    per-anchor chromatin state, confidence, and before/after type
+    per-anchor chromatin state, evidence level, and before/after type
     columns.
 
 5.  **Replicate Consolidation and Multi-Source Consensus**: Employs
@@ -706,6 +709,17 @@ contain the gene; refined links additionally carry `Mean_Expression` and
 - **Backward compatibility**: `anchor_annotation` is retained as an
   alias of `anchor_loci_annotation` for older scripts.
 
+The `anchor_type` column in `anchor_loci_annotation` reflects the
+original positional classification (P/G/E from TSS and gene-body
+overlap) and is updated by expression-aware or chromatin-aware
+refinement. Refined anchor types are found in
+`loop_annotation$anchor1_type` and `loop_annotation$anchor2_type`. For a
+full per-anchor audit trail — including the original annotation type,
+the expression-refined type, and the chromatin-corrected type — see
+`attr(result, "looplook_anchor_state")$map_info`, which contains
+`original_type_code` (annotation-time, never overwritten) and
+`type_code` (current).
+
 ##### 4. `promoter_centric_stats` & `distal_element_stats` (Topological Hub Detection)
 
 These metrics quantify interactome connectivity to identify candidate
@@ -1019,8 +1033,8 @@ refined_val <- refine_loop_anchors_by_expression(
   out_dir = out_dir,
   project_name = "Example_Validated"
 )
-# View confidence distribution
-table(refined_val$chromatin_validation$confidence)
+# View enhancer evidence distribution
+table(refined_val$chromatin_validation$enhancer_evidence)
 ```
 
 #### Deep Dive: Expression Refinement Visualizations
@@ -1109,16 +1123,17 @@ val <- validate_epeG_by_chromatin(
   anchor_min_overlap = 100   # minimum overlap (bp)
 )
 
-# View confidence distribution
-table(val$confidence)
+# View enhancer evidence distribution
+table(val$enhancer_evidence)
 ```
 
-##### Confidence Criteria
+##### Enhancer Evidence Levels
 
 Each eP/eG anchor is tested for overlap with up to 5 marks and assigned
-a confidence level (highest to lowest):
+an enhancer evidence level (highest to lowest). A promoter (H3K4me3+)
+may score only `supported` because the criteria are enhancer-oriented.
 
-| Confidence | Condition |
+| Level | Condition |
 |----|----|
 | `gold_standard` | All 5 marks provided; H3K4me1⁺, H3K27ac⁺, ATAC⁺, H3K27me3⁻, H3K4me3⁻ |
 | `high_confidence` | H3K4me1⁺ and (H3K27ac⁺ or ATAC⁺); H3K4me3⁻ if tested (H3K4me3⁺ downgrades to `supported`) |
@@ -1140,7 +1155,7 @@ the full mark combination.
 | `anchor_id`, `chr`, `start`, `end` | Anchor identifier and coordinates |
 | `anchor_type`, `anchor_gene` | Original type and associated gene(s) |
 | `H3K4me1`..`H3K4me3` | `NA` = not tested, `TRUE` = overlap, `FALSE` = tested but absent |
-| `confidence` | Factor: `gold_standard` \> `high_confidence` \> `supported` \> `weak` \> `uncertain` |
+| `enhancer_evidence` | Enhancer evidence level (not classification confidence): `gold_standard` \> `high_confidence` \> `supported` \> `weak` \> `uncertain` |
 | `evidence` | Human-readable string (e.g. `"H3K4me1+; H3K27ac+; H3K27me3-"`) |
 
 #### Chromatin-Aware Anchor Reclassification
@@ -1243,14 +1258,14 @@ head(cr$target_gene_links[, c("gene", "anchor_type_before_chromatin",
 
 The output `chromatin_validation` table records, for each candidate
 anchor, the overlap with every provided mark (`TRUE`/`FALSE`/`NA`), its
-confidence level, chromatin state, and the reclassification decision
-(positional type vs. final type). When `recompute_targets = TRUE`,
-target gene links carry `anchor_type_before_chromatin`,
-`anchor_type_after_chromatin`, and `chromatin_target_action` columns for
-full auditability. When `recompute_targets = FALSE` (default),
-`target_annotation` and `target_gene_links` are `NULL` — use
-`profile_target_genes(target_source = "loops")` for chromatin-aware
-downstream profiling.
+enhancer evidence level, chromatin state, and the reclassification
+decision (positional type vs. final type). When
+`recompute_targets = TRUE`, target gene links carry
+`anchor_type_before_chromatin`, `anchor_type_after_chromatin`, and
+`chromatin_target_action` columns for full auditability. When
+`recompute_targets = FALSE`, `target_annotation` and `target_gene_links`
+are `NULL` — use `profile_target_genes(target_source = "loops")` for
+chromatin-aware downstream profiling.
 
 ##### Chromatin Refinement Visualizations
 
@@ -1270,10 +1285,10 @@ customisation. To access a specific plot:
 
 ``` r
 
-cr$plots$Chromatin_Dumbbell   # before/after anchor type comparison
-cr$plots$Chromatin_Sankey      # reclassification flow diagram
-cr$plots$Chromatin_MarkHeatmap # per-anchor mark landscape
-cr$plots$Chromatin_UpSet        # loop-type Upset (dot matrix + log10 bars)
+cr$plots$Chromatin_Dumbbell
+cr$plots$Chromatin_Sankey
+cr$plots$Chromatin_MarkHeatmap
+cr$plots$Chromatin_UpSet
 ```
 
 **Interpreting the MarkHeatmap:** Rows represent reclassification
@@ -1387,7 +1402,11 @@ the biological scope and stringency of downstream analyses:
   `motifmatchr`).
 - **`run_ppi` & `ppi_score`**: Constructs Protein-Protein Interaction
   (PPI) networks via the STRING database (minimum combined score,
-  default: `400`).
+  default: `400`). For non-human/non-mouse species, pass the NCBI
+  taxonomy ID via `ppi_species_id` (e.g. `ppi_species_id = 9823` for
+  pig). See
+  [`?profile_target_genes`](https://zying106.github.io/looplook/reference/profile_target_genes.md)
+  for a species reference table.
 
 ### Example A: Comprehensive Integrative Profiling (Recommended)
 
@@ -1969,6 +1988,25 @@ refine_loop_anchors_by_expression(..., threshold = 0.25,
 functional enhancer activity. Validate with orthogonal chromatin data
 (ATAC-seq, H3K27ac) before biological interpretation.
 
+#### Chromatin_UpSet / patchwork print error
+
+    Error in UseMethod("ggplot_build") : no applicable method for 'ggplot_build'
+    applied to an object of class "c('gg', 'ggplot')"
+
+**Cause:** `patchwork` v1.3.x has a known bug where `plot_filler` class
+breaks interactive printing.
+
+**Solution:** Either render via `ggsave()` which bypasses the issue, or
+upgrade to patchwork ≥ 1.4.0:
+
+``` r
+
+ggsave("upset.pdf", cr$plots$Chromatin_UpSet, width = 10, height = 6)
+
+# or upgrade patchwork
+remotes::install_github("thomasp85/patchwork")
+```
+
 ------------------------------------------------------------------------
 
 ## Session Info
@@ -2052,7 +2090,7 @@ sessionInfo()
 #>  [99] bookdown_0.47               ProtGenerics_1.44.0        
 #> [101] IRanges_2.46.0              Seqinfo_1.2.0              
 #> [103] SummarizedExperiment_1.42.0 stats4_4.6.1               
-#> [105] xfun_0.59                   Biobase_2.72.0             
+#> [105] xfun_0.60                   Biobase_2.72.0             
 #> [107] matrixStats_1.5.0           stringi_1.8.7              
 #> [109] UCSC.utils_1.8.0            lazyeval_0.2.3             
 #> [111] yaml_2.3.12                 evaluate_1.0.5             
