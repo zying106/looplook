@@ -1390,7 +1390,7 @@ Error in UseMethod("ggplot_build") : no applicable method for 'ggplot_build'
 applied to an object of class "c('gg', 'ggplot')"
 ```
 
-**Cause:** `patchwork` v1.3.x has a known bug where `plot_filler` class breaks interactive printing.
+**Cause:** S3 method dispatch failure. The `plot_filler` class inserted by patchwork v1.3.x layout assembly is not a valid ggplot subclass, so `ggplot_build()` cannot resolve a method for it. This manifests in interactive printing, `ggsave`, and knitr rendering contexts.
 
 **Solution:** Either render via `ggsave()` which bypasses the issue, or upgrade to patchwork ≥ 1.4.0:
 
