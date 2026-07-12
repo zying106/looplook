@@ -3187,8 +3187,11 @@ chromatin data (ATAC-seq, H3K27ac) before biological interpretation.</p>
 </h4>
 <pre><code>Error in UseMethod("ggplot_build") : no applicable method for 'ggplot_build'
 applied to an object of class "c('gg', 'ggplot')"</code></pre>
-<p><strong>Cause:</strong> <code>patchwork</code> v1.3.x has a known bug
-where <code>plot_filler</code> class breaks interactive printing.</p>
+<p><strong>Cause:</strong> S3 method dispatch failure. The
+<code>plot_filler</code> class inserted by patchwork v1.3.x layout
+assembly is not a valid ggplot subclass, so <code>ggplot_build()</code>
+cannot resolve a method for it. This manifests in interactive printing,
+<code>ggsave</code>, and knitr rendering contexts.</p>
 <p><strong>Solution:</strong> Either render via <code>ggsave()</code>
 which bypasses the issue, or upgrade to patchwork ≥ 1.4.0:</p>
 <div class="sourceCode" id="cb45"><pre class="downlit sourceCode r">
