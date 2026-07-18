@@ -24,7 +24,7 @@ if (getRversion() >= "2.15.1") {
         "Regulated_promoter_genes", "SANKEY_RAW_GENES", "SYMBOL", "SampleID",
         "Simplified", "Source", "Target_Genes",
         "Target_Genes_Filtered", "Total_Loops", "Total_Loops_Filtered",
-        "Unique_Gene_Count", "a1_id", "a2_id", "Active_Target_Genes", "all_cluster_loop_genes", "all_of",
+        "Unique_Gene_Count", "a1_id", "a2_id", "Putative_Target_Genes", "Promoter_Target_Genes", "all_cluster_loop_genes", "all_of",
         "anchor1_gene", "anchor1_type", "anchor2_gene",
         "anchor2_type", "anchor_id", "annotation", "chr",
         "cluster_id", "col2rgb", "combined_score", "count", "deg", "detail_anno",
@@ -166,32 +166,6 @@ if (getRversion() >= "2.15.1") {
     gr
 }
 
-#' Internal: Filter Target Regions Overlapping Loop Anchors
-#'
-#' Returns the subset of target genomic ranges that overlap at least one
-#' loop anchor. Used to focus annotation on features with 3D connectivity.
-#'
-#' @param target A GRanges object of target features (e.g., ChIP-seq peaks).
-#' @param anchors A GRanges object of loop anchors.
-#' @param min_overlap Integer. Minimum number of overlapping anchors required
-#'   to retain a target. Default: \code{1L}.
-#' @return The filtered \code{target} GRanges containing only regions that
-#'   overlap at least \code{min_overlap} anchors.
-#' @keywords internal
-#' @noRd
-.filter_target_anchor_overlaps <- function(target, anchors, min_overlap = 1L) {
-    if (length(target) == 0 || length(anchors) == 0) {
-        return(target[0])
-    }
-    anchors <- .harmonize_seqlevels(anchors, target, "anchors")
-    hits <- GenomicRanges::findOverlaps(target, anchors)
-    if (length(hits) == 0) {
-        return(target[0])
-    }
-    hit_counts <- table(S4Vectors::queryHits(hits))
-    keep <- as.integer(names(hit_counts[hit_counts >= min_overlap]))
-    target[sort(keep)]
-}
 
 #' Internal: Safe FindOverlaps with Seqlevels Harmonization
 #'
@@ -429,30 +403,50 @@ clean_gene_names <- function(x, split = NULL) {
     if (is.null(anchor_state) || !"map_info" %in% names(anchor_state)) {
         return(anchor_state)
     }
-    required_cols <- c("a1_id", "a2_id", "anchor1_type", "anchor2_type")
+    required_cols <- c(
+        "a1_id", "a2_id", "anchor1_type", "anchor2_type",
+        "anchor1_gene", "anchor2_gene"
+    )
     if (!all(required_cols %in% colnames(loop_df))) {
         return(anchor_state)
     }
 
-    type_map <- dplyr::bind_rows(
-        loop_df %>%
-            dplyr::transmute(
-                anchor_id = as.character(.data$a1_id),
-                type_code_new = as.character(.data$anchor1_type)
-            ),
-        loop_df %>%
-            dplyr::transmute(
-                anchor_id = as.character(.data$a2_id),
-                type_code_new = as.character(.data$anchor2_type)
-            )
-    ) %>%
+    # Build lookup: anchor_id -> current type and gene from loop table
+    a1_map <- loop_df %>%
+        dplyr::transmute(
+            anchor_id = as.character(.data$a1_id),
+            type_code_new = as.character(.data$anchor1_type),
+            SYMBOL_new = as.character(.data$anchor1_gene)
+        )
+    a2_map <- loop_df %>%
+        dplyr::transmute(
+            anchor_id = as.character(.data$a2_id),
+            type_code_new = as.character(.data$anchor2_type),
+            SYMBOL_new = as.character(.data$anchor2_gene)
+        )
+    type_map <- dplyr::bind_rows(a1_map, a2_map) %>%
         dplyr::filter(!is.na(.data$anchor_id), .data$anchor_id != "") %>%
-        dplyr::distinct(.data$anchor_id, .keep_all = TRUE)
+        dplyr::group_by(.data$anchor_id) %>%
+        dplyr::summarise(
+            type_code_new = dplyr::first(stats::na.omit(.data$type_code_new)),
+            SYMBOL_new = paste(sort(unique(
+                stats::na.omit(unlist(strsplit(.data$SYMBOL_new, ";")))
+            )), collapse = ";"),
+            .groups = "drop"
+        )
+    # Empty SYMBOL strings -> NA (expression refinement may have cleared the gene)
+    type_map$SYMBOL_new[!nzchar(type_map$SYMBOL_new)] <- NA_character_
 
     map_info <- anchor_state$map_info
     idx <- match(map_info$anchor_id, type_map$anchor_id)
     hit <- !is.na(idx)
     map_info$type_code[hit] <- type_map$type_code_new[idx[hit]]
+    # Propagate both non-NA and NA gene values.  When expression refinement
+    # clears a gene (eP/eG -> NA), the anchor_state MUST reflect that so
+    # chromatin recomputation does not resurrect silenced genes.  The
+    # original positional gene is still recoverable from gr_anchors and
+    # original_type_code if needed for provenance tracking.
+    map_info$SYMBOL[hit] <- type_map$SYMBOL_new[idx[hit]]
 
     anchor_state$map_info <- map_info
     anchor_state
@@ -580,6 +574,10 @@ species_bsgenome_pkg <- function(species) {
 #'   Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA",
 #'   "pseudogene")}. To prioritise lncRNAs over protein-coding genes while
 #'   keeping everything else as-is, set \code{c("lncRNA", "protein")}.
+#' @param unmeasured_policy Character. How to treat genes absent from the
+#'   expression matrix during conflict resolution. \code{"keep"} (default):
+#'   unmeasured genes are retained as candidates. \code{"drop"}: unmeasured
+#'   genes are excluded, only genes with measured expression are considered.
 #' @return The input data frame with \code{SYMBOL} and \code{annotation}
 #'   columns resolved.
 #' @importFrom GenomicRanges makeGRangesFromDataFrame findOverlaps
@@ -595,14 +593,15 @@ species_bsgenome_pkg <- function(species) {
 #'     requireNamespace("GenomicFeatures", quietly = TRUE)) {
 #'     txdb <- AnnotationDbi::loadDb(
 #'         system.file("extdata", "hg19_knownGene_sample.sqlite",
-#'                      package = "GenomicFeatures")
+#'             package = "GenomicFeatures"
+#'         )
 #'     )
 #'
 #'     # Minimal genomic region: seqnames, start, end
 #'     test_region <- data.frame(
 #'         seqnames = "chr6",
-#'         start    = 29940000L,
-#'         end      = 29950000L,
+#'         start = 29940000L,
+#'         end = 29950000L,
 #'         stringsAsFactors = FALSE
 #'     )
 #'
@@ -624,12 +623,14 @@ resolve_gene_conflicts <- function(
   tss_region, gene_expr_map, min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
   co_dominance_ratio = 0.1,
-  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
+  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene"),
+  unmeasured_policy = c("keep", "drop")
 ) {
     if (nrow(current_anno_df) == 0) {
         return(current_anno_df)
     }
     conflict_strategy <- match.arg(conflict_strategy)
+    unmeasured_policy <- match.arg(unmeasured_policy)
 
     # Build candidate gene map from promoter overlaps
     candidates <- .resolve_prepare_candidates(
@@ -648,12 +649,33 @@ resolve_gene_conflicts <- function(
         if (conflict_strategy == "biotype_first") {
             resolved_candidates <- resolved_candidates %>%
                 dplyr::filter(type_rank == min(type_rank, na.rm = TRUE)) %>%
-                dplyr::mutate(has_active = any(is_active)) %>%
-                dplyr::filter(!has_active | is_active)
+                dplyr::mutate(has_active = any(is_active))
+            if (unmeasured_policy == "keep") {
+                resolved_candidates <- dplyr::filter(
+                    resolved_candidates,
+                    !has_active | is_active | !measured
+                )
+            } else {
+                resolved_candidates <- dplyr::filter(
+                    resolved_candidates,
+                    measured & (!has_active | is_active)
+                )
+            }
         } else {
             resolved_candidates <- resolved_candidates %>%
-                dplyr::mutate(has_active = any(is_active)) %>%
-                dplyr::filter(!has_active | is_active) %>%
+                dplyr::mutate(has_active = any(is_active))
+            if (unmeasured_policy == "keep") {
+                resolved_candidates <- dplyr::filter(
+                    resolved_candidates,
+                    !has_active | is_active | !measured
+                )
+            } else {
+                resolved_candidates <- dplyr::filter(
+                    resolved_candidates,
+                    measured & (!has_active | is_active)
+                )
+            }
+            resolved_candidates <- resolved_candidates %>%
                 dplyr::filter(type_rank == min(type_rank, na.rm = TRUE))
         }
 
@@ -673,16 +695,22 @@ resolve_gene_conflicts <- function(
                     } else if (length(genes) == 1) {
                         genes[1]
                     } else {
-                        max_tpm <- max(tpms, na.rm = TRUE)
-                        if (max_tpm <= 0) {
+                        max_tpm <- suppressWarnings(max(tpms, na.rm = TRUE))
+                        if (is.infinite(max_tpm) || max_tpm <= 0) {
                             paste(sort(unique(genes)), collapse = ";")
                         } else {
                             threshold <- max(max_tpm * co_dominance_ratio, 1e-6)
-                            active_genes <- genes[tpms >= threshold]
-                            if (length(active_genes) == 0) {
+                            active_genes <- genes[tpms >= threshold & !is.na(tpms)]
+                            unmeasured_genes <- genes[is.na(tpms)]
+                            final_genes <- if (unmeasured_policy == "keep") {
+                                union(active_genes, unmeasured_genes)
+                            } else {
+                                active_genes
+                            }
+                            if (length(final_genes) == 0) {
                                 paste(sort(unique(genes)), collapse = ";")
                             } else {
-                                paste(sort(unique(active_genes)), collapse = ";")
+                                paste(sort(unique(final_genes)), collapse = ";")
                             }
                         }
                     }
@@ -724,9 +752,9 @@ resolve_gene_conflicts <- function(
 #' @keywords internal
 #' @noRd
 .resolve_prepare_candidates <- function(
-    current_anno_df, txdb_obj, org_db_pkg,
-    tss_region, gene_expr_map, min_expr,
-    biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
+  current_anno_df, txdb_obj, org_db_pkg,
+  tss_region, gene_expr_map, min_expr,
+  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
 ) {
     gr_input <- .with_known_upstream_noise_suppressed(
         GenomicRanges::makeGRangesFromDataFrame(current_anno_df,
@@ -772,15 +800,15 @@ resolve_gene_conflicts <- function(
 
     gene_map$tpm <- if (!is.null(gene_expr_map)) {
         expr_upper <- setNames(gene_expr_map, toupper(names(gene_expr_map)))
-        val <- expr_upper[toupper(gene_map$SYMBOL)]
-        ifelse(is.na(val), 0, val)
+        as.numeric(expr_upper[toupper(gene_map$SYMBOL)])
     } else {
-        0
+        rep(NA_real_, nrow(gene_map))
     }
+    gene_map$measured <- !is.na(gene_map$tpm)
     gene_map$is_active <- if (min_expr == 0) {
-        gene_map$tpm > 0
+        !is.na(gene_map$tpm) & gene_map$tpm > 0
     } else {
-        gene_map$tpm >= min_expr
+        !is.na(gene_map$tpm) & gene_map$tpm >= min_expr
     }
 
     if (has_genetype) {
@@ -797,7 +825,7 @@ resolve_gene_conflicts <- function(
         # Unlisted categories: keep default relative order, appended after listed
         unlisted <- setdiff(default_order, biotype_order)
         full_order <- c(biotype_order, unlisted)
-        gene_map$type_rank <- length(full_order) + 1L  # fallback for unknown biotypes
+        gene_map$type_rank <- length(full_order) + 1L # fallback for unknown biotypes
         for (i in seq_along(full_order)) {
             key <- full_order[[i]]
             pattern <- biotype_patterns[[key]]
@@ -825,15 +853,21 @@ resolve_gene_conflicts <- function(
 #' @noRd
 .is_promoter_like <- function(t) t %in% c("P", "dual")
 
-#' Internal: Check if anchor type is distal/reenhancer-like (E, eP, eG, dual)
+#' Internal: Check if anchor type is distal/enhancer-like (E, dual).
+#' eP and eG are structural promoter/gene-body elements, not distal.
 #' @keywords internal
 #' @noRd
-.is_distal_like <- function(t) t %in% c("E", "eP", "eG", "dual")
+.is_distal_like <- function(t) t %in% c("E", "dual")
 
 #' Internal: Check if anchor type is gene-body-like (G or eG)
 #' @keywords internal
 #' @noRd
 .is_gene_body_like <- function(t) t %in% c("G", "eG")
+
+# Target-specific helpers: include eP/eG for structural target reconstruction.
+# These are wider than the chromatin-confirmed stats helpers above.
+.is_target_promoter_like <- function(t) t %in% c("P", "eP", "dual")
+.is_target_gene_body_like <- function(t) t %in% c("G", "eG")
 
 #' Internal: Reclassify Anchor by Expression
 #'
@@ -844,10 +878,15 @@ resolve_gene_conflicts <- function(
 #' @param t Character. Anchor type code (P, E, G, eP, eG).
 #' @param allow Character vector. Whitelist of active gene symbols.
 #' @param down Logical. If \code{TRUE}, reclassify silent P->eP and G->eG.
+#' @param measured Character vector or \code{NULL}. Set of gene symbols that
+#'   appear in the expression matrix (regardless of expression level).  When
+#'   provided, only genes in this set are eligible for P->eP / G->eG
+#'   reclassification; genes absent from the matrix retain their original
+#'   type (their expression state is unmeasured, not silent).
 #' @return A list with \code{type} and \code{gene}.
 #' @keywords internal
 #' @noRd
-clean_anchor <- function(g, t, allow, down) {
+clean_anchor <- function(g, t, allow, down, measured = NULL) {
     g_char <- as.character(g)
     t_char <- as.character(t)
     if (is.na(g_char) || g_char == "") {
@@ -856,17 +895,40 @@ clean_anchor <- function(g, t, allow, down) {
     gs <- unlist(strsplit(g_char, ";"))
     active_gs <- trimws(gs[toupper(trimws(gs)) %in% toupper(allow)])
     if (length(active_gs) > 0) {
-        return(list(type = t_char, gene = paste(unique(active_gs), collapse = ";")))
+        # Keep ALL positional genes; expression filtering happens on
+        # Putative_Target_Genes / Promoter_Target_Genes, not on anchor_gene.
+        all_gs <- trimws(gs)
+        return(list(type = t_char, gene = paste(unique(all_gs), collapse = ";")))
     }
     if (down) {
-        new_type <- dplyr::case_when(
-            t_char == "P" ~ "eP", t_char == "G" ~ "eG", TRUE ~ t_char
-        )
-        return(list(type = new_type, gene = NA_character_))
+        # Only reclassify when ALL genes in the anchor are measured and
+        # none are active.  If any gene is unmeasured (absent from the
+        # expression matrix), the anchor retains its original type and
+        # all its genes -- we cannot determine whether it is silent.
+        all_gs <- trimws(gs)
+        all_measured <- if (!is.null(measured) && length(measured) > 0) {
+            all(toupper(all_gs) %in% toupper(measured))
+        } else {
+            TRUE # no measured set -> assume all are measured (backward compat)
+        }
+        if (all_measured) {
+            new_type <- dplyr::case_when(
+                t_char == "P" ~ "eP", t_char == "G" ~ "eG", TRUE ~ t_char
+            )
+            # Keep positional gene; expression filtering is applied to
+            # Putative_Target_Genes and Promoter_Target_Genes, not to
+            # the anchor gene itself.
+            return(list(type = new_type, gene = paste(unique(all_gs), collapse = ";")))
+        }
+        # Some genes unmeasured: keep original type and all genes
+        return(list(type = t_char, gene = paste(unique(all_gs), collapse = ";")))
     }
-    return(list(type = t_char, gene = NA_character_))
+    # down = FALSE: keep original type and all genes -- the caller explicitly
+    # chose not to reclassify or filter by expression.  Genes below the
+    # expression threshold are still structurally associated with the anchor;
+    # their expression status is "measured_silent", not "absent".
+    return(list(type = t_char, gene = paste(unique(trimws(gs)), collapse = ";")))
 }
-
 
 
 #' Internal: Compute Dominant Interaction Type
@@ -898,9 +960,56 @@ clean_anchor <- function(g, t, allow, down) {
 #' @keywords internal
 #' @noRd
 .get_expr <- function(g, vals) {
-    e <- vals[g]
-    e[is.na(e)] <- 0
+    e <- vals[toupper(g)]
+    # NA means gene not found in expression matrix -- let callers distinguish
+    # "truly silent" (expression=0) from "not measured" (NA).
     return(e)
+}
+
+#' Internal: Validate TSS region window
+#'
+#' Ensures the TSS region is a finite numeric vector of length 2 with
+#' upstream <= 0 and downstream >= 0.
+#'
+#' @param x Numeric vector of length 2, e.g. \code{c(-2000, 2000)}.
+#' @return A validated, normalized numeric vector of length 2.
+#' @keywords internal
+#' @noRd
+.validate_tss_region <- function(x) {
+    if (!is.numeric(x) || length(x) != 2L || anyNA(x) ||
+        any(!is.finite(x)) || x[1] > 0 || x[2] < 0) {
+        stop("`tss_region` must be a finite numeric vector of length 2 ",
+            "such as c(-2000, 2000).",
+            call. = FALSE
+        )
+    }
+    as.numeric(x)
+}
+
+#' Internal: Unified Expression Threshold Predicate
+#'
+#' Single entry point for checking whether a gene passes the expression
+#' activity filter.  Consistent across basic annotation, expression
+#' refinement, chromatin refinement, and profile stats so that
+#' \code{threshold = 0} means \eqn{> 0} (strictly positive) everywhere.
+#'
+#' @param x Numeric vector of expression values (may contain \code{NA}).
+#' @param threshold Numeric scalar. Expression activity threshold.
+#' @return Logical vector. \code{NA} input yields \code{FALSE}.
+#' @keywords internal
+#' @noRd
+.passes_expression_threshold <- function(x, threshold) {
+    if (!is.numeric(threshold) || length(threshold) != 1L ||
+        is.na(threshold) || !is.finite(threshold) || threshold < 0) {
+        stop("Expression threshold must be a single, finite, non-negative number.",
+            call. = FALSE
+        )
+    }
+    if (threshold == 0) {
+        !is.na(x) & x > 0
+    } else {
+        !is.na(x) & x >= threshold
+    }
 }
 
 #' Internal: Compute Raw Promoter-Centric Statistics
@@ -914,16 +1023,32 @@ clean_anchor <- function(g, t, allow, down) {
 #' @keywords internal
 #' @noRd
 .compute_raw_promoter_stats <- function(loop_df) {
+    has_contact_id <- all(c("a1_id", "a2_id") %in% colnames(loop_df))
+    has_coords <- all(c("chr1", "start1", "end1", "chr2", "start2", "end2") %in%
+        colnames(loop_df))
+    # Precompute contact_id before select() to avoid tidy-evaluation issues
+    if (has_contact_id) {
+        loop_df$contact_id1 <- loop_df$a2_id
+        loop_df$contact_id2 <- loop_df$a1_id
+    } else if (has_coords) {
+        loop_df$contact_id1 <- paste(loop_df$chr2, loop_df$start2, loop_df$end2, sep = "_")
+        loop_df$contact_id2 <- paste(loop_df$chr1, loop_df$start1, loop_df$end1, sep = "_")
+    } else {
+        loop_df$contact_id1 <- seq_len(nrow(loop_df))
+        loop_df$contact_id2 <- seq_len(nrow(loop_df))
+    }
     raw_stats_df <- dplyr::bind_rows(
         loop_df %>% dplyr::filter(.is_promoter_like(anchor1_type) & !is.na(anchor1_gene)) %>%
-            dplyr::select(
+            dplyr::transmute(
                 Gene = anchor1_gene, Neighbor_Type = anchor2_type,
-                Loop_Type = loop_type
+                Loop_Type = loop_type,
+                contact_id = contact_id1
             ) %>% dplyr::mutate(Gene = as.character(Gene)),
         loop_df %>% dplyr::filter(.is_promoter_like(anchor2_type) & !is.na(anchor2_gene)) %>%
-            dplyr::select(
+            dplyr::transmute(
                 Gene = anchor2_gene, Neighbor_Type = anchor1_type,
-                Loop_Type = loop_type
+                Loop_Type = loop_type,
+                contact_id = contact_id2
             ) %>% dplyr::mutate(Gene = as.character(Gene))
     ) %>%
         tidyr::separate_rows(Gene, sep = ";") %>%
@@ -932,15 +1057,157 @@ clean_anchor <- function(g, t, allow, down) {
         dplyr::group_by(Gene) %>%
         dplyr::summarise(
             Total_Loops_Filtered = dplyr::n(),
+            n_Unique_Contacts_Filtered = dplyr::n_distinct(contact_id),
             n_Linked_Promoters_Filtered = sum(.is_promoter_like(Neighbor_Type), na.rm = TRUE),
             n_Linked_Distal_Filtered = sum(
                 (.is_distal_like(Neighbor_Type) | .is_gene_body_like(Neighbor_Type)),
                 na.rm = TRUE
             ),
+            n_Linked_EnhancerLike_Filtered = sum(.is_distal_like(Neighbor_Type), na.rm = TRUE),
             Dominant_Interaction_Filtered = .get_dom(Loop_Type),
             .groups = "drop"
         )
     raw_stats_df
+}
+
+#' Internal: Validate or Recover a TxDb Object
+#'
+#' TxDb S4 objects hold an internal SQLite connection that does not
+#' survive \code{saveRDS}/\code{readRDS} round-trips.  This helper
+#' validates the connection and, when it is stale, attempts to rebuild
+#' the TxDb from the database file path recorded in metadata
+#' (\code{txdb_dbfile}).
+#'
+#' @param txdb_obj A TxDb object (possibly stale after \code{readRDS}).
+#' @param txdb_dbfile Character path to the SQLite database file.
+#' @return A valid TxDb object.
+#' @keywords internal
+#' @noRd
+.validate_or_recover_txdb <- function(txdb_obj, txdb_dbfile = NULL) {
+    # Quick check: try a lightweight query against the TxDb connection.
+    conn_ok <- tryCatch(
+        {
+            suppressMessages(GenomeInfoDb::seqlevels(txdb_obj))
+            TRUE
+        },
+        error = function(e) FALSE
+    )
+    if (conn_ok) {
+        return(txdb_obj)
+    }
+
+    # Connection is dead.  Try to rebuild from dbfile.
+    has_dbfile <- !is.null(txdb_dbfile) &&
+        length(txdb_dbfile) == 1L &&
+        !is.na(txdb_dbfile) &&
+        nzchar(txdb_dbfile)
+
+    if (has_dbfile && file.exists(txdb_dbfile)) {
+        message(
+            "TxDb connection lost (likely after saveRDS/readRDS). ",
+            "Rebuilding from: ", txdb_dbfile
+        )
+        return(AnnotationDbi::loadDb(txdb_dbfile))
+    }
+    stop(
+        "TxDb connection is no longer valid (e.g., after saveRDS/readRDS) ",
+        "and the database file cannot be located for automatic recovery.\n",
+        if (has_dbfile) {
+            paste0("  Expected dbfile: ", txdb_dbfile, " (not found)\n")
+        } else {
+            "  No valid dbfile path was recorded in metadata.\n"
+        },
+        "Please re-run annotate_peaks_and_loops() with a fresh TxDb object.",
+        call. = FALSE
+    )
+}
+
+#' Internal: Get Canonical Anchor Registry
+#'
+#' Returns the canonical anchor GRanges from any looplook result object.
+#' All downstream modules (motif, distal stats, plotting, chromatin) should
+#' use this single entry point so that merged-anchor coordinates are
+#' consistent regardless of \code{anchor_merge_gap}.
+#'
+#' @param x A looplook annotation result (must carry
+#'   \code{looplook_anchor_state} attribute), or the anchor_state list itself.
+#' @param filter Character vector of anchor types to retain, or \code{NULL}
+#'   for all anchors.  Uses \code{map_info$type_code} when available.
+#' @return A \code{GRanges} object with \code{anchor_id} as names and
+#'   metadata columns \code{anchor_id}, \code{type_code}, \code{SYMBOL}.
+#' @keywords internal
+#' @noRd
+.get_anchor_registry <- function(x, filter = NULL) {
+    anchor_state <- if (is.list(x) && !is.null(x$gr_anchors)) {
+        x # already an anchor_state list
+    } else {
+        attr(x, "looplook_anchor_state", exact = TRUE)
+    }
+    if (is.null(anchor_state) || is.null(anchor_state$gr_anchors)) {
+        stop(
+            "Cannot resolve canonical anchor registry: ",
+            "no anchor_state or gr_anchors found. ",
+            "Ensure the input was produced by annotate_peaks_and_loops().",
+            call. = FALSE
+        )
+    }
+    gr <- anchor_state$gr_anchors
+    # Defensive: recover anchor IDs from names or mcols if missing.
+    # New objects have names set at creation; old objects may only have
+    # mcols$anchor_id.
+    ids <- names(gr)
+    if (is.null(ids) || length(ids) != length(gr) ||
+        anyNA(ids) || any(!nzchar(ids))) {
+        if ("anchor_id" %in% colnames(S4Vectors::mcols(gr))) {
+            ids <- as.character(S4Vectors::mcols(gr)$anchor_id)
+            names(gr) <- ids
+        }
+    }
+    if (is.null(names(gr)) || length(names(gr)) != length(gr) ||
+        anyNA(names(gr)) || any(!nzchar(names(gr))) ||
+        anyDuplicated(names(gr))) {
+        stop(
+            "Canonical anchor registry does not contain unique anchor IDs. ",
+            "Ensure the input was produced by annotate_peaks_and_loops().",
+            call. = FALSE
+        )
+    }
+    # Attach type and gene metadata from map_info when available
+    mi <- anchor_state$map_info
+    if (!is.null(mi)) {
+        if (anyDuplicated(mi$anchor_id)) {
+            stop(
+                "Canonical anchor registry: map_info contains duplicate ",
+                "anchor_id values. The annotation object may be corrupted.",
+                call. = FALSE
+            )
+        }
+        idx <- match(names(gr), mi$anchor_id)
+        if (anyNA(idx)) {
+            stop(
+                sum(is.na(idx)),
+                " canonical anchor(s) have no matching entry in map_info. ",
+                "The annotation object may have been produced by an ",
+                "incompatible pipeline version.",
+                call. = FALSE
+            )
+        }
+        GenomicRanges::mcols(gr)$type_code <- if (!is.null(mi$type_code)) {
+            mi$type_code[idx]
+        } else {
+            NA_character_
+        }
+        GenomicRanges::mcols(gr)$SYMBOL <- if (!is.null(mi$SYMBOL)) {
+            mi$SYMBOL[idx]
+        } else {
+            NA_character_
+        }
+    }
+    if (!is.null(filter)) {
+        keep <- GenomicRanges::mcols(gr)$type_code %in% filter
+        gr <- gr[keep]
+    }
+    gr
 }
 
 #' Internal: Build Promoter-Centric Summary Data Frame
@@ -959,19 +1226,28 @@ clean_anchor <- function(g, t, allow, down) {
 #' @noRd
 .build_promoter_centric_df <- function(
   raw_stats_df, upstream_promoter_stats,
-  vals, threshold, hub_percentile
+  vals, threshold, hub_percentile,
+  hub_metric = c("unique_contacts", "total_loops")
 ) {
     empty_promoter_df <- data.frame(
-        Gene = character(), Total_Loops = integer(), n_Linked_Promoters = integer(),
-        n_Linked_Distal = integer(), Dominant_Interaction = character(),
+        Gene = character(), Total_Loops = integer(),
+        n_Unique_Contacts = integer(),
+        n_Linked_Promoters = integer(), n_Linked_Distal = integer(),
+        n_Linked_EnhancerLike = integer(),
+        Dominant_Interaction = character(),
         Is_High_Connectivity_Gene = character(), Is_High_Distal_Connectivity_Gene = character(),
-        Is_Active_Gene = character(), stringsAsFactors = FALSE
+        Is_Active_Gene = character(),
+        was_promoter_before = logical(), is_promoter_after = logical(),
+        stringsAsFactors = FALSE
     )
     if (nrow(raw_stats_df) == 0) {
         return(empty_promoter_df)
     }
+    hub_metric <- match.arg(hub_metric)
+    hub_col <- if (hub_metric == "unique_contacts") "n_Unique_Contacts_Filtered" else "Total_Loops_Filtered"
+    if (!hub_col %in% colnames(raw_stats_df)) hub_col <- "Total_Loops_Filtered"
     final_cutoff <- max(stats::quantile(
-        raw_stats_df$Total_Loops_Filtered, hub_percentile,
+        raw_stats_df[[hub_col]], hub_percentile,
         na.rm = TRUE
     ), 3)
     distal_cutoff <- max(stats::quantile(
@@ -980,18 +1256,47 @@ clean_anchor <- function(g, t, allow, down) {
     ), 2)
 
     if (!is.null(upstream_promoter_stats)) {
+        # Ensure _Filtered columns exist before coalesce -- they may be
+        # absent when upstream data doesn't include expression-filtered
+        # stats (e.g., direct promoter_centric_df construction in tests).
+        # Use typed defaults to avoid logical/character coercion errors.
+        .filtered_defaults <- list(
+            Total_Loops_Filtered            = NA_integer_,
+            n_Unique_Contacts_Filtered      = NA_integer_,
+            n_Linked_Promoters_Filtered     = NA_integer_,
+            n_Linked_Distal_Filtered        = NA_integer_,
+            n_Linked_EnhancerLike_Filtered  = NA_integer_,
+            Dominant_Interaction_Filtered   = NA_character_
+        )
         promoter_centric_df <- upstream_promoter_stats %>%
-            dplyr::left_join(raw_stats_df, by = "Gene") %>%
+            dplyr::full_join(raw_stats_df, by = "Gene")
+        for (col in names(.filtered_defaults)) {
+            if (!col %in% names(promoter_centric_df)) {
+                promoter_centric_df[[col]] <- .filtered_defaults[[col]]
+            }
+        }
+        promoter_centric_df <- promoter_centric_df %>%
             dplyr::mutate(
+                was_promoter_before = !is.na(Total_Loops),
+                is_promoter_after = !is.na(Total_Loops_Filtered),
                 Total_Loops = dplyr::coalesce(Total_Loops_Filtered, 0),
+                n_Unique_Contacts = dplyr::coalesce(
+                    n_Unique_Contacts_Filtered,
+                    if ("n_Unique_Contacts" %in% names(.)) n_Unique_Contacts else 0L
+                ),
                 n_Linked_Promoters = dplyr::coalesce(n_Linked_Promoters_Filtered, 0),
                 n_Linked_Distal = dplyr::coalesce(n_Linked_Distal_Filtered, 0),
+                n_Linked_EnhancerLike = dplyr::coalesce(
+                    n_Linked_EnhancerLike_Filtered,
+                    if ("n_Linked_EnhancerLike" %in% names(.)) n_Linked_EnhancerLike else 0L
+                ),
                 Dominant_Interaction = dplyr::coalesce(
                     Dominant_Interaction_Filtered, "None"
                 ),
                 Mean_Expression_Temp = .get_expr(Gene, vals),
                 Is_Active_Gene = dplyr::if_else(
-                    Mean_Expression_Temp >= threshold, "Yes", "No"
+                    .passes_expression_threshold(Mean_Expression_Temp, threshold), "Yes", "No",
+                    missing = "Not_assessed"
                 ),
                 Is_High_Connectivity_Gene = dplyr::if_else(
                     Total_Loops >= final_cutoff, "Yes", "No"
@@ -1001,14 +1306,17 @@ clean_anchor <- function(g, t, allow, down) {
                 )
             ) %>%
             dplyr::select(
-                Gene, Total_Loops, n_Linked_Promoters, n_Linked_Distal,
+                Gene, Total_Loops, n_Unique_Contacts,
+                n_Linked_Promoters, n_Linked_Distal, n_Linked_EnhancerLike,
                 Dominant_Interaction, Is_High_Connectivity_Gene,
                 Is_High_Distal_Connectivity_Gene, Is_Active_Gene,
+                was_promoter_before, is_promoter_after,
                 dplyr::everything()
             ) %>%
             dplyr::select(-any_of(c(
-                "Total_Loops_Filtered",
+                "Total_Loops_Filtered", "n_Unique_Contacts_Filtered",
                 "n_Linked_Promoters_Filtered", "n_Linked_Distal_Filtered",
+                "n_Linked_EnhancerLike_Filtered",
                 "Dominant_Interaction_Filtered", "Is_Regulatory_Hub",
                 "Mean_Expression_Temp", "n_Linked_Enhancers", "n_Linked_GeneBodies"
             )))
@@ -1016,14 +1324,19 @@ clean_anchor <- function(g, t, allow, down) {
         promoter_centric_df <- raw_stats_df %>%
             dplyr::rename(
                 Total_Loops = Total_Loops_Filtered,
+                n_Unique_Contacts = n_Unique_Contacts_Filtered,
                 n_Linked_Promoters = n_Linked_Promoters_Filtered,
                 n_Linked_Distal = n_Linked_Distal_Filtered,
+                n_Linked_EnhancerLike = n_Linked_EnhancerLike_Filtered,
                 Dominant_Interaction = Dominant_Interaction_Filtered
             ) %>%
             dplyr::mutate(
+                was_promoter_before = FALSE,
+                is_promoter_after = TRUE,
                 Mean_Expression_Temp = .get_expr(Gene, vals),
                 Is_Active_Gene = dplyr::if_else(
-                    Mean_Expression_Temp >= threshold, "Yes", "No"
+                    .passes_expression_threshold(Mean_Expression_Temp, threshold), "Yes", "No",
+                    missing = "Not_assessed"
                 ),
                 Is_High_Connectivity_Gene = dplyr::if_else(
                     Total_Loops >= final_cutoff, "Yes", "No"
@@ -1033,9 +1346,10 @@ clean_anchor <- function(g, t, allow, down) {
                 )
             ) %>%
             dplyr::select(
-                Gene, Total_Loops, n_Linked_Promoters, n_Linked_Distal,
+                Gene, Total_Loops, n_Linked_Promoters, n_Linked_Distal, n_Linked_EnhancerLike,
                 Dominant_Interaction, Is_High_Connectivity_Gene,
                 Is_High_Distal_Connectivity_Gene, Is_Active_Gene,
+                was_promoter_before, is_promoter_after,
                 dplyr::everything()
             ) %>%
             dplyr::select(-any_of("Mean_Expression_Temp"))
@@ -1052,29 +1366,50 @@ clean_anchor <- function(g, t, allow, down) {
 #' @return A data frame of distal element statistics, or \code{NULL}.
 #' @keywords internal
 #' @noRd
-.build_distal_element_df <- function(loop_df, hub_percentile) {
+.build_distal_element_df <- function(loop_df, hub_percentile,
+                                     hub_metric = c("unique_contacts", "total_loops")) {
     if (!"a1_id" %in% colnames(loop_df)) {
         return(NULL)
     }
+    # Precompute Distal_Type columns to avoid tidy-evaluation issues with
+    # if/else inside dplyr::select()/transmute().
+    if ("Distal_Type" %in% colnames(loop_df)) {
+        loop_df$.dt1 <- loop_df$Distal_Type
+        loop_df$.dt2 <- loop_df$Distal_Type
+    } else {
+        loop_df$.dt1 <- loop_df$anchor1_type
+        loop_df$.dt2 <- loop_df$anchor2_type
+    }
+
     distal_raw_df <- dplyr::bind_rows(
         loop_df %>% dplyr::filter((.is_distal_like(anchor1_type) | .is_gene_body_like(anchor1_type))) %>%
-            dplyr::select(
-                Distal_Anchor_ID = a1_id, Neighbor_Type = anchor2_type,
-                Loop_Type = loop_type, Neighbor_Gene = anchor2_gene
+            dplyr::transmute(
+                Distal_Anchor_ID = a1_id,
+                Distal_Type = .dt1,
+                Neighbor_Type = anchor2_type,
+                Loop_Type = loop_type,
+                Neighbor_Gene = anchor2_gene,
+                contact_id = a2_id
             ),
         loop_df %>% dplyr::filter((.is_distal_like(anchor2_type) | .is_gene_body_like(anchor2_type))) %>%
-            dplyr::select(
-                Distal_Anchor_ID = a2_id, Neighbor_Type = anchor1_type,
-                Loop_Type = loop_type, Neighbor_Gene = anchor1_gene
+            dplyr::transmute(
+                Distal_Anchor_ID = a2_id,
+                Distal_Type = .dt2,
+                Neighbor_Type = anchor1_type,
+                Loop_Type = loop_type,
+                Neighbor_Gene = anchor1_gene,
+                contact_id = a1_id
             )
     ) %>%
-        dplyr::group_by(Distal_Anchor_ID) %>%
+        dplyr::group_by(Distal_Anchor_ID, Distal_Type) %>%
         dplyr::summarise(
             Total_Loops_Filtered = dplyr::n(),
+            n_Unique_Contacts_Filtered = dplyr::n_distinct(contact_id),
             n_Linked_Distal_Filtered = sum(
                 (.is_distal_like(Neighbor_Type) | .is_gene_body_like(Neighbor_Type)),
                 na.rm = TRUE
             ),
+            n_Linked_EnhancerLike_Filtered = sum(.is_distal_like(Neighbor_Type), na.rm = TRUE),
             n_Linked_Promoters_Filtered = sum(.is_promoter_like(Neighbor_Type), na.rm = TRUE),
             Dominant_Interaction_Filtered = .get_dom(Loop_Type),
             Target_Genes_Filtered = extract_genes(
@@ -1097,28 +1432,35 @@ clean_anchor <- function(g, t, allow, down) {
     if (nrow(distal_raw_df) == 0) {
         return(NULL)
     }
+    hub_metric <- match.arg(hub_metric)
+    hub_col_raw <- if (hub_metric == "unique_contacts") "n_Unique_Contacts_Filtered" else "Total_Loops_Filtered"
+    hub_col_final <- if (hub_metric == "unique_contacts") "n_Unique_Contacts" else "Total_Loops"
+    if (!hub_col_raw %in% colnames(distal_raw_df)) hub_col_raw <- "Total_Loops_Filtered"
     final_cutoff_dist <- max(stats::quantile(
-        distal_raw_df$Total_Loops_Filtered, hub_percentile,
+        distal_raw_df[[hub_col_raw]], hub_percentile,
         na.rm = TRUE
     ), 3)
     temp_df <- distal_raw_df %>%
         dplyr::rename(
             Total_Loops = Total_Loops_Filtered,
+            n_Unique_Contacts = n_Unique_Contacts_Filtered,
             n_Linked_Distal = n_Linked_Distal_Filtered,
+            n_Linked_EnhancerLike = n_Linked_EnhancerLike_Filtered,
             n_Linked_Promoters = n_Linked_Promoters_Filtered,
             Dominant_Interaction = Dominant_Interaction_Filtered,
             Target_Genes = Target_Genes_Filtered
         ) %>%
         dplyr::mutate(
             Is_High_Connectivity_Distal_Element = dplyr::if_else(
-                Total_Loops >= final_cutoff_dist, "Yes", "No"
+                .data[[hub_col_final]] >= final_cutoff_dist, "Yes", "No"
             )
         )
     temp_df <- temp_df %>%
         dplyr::select(-any_of(c(
             "chr", "start", "end", "cluster_id",
-            "Distal_Type", "Distal_Type_Filtered", "Total_Loops_Filtered",
+            "Total_Loops_Filtered", "n_Unique_Contacts_Filtered",
             "Target_Genes_Filtered", "n_Linked_Distal_Filtered",
+            "n_Linked_EnhancerLike_Filtered",
             "n_Linked_Promoters_Filtered", "Dominant_Interaction_Filtered"
         )))
     distal_element_df <- temp_df %>%
@@ -1126,8 +1468,9 @@ clean_anchor <- function(g, t, allow, down) {
             by = c("Distal_Anchor_ID" = "anchor_id")
         ) %>%
         dplyr::select(
-            chr, start, end, cluster_id, Total_Loops,
-            n_Linked_Promoters, n_Linked_Distal, Dominant_Interaction,
+            chr, start, end, cluster_id, Distal_Type, Total_Loops,
+            n_Unique_Contacts, n_Linked_Promoters, n_Linked_Distal,
+            n_Linked_EnhancerLike, Dominant_Interaction,
             any_of("Is_High_Connectivity_Distal_Element"), Target_Genes
         ) %>%
         dplyr::filter(Total_Loops > 0) %>%
@@ -1154,14 +1497,19 @@ clean_anchor <- function(g, t, allow, down) {
 #' @noRd
 compute_refined_stats <- function(
   loop_df, upstream_promoter_stats,
-  vals, threshold, hub_percentile
+  vals, threshold, hub_percentile,
+  hub_metric = c("unique_contacts", "total_loops")
 ) {
     raw_stats_df <- .compute_raw_promoter_stats(loop_df)
     promoter_centric_df <- .build_promoter_centric_df(
         raw_stats_df, upstream_promoter_stats,
-        vals, threshold, hub_percentile
+        vals, threshold, hub_percentile,
+        hub_metric = hub_metric
     )
-    distal_element_df <- .build_distal_element_df(loop_df, hub_percentile)
+    distal_element_df <- .build_distal_element_df(
+        loop_df, hub_percentile,
+        hub_metric = hub_metric
+    )
 
     list(
         promoter_centric = promoter_centric_df,
@@ -1172,10 +1520,12 @@ compute_refined_stats <- function(
 
 #' Internal: Load Expression Matrix
 #'
-#' Reads a normalized expression matrix (TPM/FPKM), sets gene identifiers as
-#' the first column, validates the requested sample columns, and returns
-#' per-gene mean expression values. Sample column names must be unique; missing
-#' or duplicated selections raise an error instead of being silently dropped.
+#' Reads a normalized expression matrix (e.g., TPM/FPKM from RNA-seq, gene-body
+#' aggregated signal from NET-seq/PRO-seq/GRO-seq, or CAGE-seq), sets gene
+#' identifiers as the first column, validates the requested sample columns, and
+#' returns per-gene mean expression values. Sample column names must be unique;
+#' missing or duplicated selections raise an error instead of being silently
+#' dropped.
 #'
 #' @param expr_matrix_file Character. Path to the expression matrix file.
 #' @param sample_columns Character or integer vector. Sample columns to average.
@@ -1223,8 +1573,9 @@ load_expression_matrix <- function(expr_matrix_file, sample_columns = NULL) {
     if (length(dup_genes) > 0) {
         warning(
             "Expression matrix contains ", length(dup_genes),
-            " duplicated gene identifier(s). Only the first occurrence of each duplicated gene is retained. ",
-            "Consider aggregating duplicates before calling looplook.",
+            " duplicated gene identifier(s). The first occurrence is retained; ",
+            "subsequent duplicates are removed. Consider aggregating transcripts ",
+            "to genes before analysis for more accurate expression summaries.",
             call. = FALSE
         )
     }
@@ -1324,8 +1675,10 @@ load_expression_matrix <- function(expr_matrix_file, sample_columns = NULL) {
     sub_mat_num <- as.data.frame(sub_mat_num, check.names = FALSE)
 
     if (is.null(sample_columns)) {
-        message("sample_columns not specified; averaging all ", ncol(sub_mat_num),
-                " sample columns for baseline expression")
+        message(
+            "sample_columns not specified; averaging all ", ncol(sub_mat_num),
+            " sample columns for baseline expression"
+        )
     }
     vals <- if (ncol(sub_mat_num) > 1) {
         rowMeans(sub_mat_num, na.rm = TRUE)
@@ -1333,7 +1686,20 @@ load_expression_matrix <- function(expr_matrix_file, sample_columns = NULL) {
         sub_mat_num[[1]]
     }
     vals[is.nan(vals)] <- NA_real_
-    names(vals) <- gene_ids
+    # Normalise gene identifiers to uppercase for consistent case-insensitive
+    # matching across all downstream lookups (whitelist, .get_expr, stats).
+    names(vals) <- toupper(gene_ids)
+    # Deduplicate gene IDs: keep the first occurrence of each gene so that
+    # quantile threshold computation and single-gene lookup use the same data.
+    dup_mask <- duplicated(names(vals))
+    if (any(dup_mask)) {
+        n_dup <- sum(dup_mask)
+        message(sprintf(
+            "Removed %d duplicate gene identifier(s) from expression matrix (keeping first occurrence).",
+            n_dup
+        ))
+        vals <- vals[!dup_mask]
+    }
     vals
 }
 
@@ -1484,13 +1850,17 @@ draw_karyo_heatmap_internal <- function(gr_data, title_prefix, bin_size, sat_lev
                 )
             ),
             error = function(e) {
-                message("Karyotype plot skipped: genome '", plot_species,
-                        "' is not supported by karyoploteR. ",
-                        "Install karyoploteR data for this genome or skip with show_karyo=FALSE.")
+                message(
+                    "Karyotype plot skipped: genome '", plot_species,
+                    "' is not supported by karyoploteR. ",
+                    "Install karyoploteR data for this genome or skip with show_karyo=FALSE."
+                )
                 return(NULL)
             }
         )
-        if (is.null(kp)) return(invisible(NULL))
+        if (is.null(kp)) {
+            return(invisible(NULL))
+        }
         karyoploteR::kpRect(kp, data = tiles, y0 = 0, y1 = 1, col = S4Vectors::mcols(tiles)$color, border = NA)
         main_title <- paste0("Loop Analysis: ", title_prefix, "\n(Genomic Load: Median ~", round(median_val / bin_size_mb, 1), " ", unit_label, "/MB)")
         graphics::mtext(main_title, side = 3, line = 1, outer = TRUE, cex = 1.2, font = 2)
@@ -1710,27 +2080,102 @@ draw_pie_with_outside_labels <- function(data_df, group_col, title, palette) {
 #' @return A named list of version strings.
 #' @keywords internal
 #' @noRd
-.record_database_versions <- function(species = NULL) {
+.record_database_versions <- function(species = NULL,
+                                      txdb_obj = NULL,
+                                      org_db_pkg = NULL,
+                                      resource_reused = FALSE) {
     get_pkg_version <- function(pkg) {
-        if (!is.null(pkg) && requireNamespace(pkg, quietly = TRUE))
+        if (!is.null(pkg) && requireNamespace(pkg, quietly = TRUE)) {
             as.character(utils::packageVersion(pkg))
-        else
+        } else {
             NA_character_
+        }
     }
-    txdb_pkg <- if (!is.null(species)) tryCatch(species_txdb_pkg(species), error = function(e) NULL) else NULL
-    orgdb_pkg <- if (!is.null(species)) tryCatch(species_orgdb_pkg(species), error = function(e) NULL) else NULL
-    bsgenome_pkg <- if (!is.null(species)) tryCatch(species_bsgenome_pkg(species), error = function(e) NULL) else NULL
+    # Resolve species defaults for comparison / fallback
+    species_txdb_pkg_name <- if (!is.null(species)) {
+        tryCatch(species_txdb_pkg(species), error = function(e) NULL)
+    } else {
+        NULL
+    }
+    species_orgdb_pkg_name <- if (!is.null(species)) {
+        tryCatch(species_orgdb_pkg(species), error = function(e) NULL)
+    } else {
+        NULL
+    }
+    bsgenome_pkg <- if (!is.null(species)) {
+        tryCatch(species_bsgenome_pkg(species), error = function(e) NULL)
+    } else {
+        NULL
+    }
+
+    # --- TxDb provenance ---
+    if (!is.null(txdb_obj) && inherits(txdb_obj, "TxDb")) {
+        custom_txdb_pkg <- .pkg_from_annotation_db(txdb_obj)
+        txdb_class <- class(txdb_obj)[1]
+        txdb_dbfile <- tryCatch(AnnotationDbi::dbfile(txdb_obj),
+            error = function(e) NA_character_
+        )
+        txdb_checksum <- if (!is.na(txdb_dbfile) && file.exists(txdb_dbfile)) {
+            unname(tools::md5sum(txdb_dbfile))
+        } else {
+            NA_character_
+        }
+        if (!is.null(custom_txdb_pkg)) {
+            txdb_source <- if (!identical(custom_txdb_pkg, species_txdb_pkg_name)) {
+                "custom"
+            } else {
+                "species_default"
+            }
+            txdb_pkg <- custom_txdb_pkg
+            txdb_version <- get_pkg_version(custom_txdb_pkg)
+        } else {
+            # Cannot infer an installed R package -- likely a custom SQLite
+            # file or ad-hoc TxDb.  Record the dbfile path but leave the
+            # package fields empty.
+            txdb_source <- "custom_sqlite"
+            txdb_pkg <- NA_character_
+            txdb_version <- NA_character_
+        }
+    } else {
+        txdb_source <- if (!is.null(species_txdb_pkg_name)) "species_default" else "unknown"
+        txdb_class <- NA_character_
+        txdb_pkg <- species_txdb_pkg_name
+        txdb_version <- get_pkg_version(species_txdb_pkg_name)
+        txdb_dbfile <- NA_character_
+        txdb_checksum <- NA_character_
+    }
+
+    # --- OrgDb provenance ---
+    if (!is.null(org_db_pkg) && nzchar(org_db_pkg)) {
+        orgdb_source <- if (!identical(org_db_pkg, species_orgdb_pkg_name)) {
+            "custom"
+        } else {
+            "species_default"
+        }
+        orgdb_version <- get_pkg_version(org_db_pkg)
+        orgdb_pkg_name <- org_db_pkg
+    } else {
+        orgdb_source <- "not_used"
+        orgdb_version <- NA_character_
+        orgdb_pkg_name <- NA_character_
+    }
 
     list(
-        TxDb       = get_pkg_version(txdb_pkg),
-        OrgDb      = get_pkg_version(orgdb_pkg),
-        BSgenome   = get_pkg_version(bsgenome_pkg),
-        JASPAR     = get_pkg_version("JASPAR2020"),
+        txdb_source = txdb_source,
+        txdb_class = txdb_class,
+        txdb_pkg = txdb_pkg,
+        txdb_dbfile = txdb_dbfile,
+        txdb_checksum = txdb_checksum,
+        TxDb = txdb_version,
+        orgdb_source = orgdb_source,
+        orgdb_pkg = orgdb_pkg_name,
+        OrgDb = orgdb_version,
+        resource_reused_from_initial_annotation = resource_reused,
+        BSgenome = get_pkg_version(bsgenome_pkg),
+        JASPAR = get_pkg_version("JASPAR2020"),
         clusterProfiler = get_pkg_version("clusterProfiler"),
-        STRINGdb   = get_pkg_version("STRINGdb"),
+        STRINGdb = get_pkg_version("STRINGdb"),
         motifmatchr = get_pkg_version("motifmatchr"),
-        txdb_pkg   = txdb_pkg,
-        orgdb_pkg  = orgdb_pkg,
         bsgenome_pkg = bsgenome_pkg
     )
 }
@@ -1748,10 +2193,10 @@ draw_pie_with_outside_labels <- function(data_df, group_col, title, palette) {
 #' @keywords internal
 #' @noRd
 .build_looplook_metadata <- function(fun, params = list(),
-                                      genome_build = NULL,
-                                      score_semantics = NULL,
-                                      diagnostics = NULL,
-                                      database_versions = NULL) {
+                                     genome_build = NULL,
+                                     score_semantics = NULL,
+                                     diagnostics = NULL,
+                                     database_versions = NULL) {
     m <- list(
         package = "looplook",
         version = as.character(utils::packageVersion("looplook")),

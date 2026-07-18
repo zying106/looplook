@@ -36,6 +36,8 @@ params:
   genome_id: null
   motif_p_thresh: 1e-4
   motif_ntop: 5
+  motif_n_perm: 0
+  universe_genes: !r NULL
   ppi_score: 400
   ppi_nSample: 400
   heatmap_nSample: 99999
@@ -444,7 +446,7 @@ if (has_precomp) {
 cat('<div class="status-box status-info">')
 cat(sprintf("This report presents the multi-omics integration results for <strong>%s</strong>. ",
   html_escape(params$project_name)))
-cat("The pipeline maps genomic features (derived from ChIP-seq, CUT&Tag, CUT&RUN, or GWAS) to their target genes using both spatial chromatin topology and linear proximity, providing a high-confidence map of the regulatory landscape.")
+cat("The pipeline maps genomic features (derived from ChIP-seq, CUT&Tag, CUT&RUN, or GWAS) to their target genes using both spatial chromatin topology and linear proximity, providing a strong map of the regulatory landscape.")
 cat('</div>')
 
 cat("\n\n### Input Data Overview\n\n")
@@ -468,7 +470,7 @@ if (has_expr) {
   cat(sprintf("2. **Expression Refinement:** Filtering silent contacts (TPM < %.1f) and topology reclassification (P to eP).\n", params$threshold))
 }
 if (has_chromatin) {
-  cat(sprintf("3. **Chromatin-Guided Reclassification:** %s mark(s) validated and reclassified anchors against ENCODE criteria.\n",
+  cat(sprintf("3. **Chromatin-Guided Reclassification:** %s mark(s) validated and reclassified anchors against ENCODE-inspired criteria.\n",
     length(params$chromatin_beds)))
 }
 if (has_profiling) {
@@ -512,6 +514,7 @@ if (has_expr) {
       annotation_res = res,
       expr_matrix_file = expr_path,
       sample_columns = expr_sample_columns,
+      species = params$species,
       threshold = params$threshold,
       unit_type = params$unit_type,
       reclassify_by_expression = params$reclassify_by_expression,
@@ -706,16 +709,29 @@ if (has_expr && !is.null(refined) && !is.null(refined$loop_annotation)) {
   rla <- refined$loop_annotation
   n_original <- nrow(res$loop_annotation)
   n_filtered <- nrow(rla)
-  n_reclass <- sum(grepl("^e", rla$loop_type))
+  # Count unique eP/eG anchors by anchor ID, not by type string
+  eP_anchors <- unique(c(
+    as.character(rla$a1_id[rla$anchor1_type == "eP"]),
+    as.character(rla$a2_id[rla$anchor2_type == "eP"])
+  ))
+  eP_anchors <- eP_anchors[!is.na(eP_anchors) & nzchar(eP_anchors)]
+  eG_anchors <- unique(c(
+    as.character(rla$a1_id[rla$anchor1_type == "eG"]),
+    as.character(rla$a2_id[rla$anchor2_type == "eG"])
+  ))
+  eG_anchors <- eG_anchors[!is.na(eG_anchors) & nzchar(eG_anchors)]
+  n_eP <- length(eP_anchors)
+  n_eG <- length(eG_anchors)
 
   cat('<div class="status-box status-success">')
-  refine_label <- if (has_chromatin && !is.null(chromatin_refined)) "Dual refinement" else "Refinement"
+  refine_label <- if (has_chromatin && !is.null(chromatin_refined)) "Dual refinement" else "Expression refinement"
 cat(sprintf("<strong>%s complete.</strong> Applied a %s threshold of <strong>%.1f</strong>. ",
     refine_label,
       html_escape(params$unit_type), params$threshold))
-  cat(sprintf("%s of %s original loops passed QC (%s%% retained). ", 
-      comma(n_filtered), comma(n_original), round(n_filtered / n_original * 100, 1)))
-  cat(sprintf("<strong>%s</strong> promoter-anchors were reclassified as enhancer-like elements (eP).", comma(n_reclass)))
+  cat(sprintf("All %s structural loops preserved; <strong>%s</strong> reclassified as eP and <strong>%s</strong> as eG (unique anchors). ",
+      comma(n_original), comma(n_eP), comma(n_eG)))
+  cat(sprintf("Expression-filtered target columns reflect %s functional active loops.",
+      comma(sum(rla$Retained_In_Functional_Network %in% TRUE, na.rm = TRUE))))
   cat('</div>')
 } else if (!is.null(chromatin_refined) && !is.null(chromatin_refined$qc_summary)) {
   # Chromatin-only refinement (no expression data)
@@ -723,9 +739,9 @@ cat(sprintf("<strong>%s complete.</strong> Applied a %s threshold of <strong>%.1
   cat('<div class="status-box status-success">')
   cat(sprintf("<strong>Chromatin refinement complete.</strong> %s candidate anchors tested. ",
       comma(qc$n_candidate_anchors)))
-  cat(sprintf("<strong>%s</strong> reclassified, <strong>%s</strong> gold-standard, ",
-      comma(qc$n_reclassified), comma(qc$n_gold_standard)))
-  cat(sprintf("<strong>%s</strong> high-confidence.", comma(qc$n_high_confidence)))
+  cat(sprintf("<strong>%s</strong> reclassified, <strong>%s</strong> canonical, ",
+      comma(qc$n_reclassified), comma(qc$n_canonical)))
+  cat(sprintf("<strong>%s</strong> strong.", comma(qc$n_strong)))
   cat('</div>')
 } else {
   cat('<div class="status-box status-warning">')
@@ -737,17 +753,22 @@ cat(sprintf("<strong>%s complete.</strong> Applied a %s threshold of <strong>%.1
   cat('</div>')
 }
 if (has_chromatin && !is.null(chromatin_refined)) {
-  n_dual <- sum(chromatin_refined$loop_annotation$loop_type == "dual" |
-                grepl("dual", chromatin_refined$loop_annotation$loop_type))
-  n_reclass <- sum(grepl("Reclassified", names(table(chromatin_refined$chromatin_validation$enhancer_evidence))))
+  qc <- chromatin_refined$qc_summary
   cv_summary <- table(chromatin_refined$chromatin_validation$enhancer_evidence)
   .get_cv <- function(tbl, nm) if (nm %in% names(tbl)) tbl[[nm]] else 0L
   cat('<div class="status-box status-info">')
   cat(sprintf("<strong>Chromatin refinement complete.</strong> "))
-  if (n_dual > 0) cat(sprintf("<strong>%s</strong> anchors flagged as dual-function. ", comma(n_dual)))
-  cat(sprintf("Confidence: gold=%s, high=%s, supported=%s, weak=%s, uncertain=%s.",
-      comma(.get_cv(cv_summary, "gold_standard")), comma(.get_cv(cv_summary, "high_confidence")),
-      comma(.get_cv(cv_summary, "supported")), comma(.get_cv(cv_summary, "weak")),
+  if (!is.null(qc$n_dual) && qc$n_dual > 0) {
+    cat(sprintf("<strong>%s</strong> anchors flagged as dual-function. ", comma(qc$n_dual)))
+  }
+  if (!is.null(qc$n_candidate_anchors)) {
+    cat(sprintf("%s candidate anchors tested; <strong>%s</strong> reclassified (%s canonical, %s strong). ",
+        comma(qc$n_candidate_anchors), comma(qc$n_reclassified),
+        comma(qc$n_canonical), comma(qc$n_strong)))
+  }
+  cat(sprintf("Enhancer evidence: canonical=%s, strong=%s, supported=%s, limited=%s, uncertain=%s.",
+      comma(.get_cv(cv_summary, "canonical")), comma(.get_cv(cv_summary, "strong")),
+      comma(.get_cv(cv_summary, "supported")), comma(.get_cv(cv_summary, "limited")),
       comma(.get_cv(cv_summary, "uncertain"))))
   cat('</div>')
 } else if (has_chromatin && !is.null(chromatin_error)) {
@@ -757,7 +778,7 @@ if (has_chromatin && !is.null(chromatin_refined)) {
 }
 ```
 
-`r if(has_chromatin && !is.null(chromatin_refined)) "<div class='status-box status-info' style='margin-bottom:20px'><strong>Combined refinement strategy:</strong> Both expression and chromatin data were provided. The sections below show chromatin-aware results, which incorporate and refine the expression-derived anchor classifications. Expression-only tables are omitted to avoid redundancy.</div>" else if(has_expr && !is.null(refined)) "<div class='status-box status-info' style='margin-bottom:20px'><strong>Expression-aware refinement:</strong> Only expression data was provided. eP/eG labels denote expression-filtered silent anchors — validate with orthogonal chromatin data before functional interpretation.</div>"`
+`r if(has_chromatin && !is.null(chromatin_refined)) "<div class='status-box status-info' style='margin-bottom:20px'><strong>Combined refinement strategy:</strong> Both expression and chromatin data were provided. The sections below show chromatin-aware results, which incorporate and refine the expression-derived anchor classifications. Expression-only tables are omitted to avoid redundancy.</div>" else if(has_expr && !is.null(refined)) "<div class='status-box status-info' style='margin-bottom:20px'><strong>Expression-aware refinement:</strong> Only expression data was provided. eP/eG labels denote element-Promoter like / element-Genebody like anchors — validate with orthogonal chromatin data before functional interpretation.</div>"`
 
 ```{r refinement-results, results='asis', error=TRUE, eval=has_expr && !is.null(refined) && is.null(chromatin_refined)}
 cat("## Refined Interaction Types\n")
@@ -916,11 +937,11 @@ if (!is.null(chromatin_refined$qc_summary)) {
   cat("\n## Reclassification Summary\n\n")
   cat('<div class="table-caption">Chromatin-aware anchor reclassification statistics</div>\n')
   qc_df <- data.frame(
-    Metric = c("Candidate anchors tested", "Reclassified", "Gold standard", "High confidence",
-               "Supported", "Weak", "Dual-function anchors", "Promoter-like"),
+    Metric = c("Candidate anchors tested", "Reclassified", "Canonical", "High confidence",
+               "Supported", "Limited", "Dual-function anchors", "Promoter-like"),
     Value = c(comma(qc$n_candidate_anchors), comma(qc$n_reclassified),
-              comma(qc$n_gold_standard), comma(qc$n_high_confidence),
-              comma(qc$n_supported), comma(qc$n_weak),
+              comma(qc$n_canonical), comma(qc$n_strong),
+              comma(qc$n_supported), comma(qc$n_limited),
               comma(qc$n_dual), comma(qc$n_promoter_like)),
     stringsAsFactors = FALSE
   )
@@ -1008,9 +1029,9 @@ for (nm in chr_plot_nms) {
 cv <- chromatin_refined$chromatin_validation
 cat("\n## Orthogonal Chromatin Validation\n\n")
 cv_tab <- table(cv$enhancer_evidence)
-cv_levels <- c("gold_standard", "high_confidence", "supported", "weak", "uncertain")
-cv_colors <- c("gold_standard"="#1B5E20", "high_confidence"="#2E7D32", "supported"="#66BB6A",
-               "weak"="#FFB300", "uncertain"="#BDBDBD")
+cv_levels <- c("canonical", "strong", "supported", "limited", "uncertain")
+cv_colors <- c("canonical"="#1B5E20", "strong"="#2E7D32", "supported"="#66BB6A",
+               "limited"="#FFB300", "uncertain"="#BDBDBD")
 cv_counts <- sapply(cv_levels, function(l) if (l %in% names(cv_tab)) cv_tab[[l]] else 0L)
 cv_has_data <- sum(cv_counts) > 0
 
@@ -1026,10 +1047,10 @@ if (cv_has_data) {
     if (cv_counts[lvl] > 0) {
       pct <- round(cv_counts[lvl] / nrow(cv) * 100, 1)
       desc <- switch(lvl,
-        gold_standard = "All 5 marks aligned: H3K4me1+, H3K27ac+, ATAC+, H3K27me3-, H3K4me3-",
-        high_confidence = "H3K4me1+ and (H3K27ac+ or ATAC+)",
+        canonical = "All 5 marks aligned: H3K4me1+, H3K27ac+, ATAC+, H3K27me3-, H3K4me3-",
+        strong = "H3K4me1+ and (H3K27ac+ or ATAC+)",
         supported = "At least one active mark positive",
-        weak = "No active marks; H3K27me3/H3K4me3 tested and absent",
+        limited = "No active marks; H3K27me3/H3K4me3 not detected in peak calls",
         uncertain = "No chromatin data or no overlaps")
       cat(sprintf("| <span style='color:%s'>**%s**</span> | <strong>%s</strong> (%s%%) | %s |\n",
           cv_colors[lvl], lvl, comma(cv_counts[lvl]), pct, desc))
@@ -1057,8 +1078,8 @@ if (cv_has_data) {
                      plot.subtitle = ggplot2::element_text(hjust = 0.5, size = 10))
     cat("\n")
     render_plot_container(p,
-      title = "Chromatin Validation Confidence",
-      description = "Confidence levels are based on ENCODE active-enhancer criteria. Gold standard requires all 5 marks aligned. High confidence requires H3K4me1 plus H3K27ac or ATAC.")
+      title = "Chromatin Validation — Enhancer Evidence",
+      description = "Enhancer evidence levels follow ENCODE active-enhancer criteria. Canonical requires all 5 marks aligned (chromatin signature match, not functional validation). Strong requires H3K4me1 plus H3K27ac or ATAC.")
   }
   cat("\n")
 } else {
@@ -1109,6 +1130,10 @@ profile_res <- tryCatch(
     run_ppi = effective_run_ppi,
     run_motif = params$run_motif,
     genome_id = if (is.null(params$genome_id) || !nzchar(params$genome_id)) params$species else params$genome_id,
+    org_db = switch(params$species,
+      hg38 = "org.Hs.eg.db", hg19 = "org.Hs.eg.db",
+      mm10 = "org.Mm.eg.db", mm9 = "org.Mm.eg.db",
+      "org.Hs.eg.db"),
     motif_p_thresh = params$motif_p_thresh,
     motif_ntop = params$motif_ntop,
     ppi_score = params$ppi_score,
@@ -1116,7 +1141,10 @@ profile_res <- tryCatch(
     heatmap_nSample = params$heatmap_nSample,
     gsea_nSample = params$gsea_nSample,
     cnet_nSample = params$cnet_nSample,
-    stat_test = params$stat_test
+    stat_test = params$stat_test,
+    motif_n_perm = params$motif_n_perm,
+    universe_genes = params$universe_genes,
+    seed = params$seed
   )),
   error = function(e) {
     profiling_error <<- conditionMessage(e)

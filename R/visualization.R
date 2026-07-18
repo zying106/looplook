@@ -145,7 +145,7 @@
             loops <- loops %>% dplyr::filter(score >= min_score)
             if (nrow(loops) == 0) {
                 warning("All loops filtered by min_score; track will be empty.", call. = FALSE)
-                return(list(loops = loops[0,], has_score = FALSE))
+                return(list(loops = loops[0, ], has_score = FALSE))
             }
         }
     }
@@ -358,37 +358,52 @@ NULL
         a2 <- d$anchors[duplicated(d$anchors$loop_i), ]
         names(a1) <- paste0(names(a1), "1")
         names(a2) <- paste0(names(a2), "2")
-        anchor_lu <- merge(a1[, c("loop_i1","chr1","start1","end1")],
-                           a2[, c("loop_i2","chr2","start2","end2")],
-                           by.x = "loop_i1", by.y = "loop_i2")
+        anchor_lu <- merge(a1[, c("loop_i1", "chr1", "start1", "end1")],
+            a2[, c("loop_i2", "chr2", "start2", "end2")],
+            by.x = "loop_i1", by.y = "loop_i2"
+        )
         d$bez_df <- merge(d$bez_df, anchor_lu, by.x = "loop_i", by.y = "loop_i1", all.x = TRUE)
-        d$bez_df$tooltip <- sprintf("chr%s:%s-%s <-> chr%s:%s-%s | score=%.1f",
+        d$bez_df$tooltip <- sprintf(
+            "chr%s:%s-%s <-> chr%s:%s-%s | score=%.1f",
             d$bez_df$chr1, as.integer(d$bez_df$start1), as.integer(d$bez_df$end1),
             d$bez_df$chr2, as.integer(d$bez_df$start2), as.integer(d$bez_df$end2),
-            d$bez_df$score)
+            d$bez_df$score
+        )
         dense_list <- lapply(split(d$bez_df, d$bez_df$loop_i), function(sub) {
-            if (nrow(sub) < 3) return(sub)
+            if (nrow(sub) < 3) {
+                return(sub)
+            }
             t_vals <- seq(0, 1, length.out = 30)
-            x0 <- sub$x[1]; x1 <- sub$x[2]; x2 <- sub$x[3]
-            y0 <- sub$y[1]; y1 <- sub$y[2]; y2 <- sub$y[3]
+            x0 <- sub$x[1]
+            x1 <- sub$x[2]
+            x2 <- sub$x[3]
+            y0 <- sub$y[1]
+            y1 <- sub$y[2]
+            y2 <- sub$y[3]
             bx <- (1 - t_vals)^2 * x0 + 2 * (1 - t_vals) * t_vals * x1 + t_vals^2 * x2
             by <- (1 - t_vals)^2 * y0 + 2 * (1 - t_vals) * t_vals * y1 + t_vals^2 * y2
-            data.frame(loop_i = sub$loop_i[1], x = bx, y = by,
+            data.frame(
+                loop_i = sub$loop_i[1], x = bx, y = by,
                 color = sub$final_color[1], tooltip = sub$tooltip[1],
                 arc_level = sub$arc_level[1], score = sub$score[1],
-                stringsAsFactors = FALSE)
+                stringsAsFactors = FALSE
+            )
         })
         d$bez_dense <- do.call(rbind, dense_list)
     }
     if (nrow(d$anchors) > 0) {
-        d$anchors$tooltip <- sprintf("%s:%s-%s | score=%.1f",
-            d$anchors$chr, as.integer(d$anchors$start), as.integer(d$anchors$end), d$anchors$score)
+        d$anchors$tooltip <- sprintf(
+            "%s:%s-%s | score=%.1f",
+            d$anchors$chr, as.integer(d$anchors$start), as.integer(d$anchors$end), d$anchors$score
+        )
     }
     if (!is.null(d$overlap_df_plot) && nrow(d$overlap_df_plot) > 0) {
         d$overlap_df_plot$peak_id <- sprintf("Peak_%d", seq_len(nrow(d$overlap_df_plot)))
-        d$overlap_df_plot$tooltip <- sprintf("%s: %s:%s-%s",
+        d$overlap_df_plot$tooltip <- sprintf(
+            "%s: %s:%s-%s",
             d$overlap_df_plot$peak_id, d$overlap_df_plot$chr,
-            as.integer(d$overlap_df_plot$start), as.integer(d$overlap_df_plot$end))
+            as.integer(d$overlap_df_plot$start), as.integer(d$overlap_df_plot$end)
+        )
     }
     if (nrow(d$genes_df) > 0) {
         d$genes_df$tooltip <- if ("gene_biotype" %in% colnames(d$genes_df)) {
@@ -651,8 +666,10 @@ plot_peaks_interactions <- function(
         if (isTRUE(interactive) && requireNamespace("ggiraph", quietly = TRUE)) {
             p <- p + ggiraph::geom_rect_interactive(
                 data = d$overlap_df_plot,
-                ggplot2::aes(xmin = start, xmax = end, ymin = ymin, ymax = ymax,
-                             tooltip = tooltip, data_id = tooltip),
+                ggplot2::aes(
+                    xmin = start, xmax = end, ymin = ymin, ymax = ymax,
+                    tooltip = tooltip, data_id = tooltip
+                ),
                 fill = overlap_color, alpha = 1
             )
         } else {
@@ -765,8 +782,10 @@ plot_peaks_interactions <- function(
                 ggplot2::scale_fill_identity() +
                 ggiraph::geom_path_interactive(
                     data = d$bez_dense,
-                    ggplot2::aes(x = x, y = y, group = loop_i,
-                                 color = color, tooltip = tooltip, data_id = tooltip),
+                    ggplot2::aes(
+                        x = x, y = y, group = loop_i,
+                        color = color, tooltip = tooltip, data_id = tooltip
+                    ),
                     linewidth = 0.6
                 ) +
                 ggplot2::scale_color_identity()
@@ -813,10 +832,14 @@ plot_peaks_interactions <- function(
         ggplot2::ggsave(save_file, plot = p, width = 10, height = 5)
     }
     if (isTRUE(interactive) && requireNamespace("ggiraph", quietly = TRUE)) {
-        return(ggiraph::girafe(ggobj = p, width_svg = 10, height_svg = 5,
-            options = list(ggiraph::opts_tooltip(css = "background:#333;color:#fff;padding:6px 10px;border-radius:4px;font-size:12px;"),
-                           ggiraph::opts_hover(css = "stroke-width:3px;opacity:1;filter:brightness(0.5);"),
-                           ggiraph::opts_hover_inv(css = "opacity:0.15;"))))
+        return(ggiraph::girafe(
+            ggobj = p, width_svg = 10, height_svg = 5,
+            options = list(
+                ggiraph::opts_tooltip(css = "background:#333;color:#fff;padding:6px 10px;border-radius:4px;font-size:12px;"),
+                ggiraph::opts_hover(css = "stroke-width:3px;opacity:1;filter:brightness(0.5);"),
+                ggiraph::opts_hover_inv(css = "opacity:0.15;")
+            )
+        ))
     }
     return(p)
 }

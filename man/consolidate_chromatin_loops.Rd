@@ -94,7 +94,7 @@ A filtered \code{\link[InteractionSet]{GInteractions}} object with metadata colu
 \item{\code{score}}{Replicate-balanced consensus score.}
 \item{\code{n_members}}{Number of raw loops merged into this entry
 (1 for intersect mode where no coordinate merging occurs). For
-\code{"intersect"} mode, results are \strong{not symmetric} — changing file
+\code{"intersect"} mode, results are \strong{not symmetric} -- changing file
 order changes output.}
 \item{\code{n_reps}}{Number of input files that support this entry.}
 \item{\code{cluster_id}}{Connected-component cluster identifier.}
@@ -116,7 +116,7 @@ This function consolidates chromatin loops from multiple BEDPE files. It is desi
 The function supports three modes:
 \itemize{
 \item \code{"consensus"}: Implements graph-based connected component analysis to cluster spatially proximal anchors across samples. Only retains clusters detected in >= min_consensus biological replicates.
-\item \code{"intersect"}: Reference-based filtering. Retains loops in File 1 whose anchors overlap with loops in every other file within the specified \code{gap} tolerance. Coordinates and scores are inherited from File 1 without merging. \strong{Important: Intersect mode is NOT symmetric.} The output depends on which file is listed first — loops are retained from File 1 only. Changing file order may produce different results.
+\item \code{"intersect"}: Reference-based filtering. Retains loops in File 1 whose anchors overlap with loops in every other file within the specified \code{gap} tolerance. Coordinates and scores are inherited from File 1 without merging. \strong{Important: Intersect mode is NOT symmetric.} The output depends on which file is listed first -- loops are retained from File 1 only. Changing file order may produce different results.
 \item \code{"union"}: Retains all chromatin interactions across the entire cohort, ideal for exploratory pan-tissue analyses.
 }
 
@@ -127,7 +127,7 @@ any cluster span exceeds the chaining threshold
 (\code{max(3*gap, 5*med_width*gap/1000)}). Use \code{chaining_policy} to
 control this behavior (\code{"warn"}, \code{"none"}, \code{"drop"}, or
 \code{"error"}). \strong{Note:} the default \code{"warn"} policy does
-\emph{not} remove affected clusters — their inflated coordinates (from
+\emph{not} remove affected clusters -- their inflated coordinates (from
 \code{min(start)} to \code{max(end)} across all chained members) flow
 into downstream analyses unchanged. When chaining is a concern for
 downstream overlapping operations, use \code{chaining_policy = "drop"}

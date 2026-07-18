@@ -44,8 +44,8 @@ Accepts any assembly string; used for seqlevel harmonization.}
 A data frame with columns:
 \describe{
 \item{anchor_id, chr, start, end, anchor_type, anchor_gene, cluster_id}{Anchor identifiers.}
-\item{H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3}{Logical or \code{NA}. \code{TRUE} = overlap, \code{FALSE} = tested but absent, \code{NA} = not tested.}
-\item{enhancer_evidence}{Factor: \code{gold_standard} > \code{high_confidence} > \code{supported} > \code{weak} > \code{uncertain}.}
+\item{H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3}{Logical or \code{NA}. \code{TRUE} = peak detected, \code{FALSE} = peak not called (below detection threshold in this dataset), \code{NA} = mark not provided.}
+\item{enhancer_evidence}{Factor (enhancer evidence level): \code{canonical} > \code{strong} > \code{supported} > \code{limited} > \code{uncertain}.}
 \item{evidence}{Human-readable string of the constituting marks (e.g. \code{"H3K4me1+; H3K27ac+; H3K4me3-; H3K27me3-"}). Anchors with tested-positive H3K4me3 at \code{supported} confidence are annotated with a \code{"promoter_like"} tag.}
 }
 }
@@ -56,14 +56,14 @@ classification from \code{\link{annotate_peaks_and_loops}}, against
 user-supplied chromatin mark BED files.
 }
 \details{
-Confidence levels follow ENCODE active-enhancer criteria.  Each
+Enhancer evidence levels follow ENCODE active-enhancer criteria. Each
 anchor is classified into the highest applicable level:
 \describe{
-\item{gold_standard}{All 5 marks tested: H3K4me1+, H3K27ac+, ATAC+, H3K27me3-, H3K4me3-.}
-\item{high_confidence}{H3K4me1+ and (H3K27ac+ or ATAC+); H3K4me3 must be absent when tested.}
+\item{canonical}{All 5 marks tested: H3K4me1+, H3K27ac+, ATAC+, H3K27me3-, H3K4me3-. This is a chromatin signature match, not functional validation.}
+\item{strong}{H3K4me1+ and (H3K27ac+ or ATAC+); H3K4me3 must be absent when tested.}
 \item{supported}{Any of H3K4me1, H3K27ac, or ATAC positive. Anchors with H3K4me3+
 (regardless of H3K27me3 status) receive a \code{"promoter_like"} evidence tag.}
-\item{weak}{Tested negative markers (H3K27me3-, H3K4me3-) present but no active marks.}
+\item{limited}{Tested negative markers (H3K27me3-, H3K4me3-) present but no active marks.}
 \item{uncertain}{Marks tested but none identified; or no marks tested at all.}
 }
 Marks not provided are recorded as \code{NA} and never treated as negative evidence.

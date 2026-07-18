@@ -11,6 +11,7 @@ annotate_peaks_and_loops(
   org_db = NULL,
   species = "hg38",
   tss_region = c(-2000, 2000),
+  anchor_merge_gap = 0,
   out_dir = "./results",
   expr_matrix_file = NULL,
   sample_columns = NULL,
@@ -19,6 +20,7 @@ annotate_peaks_and_loops(
   karyo_bin_size = 1e+05,
   neighbor_hop = 0,
   hub_percentile = 0.95,
+  hub_metric = c("unique_contacts", "total_loops"),
   min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
   co_dominance_ratio = 0.1,
@@ -27,7 +29,8 @@ annotate_peaks_and_loops(
   anchor_min_overlap = 1L,
   anchor_min_frac = 0,
   write_output = TRUE,
-  quiet = FALSE
+  quiet = FALSE,
+  target_priority = c("promoter_then_distance", "distance_then_role")
 )
 }
 \arguments{
@@ -49,11 +52,20 @@ directly (e.g. \code{txdb = TxDb.Dmelanogaster.UCSC.dm6.ensGene},
 \code{org_db = "org.Dm.eg.db"}). The \code{species} string is also used
 for karyotype ideograms and JASPAR motif species filtering.}
 
-\item{tss_region}{Numeric vector of length 2. Promoter window around the TSS in bp. Default: \code{c(-2000, 2000)} (±2 kb; typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).}
+\item{tss_region}{Numeric vector of length 2. Promoter window around the TSS in bp. Default: \code{c(-2000, 2000)} (+/-2 kb; typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).}
+
+\item{anchor_merge_gap}{Integer. Merge loop anchors within this many bp on
+the same chromosome before building the connectivity graph. Default
+\code{0} (no merging; anchors must match exactly on chr, start, end).
+Set to \code{50--200} when input BEDPE comes directly from a loop caller
+without prior replicate consolidation -- the same biological anchor may
+appear with slightly different boundaries in different loop rows, which
+would otherwise fragment the graph. Not needed when input is
+pre-consolidated via \code{\link{consolidate_chromatin_loops}}.}
 
 \item{out_dir}{Character. Output directory for the Excel results file. Default: \code{"./results"}.}
 
-\item{expr_matrix_file}{Optional path to a normalised expression matrix (TPM/FPKM, genes x samples). Enables expression-aware conflict resolution. Default: \code{NULL}.}
+\item{expr_matrix_file}{Optional path to a normalised expression matrix (genes x samples). Accepts steady-state RNA-seq (TPM/FPKM), nascent transcription data (NET-seq, PRO-seq, GRO-seq, TT-seq), or CAGE-seq. Enables expression-aware conflict resolution. Default: \code{NULL}.}
 
 \item{sample_columns}{Character vector or integer indices. Columns in \code{expr_matrix_file} to average for baseline expression. Default: \code{NULL}.}
 
@@ -67,13 +79,17 @@ for karyotype ideograms and JASPAR motif species filtering.}
 
 \item{hub_percentile}{Numeric (0-1). Loop-count quantile for hub detection. Default: \code{0.95}. Genes or distal elements with connectivity at or above this quantile are flagged as hubs. A minimum floor of 3 (promoter-centric) or 2 (distal) is applied to avoid false hubs in small datasets.}
 
+\item{hub_metric}{Character. Which connectivity count to use for hub detection. \code{"unique_contacts"} (default): counts distinct neighbour anchor IDs, robust to duplicate/replicate loop rows. \code{"total_loops"}: counts all loop rows (backward compatible; may inflate hub calls when input contains unconsolidated replicates).}
+
 \item{min_expr}{Numeric. Minimum expression value for a gene to be considered
 active during anchor-level conflict resolution. Used only when
 \code{expr_matrix_file} is provided. Default: \code{0} (any non-zero
-expression, i.e. TPM > 0). Increase to \code{1} or higher to require
+expression). Increase to \code{1} or higher to require
 stronger evidence. Note: when \code{min_expr = 0}, the code uses a strict
 greater-than comparison (\code{> 0}) to exclude truly undetected genes;
-when \code{min_expr >= 1}, it uses \code{>= min_expr}.
+when \code{min_expr >= 1}, it uses \code{>= min_expr}. For nascent
+transcription data (NET-seq, PRO-seq), gene-body aggregated signal
+should be used as the quantitative input.
 See \code{\link{refine_loop_anchors_by_expression}} for the
 separate \code{threshold} parameter that controls promoter reclassification.}
 
@@ -98,13 +114,23 @@ Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")}
 
 \item{anchor_gap}{Integer. Search radius: how far apart (bp) can a peak and loop anchor be for the peak to be considered "near" the anchor? \code{-1L} (default): strict physical overlap required (GenomicRanges default -- peak and anchor must share at least 1 bp). \code{0L}: adjacent intervals (peak end == anchor start) also count. \code{>0}: explicit gap tolerance in bp (e.g. \code{200} = 200 bp tolerance for cross-experiment integration). When \code{>= 0}, the result includes both physically overlapping pairs AND proximity-only pairs (within gap but no actual overlap). Use \code{anchor_min_overlap > 1} to require actual physical overlap among these candidates.}
 
-\item{anchor_min_overlap}{Integer. After candidate pairs are found (via \code{anchor_gap}), how many base pairs of actual physical overlap are required? Default \code{1L}: any touch counts (including proximity-only hits when \code{anchor_gap >= 0}). Increase to \code{10-100} to filter out spurious boundary overlaps. Setting this \code{> 1} with \code{anchor_gap >= 0} ensures that even with gap tolerance, only pairs with genuine physical overlap are retained.}
+\item{anchor_min_overlap}{Integer. After candidate pairs are found (via \code{anchor_gap}), how many base pairs of actual physical overlap are required? Default \code{1L}: at least 1 bp of sequence overlap is required even when \code{anchor_gap >= 0}. Increase to \code{10-100} to filter out spurious boundary overlaps. This filter is always applied (including at the default value) so that proximity-only pairs within the gap but without physical overlap are excluded.}
 
 \item{anchor_min_frac}{Numeric (0-1). After the first two filters, what fraction of the \emph{peak} width must physically overlap the anchor? Default \code{0}: any fraction accepted. Set to \code{0.1-0.5} when peaks are broad (e.g. H3K27ac domains, 2-5 kb) so a 1 bp overlap does not link the entire broad peak. Ignored for point features (SNPs, eQTLs). Applied last, only to pairs that passed \code{anchor_gap} and \code{anchor_min_overlap}.}
 
 \item{write_output}{Logical. If \code{TRUE} (default), write the Excel workbook to \code{out_dir}. If \code{FALSE}, return results without creating directories or files.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.}
+
+\item{target_priority}{Character. How to prioritise among multiple candidate
+target genes per input feature. \code{"promoter_then_distance"} (default):
+evidence tier dominates — all promoter-linked genes beat all gene-body
+genes regardless of path length; within each tier shorter paths win.
+\code{"distance_then_role"}: path-length dominates — the closest linked
+gene wins; at equal distance promoter beats gene-body (legacy behaviour).
+The policy affects \code{Assigned_Target_Genes} only.
+\code{Regulated_promoter_genes} always reports all promoter-linked
+genes regardless of the chosen policy.}
 }
 \value{
 A named list:
@@ -114,10 +140,10 @@ Key columns include:
 \itemize{
 \item \code{All_Loop_Connected_Genes}: All genes from loop-connected anchors (P/G types).
 \item \code{Regulated_promoter_genes}: Promoter genes supported by loop-anchor context.
-\item \code{Assigned_Target_Genes}: Promoter-first 3D assignment (prioritises P > G > E).
+\item \code{Assigned_Target_Genes}: Policy-based 3D assignment (default: promoter-first, then shorter path wins; see \code{target_priority}).
 \item \code{*_Filled} variants: Linear nearest-gene fallback when strict 3D assignments are empty.
 \item \code{Regulated_promoter_Evidence}: Provenance of \code{Regulated_promoter_genes}
-(e.g., \code{local_promoter_overlap}, \code{direct_opposite_promoter}).
+(e.g., \code{local_promoter_overlap}, \code{distal_promoter}).
 \strong{Read with} \code{Regulated_promoter_genes}; do not cross-reference
 with \code{Assigned_Target_Genes} or other columns.
 \item \code{Regulated_promoter_Fallback_Evidence}: Provenance of
@@ -137,7 +163,7 @@ assigned to each peak; do not interpret any one column in isolation.
 \item \code{source}: \code{"loop_anchor"} (3D-derived) or \code{"linear_annotation"} (nearest gene).
 \item \code{evidence}: Provenance label --
 \code{"local_promoter_overlap"} (peak overlaps anchor promoter),
-\code{"direct_opposite_promoter"} (opposite anchor is promoter),
+\code{"distal_promoter"} (promoter on the distal loop anchor),
 \code{"gene_body_context"} (gene body linkage),
 \code{"expanded_promoter_loop"} (via ego-network expansion),
 \code{"linear_annotation"} (direct nearest gene),
@@ -151,14 +177,14 @@ Logical membership flags indicating which target annotation column(s)
 this gene appears in.
 }
 \item \code{loop_annotation} -- Annotated 3D interactome with
-\code{Putative_Target_Genes} (genes from P/G-type anchors connected
-through the loop network; for G-P loops, preferentially selects
-P-side genes). Does not include linear nearest-gene fallback at
-this stage (added by \code{\link{refine_loop_anchors_by_expression}}).
+\code{Putative_Target_Genes} (all P/G anchor genes connected
+through the loop network) and \code{Promoter_Target_Genes}
+(promoter-only subset, P-side genes).  G--P/P--G asymmetry is
+respected.  Does not include linear nearest-gene fallback.
 \item \code{anchor_loci_annotation} -- Non-redundant anchor-locus genomic classifications after within-cluster interval reduction.
 \item \code{anchor_annotation} -- Backward-compatible alias of \code{anchor_loci_annotation}.
 \item \code{promoter_centric_stats} -- Gene-level connectivity statistics.
-\item \code{distal_element_stats} -- Distal-element connectivity statistics.
+\item \code{distal_element_stats} -- Distal anchor connectivity (E, dual, G, eG).
 \item \code{plots} -- Named list of ggplot/grob objects:
 \code{Basic_Donut}, \code{Basic_Circular}, \code{Basic_Flower},
 \code{Karyo_LoopGenes}, \code{Karyo_Anchors},
@@ -219,7 +245,7 @@ The table below lists suggested starting points for common experimental designs.
 
 \tabular{llll}{
 \strong{Experimental design} \tab \code{anchor_gap} \tab \code{anchor_min_overlap} \tab \code{anchor_min_frac} \cr
-Same-experiment HiChIP / ChIA-PET (default) \tab \code{0} \tab \code{1} \tab \code{0} \cr
+Same-experiment HiChIP / ChIA-PET (default) \tab \code{-1} \tab \code{1} \tab \code{0} \cr
 Cross-experiment (e.g. ATAC-seq peaks x HiChIP loops) \tab \code{200-500} \tab \code{10} \tab \code{0} \cr
 Broad histone-mark peaks (H3K27ac, 2-5 kb) \tab \code{0} \tab \code{100} \tab \code{0.1} \cr
 Super-enhancers / wide domains (20-80 kb) \tab \code{0} \tab \code{500} \tab \code{0.05} \cr

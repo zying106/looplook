@@ -31,6 +31,7 @@ looplook_report(
   genome_id = species,
   motif_p_thresh = 1e-04,
   motif_ntop = 5,
+  motif_n_perm = 0L,
   ppi_score = 400,
   ppi_nSample = 400,
   heatmap_nSample = 99999,
@@ -48,6 +49,7 @@ looplook_report(
   output_file = NULL,
   quiet = FALSE,
   seed = NULL,
+  universe_genes = NULL,
   ...
 )
 }
@@ -109,6 +111,10 @@ Default \code{FALSE}.}
 
 \item{motif_ntop}{Numeric. Number of top motifs to display. Default \code{5}.}
 
+\item{motif_n_perm}{Integer. Number of within-component label permutations
+for empirical motif P-value estimation. Passed to
+\code{\link{profile_target_genes}}. Default \code{0} (Fisher exact test).}
+
 \item{ppi_score}{Numeric. Minimum STRING combined score. Default \code{400}.}
 
 \item{ppi_nSample}{Numeric. Maximum genes to include in PPI. Default \code{400}.}
@@ -139,7 +145,7 @@ with confidence-level distribution for eP/eG anchors. Default: \code{list()} (sk
 \item{chromatin_bw}{Named list of bigWig file paths, or \code{NULL}. Passed
 to \code{\link{refine_loop_anchors_by_chromatin}}. Requires \code{"H3K4me1"}
 and \code{"H3K4me3"}. \strong{Strongly recommended} for resolving true
-dual-function elements. Default: \code{NULL}.}
+dual-signature elements. Default: \code{NULL}.}
 
 \item{bw_ratio_threshold}{Numeric. Minimum H3K4me1/H3K4me3 ratio for dual
 classification. Default: \code{3}.}
@@ -153,6 +159,9 @@ BED file (e.g. FANTOM5, ENCODE cCREs). Default: \code{NULL}.}
 
 \item{seed}{Integer or NULL. Passed to \code{\link{profile_target_genes}} for
 reproducible GSEA and motif sampling. Default \code{NULL}.}
+
+\item{universe_genes}{Named numeric vector or \code{NULL}. GO background
+universe. Passed to \code{\link{profile_target_genes}}. Default \code{NULL}.}
 
 \item{...}{Additional arguments passed to \code{rmarkdown::render}.}
 }

@@ -10,6 +10,7 @@ refine_loop_anchors_by_chromatin(
   anchor_gap = 200,
   anchor_min_overlap = 100,
   species = "hg38",
+  tss_region = NULL,
   out_dir = "./results/chromatin",
   project_name = "HiChIP",
   color_palette = "Paired",
@@ -20,7 +21,8 @@ refine_loop_anchors_by_chromatin(
   sankey_colors = NULL,
   chromatin_bw = NULL,
   bw_ratio_threshold = 3,
-  enhancer_bed = NULL
+  enhancer_bed = NULL,
+  hub_metric = c("unique_contacts", "total_loops")
 )
 }
 \arguments{
@@ -35,9 +37,21 @@ improve confidence but are optional.}
 
 \item{anchor_gap}{Integer. Gap tolerance for mark overlap. Default \code{200}.}
 
-\item{anchor_min_overlap}{Integer. Minimum overlap for mark overlap. Default \code{100}.}
+\item{anchor_min_overlap}{Integer. Minimum physical overlap (bp) between
+an anchor and a chromatin mark peak, or between an anchor and an external
+enhancer BED region (\code{enhancer_bed}). Requires actual base-pair
+intersection; proximity-only matches are excluded. Default \code{100 bp}
+is appropriate for ChIP-seq peaks and ENCODE cCREs. Reduce to
+\code{1--10} for narrow features (TFBS, DHS, SNPs).}
 
 \item{species}{Character. Genome assembly. Default \code{"hg38"}.}
+
+\item{tss_region}{Numeric vector of length 2, or \code{NULL}. Promoter
+window around the anchor centre in bp, used for TSS re-annotation of
+E->P / G->P anchors.  Default: \code{NULL} (auto-inherits from upstream
+annotation metadata; falls back to \code{c(-2000, 2000)} if neither
+is available).  A warning is emitted if an explicit value differs from
+the upstream annotation.}
 
 \item{out_dir}{Character. Output directory for Excel export. Default \code{"./results/chromatin"}.}
 
@@ -50,7 +64,7 @@ palettes. Default: \code{"Paired"}.}
 \item{candidate_types}{Character vector or \code{NULL}. Anchor types to
 validate and reclassify. \code{NULL} (default): uses all five types
 \code{c("P","G","E","eP","eG")} regardless of input source. Chromatin
-evidence can reclassify any anchor type (e.g. P→dual, E→P), so
+evidence can reclassify any anchor type (e.g. P->dual, E->P), so
 restricting to expression-silenced types alone would miss biologically
 important transitions.
 Set to a subset to limit reclassification scope.}
@@ -76,15 +90,17 @@ anchor types (\code{"P"}, \code{"E"}, \code{"G"}, \code{"eP"},
 
 \item{chromatin_bw}{Named list of bigWig file paths, or \code{NULL}.
 When provided, H3K4me1/H3K4me3 signal ratios are computed for
-dual-positive anchors to distinguish true dual-function elements
+dual-positive anchors to distinguish dual-signature elements
 (ratio >= 3) from promoter-proximal H3K4me1 shoulders (ratio < 3,
 reclassified to P).  Requires the \pkg{rtracklayer} package.
 The list must include named elements \code{"H3K4me1"} and
-\code{"H3K4me3"}.  Default: \code{NULL} (BED-only mode — all
-H3K4me3-positive anchors are classified as P).
+\code{"H3K4me3"}.  Default: \code{NULL} (BED-only mode --
+H3K4me3-positive anchors lacking H3K4me1 overlap are reclassified as P;
+dual-positive (H3K4me1+/H3K4me3+) anchors retain their original type
+pending bigWig resolution).
 \strong{Strongly recommended} when ChIP-seq data are available:
 bigWig signals provide the quantitative H3K4me1/H3K4me3 ratio needed
-to distinguish true dual-function elements from promoter-proximal
+to distinguish dual-signature elements from promoter-proximal
 H3K4me1 shoulders.  Use the companion script
 \code{inst/scripts/diagnose_h3k4me_ratio.R} to explore the ratio
 distribution in your data and choose an appropriate threshold.}
@@ -93,7 +109,7 @@ distribution in your data and choose an appropriate threshold.}
 classify a dual-positive anchor as true \code{"dual"}.  Anchors
 below this threshold are reclassified as \code{"P"} (promoter
 shoulder).  Default: \code{3} (H3K4me1 signal must be at least
-3× H3K4me3 to override promoter identity).  Only used when
+3x H3K4me3 to override promoter identity).  Only used when
 \code{chromatin_bw} is provided.}
 
 \item{enhancer_bed}{Character or \code{NULL}. Path to a BED file of
@@ -101,7 +117,10 @@ known enhancer regions (e.g., FANTOM5, ENCODE cCREs).  Anchors
 overlapping these regions receive high-confidence enhancer
 classification: \code{"E"} when H3K4me3 is absent, \code{"dual"}
 when H3K4me3 is also present.  This curated evidence takes priority
-over chromatin-mark-derived confidence levels.  Default: \code{NULL}.}
+over chromatin-mark-derived enhancer evidence levels.  Default: \code{NULL}.}
+
+\item{hub_metric}{Character. Which connectivity count to use for hub
+detection. \code{"unique_contacts"} (default) or \code{"total_loops"}.}
 }
 \value{
 An invisible named list with updated \code{loop_annotation},
@@ -125,31 +144,42 @@ preserve pre-chromatin target assignments.
 Refines loop anchor types (P, E, G, eP, eG) using chromatin mark evidence
 (H3K4me1, H3K4me3, and optionally H3K27ac, ATAC, H3K27me3).  Anchors with
 dual promoter-enhancer chromatin signatures are flagged as \code{"dual"}.
-This function can be called before or after
-\code{\link{refine_loop_anchors_by_expression}} -- the two refinements
-address orthogonal biological questions (chromatin identity vs.
-transcriptional activity) and do not depend on ordering.
+\strong{Supported multi-omic workflow:} When both expression and
+chromatin data are used, the required order is:\preformatted{
+  annotate_peaks_and_loops()
+  ->refine_loop_anchors_by_expression()
+  ->refine_loop_anchors_by_chromatin()
+}
+Chromatin-only refinement (without prior expression refinement) is
+also supported.
+
+\strong{Unsupported:} Running \code{refine_loop_anchors_by_expression()}
+on a chromatin-refined object will raise an error. The reverse order
+(chromatin ->expression) is not supported because
+\code{clean_anchor()} only handles P and G types and cannot correctly
+process \code{dual} or other types set by chromatin refinement.
 }
 \details{
 \strong{Reclassification rules (minimum input: H3K4me1 + H3K4me3):}
 \itemize{
 \item Enhancer BED overlap (highest priority): overlapped anchors become
 \code{"E"} (H3K4me3 absent) or \code{"dual"} (H3K4me3 present).
-\item P + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-function) or
+\item P + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-signature) or
 \code{"P"} (when H3K4me1 is likely a promoter shoulder; this is
 resolved by bigWig ratio >= 3 when \code{chromatin_bw} is provided).
-\item eP/eG + gold_standard or high_confidence + active/primed enhancer
+\item eP/eG + canonical or strong + active/intermediate enhancer
 chromatin -> \code{"E"} (enhancer identity confirmed).
 \item P + H3K4me1(+) and H3K4me3(-) \emph{and} (H3K27ac(+) or ATAC(+))
 -> \code{"E"} (conservative: requires active-mark confirmation beyond
 H3K4me1 alone).
-\item eP/eG + gold_standard or high_confidence + active/primed enhancer
+\item eP/eG + canonical or strong + active/intermediate enhancer
 chromatin -> \code{"E"} (enhancer identity confirmed; matches the
 P->E rule to guarantee the same outcome whether expression or
 chromatin refinement runs first).
 \item eP + promoter_like (H3K4me3+, irrespective of H3K27me3 status) -> \code{"P"} (revert).
-\item eG + promoter_like -> \code{"G"} (revert).
-\item E + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-function).
+\item eG + promoter_like -> \code{"P"} (H3K4me3+ inside a gene body most
+likely indicates an internal promoter or alternate TSS).
+\item E + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-signature).
 \item E + H3K4me3(+) without H3K4me1 -> \code{"P"} (unannotated promoter).
 \item G + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (gene-body dual).
 \item G + H3K4me3(+) without H3K4me1 -> \code{"P"} (internal promoter).
@@ -171,13 +201,13 @@ reclassification rules.
 match first):
 \itemize{
 \item \code{"conflicting_marks"}: H3K27me3+ coexisting with any
-active mark (H3K4me1+, H3K27ac+, or H3K4me3+)  --
+active mark (H3K4me1+, H3K27ac+, H3K4me3+, or ATAC+)  --
 bivalent/poised/ambiguous chromatin; takes priority over
 enhancer-like and dual-like classifications.
 \item \code{"dual_like"}: H3K4me1+ H3K4me3+
 \item \code{"active_enhancer_like"}: H3K4me1+ H3K27ac+ ATAC+
-\item \code{"primed_enhancer_like"}: H3K4me1+ with H3K27ac+ or ATAC+
-\item \code{"weak_enhancer_like"}: H3K4me1+ only, or H3K27ac+ only
+\item \code{"intermediate_enhancer_like"}: H3K4me1+ with H3K27ac+ or ATAC+
+\item \code{"other_enhancer_like"}: H3K4me1+ only, or H3K27ac+ only
 \item \code{"promoter_like"}: H3K4me3+
 \item \code{"repressed"}: H3K27me3+ (no active marks)
 \item \code{"uncertain"}: marks tested but none present
@@ -185,9 +215,9 @@ enhancer-like and dual-like classifications.
 }
 
 \strong{Candidate anchor selection:} When \code{candidate_types = NULL}
-(default), raw annotation from \code{\link{annotate_peaks_and_loops}} tests
-\code{P}, \code{G}, and \code{E} anchors.  Expression-refined input tests
-\code{eP} and \code{eG} anchors.
+(default), all five anchor types \code{c("P","G","E","eP","eG")} are tested
+regardless of input source.  Set \code{candidate_types} to a subset
+(e.g. \code{c("eP", "eG")}) to restrict reclassification scope.
 
 After reclassification, \code{loop_type} is recomputed from the updated
 anchor types.
@@ -200,10 +230,10 @@ domains poise genes for activation while maintaining transcriptional
 silence. The reclassification rules do \emph{not} override positional
 anchor types for conflicting-mark anchors alone: active histone marks
 (e.g.\ H3K4me3) carry stronger weight for promoter/enhancer identity
-than H3K27me3. To distinguish active from poised promoters, use
-\code{\link{refine_loop_anchors_by_expression}} after chromatin
-refinement -- silent genes at bivalent promoters will be reclassified
-from \code{P} to \code{eP}. The \code{chromatin_state} column in
+than H3K27me3. To distinguish active from poised promoters, run
+expression refinement before chromatin refinement and use the
+retained expression state together with
+\code{chromatin_state = "conflicting_marks"}. The \code{chromatin_state} column in
 \code{chromatin_validation} remains available for independent filtering
 of conflicting-mark anchors.
 
@@ -211,10 +241,10 @@ of conflicting-mark anchors.
 The two refinement modules serve distinct roles in a complete analysis:
 \itemize{
 \item \strong{Expression-aware refinement} evaluates transcriptional activity
-(is the gene expressed?) and produces activity-aware metrics
-(\code{Active_Target_Genes}, \code{Retained_In_Functional_Network},
-\code{Refinement_Action}) required for downstream GSEA, GO enrichment,
-and differential expression profiling.
+(is the gene expressed?) and produces expression-filtered
+\code{Putative_Target_Genes} and \code{Promoter_Target_Genes}
+plus \code{Retained_In_Functional_Network} and
+\code{Refinement_Action} for downstream profiling.
 \item \strong{Chromatin-aware refinement} evaluates chromatin identity
 (what \emph{is} this anchor?) using direct histone mark evidence,
 correcting anchor types and reclassifying eP/eG into definitive
@@ -224,8 +254,9 @@ When you have \strong{both RNA-seq and ChIP-seq}, use
 \code{refine_loop_anchors_by_expression} first, then
 \code{refine_loop_anchors_by_chromatin} -- expression marks silent anchors
 as hypotheses (eP/eG), chromatin confirms or corrects them into definitive
-types, and the expression-derived activity columns
-(\code{Active_Target_Genes} etc.) pass through into downstream profiling.
+types, and the expression-filtered target gene columns
+(\code{Putative_Target_Genes}, \code{Promoter_Target_Genes} etc.)
+carry the current target set into downstream profiling.
 When you have \strong{only ChIP-seq}, run chromatin refinement directly on
 the output of \code{\link{annotate_peaks_and_loops}}.
 }

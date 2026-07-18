@@ -18,24 +18,25 @@ refine_loop_anchors_by_expression(
   karyo_bin_size = 1e+05,
   reclassify_by_expression = TRUE,
   hub_percentile = 0.95,
+  hub_metric = c("unique_contacts", "total_loops"),
   chromatin_beds = list(),
   write_output = TRUE,
-  quiet = FALSE
+  quiet = FALSE,
+  allow_rerefine = FALSE
 )
 }
 \arguments{
 \item{annotation_res}{List. The raw foundational output object returned by \code{\link{annotate_peaks_and_loops}}.}
 
-\item{expr_matrix_file}{Path to a normalised expression matrix (TPM/FPKM, genes x samples). Required for refinement. Default: \code{NULL}.}
+\item{expr_matrix_file}{Path to a normalised expression matrix (genes x samples). Accepts steady-state RNA-seq (TPM/FPKM/RPKM), nascent transcription data (NET-seq, PRO-seq, GRO-seq, TT-seq), or CAGE-seq. Required for refinement. Default: \code{NULL}.}
 
 \item{sample_columns}{Character vector or integer indices. Columns in \code{expr_matrix_file} to average. Default: \code{NULL}.}
 
-\item{threshold}{Numeric. Minimum expression value (e.g., TPM >= 1) for a gene to be considered active. Default: \code{1}. Set to \code{0} to retain any detected expression (TPM > 0). Use \code{threshold_mode = "quantile"} to specify a quantile instead of an absolute value.
-\strong{Gene name matching is case-sensitive.} Ensure gene identifiers in
-\code{expr_matrix_file} use the same case as the symbols returned by your
-OrgDb (typically all-uppercase for human and mouse, e.g. \code{"TP53"},
-not \code{"Tp53"}). Mismatched case will cause expressed genes to be
-misclassified as silent (eP/eG).}
+\item{threshold}{Numeric. Minimum expression value (e.g., TPM >= 1) for a gene to be considered active. Default: \code{1}. Set to \code{0} to retain any detected expression. Use \code{threshold_mode = "quantile"} to specify a quantile instead of an absolute value. For nascent transcription data (NET-seq, PRO-seq), use gene-body aggregated signal (e.g., RPKM) and adjust the threshold accordingly -- Pol II elongation signal is typically sparser than steady-state mRNA, so a lower absolute threshold or quantile mode is recommended.
+Gene name matching is \strong{case-insensitive}. Gene identifiers are
+canonicalised to uppercase before matching, so \code{"TP53"}, \code{"Tp53"},
+and \code{"tp53"} are treated as the same gene. This accommodates the
+common human (all-uppercase) vs mouse (Title Case) convention mismatch.}
 
 \item{threshold_mode}{Character. How to interpret the \code{threshold}
 value. \code{"absolute"} (default): \code{threshold} is a direct expression
@@ -45,7 +46,7 @@ highly expressed genes are considered active). Quantile mode is
 dataset-adaptive and may be more robust across experiments with different
 sequencing depths. The effective expression cutoff is reported in the log.}
 
-\item{unit_type}{Character. Expression unit for plot labels (e.g., \code{"TPM"}). Default: \code{"TPM"}.}
+\item{unit_type}{Character. Expression unit for plot labels (e.g., \code{"TPM"}, \code{"FPKM"}, \code{"RPKM"}, \code{"NETseq_RPKM"}, \code{"raw_count"}). Default: \code{"TPM"}.}
 
 \item{species}{Character. Genome assembly string. Default: \code{"hg38"}.
 For non-human/non-mouse species, pass \code{annotation_res} produced by
@@ -60,13 +61,18 @@ For non-human/non-mouse species, pass \code{annotation_res} produced by
 \item{karyo_bin_size}{Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default: \code{1e5} (100 kb). Typical range: 5e4-5e5 depending on genome size and resolution.}
 
 \item{reclassify_by_expression}{Logical. If \code{TRUE} (default), silent
-promoters (P) and gene bodies (G) are reclassified as eP/eG. If
-\code{FALSE}, anchor \emph{types} are left unchanged, but anchor genes
-that fall outside the active whitelist are still stripped to \code{NA}
-(only the identity label is preserved, not the gene assignment). To
-retain genes unchanged, omit the \code{expr_matrix_file} argument.}
+promoters (P) and gene bodies (G) are reclassified as eP/eG while
+positional gene attribution is retained. Expression filtering is applied
+to current target-gene columns, not to anchor_gene. If \code{FALSE}, both anchor types and
+gene symbols are preserved unchanged -- genes absent from the expression
+matrix are kept (their expression state is unmeasured, not silent).
+Measured-silent genes remain in the gene list but are tracked separately
+via the \code{Target_Expression_State} and \code{Passes_Expression_Filter}
+columns in the output.}
 
 \item{hub_percentile}{Numeric (0-1). Node-degree quantile for hub detection. Default: \code{0.95}.}
+
+\item{hub_metric}{Character. Which connectivity count to use for hub detection. \code{"unique_contacts"} (default): counts distinct neighbour anchor IDs. \code{"total_loops"}: counts all loop rows (backward compatible).}
 
 \item{chromatin_beds}{Named list of BED file paths for orthogonal chromatin
 mark validation of eP/eG anchors. When non-empty, a \emph{Chromatin
@@ -79,6 +85,10 @@ skip this parameter to avoid redundant BED file reads.}
 \item{write_output}{Logical. If \code{TRUE} (default), write the refined Excel workbook to \code{out_dir}. If \code{FALSE}, return results without creating directories or files.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.}
+
+\item{allow_rerefine}{Logical. If \code{FALSE} (default), stops when
+the input has already been expression-refined. Set to \code{TRUE}
+to override (for interactive exploration only).}
 }
 \value{
 A named list:
@@ -86,14 +96,27 @@ A named list:
 \item \code{loop_annotation} -- Full refined 3D network with updated \code{loop_type}
 (e.g., eP-P) and two target gene columns:
 \itemize{
-\item \code{Active_Target_Genes}: Expression-filtered active-only targets (no fallback).
-\item \code{Putative_Target_Genes}: Display column; may include
-\emph{loop-anchor} fallback when \code{Active_Target_Genes} is
-empty (uses the promoter/gene-body gene of any looped anchor, not
-the linear nearest-gene fallback). The linear nearest-gene
-fallback applies only to the \code{Regulated_promoter_genes_Filled}
-and \code{Assigned_Target_Genes_Filled} columns of
-\code{target_annotation} (see \code{annotate_peaks_and_loops}).
+\item \code{Putative_Target_Genes}: \strong{Primary target-assignment
+result.} Candidate target genes based on final anchor type, TSS
+assignment, loop topology, and the current refinement stage.
+In expression-refined objects, all listed genes pass the
+expression threshold. \strong{Use for:} enhancer--gene linking
+benchmarks, CRISPRi validation, nearest-gene comparisons, loop
+connectivity analysis, full network export.
+\item \code{Promoter_Target_Genes}: \strong{Promoter-only subset
+of \code{Putative_Target_Genes}.} Contains only target genes
+supported by promoter-role (P/eP/dual) anchors. Always satisfies
+\code{Promoter_Target_Genes subset of Putative_Target_Genes}.
+\strong{Use for:} promoter-centric GO, KEGG, GSEA, active
+regulatory network from promoter-anchored loops.
+\item \code{Target_Expression_State}: Per-loop summary of target
+gene expression status (\code{"active"}, \code{"active_partial"},
+\code{"measured_silent"}, \code{"unmeasured"}, \code{"mixed"},
+\code{"no_target"}, \code{"not_assessed"}).
+\strong{\code{"unmeasured"} != \code{"measured_silent"}:}
+unmeasured means the gene was not in the expression input and
+its activity is unknown; measured-silent means it was measured
+but fell below the activity threshold.
 }
 Refinement status columns:
 \code{Has_Active_Target}, \code{Retained_In_Functional_Network}, and
@@ -106,16 +129,16 @@ reclassified in place for silent elements); filter on
 \item \code{anchor_loci_annotation} -- Filtered non-redundant anchor-locus annotations with expressed targets.
 \item \code{anchor_annotation} -- Backward-compatible alias of \code{anchor_loci_annotation}.
 \item \code{promoter_centric_stats} -- Gene-level connectivity statistics.
-\item \code{distal_element_stats} -- Distal-element connectivity statistics.
+\item \code{distal_element_stats} -- Distal anchor connectivity (E, dual, G, eG).
 \item \code{target_annotation} -- Target features (peaks) with gene assignments.
 Key columns include:
 \itemize{
 \item \code{All_Loop_Connected_Genes}: All genes from loop-connected anchors (P/G types).
 \item \code{Regulated_promoter_genes}: Promoter genes supported by loop-anchor context.
-\item \code{Assigned_Target_Genes}: Promoter-first 3D assignment (prioritises P > G > E).
+\item \code{Assigned_Target_Genes}: Policy-based 3D assignment (default: promoter-first, then shorter path wins; see \code{target_priority}).
 \item \code{*_Filled} variants: Linear nearest-gene fallback when strict 3D assignments are empty.
 \item \code{Regulated_promoter_Evidence}: Provenance of \code{Regulated_promoter_genes}
-(e.g., \code{local_promoter_overlap}, \code{direct_opposite_promoter}).
+(e.g., \code{local_promoter_overlap}, \code{distal_promoter}).
 \strong{Read with} \code{Regulated_promoter_genes}; do not cross-reference
 with \code{Assigned_Target_Genes} or other columns.
 \item \code{Regulated_promoter_Fallback_Evidence}: Provenance of
@@ -135,7 +158,7 @@ assigned to each peak; do not interpret any one column in isolation.
 \item \code{source}: \code{"loop_anchor"} (3D-derived) or \code{"linear_annotation"} (nearest gene).
 \item \code{evidence}: Provenance label --
 \code{"local_promoter_overlap"} (peak overlaps anchor promoter),
-\code{"direct_opposite_promoter"} (opposite anchor is promoter),
+\code{"distal_promoter"} (promoter on the distal loop anchor),
 \code{"gene_body_context"} (gene body linkage),
 \code{"expanded_promoter_loop"} (via ego-network expansion),
 \code{"linear_annotation"} (direct nearest gene),
@@ -147,12 +170,23 @@ via the \code{*_Filled} linear nearest-gene fallback mechanism.
 \item \code{in_regulated_promoter} through \code{in_assigned_target_filled}:
 Logical membership flags indicating which target annotation column(s)
 this gene appears in. A gene may appear in multiple columns simultaneously.
-\item (Refine only) \code{Mean_Expression}: Per-gene mean expression value.
-\item (Refine only) \code{Passes_Expression_Filter}: Logical. \code{TRUE} if
-\code{Mean_Expression >= threshold}.
+\item (Refine only) \code{Mean_Expression}: Per-gene mean expression value
+(\code{NA} when the gene is not in the expression matrix).
+\item (Refine only) \code{Expression_State}: Character. Per-gene expression
+status: \code{"active"} (measured and above threshold),
+\code{"measured_silent"} (measured but below threshold),
+\code{"unmeasured"} (gene not present in expression input),
+\code{"measured_not_assessed"} (measured but no threshold available).
+Loop-level aggregation fields also include \code{"active_partial"},
+\code{"mixed"}, \code{"no_target"}, and \code{"not_assessed"}.
+\item (Refine only) \code{Passes_Expression_Filter}: Logical with three
+states. \code{TRUE} = measured and active; \code{FALSE} = measured
+but below threshold; \code{NA} = unmeasured or not assessed.
+\strong{\code{NA} (unmeasured/not-assessed) \eqn{\neq}
+\code{FALSE} (measured-silent).}
 }
 \item \code{chromatin_validation} -- Data frame from
-\code{\link{validate_epeG_by_chromatin}} with confidence levels and
+\code{\link{validate_epeG_by_chromatin}} with enhancer evidence levels and
 evidence strings for each eP/eG anchor. \code{NULL} when
 \code{chromatin_beds} is not provided or is empty (default).
 \item \code{plots} -- Named list of ggplot objects (dumbbell, rose, karyotype).
@@ -165,26 +199,32 @@ The workbook contains a \emph{Chromatin Validation} sheet (when
 sheet with only loops where \code{Retained_In_Functional_Network == TRUE}.
 }
 \description{
-Integrates quantitative RNA-seq data (e.g., TPM/FPKM) with 3D structural data
+Integrates quantitative transcription data with 3D structural data.
+Preferred input order: CAGE-seq / PRO-seq > GRO-seq / NET-seq >
+TT-seq > RNA-seq (methods that directly measure promoter activity or
+Pol II elongation provide the most direct evidence for P/eP classification).
 to reclassify regulatory elements and annotate functional status, deriving a
 functionally interpretable regulatory network from physical chromatin contacts.
 All structural loop rows are preserved; anchor type and gene assignments
-are reclassified in place (silent promoters have their gene set to NA and
-type downgraded to eP/eG). Refinement status columns indicate which
+are reclassified in place (silent promoters become eP/eG with
+positional gene preserved; expression filtering is applied to
+\code{Putative_Target_Genes} and \code{Promoter_Target_Genes}, not
+to anchor gene assignments). Refinement status columns indicate which
 loops belong to the high-confidence active subset.
 }
 \details{
 \strong{Algorithmic Framework:}
 \itemize{
 \item \strong{Target Filtration:} Parses merged gene assignments (e.g., \code{"GeneA;GeneB"}), evaluates individual genes against a defined expression threshold, and retains only transcriptionally active targets.
-\item \strong{Biological Reclassification:} Reclassifies physically annotated promoters (\code{P}) and gene bodies (\code{G}) lacking active transcription as \emph{expression-filtered silent} regulatory elements (\code{eP}, \code{eG}). \strong{Important:} \code{eP}/\code{eG} labels indicate transcriptional silence at the reference gene -- they do \strong{not} constitute evidence of enhancer activity. Orthogonal chromatin data (ATAC-seq, H3K27ac, H3K4me1) are required for functional enhancer interpretation. The labels are retained for backward compatibility; interpret them as "inactive-P" / "inactive-G" rather than "enhancer-P" / "enhancer-G".
+\item \strong{Biological Reclassification:} Reclassifies physically annotated promoters (\code{P}) and gene bodies (\code{G}) lacking active transcription as \emph{element-Promoter like} (\code{eP}) and \emph{element-Genebody like} (\code{eG}) elements. \strong{Important:} \code{eP}/\code{eG} labels denote structural genomic position (near a TSS or within a gene body) -- they do \strong{not} constitute evidence of enhancer activity, even though the associated gene is transcriptionally silent. Orthogonal chromatin data (ATAC-seq, H3K27ac, H3K4me1) are required for functional regulatory interpretation. The \code{e} prefix stands for \strong{element} (a structurally defined genomic feature akin to a cis-regulatory element), not enhancer.
 \item \strong{Expression-Aware Connectivity Statistics:} Recomputes promoter-centric and distal-element connectivity after expression-aware anchor refinement, while preserving all structural loop rows in the refined loop annotation (anchor types and genes are reclassified in place for silent elements). This separates the complete physical contact map from the high-confidence active subset.
 \item \strong{External Target Refinement:} Filters auxiliary target mapping columns (e.g., \code{Assigned_Target_Genes_Filled}) based on expression criteria, ensuring that mapped 1D genomic features are exclusively linked to active genes.
 \item \strong{Target Provenance Preservation:} Recomputes \code{*_Filled}
 membership flags in \code{target_gene_links} after expression filtering,
-retains only links still used by the refined target columns, and appends
-\code{Mean_Expression} plus \code{Passes_Expression_Filter}. Evidence labels
-such as \code{local_promoter_overlap}, \code{direct_opposite_promoter}, and
+retains all structural links with expression provenance, and appends
+\code{Mean_Expression}, \code{Expression_State}, and
+\code{Passes_Expression_Filter}. Evidence labels
+such as \code{local_promoter_overlap}, \code{distal_promoter}, and
 \code{linear_fallback} are preserved.
 }
 
@@ -201,23 +241,31 @@ provided via \code{Retained_In_Functional_Network} and the
 \emph{Functional Loop Annotation} Excel sheet.
 
 \strong{Interpretation of eP/eG labels:}
-\code{eP} and \code{eG} are \strong{expression-filtered silent states}, not
-functional enhancer classifications. Bulk RNA-seq silence can arise from
-cell-type proportions, time-point effects, sequencing depth, or promoter
-pausing -- none of which imply the locus has gained enhancer activity.
-These labels should be read as "transcriptionally inactive P/G" and
-treated as hypotheses requiring orthogonal validation (ATAC-seq, H3K27ac,
-H3K4me1, or H3K27me3 depletion). Users with matched chromatin data should
+\code{eP} (\strong{e}lement-\strong{P}romoter like) and \code{eG}
+(\strong{e}lement-\strong{G}enebody like) are \strong{structural positional
+classifications}, not functional enhancer classifications. An eP anchor
+resides near a TSS and is structurally promoter-like; an eG anchor lies
+within a gene body and is structurally genebody-like. The associated
+gene may be transcriptionally silent in the current sample -- this can
+arise from cell-type proportions, time-point effects, sequencing depth,
+or promoter pausing -- but the anchor retains its positional identity
+as a putative regulatory element. These labels should be treated as
+hypotheses requiring orthogonal validation (ATAC-seq, H3K27ac, H3K4me1,
+or H3K27me3 depletion). Users with matched chromatin data should
 overlay eP/eG loci against these tracks before interpreting them as
-putative regulatory elements.
+functionally active regulatory elements.
 
-\strong{Pipeline guidance:} When matched chromatin data are available,
-follow expression refinement with
+\strong{Pipeline guidance:} The recommended order is \strong{expression
+refinement first, then chromatin refinement.} When matched chromatin data
+are available, follow expression refinement with
 \code{\link{refine_loop_anchors_by_chromatin}} -- chromatin evidence
 resolves eP/eG into definitive types (E, P, G, dual), while the
-expression-derived activity columns (\code{Active_Target_Genes},
-\code{Retained_In_Functional_Network}) pass through for downstream
-profiling. See \code{\link{refine_loop_anchors_by_chromatin}} for the full
+expression-derived columns (\code{Putative_Target_Genes},
+\code{Promoter_Target_Genes}, \code{Retained_In_Functional_Network})
+carry forward the filtered target set for downstream profiling.
+The reverse order (chromatin ->expression) is unsupported and will stop.
+and will produce incorrect results. See
+\code{\link{refine_loop_anchors_by_chromatin}} for the full
 pipeline recommendation.
 }
 \examples{

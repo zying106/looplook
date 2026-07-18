@@ -1,3 +1,52 @@
+Changes in version 0.99.15 (2026-07-18)
+-----------------------------------------
+
+Algorithm Correctness
+
+* Added `target_priority` parameter (default `"promoter_then_distance"`) to
+  `annotate_peaks_and_loops()`.  Priority policy: `promoter_then_distance`
+  gives all promoter-linked evidence priority over gene-body links regardless
+  of path length; `distance_then_role` restores the legacy path-length-dominant
+  behaviour.  This parameter is propagated through expression refinement and
+  chromatin refinement, consistently affecting `Assigned_Target_Genes` across
+  all pipeline stages.  Tied genes with the same optimal priority are preserved
+  (semicolon-delimited).
+* Reordered chromatin reclassification rules to fix three blocking issues:
+  (1) enhancer BED is now truly highest priority; (2) eP/eG dual_like anchors
+  correctly resolve via bigWig ratio (me1_dominant → dual, unresolved → keep,
+  not_me1_dominant → P); (3) eP/eG with H3K4me3+ but without H3K4me1+
+  (promoter_like) revert to P.  Bivalent H3K4me3+/H3K27me3+ anchors are
+  resolved by these rules (H3K4me3 defines promoter identity), not by the
+  generic conflicting_marks clause.
+* Removed duplicate E/G dual-positive rules that became unreachable after
+  reordering.
+* Fixed duplicate `mutate()` columns (role_rank, path_rank) that caused
+  a dplyr error in `.aggregate_strict_targets()`.
+* Fixed `up_meta_params` scope bug in expression refinement target finalizer.
+
+Documentation
+
+* Fixed BED-only mode documentation to accurately describe dual-positive anchor
+  retention (H3K4me1+/H3K4me3+ anchors keep eP/eG type pending bigWig resolution).
+* Removed misleading measured_set reference from reclassify_by_expression documentation.
+* Corrected vignette BED-only mode descriptions for chromatin reclassification rules.
+* Fixed vignette gsea_nSample default (NULL, not 99999) to match profile_target_genes().
+* Fixed validate_epeG_by_chromatin() and chromatin-refine examples in vignette.
+* Fixed README "within 10% of max" → "at least 10% of the group maximum" for
+  co_dominance_ratio description.
+* Changed "ENCODE criteria" → "ENCODE-inspired criteria" in report template (4 occurrences).
+
+Testing & Engineering
+
+* Removed file-level skip_on_bioc() from 3 core regression test files
+  (test-regression.R, test-synthetic-invariants.R, test-review-fixes.R)
+  so critical invariants run on Bioconductor builders.
+* Updated 3 recompute_targets = FALSE tests to expect preserved upstream
+  target tables (not NULL), matching the unified finalizer behavior.
+* Added globalVariables() declarations for 30+ dplyr/data.table NSE symbols
+  in annotation.R and data_processing.R, resolving R CMD check NOTES.
+* Fixed roxygen block separation for .passes_expression_threshold().
+
 Changes in version 0.99.14 (2026-06-21)
 -----------------------------------------
 

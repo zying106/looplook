@@ -1,11 +1,11 @@
 #' looplook: A Triple-Layer Orthogonal Annotation Framework for Chromatin Interactions
 #'
-#' looplook classifies loop anchors — the fundamental units connecting 3D
-#' chromatin contacts to downstream peak and feature annotation — through a
+#' looplook classifies loop anchors -- the fundamental units connecting 3D
+#' chromatin contacts to downstream peak and feature annotation -- through a
 #' \strong{three-layer orthogonal annotation framework} in which each layer
 #' integrates an independent category of experimental evidence:
 #' \itemize{
-#'   \item \strong{Positional annotation} provides the baseline anchor assignment
+#'   \item \strong{Genomic annotation} provides the baseline anchor assignment
 #'     from genomic coordinates (TSS and gene-body overlap).
 #'   \item \strong{Expression-aware refinement} adds transcriptional-activity
 #'     context from transcriptomic data (CAGE-seq, RNA-seq, TT-seq, SLAM-seq).
@@ -30,7 +30,7 @@
 #'     and topological reclassification of silent regulatory elements
 #'     (\code{\link{refine_loop_anchors_by_expression}}).
 #'   \item \strong{Chromatin-Aware Refinement:} Chromatin mark-based anchor
-#'     reclassification, dual-function element detection, and orthogonal
+#'     reclassification, dual-signature element detection, and orthogonal
 #'     validation of expression-derived hypotheses
 #'     (\code{\link{refine_loop_anchors_by_chromatin}},
 #'     \code{\link{validate_epeG_by_chromatin}}).

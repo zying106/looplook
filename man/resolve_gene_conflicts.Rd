@@ -13,7 +13,8 @@ resolve_gene_conflicts(
   min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
   co_dominance_ratio = 0.1,
-  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
+  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene"),
+  unmeasured_policy = c("keep", "drop")
 )
 }
 \arguments{
@@ -60,6 +61,11 @@ keep their default relative order and are appended after the listed ones.
 Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA",
   "pseudogene")}. To prioritise lncRNAs over protein-coding genes while
 keeping everything else as-is, set \code{c("lncRNA", "protein")}.}
+
+\item{unmeasured_policy}{Character. How to treat genes absent from the
+expression matrix during conflict resolution. \code{"keep"} (default):
+unmeasured genes are retained as candidates. \code{"drop"}: unmeasured
+genes are excluded, only genes with measured expression are considered.}
 }
 \value{
 The input data frame with \code{SYMBOL} and \code{annotation}
@@ -85,14 +91,15 @@ if (requireNamespace("org.Hs.eg.db", quietly = TRUE) &&
     requireNamespace("GenomicFeatures", quietly = TRUE)) {
     txdb <- AnnotationDbi::loadDb(
         system.file("extdata", "hg19_knownGene_sample.sqlite",
-                     package = "GenomicFeatures")
+            package = "GenomicFeatures"
+        )
     )
 
     # Minimal genomic region: seqnames, start, end
     test_region <- data.frame(
         seqnames = "chr6",
-        start    = 29940000L,
-        end      = 29950000L,
+        start = 29940000L,
+        end = 29950000L,
         stringsAsFactors = FALSE
     )
 

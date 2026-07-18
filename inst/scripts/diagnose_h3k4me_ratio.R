@@ -1,24 +1,27 @@
 #!/usr/bin/env Rscript
-#' Diagnose H3K4me1 / H3K4me3 Signal Ratio at Dual-Positive Anchors
+#' Diagnose H3K4me1 / H3K4me3 Signal Ratio for Dual-Function Classification
 #'
-#' Computes bigWig signal ratio only for anchors where BOTH H3K4me1 and
-#' H3K4me3 peaks overlap (i.e., dual candidates in the BED-based pipeline).
-#' These are the only anchors that need bigWig to resolve dual vs P.
+#' Computes overlap-width-weighted bigWig signal per anchor at dual-positive
+#' loci (both H3K4me1 and H3K4me3 peaks), and at negative-control regions
+#' (neither mark called) to estimate a data-driven ratio threshold.
 #'
 #' Usage:
 #'   Rscript diagnose_h3k4me_ratio.R anchors.bed H3K4me1.bed H3K4me3.bed H3K4me1.bw H3K4me3.bw
-#'   Rscript diagnose_h3k4me_ratio.R anchors.bed H3K4me1.bed H3K4me3.bed H3K4me1.bw H3K4me3.bw --out plot.pdf
+#'   Rscript diagnose_h3k4me_ratio.R anchors.bed H3K4me1.bed H3K4me3.bed H3K4me1.bw H3K4me3.bw --k27me3 H3K27me3.bed --out plot.pdf
+#'
+#' With --k27me3: uses H3K27me3-only anchors (K27me3+ & K4me1- & K4me3-) as
+#'   negative control.  Without: uses peak-negative anchors as background.
 #'
 #' Output:
-#'   - Console: quantiles + threshold diagnostics (dual candidates only)
-#'   - PDF (if --out): histogram + density of log2 ratios
+#'   - Console: quantiles, threshold diagnostics, data-driven recommendation
+#'   - PDF (if --out): dual-positive and background ratio distributions
 #'
 #' Required packages: rtracklayer, GenomicRanges, ggplot2
 # ----------------------------------------------------------------------
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 5) {
-  stop("Usage: Rscript diagnose_h3k4me_ratio.R anchors.bed H3K4me1.bed H3K4me3.bed H3K4me1.bw H3K4me3.bw [--out plot.pdf]")
+  stop("Usage: Rscript diagnose_h3k4me_ratio.R anchors.bed H3K4me1.bed H3K4me3.bed H3K4me1.bw H3K4me3.bw [--k27me3 H3K27me3.bed] [--out plot.pdf]")
 }
 
 bed_path   <- args[1]
@@ -26,6 +29,7 @@ me1_peaks  <- args[2]
 me3_peaks  <- args[3]
 bw_me1     <- args[4]
 bw_me3     <- args[5]
+k27me3_bed <- if ("--k27me3" %in% args) args[which(args == "--k27me3") + 1] else NULL
 out_plot   <- if ("--out" %in% args) args[which(args == "--out") + 1] else NULL
 
 suppressPackageStartupMessages({
@@ -41,62 +45,106 @@ read_bed <- function(f) {
   GRanges(df$chr, IRanges(df$start, df$end))
 }
 
-# --- Load anchors and peak files ---
+# Overlap-width-weighted mean signal (matches .compute_bw_ratio in package)
+weighted_mean_signal <- function(gr, sig) {
+  v <- rep(NA_real_, length(gr))
+  hits <- findOverlaps(gr, sig)
+  if (length(hits) == 0) return(v)
+  qh <- queryHits(hits); sh <- subjectHits(hits)
+  w <- width(pintersect(gr[qh], sig[sh]))
+  v[unique(qh)] <- tapply(sig$score[sh] * w, qh, sum) / tapply(w, qh, sum)
+  v
+}
+
+# --- Load ---
 message("Loading data ...")
 anchors  <- read_bed(bed_path)
 pk_me1   <- read_bed(me1_peaks)
 pk_me3   <- read_bed(me3_peaks)
 
-# --- Find dual-positive anchors (both marks overlap) ---
+# --- Dual-positive anchors ---
 h1 <- findOverlaps(anchors, pk_me1, maxgap = 200L)
 h2 <- findOverlaps(anchors, pk_me3, maxgap = 200L)
 dual_idx <- base::intersect(unique(queryHits(h1)), unique(queryHits(h2)))
 gr_dual <- anchors[dual_idx]
 
 message(sprintf("Total anchors:  %d", length(anchors)))
-message(sprintf("H3K4me1+ only:  %d", length(unique(queryHits(h1)))))
-message(sprintf("H3K4me3+ only:  %d", length(unique(queryHits(h2)))))
+message(sprintf("H3K4me1+ only:  %d", length(setdiff(unique(queryHits(h1)), dual_idx))))
+message(sprintf("H3K4me3+ only:  %d", length(setdiff(unique(queryHits(h2)), dual_idx))))
 message(sprintf("Dual-positive:  %d", length(dual_idx)))
 
-if (length(dual_idx) == 0) stop("No dual-positive anchors found; nothing to diagnose.")
+# --- Negative-control anchors ---
+if (!is.null(k27me3_bed)) {
+  pk_k27 <- read_bed(k27me3_bed)
+  hk <- findOverlaps(anchors, pk_k27, maxgap = 200L)
+  neg_idx <- setdiff(unique(queryHits(hk)), union(unique(queryHits(h1)), unique(queryHits(h2))))
+  neg_label <- "H3K27me3-only"
+} else {
+  neg_idx <- setdiff(seq_along(anchors), union(unique(queryHits(h1)), unique(queryHits(h2))))
+  neg_label <- "peak-negative"
+}
+gr_neg <- anchors[neg_idx]
+message(sprintf("Negative control (%s): %d anchors", neg_label, length(neg_idx)))
 
-# --- Extract bigWig signal at dual anchors ---
-s1 <- import.bw(bw_me1, which = gr_dual)
-s3 <- import.bw(bw_me3, which = gr_dual)
+# --- Weighted bigWig signal ---
+compute_ratios <- function(gr, label) {
+  if (length(gr) == 0) return(numeric(0))
+  s1 <- import.bw(bw_me1, which = gr)
+  s3 <- import.bw(bw_me3, which = gr)
+  v1 <- weighted_mean_signal(gr, s1)
+  v3 <- weighted_mean_signal(gr, s3)
+  valid <- !is.na(v1) & !is.na(v3) & v1 > 0 & v3 > 0
+  if (sum(valid) == 0) return(numeric(0))
+  message(sprintf("  %s: %d / %d have valid signal", label, sum(valid), length(gr)))
+  v1[valid] / v3[valid]
+}
 
-hits1 <- findOverlaps(gr_dual, s1)
-hits3 <- findOverlaps(gr_dual, s3)
+message("\nComputing weighted bigWig signal ratios ...")
+ratio_dual   <- compute_ratios(gr_dual, "Dual-positive")
+ratio_neg    <- compute_ratios(gr_neg,  neg_label)
 
-sig1 <- rep(NA_real_, length(gr_dual))
-sig3 <- rep(NA_real_, length(gr_dual))
-if (length(hits1) > 0) sig1[unique(queryHits(hits1))] <- tapply(s1$score[subjectHits(hits1)], queryHits(hits1), mean)
-if (length(hits3) > 0) sig3[unique(queryHits(hits3))] <- tapply(s3$score[subjectHits(hits3)], queryHits(hits3), mean)
-
-valid <- !is.na(sig1) & !is.na(sig3) & sig1 > 0 & sig3 > 0
-ratio_me1_me3 <- sig1[valid] / sig3[valid]
-n_valid <- sum(valid)
-
-message(sprintf("Anchors with valid signal for both marks: %d", n_valid))
-if (n_valid == 0) stop("No dual anchors had measurable signal for both marks.")
+if (length(ratio_dual) == 0) stop("No dual anchors had measurable signal for both marks.")
 
 # --- Diagnostics ---
-cat("\n=== H3K4me1 / H3K4me3 (dual-positive anchors only) ===\n")
-print(round(quantile(ratio_me1_me3, probs = c(0, 0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99, 1)), 3))
+cat("\n=== Dual-Positive Anchor H3K4me1 / H3K4me3 Ratio ===\n")
+print(round(quantile(ratio_dual, probs = c(0, 0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99, 1)), 3))
 
-cat(sprintf("\n--- Threshold diagnostics ---\n"))
-cat(sprintf("Ratio >= 1.0:  %.1f%%  (H3K4me1 >= H3K4me3)\n", 100 * mean(ratio_me1_me3 >= 1.0)))
-cat(sprintf("Ratio >= 1.5:  %.1f%%\n", 100 * mean(ratio_me1_me3 >= 1.5)))
-cat(sprintf("Ratio >= 2.0:  %.1f%%  (threshold 2; these stay dual)\n", 100 * mean(ratio_me1_me3 >= 2.0)))
-cat(sprintf("Ratio >= 3.0:  %.1f%%  (threshold 3; more stringent)\n", 100 * mean(ratio_me1_me3 >= 3.0)))
-cat(sprintf("Ratio <  2.0:  %.1f%%  (reclassified to P)\n", 100 * mean(ratio_me1_me3 < 2.0)))
+cat(sprintf("\n--- Fraction of dual-positive anchors at threshold ---\n"))
+for (th in c(1, 1.5, 2, 3, 5)) {
+  cat(sprintf("Ratio >= %.1f:  %.1f%%\n", th, 100 * mean(ratio_dual >= th)))
+}
+
+# --- Data-driven recommendation from negative control ---
+if (length(ratio_neg) >= 10) {
+  neg_p95 <- round(quantile(ratio_neg, 0.95, na.rm = TRUE), 2)
+  cat(sprintf("\n=== Negative-control (%s) ratio distribution ===\n", neg_label))
+  print(round(quantile(ratio_neg, probs = c(0, 0.50, 0.90, 0.95, 0.99, 1)), 3))
+  cat(sprintf("\n--- Recommendation ---\n"))
+  cat(sprintf("95th percentile of background ratio: %.2f\n", neg_p95))
+  cat(sprintf("Suggested bw_ratio_threshold: %.1f\n",
+      max(2, ceiling(neg_p95 * 10) / 10)))
+  cat(sprintf("(i.e. only anchors with ratio > %.1f× background are likely true dual)\n",
+      max(2, ceiling(neg_p95 * 10) / 10)))
+  cat(sprintf("Current default bw_ratio_threshold = 3 would retain %.1f%% of dual-positives.\n",
+      100 * mean(ratio_dual >= 3)))
+} else {
+  cat(sprintf("\n--- Recommendation ---\n"))
+  cat(sprintf("Insufficient negative-control anchors (n=%d) for data-driven threshold.\n", length(ratio_neg)))
+  cat(sprintf("Using default bw_ratio_threshold = 3.\n"))
+}
 
 # --- Plot ---
 if (!is.null(out_plot)) {
-  df <- data.frame(log2_ratio = log2(ratio_me1_me3 + 1e-6))
-  p <- ggplot(df, aes(x = log2_ratio)) +
+  df_dual <- data.frame(log2_ratio = log2(ratio_dual + 1e-6), Group = "Dual-positive")
+  df_all  <- df_dual
+  if (length(ratio_neg) >= 10) {
+    df_neg <- data.frame(log2_ratio = log2(ratio_neg + 1e-6), Group = neg_label)
+    df_all <- rbind(df_dual, df_neg)
+  }
+  p <- ggplot(df_all, aes(x = log2_ratio, fill = Group)) +
     geom_histogram(aes(y = after_stat(density)), bins = 80,
-                   fill = "#5D6D7E", alpha = 0.7, boundary = 0) +
-    geom_density(color = "#E41A1C", linewidth = 1) +
+                   alpha = 0.5, position = "identity", boundary = 0) +
+    geom_density(aes(color = Group), linewidth = 1) +
     geom_vline(xintercept = log2(c(1, 2, 3)), linetype = "dashed",
                color = c("#999999", "#27AE60", "#E41A1C"), linewidth = 0.8) +
     annotate("text", x = log2(c(1, 2, 3)), y = Inf, vjust = 2,
@@ -105,10 +153,12 @@ if (!is.null(out_plot)) {
     scale_x_continuous(breaks = seq(-5, 5, 1),
                        labels = c("1/32","1/16","1/8","1/4","1/2","1",
                                   "2","4","8","16","32")) +
-    labs(x = expression(H3K4me1 / H3K4me3~(log[2])),
-         y = "Density",
-         title = sprintf("H3K4me1 / H3K4me3 Signal Ratio\n(%d dual-positive anchors)", n_valid),
-         subtitle = "Ratio >= 2 (green) → dual ; Ratio < 2 → P") +
+    scale_fill_manual(values = c("Dual-positive" = "#5D6D7E", "#D95F02")) +
+    scale_color_manual(values = c("Dual-positive" = "#E41A1C", "#D95F02")) +
+    labs(x = expression(H3K4me1 / H3K4me3~(log[2])), y = "Density",
+         title = "H3K4me1 / H3K4me3 Signal Ratio",
+         subtitle = sprintf("Dual-positive (n=%d) vs %s background (n=%d)",
+           length(ratio_dual), neg_label, length(ratio_neg))) +
     theme_classic(base_size = 12) +
     theme(plot.title = element_text(face = "bold", hjust = 0.5),
           plot.subtitle = element_text(hjust = 0.5))

@@ -11,7 +11,7 @@ profile_target_genes(
   expr_matrix_file,
   metadata_file,
   target_source = c("loops", "targets"),
-  target_mapping_mode = c("all", "promoter", "active"),
+  target_mapping_mode = c("all", "promoter"),
   loop_types = c("E-P", "P-P"),
   include_Filled = TRUE,
   use_nearest_gene = FALSE,
@@ -22,14 +22,16 @@ profile_target_genes(
   genome_id = "hg38",
   motif_p_thresh = 1e-04,
   motif_ntop = 5,
+  motif_n_perm = 0L,
   run_go = FALSE,
   run_ppi = FALSE,
   ppi_score = 400,
   ppi_nSample = 400,
   ppi_species_id = NULL,
   heatmap_nSample = 99999,
-  gsea_nSample = 99999,
+  gsea_nSample = NULL,
   cnet_nSample = 50,
+  universe_genes = NULL,
   stat_test = "wilcox.test",
   cor_method = "pearson",
   seed = NULL
@@ -50,11 +52,12 @@ Default \code{"log2FoldChange"}.}
 \item{target_source}{Character vector. Source of target genes to analyze.
 Default \code{c("loops", "targets")}.}
 
-\item{target_mapping_mode}{Character. Mapping strategy: \code{"all"} (any
-anchor-gene connection), \code{"promoter"} (require direct promoter
-contact), or \code{"active"} (only expression-filtered active target
-genes; available only with \code{target_source = "loops"} after running
-\code{\link{refine_loop_anchors_by_expression}}). Default \code{"all"}.}
+\item{target_mapping_mode}{Character. Mapping strategy: \code{"all"}
+(all anchor-gene connections, \code{Putative_Target_Genes}) or
+\code{"promoter"} (promoter-only subset, \code{Promoter_Target_Genes}).
+Expression filtering is determined by the refinement stage of the
+supplied annotation object, not by this parameter.
+Default \code{"all"}.}
 
 \item{loop_types}{Character vector. The specific loop types to analyze.
 Default \code{c("E-P", "P-P")}.}
@@ -86,6 +89,15 @@ Default \code{1e-4}.}
 \item{motif_ntop}{Numeric. Number of top enriched motifs to output.
 Default \code{5}.}
 
+\item{motif_n_perm}{Integer. Number of within-component foreground/background
+label permutations for empirical motif P-value estimation. When positive,
+labels are shuffled within each loop component to partially account for
+anchor non-independence. \code{0} (default) retains Fisher exact test.
+Use \code{10-100} for testing. For inference, choose according to the
+number of motifs and desired P-value resolution; \code{1000} may be
+insufficient after multiple-testing correction across a full motif library.
+This is an exploratory calibration, not a fully component-level model.}
+
 \item{run_go}{Logical. Whether to perform Gene Ontology (GO) enrichment.
 Default \code{FALSE}.}
 
@@ -108,13 +120,20 @@ for species whose OrgDb naming is not recognised. See
 Default \code{99999} (effectively no limit). Reduce to \code{20-50} for
 readable heatmaps.}
 
-\item{gsea_nSample}{Numeric. Maximum number of target genes to sample for GSEA.
-Default \code{99999} (effectively no down-sampling; all target genes are
-used). When the gene set is large, set to a smaller value (e.g. \code{20})
-to reduce enrichment bias. Set to \code{NULL} to always use the full set.}
+\item{gsea_nSample}{Numeric or \code{NULL}. Maximum number of target genes
+to sample for GSEA. Default \code{NULL} (no down-sampling; all target
+genes are used). Down-sampling introduces Monte Carlo variance and
+should only be used when the target set is extremely large (>1000 genes)
+for computational efficiency. For reproducible results, set the
+\code{seed} parameter when using down-sampling.}
 
 \item{cnet_nSample}{Numeric. Number of top GO terms to display in cnetplot.
 Default \code{50}.}
+
+\item{universe_genes}{Named numeric vector or \code{NULL}. GO background
+universe.  Names are gene symbols, values are ranking metrics (e.g. LFC).
+When \code{NULL}, the full differential table is used as background.
+Default \code{NULL}.}
 
 \item{stat_test}{Character. Statistical test for LFC comparisons.
 Default \code{"wilcox.test"}.}
@@ -133,6 +152,7 @@ An invisible nested list indexed by \code{target_source} (e.g., \code{"targets"}
 Each element contains:
 \describe{
 \item{\code{go_results}}{Named list of data frames (one per gene set) containing GO enrichment results (if \code{run_go = TRUE}).}
+\item{\code{motif_results}}{Named list of motif enrichment result tables, indexed by analysis task. Each task contains \code{proximal} and \code{distal} data frames when available (if \code{run_motif = TRUE}).}
 \item{\code{target_gene_sets}}{Named list of character vectors containing target gene symbols.}
 \item{\code{plots}}{Named list of ggplot objects (LFC_Violin, GSEA, Heatmap, Scatter, GO_Network, PPI_Network, etc.).}
 \item{\code{warnings}}{Character vector of module-level warnings (e.g., "\link[AnnotationDbi:colsAndKeytypes]{AnnotationDbi::GO} failed: ..."). Empty if all modules succeeded.}
@@ -146,12 +166,12 @@ transcription factor motif scanning, Gene Ontology (GO) enrichment, and
 protein-protein interaction (PPI) network construction.
 }
 \details{
-Two analysis steps use random sampling: GSEA target-gene down-sampling
-(controlled by \code{gsea_nSample}, via unweighted sampling without
-replacement to reduce enrichment bias) and motif background anchor sampling
-(GC-matched, limited to 2 000 background regions per contrast).
-GSEA tie-breaking for duplicate ranked values is deterministic
-(position-based offset). For fully reproducible results, set the \code{seed}
+GSEA operates on the full target gene set by default (\code{gsea_nSample = NULL}).
+Down-sampling is available for very large sets but introduces Monte Carlo
+variance. Motif background anchor sampling is GC-matched, limited to 2 000
+background regions per contrast. GSEA tie-breaking for duplicate ranked
+values is deterministic (position-based offset). For fully reproducible
+results, set the \code{seed}
 parameter.
 
 \strong{Exploratory modules:} The GO enrichment (\code{run_go}), motif scanning
@@ -159,6 +179,12 @@ parameter.
 \emph{research-grade} analyses that depend on external databases and algorithms.
 Results should be treated as hypothesis-generating and validated with
 independent experimental approaches. All three modules are disabled by default.
+\strong{Motif enrichment note:} By default, Fisher's exact test treats each
+anchor as an independent observation. When \code{motif_n_perm > 0},
+empirical P-values are estimated by shuffling foreground/background labels
+within loop components, which partially accounts for component dependence.
+Pure-label components are non-exchangeable; the procedure remains exploratory
+rather than a fully component-level inferential model.
 }
 \note{
 Downstream modules are run in a fail-soft mode. Module-level failures

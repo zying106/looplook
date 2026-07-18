@@ -29,6 +29,10 @@
 ^Outputs$
 ^Library$
 ^looplook_algorithm.*\.(md|docx)$
+^looplook[0-9]+_deep_algorithm_review_zh\.md$
+^looplook_hop_based_target_stratification_design_zh\.md$
+^looplook_novel_TSS_H3K4me3_handling_design_zh\.md$
+^looplook6_deep_algorithm_review_zh.*\.md$
 coverage
 ^\.git$
 ^looplook\.Rcheck$
