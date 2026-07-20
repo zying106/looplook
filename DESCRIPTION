@@ -88,6 +88,7 @@ Suggests:
     ggdist,
     magick,
     knitr,
+    kableExtra,
     rmarkdown,
     rtracklayer,
     png,
