@@ -93,7 +93,7 @@ of the group maximum are retained (collapsed with ";").'><meta property="og:imag
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.14</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.15</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -144,7 +144,8 @@ of the group maximum are retained (collapsed with ";").</p>
 <span>  min_expr <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  conflict_strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"biotype_first"</span>, <span class="st">"expression_first"</span><span class="op">)</span>,</span>
 <span>  co_dominance_ratio <span class="op">=</span> <span class="fl">0.1</span>,</span>
-<span>  biotype_order <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"protein"</span>, <span class="st">"small_ncRNA"</span>, <span class="st">"antisense"</span>, <span class="st">"lncRNA"</span>, <span class="st">"pseudogene"</span><span class="op">)</span></span>
+<span>  biotype_order <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"protein"</span>, <span class="st">"small_ncRNA"</span>, <span class="st">"antisense"</span>, <span class="st">"lncRNA"</span>, <span class="st">"pseudogene"</span><span class="op">)</span>,</span>
+<span>  unmeasured_policy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"keep"</span>, <span class="st">"drop"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -213,6 +214,13 @@ Default: <code>c("protein", "small_ncRNA", "antisense", "lncRNA",
   "pseudogene")</code>. To prioritise lncRNAs over protein-coding genes while
 keeping everything else as-is, set <code>c("lncRNA", "protein")</code>.</p></dd>
 
+
+<dt id="arg-unmeasured-policy">unmeasured_policy<a class="anchor" aria-label="anchor" href="#arg-unmeasured-policy"></a></dt>
+<dd><p>Character. How to treat genes absent from the
+expression matrix during conflict resolution. <code>"keep"</code> (default):
+unmeasured genes are retained as candidates. <code>"drop"</code>: unmeasured
+genes are excluded, only genes with measured expression are considered.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -226,32 +234,33 @@ columns resolved.</p>
 <span class="r-in"><span><span class="co"># It demonstrates the core conflict-resolution logic on a synthetic</span></span></span>
 <span class="r-in"><span><span class="co"># genomic region near the hg19 HLA locus (chr6:29,940,000-29,950,000).</span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"GenomicFeatures"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span>    <span class="va">txdb</span> <span class="op">&lt;-</span> <span class="fu">AnnotationDbi</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/AnnotationDbi/man/AnnotationDb-class.html" class="external-link">loadDb</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>        <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"hg19_knownGene_sample.sqlite"</span>,</span></span>
-<span class="r-in"><span>                     package <span class="op">=</span> <span class="st">"GenomicFeatures"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"GenomicFeatures"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="va">txdb</span> <span class="op">&lt;-</span> <span class="fu">AnnotationDbi</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/AnnotationDbi/man/AnnotationDb-class.html" class="external-link">loadDb</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"hg19_knownGene_sample.sqlite"</span>,</span></span>
+<span class="r-in"><span>      package <span class="op">=</span> <span class="st">"GenomicFeatures"</span></span></span>
 <span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>    <span class="co"># Minimal genomic region: seqnames, start, end</span></span></span>
-<span class="r-in"><span>    <span class="va">test_region</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>        seqnames <span class="op">=</span> <span class="st">"chr6"</span>,</span></span>
-<span class="r-in"><span>        start    <span class="op">=</span> <span class="fl">29940000L</span>,</span></span>
-<span class="r-in"><span>        end      <span class="op">=</span> <span class="fl">29950000L</span>,</span></span>
-<span class="r-in"><span>        stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span></span>
-<span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="co"># Minimal genomic region: seqnames, start, end</span></span></span>
+<span class="r-in"><span>  <span class="va">test_region</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    seqnames <span class="op">=</span> <span class="st">"chr6"</span>,</span></span>
+<span class="r-in"><span>    start <span class="op">=</span> <span class="fl">29940000L</span>,</span></span>
+<span class="r-in"><span>    end <span class="op">=</span> <span class="fl">29950000L</span>,</span></span>
+<span class="r-in"><span>    stringsAsFactors <span class="op">=</span> <span class="cn">FALSE</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>    <span class="co"># Run with default settings (biotype-first, no expression data)</span></span></span>
-<span class="r-in"><span>    <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">resolve_gene_conflicts</span><span class="op">(</span></span></span>
-<span class="r-in"><span>        current_anno_df    <span class="op">=</span> <span class="va">test_region</span>,</span></span>
-<span class="r-in"><span>        txdb_obj           <span class="op">=</span> <span class="va">txdb</span>,</span></span>
-<span class="r-in"><span>        org_db_pkg         <span class="op">=</span> <span class="st">"org.Hs.eg.db"</span>,</span></span>
-<span class="r-in"><span>        tss_region         <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2000</span>, <span class="fl">2000</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>        gene_expr_map      <span class="op">=</span> <span class="cn">NULL</span>,</span></span>
-<span class="r-in"><span>        conflict_strategy  <span class="op">=</span> <span class="st">"biotype_first"</span></span></span>
-<span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="co"># Run with default settings (biotype-first, no expression data)</span></span></span>
+<span class="r-in"><span>  <span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">resolve_gene_conflicts</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    current_anno_df    <span class="op">=</span> <span class="va">test_region</span>,</span></span>
+<span class="r-in"><span>    txdb_obj           <span class="op">=</span> <span class="va">txdb</span>,</span></span>
+<span class="r-in"><span>    org_db_pkg         <span class="op">=</span> <span class="st">"org.Hs.eg.db"</span>,</span></span>
+<span class="r-in"><span>    tss_region         <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2000</span>, <span class="fl">2000</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    gene_expr_map      <span class="op">=</span> <span class="cn">NULL</span>,</span></span>
+<span class="r-in"><span>    conflict_strategy  <span class="op">=</span> <span class="st">"biotype_first"</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>    <span class="co"># Inspect resolved gene symbols (columns appear when genes are found)</span></span></span>
-<span class="r-in"><span>    <span class="kw">if</span> <span class="op">(</span><span class="st">"SYMBOL"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">SYMBOL</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="co"># Inspect resolved gene symbols (columns appear when genes are found)</span></span></span>
+<span class="r-in"><span>  <span class="kw">if</span> <span class="op">(</span><span class="st">"SYMBOL"</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">SYMBOL</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>
     </div>

@@ -1,17 +1,17 @@
 # looplook: A Triple-Layer Orthogonal Annotation Framework for Chromatin Interactions
 
-looplook classifies loop anchors — the fundamental units connecting 3D
-chromatin contacts to downstream peak and feature annotation — through a
+looplook classifies loop anchors – the fundamental units connecting 3D
+chromatin contacts to downstream peak and feature annotation – through a
 **three-layer orthogonal annotation framework** in which each layer
 integrates an independent category of experimental evidence:
 
-- **Positional annotation** provides the baseline anchor assignment from
+- **Genomic annotation** provides the baseline anchor assignment from
   genomic coordinates (TSS and gene-body overlap).
 
 - **Expression-aware refinement** adds transcriptional-activity context
   from transcriptomic data (CAGE-seq, RNA-seq, TT-seq, SLAM-seq).
 
-- **Chromatin-state reclassification** supplies orthogonal histone-mark
+- **Chromatin-Aware Refinement** supplies orthogonal histone-mark
   validation (ChIP-seq, CUT&Tag, ATAC-seq).
 
 These anchor-level classifications propagate through the loop network to
@@ -39,7 +39,7 @@ data modalities.
   ([`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)).
 
 - **Chromatin-Aware Refinement:** Chromatin mark-based anchor
-  reclassification, dual-function element detection, and orthogonal
+  reclassification, dual-signature element detection, and orthogonal
   validation of expression-derived hypotheses
   ([`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md),
   [`validate_epeG_by_chromatin`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)).

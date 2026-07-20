@@ -1,13 +1,17 @@
 # Expression-Aware refinement of loop anchors and target linkages
 
-Integrates quantitative RNA-seq data (e.g., TPM/FPKM) with 3D structural
-data to reclassify regulatory elements and annotate functional status,
-deriving a functionally interpretable regulatory network from physical
-chromatin contacts. All structural loop rows are preserved; anchor type
-and gene assignments are reclassified in place (silent promoters have
-their gene set to NA and type downgraded to eP/eG). Refinement status
-columns indicate which loops belong to the high-confidence active
-subset.
+Integrates quantitative transcription data with 3D structural data.
+Preferred input order: CAGE-seq / PRO-seq \> GRO-seq / NET-seq \> TT-seq
+\> RNA-seq (methods that directly measure promoter activity or Pol II
+elongation provide the most direct evidence for P/eP classification). to
+reclassify regulatory elements and annotate functional status, deriving
+a functionally interpretable regulatory network from physical chromatin
+contacts. All structural loop rows are preserved; anchor type and gene
+assignments are reclassified in place (silent promoters become eP/eG
+with positional gene preserved; expression filtering is applied to
+`Putative_Target_Genes` and `Promoter_Target_Genes`, not to anchor gene
+assignments). Refinement status columns indicate which loops belong to
+the high-confidence active subset.
 
 ## Usage
 
@@ -26,9 +30,11 @@ refine_loop_anchors_by_expression(
   karyo_bin_size = 1e+05,
   reclassify_by_expression = TRUE,
   hub_percentile = 0.95,
+  hub_metric = c("unique_contacts", "total_loops"),
   chromatin_beds = list(),
   write_output = TRUE,
-  quiet = FALSE
+  quiet = FALSE,
+  allow_rerefine = FALSE
 )
 ```
 
@@ -41,8 +47,10 @@ refine_loop_anchors_by_expression(
 
 - expr_matrix_file:
 
-  Path to a normalised expression matrix (TPM/FPKM, genes x samples).
-  Required for refinement. Default: `NULL`.
+  Path to a normalised expression matrix (genes x samples). Accepts
+  steady-state RNA-seq (TPM/FPKM/RPKM), nascent transcription data
+  (NET-seq, PRO-seq, GRO-seq, TT-seq), or CAGE-seq. Required for
+  refinement. Default: `NULL`.
 
 - sample_columns:
 
@@ -53,13 +61,16 @@ refine_loop_anchors_by_expression(
 
   Numeric. Minimum expression value (e.g., TPM \>= 1) for a gene to be
   considered active. Default: `1`. Set to `0` to retain any detected
-  expression (TPM \> 0). Use `threshold_mode = "quantile"` to specify a
-  quantile instead of an absolute value. **Gene name matching is
-  case-sensitive.** Ensure gene identifiers in `expr_matrix_file` use
-  the same case as the symbols returned by your OrgDb (typically
-  all-uppercase for human and mouse, e.g. `"TP53"`, not `"Tp53"`).
-  Mismatched case will cause expressed genes to be misclassified as
-  silent (eP/eG).
+  expression. Use `threshold_mode = "quantile"` to specify a quantile
+  instead of an absolute value. For nascent transcription data (NET-seq,
+  PRO-seq), use gene-body aggregated signal (e.g., RPKM) and adjust the
+  threshold accordingly – Pol II elongation signal is typically sparser
+  than steady-state mRNA, so a lower absolute threshold or quantile mode
+  is recommended. Gene name matching is **case-insensitive**. Gene
+  identifiers are canonicalised to uppercase before matching, so
+  `"TP53"`, `"Tp53"`, and `"tp53"` are treated as the same gene. This
+  accommodates the common human (all-uppercase) vs mouse (Title Case)
+  convention mismatch.
 
 - threshold_mode:
 
@@ -73,8 +84,8 @@ refine_loop_anchors_by_expression(
 
 - unit_type:
 
-  Character. Expression unit for plot labels (e.g., `"TPM"`). Default:
-  `"TPM"`.
+  Character. Expression unit for plot labels (e.g., `"TPM"`, `"FPKM"`,
+  `"RPKM"`, `"NETseq_RPKM"`, `"raw_count"`). Default: `"TPM"`.
 
 - species:
 
@@ -107,16 +118,25 @@ refine_loop_anchors_by_expression(
 - reclassify_by_expression:
 
   Logical. If `TRUE` (default), silent promoters (P) and gene bodies (G)
-  are reclassified as eP/eG. If `FALSE`, anchor *types* are left
-  unchanged, but anchor genes that fall outside the active whitelist are
-  still stripped to `NA` (only the identity label is preserved, not the
-  gene assignment). To retain genes unchanged, omit the
-  `expr_matrix_file` argument.
+  are reclassified as eP/eG while positional gene attribution is
+  retained. Expression filtering is applied to current target-gene
+  columns, not to anchor_gene. If `FALSE`, both anchor types and gene
+  symbols are preserved unchanged – genes absent from the expression
+  matrix are kept (their expression state is unmeasured, not silent).
+  Measured-silent genes remain in the gene list but are tracked
+  separately via the `Target_Expression_State` and
+  `Passes_Expression_Filter` columns in the output.
 
 - hub_percentile:
 
   Numeric (0-1). Node-degree quantile for hub detection. Default:
   `0.95`.
+
+- hub_metric:
+
+  Character. Which connectivity count to use for hub detection.
+  `"unique_contacts"` (default): counts distinct neighbour anchor IDs.
+  `"total_loops"`: counts all loop rows (backward compatible).
 
 - chromatin_beds:
 
@@ -141,6 +161,12 @@ refine_loop_anchors_by_expression(
   Logical. If `TRUE`, suppress progress messages while preserving
   warnings. Default: `FALSE`.
 
+- allow_rerefine:
+
+  Logical. If `FALSE` (default), stops when the input has already been
+  expression-refined. Set to `TRUE` to override (for interactive
+  exploration only).
+
 ## Value
 
 A named list:
@@ -148,16 +174,28 @@ A named list:
 - `loop_annotation` – Full refined 3D network with updated `loop_type`
   (e.g., eP-P) and two target gene columns:
 
-  - `Active_Target_Genes`: Expression-filtered active-only targets (no
-    fallback).
+  - `Putative_Target_Genes`: **Primary target-assignment result.**
+    Candidate target genes based on final anchor type, TSS assignment,
+    loop topology, and the current refinement stage. In
+    expression-refined objects, all listed genes pass the expression
+    threshold. **Use for:** enhancer–gene linking benchmarks, CRISPRi
+    validation, nearest-gene comparisons, loop connectivity analysis,
+    full network export.
 
-  - `Putative_Target_Genes`: Display column; may include *loop-anchor*
-    fallback when `Active_Target_Genes` is empty (uses the
-    promoter/gene-body gene of any looped anchor, not the linear
-    nearest-gene fallback). The linear nearest-gene fallback applies
-    only to the `Regulated_promoter_genes_Filled` and
-    `Assigned_Target_Genes_Filled` columns of `target_annotation` (see
-    `annotate_peaks_and_loops`).
+  - `Promoter_Target_Genes`: **Promoter-only subset of
+    `Putative_Target_Genes`.** Contains only target genes supported by
+    promoter-role (P/eP/dual) anchors. Always satisfies
+    `Promoter_Target_Genes subset of Putative_Target_Genes`. **Use
+    for:** promoter-centric GO, KEGG, GSEA, active regulatory network
+    from promoter-anchored loops.
+
+  - `Target_Expression_State`: Per-loop summary of target gene
+    expression status (`"active"`, `"active_partial"`,
+    `"measured_silent"`, `"unmeasured"`, `"mixed"`, `"no_target"`,
+    `"not_assessed"`). **`"unmeasured"` != `"measured_silent"`:**
+    unmeasured means the gene was not in the expression input and its
+    activity is unknown; measured-silent means it was measured but fell
+    below the activity threshold.
 
   Refinement status columns: `Has_Active_Target`,
   `Retained_In_Functional_Network`, and `Refinement_Action`
@@ -176,7 +214,7 @@ A named list:
 
 - `promoter_centric_stats` – Gene-level connectivity statistics.
 
-- `distal_element_stats` – Distal-element connectivity statistics.
+- `distal_element_stats` – Distal anchor connectivity (E, dual, G, eG).
 
 - `target_annotation` – Target features (peaks) with gene assignments.
   Key columns include:
@@ -187,17 +225,16 @@ A named list:
   - `Regulated_promoter_genes`: Promoter genes supported by loop-anchor
     context.
 
-  - `Assigned_Target_Genes`: Promoter-first 3D assignment (prioritises P
-    \> G \> E).
+  - `Assigned_Target_Genes`: Policy-based 3D assignment (default:
+    promoter-first, then shorter path wins; see `target_priority`).
 
   - `*_Filled` variants: Linear nearest-gene fallback when strict 3D
     assignments are empty.
 
   - `Regulated_promoter_Evidence`: Provenance of
     `Regulated_promoter_genes` (e.g., `local_promoter_overlap`,
-    `direct_opposite_promoter`). **Read with**
-    `Regulated_promoter_genes`; do not cross-reference with
-    `Assigned_Target_Genes` or other columns.
+    `distal_promoter`). **Read with** `Regulated_promoter_genes`; do not
+    cross-reference with `Assigned_Target_Genes` or other columns.
 
   - `Regulated_promoter_Fallback_Evidence`: Provenance of
     `Regulated_promoter_genes_Filled`. **Read with**
@@ -220,8 +257,8 @@ A named list:
     (nearest gene).
 
   - `evidence`: Provenance label – `"local_promoter_overlap"` (peak
-    overlaps anchor promoter), `"direct_opposite_promoter"` (opposite
-    anchor is promoter), `"gene_body_context"` (gene body linkage),
+    overlaps anchor promoter), `"distal_promoter"` (promoter on the
+    distal loop anchor), `"gene_body_context"` (gene body linkage),
     `"expanded_promoter_loop"` (via ego-network expansion),
     `"linear_annotation"` (direct nearest gene), or `"linear_fallback"`
     (filled when 3D assignment was empty).
@@ -237,15 +274,27 @@ A named list:
     gene appears in. A gene may appear in multiple columns
     simultaneously.
 
-  - (Refine only) `Mean_Expression`: Per-gene mean expression value.
+  - (Refine only) `Mean_Expression`: Per-gene mean expression value
+    (`NA` when the gene is not in the expression matrix).
 
-  - (Refine only) `Passes_Expression_Filter`: Logical. `TRUE` if
-    `Mean_Expression >= threshold`.
+  - (Refine only) `Expression_State`: Character. Per-gene expression
+    status: `"active"` (measured and above threshold),
+    `"measured_silent"` (measured but below threshold), `"unmeasured"`
+    (gene not present in expression input), `"measured_not_assessed"`
+    (measured but no threshold available). Loop-level aggregation fields
+    also include `"active_partial"`, `"mixed"`, `"no_target"`, and
+    `"not_assessed"`.
+
+  - (Refine only) `Passes_Expression_Filter`: Logical with three states.
+    `TRUE` = measured and active; `FALSE` = measured but below
+    threshold; `NA` = unmeasured or not assessed. **`NA`
+    (unmeasured/not-assessed) \\\neq\\ `FALSE` (measured-silent).**
 
 - `chromatin_validation` – Data frame from
   [`validate_epeG_by_chromatin`](https://zying106.github.io/looplook/reference/validate_epeG_by_chromatin.md)
-  with confidence levels and evidence strings for each eP/eG anchor.
-  `NULL` when `chromatin_beds` is not provided or is empty (default).
+  with enhancer evidence levels and evidence strings for each eP/eG
+  anchor. `NULL` when `chromatin_beds` is not provided or is empty
+  (default).
 
 - `plots` – Named list of ggplot objects (dumbbell, rose, karyotype).
 
@@ -270,13 +319,15 @@ with only loops where `Retained_In_Functional_Network == TRUE`.
 
 - **Biological Reclassification:** Reclassifies physically annotated
   promoters (`P`) and gene bodies (`G`) lacking active transcription as
-  *expression-filtered silent* regulatory elements (`eP`, `eG`).
-  **Important:** `eP`/`eG` labels indicate transcriptional silence at
-  the reference gene – they do **not** constitute evidence of enhancer
-  activity. Orthogonal chromatin data (ATAC-seq, H3K27ac, H3K4me1) are
-  required for functional enhancer interpretation. The labels are
-  retained for backward compatibility; interpret them as "inactive-P" /
-  "inactive-G" rather than "enhancer-P" / "enhancer-G".
+  *element-Promoter like* (`eP`) and *element-Genebody like* (`eG`)
+  elements. **Important:** `eP`/`eG` labels denote structural genomic
+  position (near a TSS or within a gene body) – they do **not**
+  constitute evidence of enhancer activity, even though the associated
+  gene is transcriptionally silent. Orthogonal chromatin data (ATAC-seq,
+  H3K27ac, H3K4me1) are required for functional regulatory
+  interpretation. The `e` prefix stands for **element** (a structurally
+  defined genomic feature akin to a cis-regulatory element), not
+  enhancer.
 
 - **Expression-Aware Connectivity Statistics:** Recomputes
   promoter-centric and distal-element connectivity after
@@ -291,11 +342,11 @@ with only loops where `Retained_In_Functional_Network == TRUE`.
   linked to active genes.
 
 - **Target Provenance Preservation:** Recomputes `*_Filled` membership
-  flags in `target_gene_links` after expression filtering, retains only
-  links still used by the refined target columns, and appends
-  `Mean_Expression` plus `Passes_Expression_Filter`. Evidence labels
-  such as `local_promoter_overlap`, `direct_opposite_promoter`, and
-  `linear_fallback` are preserved.
+  flags in `target_gene_links` after expression filtering, retains all
+  structural links with expression provenance, and appends
+  `Mean_Expression`, `Expression_State`, and `Passes_Expression_Filter`.
+  Evidence labels such as `local_promoter_overlap`, `distal_promoter`,
+  and `linear_fallback` are preserved.
 
 **Design Philosophy:** This function does not discard structural loop
 rows based on expression state. Hi-C, HiChIP, and PLAC-seq capture 3D
@@ -309,24 +360,30 @@ All rows are retained; a high-confidence functional subset is provided
 via `Retained_In_Functional_Network` and the *Functional Loop
 Annotation* Excel sheet.
 
-**Interpretation of eP/eG labels:** `eP` and `eG` are
-**expression-filtered silent states**, not functional enhancer
-classifications. Bulk RNA-seq silence can arise from cell-type
-proportions, time-point effects, sequencing depth, or promoter pausing –
-none of which imply the locus has gained enhancer activity. These labels
-should be read as "transcriptionally inactive P/G" and treated as
+**Interpretation of eP/eG labels:** `eP` (**e**lement-**P**romoter like)
+and `eG` (**e**lement-**G**enebody like) are **structural positional
+classifications**, not functional enhancer classifications. An eP anchor
+resides near a TSS and is structurally promoter-like; an eG anchor lies
+within a gene body and is structurally genebody-like. The associated
+gene may be transcriptionally silent in the current sample – this can
+arise from cell-type proportions, time-point effects, sequencing depth,
+or promoter pausing – but the anchor retains its positional identity as
+a putative regulatory element. These labels should be treated as
 hypotheses requiring orthogonal validation (ATAC-seq, H3K27ac, H3K4me1,
 or H3K27me3 depletion). Users with matched chromatin data should overlay
-eP/eG loci against these tracks before interpreting them as putative
-regulatory elements.
+eP/eG loci against these tracks before interpreting them as functionally
+active regulatory elements.
 
-**Pipeline guidance:** When matched chromatin data are available, follow
-expression refinement with
+**Pipeline guidance:** The recommended order is **expression refinement
+first, then chromatin refinement.** When matched chromatin data are
+available, follow expression refinement with
 [`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
 – chromatin evidence resolves eP/eG into definitive types (E, P, G,
-dual), while the expression-derived activity columns
-(`Active_Target_Genes`, `Retained_In_Functional_Network`) pass through
-for downstream profiling. See
+dual), while the expression-derived columns (`Putative_Target_Genes`,
+`Promoter_Target_Genes`, `Retained_In_Functional_Network`) carry forward
+the filtered target set for downstream profiling. The reverse order
+(chromatin -\>expression) is unsupported and will stop. and will produce
+incorrect results. See
 [`refine_loop_anchors_by_chromatin`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_chromatin.md)
 for the full pipeline recommendation.
 
@@ -354,22 +411,21 @@ raw_annotation$promoter_centric_stats <- head(raw_annotation$promoter_centric_st
 raw_annotation$distal_element_stats <- head(raw_annotation$distal_element_stats, 6)
 
 res_reclassified <- refine_loop_anchors_by_expression(
-    annotation_res = raw_annotation,
-    expr_matrix_file = expr_path,
-    sample_columns = "con1",
-    threshold = 1.0,
-    unit_type = "TPM",
-    species = "hg38",
-    out_dir = tempdir(),
-    project_name = "Example_Reclassified",
-    reclassify_by_expression = TRUE,
-    write_output = FALSE,
-    quiet = TRUE
+  annotation_res = raw_annotation,
+  expr_matrix_file = expr_path,
+  sample_columns = "con1",
+  threshold = 1.0,
+  unit_type = "TPM",
+  species = "hg38",
+  out_dir = tempdir(),
+  project_name = "Example_Reclassified",
+  reclassify_by_expression = TRUE,
+  write_output = FALSE,
+  quiet = TRUE
 )
-#> Warning: Only 18.2% (2 / 11) of annotation gene symbols match the expression matrix row names. Low overlap suggests different gene identifier conventions. Check that expression matrix row names and OrgDb annotations use the same convention (e.g., both SYMBOL, or both ENSEMBL). If the expression matrix uses Ensembl IDs or Entrez IDs while annotations use SYMBOL, convert identifiers first (e.g., via AnnotationDbi::mapIds or org.*.eg.db). A mismatch will cause expressed genes to be misclassified as silent (eP/eG).
-#> Warning: 100% of P/G anchors were reclassified to eP/eG. eP/eG labels indicate transcriptionally inactive promoter/gene-body states; enhancer activity requires orthogonal chromatin evidence. Validate with orthogonal chromatin data (ATAC-seq, H3K27ac) before interpreting eP/eG anchors as functional enhancers.
+#> Warning: Only 27.3% (3 / 11) of annotation gene symbols match the expression matrix row names. Low ID mapping suggests different gene identifier conventions. Check that expression matrix row names and OrgDb annotations use the same convention (e.g., both SYMBOL, or both ENSEMBL). If the expression matrix uses Ensembl IDs or Entrez IDs while annotations use SYMBOL, convert identifiers first (e.g., via AnnotationDbi::mapIds or org.*.eg.db). 
 print(table(res_reclassified$loop_annotation$loop_type))
 #> 
-#>   E-E  E-eP  eG-P  eP-G eP-eP 
-#>     1     2     1     1     1 
+#> E-E E-P G-P P-P 
+#>   1   2   2   1 
 ```

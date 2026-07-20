@@ -81,7 +81,7 @@ user-supplied chromatin mark BED files."><meta property="og:image" content="http
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.14</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.15</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -177,10 +177,10 @@ Accepts any assembly string; used for seqlevel harmonization.</p></dd>
 <dd><p>Anchor identifiers.</p></dd>
 
 <dt>H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3</dt>
-<dd><p>Logical or <code>NA</code>. <code>TRUE</code> = overlap, <code>FALSE</code> = tested but absent, <code>NA</code> = not tested.</p></dd>
+<dd><p>Logical or <code>NA</code>. <code>TRUE</code> = peak detected, <code>FALSE</code> = peak not called (below detection threshold in this dataset), <code>NA</code> = mark not provided.</p></dd>
 
 <dt>enhancer_evidence</dt>
-<dd><p>Factor: <code>gold_standard</code> &gt; <code>high_confidence</code> &gt; <code>supported</code> &gt; <code>weak</code> &gt; <code>uncertain</code>.</p></dd>
+<dd><p>Factor (enhancer evidence level): <code>canonical</code> &gt; <code>strong</code> &gt; <code>supported</code> &gt; <code>limited</code> &gt; <code>uncertain</code>.</p></dd>
 
 <dt>evidence</dt>
 <dd><p>Human-readable string of the constituting marks (e.g. <code>"H3K4me1+; H3K27ac+; H3K4me3-; H3K27me3-"</code>). Anchors with tested-positive H3K4me3 at <code>supported</code> confidence are annotated with a <code>"promoter_like"</code> tag.</p></dd>
@@ -189,18 +189,20 @@ Accepts any assembly string; used for seqlevel harmonization.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Confidence levels follow ENCODE active-enhancer criteria.  Each
-anchor is classified into the highest applicable level:</p><dl><dt>gold_standard</dt>
-<dd><p>All 5 marks tested: H3K4me1+, H3K27ac+, ATAC+, H3K27me3-, H3K4me3-.</p></dd>
+    <p>Enhancer evidence levels follow ENCODE-inspired active-enhancer criteria. Each
+anchor is classified into the highest applicable level:</p><dl><dt>canonical</dt>
+<dd><p>All 5 marks tested: H3K4me1+, H3K27ac+, ATAC+, H3K27me3-, H3K4me3-. This is a chromatin signature match, not functional validation.</p></dd>
 
-<dt>high_confidence</dt>
+<dt>strong</dt>
 <dd><p>H3K4me1+ and (H3K27ac+ or ATAC+); H3K4me3 must be absent when tested.</p></dd>
 
 <dt>supported</dt>
 <dd><p>Any of H3K4me1, H3K27ac, or ATAC positive. Anchors with H3K4me3+
-(regardless of H3K27me3 status) receive a <code>"promoter_like"</code> evidence tag.</p></dd>
+receive a <code>"promoter_like"</code> evidence tag (note: the evidence tag alone does
+not force reclassification; triple-positive anchors retain eP/eG via
+<code>conflicting_marks</code>).</p></dd>
 
-<dt>weak</dt>
+<dt>limited</dt>
 <dd><p>Tested negative markers (H3K27me3-, H3K4me3-) present but no active marks.</p></dd>
 
 <dt>uncertain</dt>
@@ -221,26 +223,22 @@ normalised to <code>H3K4me1</code>).</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Create dummy chromatin BED files for demonstration</span></span></span>
 <span class="r-in"><span><span class="va">bed_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="st">"chr6\t10410000\t10413000"</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">bed_dir</span>, <span class="st">"H3K4me1.bed"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="st">"chr6\t10411000\t10414000"</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">bed_dir</span>, <span class="st">"H3K27ac.bed"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="st">"chr1\t109492000\t109496500"</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">bed_dir</span>, <span class="st">"H3K4me1.bed"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="st">"chr1\t116686500\t116690000"</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">bed_dir</span>, <span class="st">"H3K27ac.bed"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Run validation (using raw annotation; pass refined for eP/eG only)</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu">validate_epeG_by_chromatin</span><span class="op">(</span></span></span>
-<span class="r-in"><span>    annotation_res <span class="op">=</span> <span class="va">raw_annotation</span>,</span></span>
-<span class="r-in"><span>    chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>        H3K4me1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">bed_dir</span>, <span class="st">"H3K4me1.bed"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>        H3K27ac <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">bed_dir</span>, <span class="st">"H3K27ac.bed"</span><span class="op">)</span></span></span>
-<span class="r-in"><span>    <span class="op">)</span>,</span></span>
-<span class="r-in"><span>    quiet <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span>  annotation_res <span class="op">=</span> <span class="va">raw_annotation</span>,</span></span>
+<span class="r-in"><span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    H3K4me1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">bed_dir</span>, <span class="st">"H3K4me1.bed"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    H3K27ac <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">bed_dir</span>, <span class="st">"H3K27ac.bed"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span>,</span></span>
+<span class="r-in"><span>  quiet <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>The 2 combined objects have no sequence levels in common. (Use</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   suppressWarnings() to suppress this warning.)</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>The 2 combined objects have no sequence levels in common. (Use</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   suppressWarnings() to suppress this warning.)</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">result</span><span class="op">$</span><span class="va">enhancer_evidence</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   gold_standard high_confidence       supported            weak       uncertain </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>               0               0               0               0             385 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> canonical    strong supported   limited uncertain </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         0         0         2         0       383 </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

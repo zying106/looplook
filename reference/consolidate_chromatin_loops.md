@@ -23,7 +23,7 @@ The function supports three modes:
   whose anchors overlap with loops in every other file within the
   specified `gap` tolerance. Coordinates and scores are inherited from
   File 1 without merging. **Important: Intersect mode is NOT
-  symmetric.** The output depends on which file is listed first — loops
+  symmetric.** The output depends on which file is listed first – loops
   are retained from File 1 only. Changing file order may produce
   different results.
 
@@ -36,7 +36,7 @@ same cluster even if they are far apart). By default, a warning is
 emitted when any cluster span exceeds the chaining threshold
 (`max(3*gap, 5*med_width*gap/1000)`). Use `chaining_policy` to control
 this behavior (`"warn"`, `"none"`, `"drop"`, or `"error"`). **Note:**
-the default `"warn"` policy does *not* remove affected clusters — their
+the default `"warn"` policy does *not* remove affected clusters – their
 inflated coordinates (from `min(start)` to `max(end)` across all chained
 members) flow into downstream analyses unchanged. When chaining is a
 concern for downstream overlapping operations, use
@@ -82,7 +82,16 @@ consolidate_chromatin_loops(
 
 - files:
 
-  Character vector. Paths to BEDPE files (at least two).
+  Character vector. Paths to BEDPE files (at least two). **Empty
+  files:** A zero-byte BEDPE file is treated as an empty replicate and
+  triggers a warning. Empty replicates remain part of the replicate set:
+  they count toward the default consensus denominator (`min_consensus`)
+  and are required by intersect mode (which demands support from all
+  inputs). They contribute no interactions in union mode. A file must be
+  truly zero-byte to qualify as an empty replicate; any non-empty file
+  must be a valid BEDPE with at least six columns. Verify that an empty
+  file represents a legitimate biological result rather than a failed
+  loop-calling run.
 
 - gap:
 
@@ -212,7 +221,7 @@ object with metadata columns:
 
   Number of raw loops merged into this entry (1 for intersect mode where
   no coordinate merging occurs). For `"intersect"` mode, results are
-  **not symmetric** — changing file order changes output.
+  **not symmetric** – changing file order changes output.
 
 - `n_reps`:
 
@@ -240,31 +249,31 @@ f2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
 # Example A: Intersect Mode
 # Only keeps loops present in f1 that are also supported by f2
 res_intersect <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "intersect",
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
+  files = c(f1, f2),
+  mode = "intersect",
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
 )
 #> >>> Reading BEDPE files
-#>     File 1: 300 loops
-#>     File 2: 300 loops
+#>     File 1: 300 loops (raw: 300)
+#>     File 2: 300 loops (raw: 300)
 #> >>> Intersect mode: Reference-based filtering (No Coordinate Merging)
 #>     Base: File 1 (first input). Output coordinates and scores come exclusively from File 1.
 #>     Intersecting with File 2...
-#> Finished! Saved to /tmp/RtmpZTWO9X/file9e163debd9b9.bedpe
 #> Finished! Final loops: 12
+#> Finished! Saved to /tmp/RtmppSmNji/file9dfb6de8fa3d.bedpe
 
 # Example B: Consensus Mode (formerly Reproducible)
 # Finds consensus loops supported by both replicates (default for N=2)
 res_consensus <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "consensus",
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
+  files = c(f1, f2),
+  mode = "consensus",
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
 )
 #> >>> Reading BEDPE files
-#>     File 1: 300 loops
-#>     File 2: 300 loops
+#>     File 1: 300 loops (raw: 300)
+#>     File 2: 300 loops (raw: 300)
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> --- Gap Diagnosis ---
 #>   Anchor width: median = 4,859 bp  (IQR: 3,433.25 - 7,146.25 bp)
@@ -286,20 +295,20 @@ res_consensus <- consolidate_chromatin_loops(
 #>     #4: max_span = 11,840 bp, n_members = 2, n_reps = 2
 #>   Chaining: 0/12 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpZTWO9X/file9e16611ff43d.bedpe
 #> Finished! Final loops: 12
+#> Finished! Saved to /tmp/RtmppSmNji/file9dfb13b800d1.bedpe
 
 # Example C: Union Mode
 # Merges all loops into a single map
 res_union <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "union",
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
+  files = c(f1, f2),
+  mode = "union",
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
 )
 #> >>> Reading BEDPE files
-#>     File 1: 300 loops
-#>     File 2: 300 loops
+#>     File 1: 300 loops (raw: 300)
+#>     File 2: 300 loops (raw: 300)
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> --- Gap Diagnosis ---
 #>   Anchor width: median = 4,859 bp  (IQR: 3,433.25 - 7,146.25 bp)
@@ -320,24 +329,24 @@ res_union <- consolidate_chromatin_loops(
 #>     #427: max_span = 26,620 bp, n_members = 1, n_reps = 1
 #>   Chaining: 0/586 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpZTWO9X/file9e1645346b3f.bedpe
 #> Finished! Final loops: 586
+#> Finished! Saved to /tmp/RtmppSmNji/file9dfb3230be12.bedpe
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
 # 1. Pre-filter: Discard singletons (score < 2) to remove noise.
 # 2. Merge: Find loops present in both replicates.
 # 3. Post-filter: Keep only strong consensus loops (score > 5).
 res_clean <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "consensus",
-    min_raw_score = 2, # Pre-filter (remove noise)
-    min_score = 5, # Post-filter (keep strong loops)
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
+  files = c(f1, f2),
+  mode = "consensus",
+  min_raw_score = 2, # Pre-filter (remove noise)
+  min_score = 5, # Post-filter (keep strong loops)
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
 )
 #> >>> Reading BEDPE files
-#>     File 1: 115 loops
-#>     File 2: 100 loops
+#>     File 1: 115 loops (raw: 300)
+#>     File 2: 100 loops (raw: 300)
 #> >>> Clustering mode (Union/Consensus): Merging coordinates via Graph
 #> --- Gap Diagnosis ---
 #>   Anchor width: median = 5,403 bp  (IQR: 3,921.5 - 8,977 bp)
@@ -359,8 +368,8 @@ res_clean <- consolidate_chromatin_loops(
 #>     #5: max_span = 6,849 bp, n_members = 2, n_reps = 2
 #>   Chaining: 0/7 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
-#> Finished! Saved to /tmp/RtmpZTWO9X/file9e16250ca19a.bedpe
 #> Finished! Final loops: 4
+#> Finished! Saved to /tmp/RtmppSmNji/file9dfb5524eaae.bedpe
 
 # Inspect results
 length(res_intersect)

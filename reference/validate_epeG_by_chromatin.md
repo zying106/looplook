@@ -70,13 +70,13 @@ A data frame with columns:
 
 - H3K4me1, H3K27ac, ATAC, H3K27me3, H3K4me3:
 
-  Logical or `NA`. `TRUE` = overlap, `FALSE` = tested but absent, `NA` =
-  not tested.
+  Logical or `NA`. `TRUE` = peak detected, `FALSE` = peak not called
+  (below detection threshold in this dataset), `NA` = mark not provided.
 
 - enhancer_evidence:
 
-  Factor: `gold_standard` \> `high_confidence` \> `supported` \> `weak`
-  \> `uncertain`.
+  Factor (enhancer evidence level): `canonical` \> `strong` \>
+  `supported` \> `limited` \> `uncertain`.
 
 - evidence:
 
@@ -87,24 +87,26 @@ A data frame with columns:
 
 ## Details
 
-Confidence levels follow ENCODE active-enhancer criteria. Each anchor is
-classified into the highest applicable level:
+Enhancer evidence levels follow ENCODE-inspired active-enhancer
+criteria. Each anchor is classified into the highest applicable level:
 
-- gold_standard:
+- canonical:
 
   All 5 marks tested: H3K4me1+, H3K27ac+, ATAC+, H3K27me3-, H3K4me3-.
+  This is a chromatin signature match, not functional validation.
 
-- high_confidence:
+- strong:
 
   H3K4me1+ and (H3K27ac+ or ATAC+); H3K4me3 must be absent when tested.
 
 - supported:
 
   Any of H3K4me1, H3K27ac, or ATAC positive. Anchors with H3K4me3+
-  (regardless of H3K27me3 status) receive a `"promoter_like"` evidence
-  tag.
+  receive a `"promoter_like"` evidence tag (note: the evidence tag alone
+  does not force reclassification; triple-positive anchors retain eP/eG
+  via `conflicting_marks`).
 
-- weak:
+- limited:
 
   Tested negative markers (H3K27me3-, H3K4me3-) present but no active
   marks.
@@ -127,24 +129,20 @@ raw_annotation <- tmp[[ls(tmp)[1]]]
 
 # Create dummy chromatin BED files for demonstration
 bed_dir <- tempdir()
-writeLines("chr6\t10410000\t10413000", file.path(bed_dir, "H3K4me1.bed"))
-writeLines("chr6\t10411000\t10414000", file.path(bed_dir, "H3K27ac.bed"))
+writeLines("chr1\t109492000\t109496500", file.path(bed_dir, "H3K4me1.bed"))
+writeLines("chr1\t116686500\t116690000", file.path(bed_dir, "H3K27ac.bed"))
 
 # Run validation (using raw annotation; pass refined for eP/eG only)
 result <- validate_epeG_by_chromatin(
-    annotation_res = raw_annotation,
-    chromatin_beds = list(
-        H3K4me1 = file.path(bed_dir, "H3K4me1.bed"),
-        H3K27ac = file.path(bed_dir, "H3K27ac.bed")
-    ),
-    quiet = TRUE
+  annotation_res = raw_annotation,
+  chromatin_beds = list(
+    H3K4me1 = file.path(bed_dir, "H3K4me1.bed"),
+    H3K27ac = file.path(bed_dir, "H3K27ac.bed")
+  ),
+  quiet = TRUE
 )
-#> Warning: The 2 combined objects have no sequence levels in common. (Use
-#>   suppressWarnings() to suppress this warning.)
-#> Warning: The 2 combined objects have no sequence levels in common. (Use
-#>   suppressWarnings() to suppress this warning.)
 table(result$enhancer_evidence)
 #> 
-#>   gold_standard high_confidence       supported            weak       uncertain 
-#>               0               0               0               0             385 
+#> canonical    strong supported   limited uncertain 
+#>         0         0         2         0       383 
 ```

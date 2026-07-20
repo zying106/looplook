@@ -23,7 +23,8 @@ resolve_gene_conflicts(
   min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
   co_dominance_ratio = 0.1,
-  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")
+  biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene"),
+  unmeasured_policy = c("keep", "drop")
 )
 ```
 
@@ -89,6 +90,13 @@ resolve_gene_conflicts(
   prioritise lncRNAs over protein-coding genes while keeping everything
   else as-is, set `c("lncRNA", "protein")`.
 
+- unmeasured_policy:
+
+  Character. How to treat genes absent from the expression matrix during
+  conflict resolution. `"keep"` (default): unmeasured genes are retained
+  as candidates. `"drop"`: unmeasured genes are excluded, only genes
+  with measured expression are considered.
+
 ## Value
 
 The input data frame with `SYMBOL` and `annotation` columns resolved.
@@ -100,31 +108,32 @@ The input data frame with `SYMBOL` and `annotation` columns resolved.
 # It demonstrates the core conflict-resolution logic on a synthetic
 # genomic region near the hg19 HLA locus (chr6:29,940,000-29,950,000).
 if (requireNamespace("org.Hs.eg.db", quietly = TRUE) &&
-    requireNamespace("GenomicFeatures", quietly = TRUE)) {
-    txdb <- AnnotationDbi::loadDb(
-        system.file("extdata", "hg19_knownGene_sample.sqlite",
-                     package = "GenomicFeatures")
+  requireNamespace("GenomicFeatures", quietly = TRUE)) {
+  txdb <- AnnotationDbi::loadDb(
+    system.file("extdata", "hg19_knownGene_sample.sqlite",
+      package = "GenomicFeatures"
     )
+  )
 
-    # Minimal genomic region: seqnames, start, end
-    test_region <- data.frame(
-        seqnames = "chr6",
-        start    = 29940000L,
-        end      = 29950000L,
-        stringsAsFactors = FALSE
-    )
+  # Minimal genomic region: seqnames, start, end
+  test_region <- data.frame(
+    seqnames = "chr6",
+    start = 29940000L,
+    end = 29950000L,
+    stringsAsFactors = FALSE
+  )
 
-    # Run with default settings (biotype-first, no expression data)
-    result <- resolve_gene_conflicts(
-        current_anno_df    = test_region,
-        txdb_obj           = txdb,
-        org_db_pkg         = "org.Hs.eg.db",
-        tss_region         = c(-2000, 2000),
-        gene_expr_map      = NULL,
-        conflict_strategy  = "biotype_first"
-    )
+  # Run with default settings (biotype-first, no expression data)
+  result <- resolve_gene_conflicts(
+    current_anno_df    = test_region,
+    txdb_obj           = txdb,
+    org_db_pkg         = "org.Hs.eg.db",
+    tss_region         = c(-2000, 2000),
+    gene_expr_map      = NULL,
+    conflict_strategy  = "biotype_first"
+  )
 
-    # Inspect resolved gene symbols (columns appear when genes are found)
-    if ("SYMBOL" %in% colnames(result)) print(result$SYMBOL)
+  # Inspect resolved gene symbols (columns appear when genes are found)
+  if ("SYMBOL" %in% colnames(result)) print(result$SYMBOL)
 }
 ```

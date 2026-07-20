@@ -25,6 +25,7 @@ annotate_peaks_and_loops(
   org_db = NULL,
   species = "hg38",
   tss_region = c(-2000, 2000),
+  anchor_merge_gap = 0,
   out_dir = "./results",
   expr_matrix_file = NULL,
   sample_columns = NULL,
@@ -33,6 +34,7 @@ annotate_peaks_and_loops(
   karyo_bin_size = 1e+05,
   neighbor_hop = 0,
   hub_percentile = 0.95,
+  hub_metric = c("unique_contacts", "total_loops"),
   min_expr = 0,
   conflict_strategy = c("biotype_first", "expression_first"),
   co_dominance_ratio = 0.1,
@@ -41,7 +43,8 @@ annotate_peaks_and_loops(
   anchor_min_overlap = 1L,
   anchor_min_frac = 0,
   write_output = TRUE,
-  quiet = FALSE
+  quiet = FALSE,
+  target_priority = c("promoter_then_distance", "distance_then_role")
 )
 ```
 
@@ -84,9 +87,20 @@ annotate_peaks_and_loops(
 - tss_region:
 
   Numeric vector of length 2. Promoter window around the TSS in bp.
-  Default: `c(-2000, 2000)` (±2 kb; typical for mammalian protein-coding
-  genes; may need widening for broad domains like HOX clusters, or
-  narrowing for compact genomes).
+  Default: `c(-2000, 2000)` (+/-2 kb; typical for mammalian
+  protein-coding genes; may need widening for broad domains like HOX
+  clusters, or narrowing for compact genomes).
+
+- anchor_merge_gap:
+
+  Integer. Merge loop anchors within this many bp on the same chromosome
+  before building the connectivity graph. Default `0` (no merging;
+  anchors must match exactly on chr, start, end). Set to `50--200` when
+  input BEDPE comes directly from a loop caller without prior replicate
+  consolidation – the same biological anchor may appear with slightly
+  different boundaries in different loop rows, which would otherwise
+  fragment the graph. Not needed when input is pre-consolidated via
+  [`consolidate_chromatin_loops`](https://zying106.github.io/looplook/reference/consolidate_chromatin_loops.md).
 
 - out_dir:
 
@@ -95,9 +109,10 @@ annotate_peaks_and_loops(
 
 - expr_matrix_file:
 
-  Optional path to a normalised expression matrix (TPM/FPKM, genes x
-  samples). Enables expression-aware conflict resolution. Default:
-  `NULL`.
+  Optional path to a normalised expression matrix (genes x samples).
+  Accepts steady-state RNA-seq (TPM/FPKM), nascent transcription data
+  (NET-seq, PRO-seq, GRO-seq, TT-seq), or CAGE-seq. Enables
+  expression-aware conflict resolution. Default: `NULL`.
 
 - sample_columns:
 
@@ -134,15 +149,25 @@ annotate_peaks_and_loops(
   are flagged as hubs. A minimum floor of 3 (promoter-centric) or 2
   (distal) is applied to avoid false hubs in small datasets.
 
+- hub_metric:
+
+  Character. Which connectivity count to use for hub detection.
+  `"unique_contacts"` (default): counts distinct neighbour anchor IDs,
+  robust to duplicate/replicate loop rows. `"total_loops"`: counts all
+  loop rows (backward compatible; may inflate hub calls when input
+  contains unconsolidated replicates).
+
 - min_expr:
 
   Numeric. Minimum expression value for a gene to be considered active
   during anchor-level conflict resolution. Used only when
-  `expr_matrix_file` is provided. Default: `0` (any non-zero expression,
-  i.e. TPM \> 0). Increase to `1` or higher to require stronger
-  evidence. Note: when `min_expr = 0`, the code uses a strict
-  greater-than comparison (`> 0`) to exclude truly undetected genes;
-  when `min_expr >= 1`, it uses `>= min_expr`. See
+  `expr_matrix_file` is provided. Default: `0` (any non-zero
+  expression). Increase to `1` or higher to require stronger evidence.
+  Note: when `min_expr = 0`, the code uses a strict greater-than
+  comparison (`> 0`) to exclude truly undetected genes; when
+  `min_expr >= 1`, it uses `>= min_expr`. For nascent transcription data
+  (NET-seq, PRO-seq), gene-body aggregated signal should be used as the
+  quantitative input. See
   [`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
   for the separate `threshold` parameter that controls promoter
   reclassification.
@@ -176,25 +201,21 @@ annotate_peaks_and_loops(
 
 - anchor_gap:
 
-  Integer. Search radius: how far apart (bp) can a peak and loop anchor
-  be for the peak to be considered "near" the anchor? `-1L` (default):
-  strict physical overlap required (GenomicRanges default – peak and
-  anchor must share at least 1 bp). `0L`: adjacent intervals (peak end
-  == anchor start) also count. `>0`: explicit gap tolerance in bp (e.g.
-  `200` = 200 bp tolerance for cross-experiment integration). When
-  `>= 0`, the result includes both physically overlapping pairs AND
-  proximity-only pairs (within gap but no actual overlap). Use
-  `anchor_min_overlap > 1` to require actual physical overlap among
-  these candidates.
+  Integer. Candidate search radius in bp between a peak and a loop
+  anchor. `-1L` (default): strict physical overlap required. When
+  `>= 0`, expands the candidate search window (e.g. `200` for
+  cross-experiment coordinate shifts). **Note:** final retention always
+  requires at least `anchor_min_overlap` bp of physical overlap; this
+  parameter only controls which candidates are evaluated, not whether
+  proximity-only pairs are retained.
 
 - anchor_min_overlap:
 
-  Integer. After candidate pairs are found (via `anchor_gap`), how many
-  base pairs of actual physical overlap are required? Default `1L`: any
-  touch counts (including proximity-only hits when `anchor_gap >= 0`).
-  Increase to `10-100` to filter out spurious boundary overlaps. Setting
-  this `> 1` with `anchor_gap >= 0` ensures that even with gap
-  tolerance, only pairs with genuine physical overlap are retained.
+  Integer. Minimum required physical overlap (bp) between a peak and an
+  anchor. Default `1L`: at least 1 bp of actual sequence overlap
+  required — proximity-only pairs within the `anchor_gap` window but
+  without physical overlap are excluded. Increase to `10-100` for broad
+  peaks to avoid spurious boundary overlaps.
 
 - anchor_min_frac:
 
@@ -215,6 +236,22 @@ annotate_peaks_and_loops(
   Logical. If `TRUE`, suppress progress messages while preserving
   warnings. Default: `FALSE`.
 
+- target_priority:
+
+  Character. How to prioritise among multiple candidate target genes per
+  input feature. The policy applies only within primary target links
+  (default `path_length <= 1`); longer paths are reported separately as
+  `Expanded_Target_Genes` and do not participate in
+  `Assigned_Target_Genes` selection. `"promoter_then_distance"`
+  (default): within primary links, promoter evidence dominates — all
+  promoter-linked genes beat all gene-body genes regardless of path
+  length; within each tier shorter paths win. `"distance_then_role"`:
+  within primary links, path-length dominates — the closest linked gene
+  wins; at equal distance promoter beats gene-body (legacy behaviour).
+  The policy affects `Assigned_Target_Genes` only.
+  `Regulated_promoter_genes` always reports all promoter-linked genes
+  regardless of the chosen policy.
+
 ## Value
 
 A named list:
@@ -228,17 +265,16 @@ A named list:
   - `Regulated_promoter_genes`: Promoter genes supported by loop-anchor
     context.
 
-  - `Assigned_Target_Genes`: Promoter-first 3D assignment (prioritises P
-    \> G \> E).
+  - `Assigned_Target_Genes`: Policy-based 3D assignment (default:
+    promoter-first, then shorter path wins; see `target_priority`).
 
   - `*_Filled` variants: Linear nearest-gene fallback when strict 3D
     assignments are empty.
 
   - `Regulated_promoter_Evidence`: Provenance of
     `Regulated_promoter_genes` (e.g., `local_promoter_overlap`,
-    `direct_opposite_promoter`). **Read with**
-    `Regulated_promoter_genes`; do not cross-reference with
-    `Assigned_Target_Genes` or other columns.
+    `distal_promoter`). **Read with** `Regulated_promoter_genes`; do not
+    cross-reference with `Assigned_Target_Genes` or other columns.
 
   - `Regulated_promoter_Fallback_Evidence`: Provenance of
     `Regulated_promoter_genes_Filled`. **Read with**
@@ -261,8 +297,8 @@ A named list:
     (nearest gene).
 
   - `evidence`: Provenance label – `"local_promoter_overlap"` (peak
-    overlaps anchor promoter), `"direct_opposite_promoter"` (opposite
-    anchor is promoter), `"gene_body_context"` (gene body linkage),
+    overlaps anchor promoter), `"distal_promoter"` (promoter on the
+    distal loop anchor), `"gene_body_context"` (gene body linkage),
     `"expanded_promoter_loop"` (via ego-network expansion),
     `"linear_annotation"` (direct nearest gene), or `"linear_fallback"`
     (filled when 3D assignment was empty).
@@ -278,10 +314,10 @@ A named list:
     gene appears in.
 
 - `loop_annotation` – Annotated 3D interactome with
-  `Putative_Target_Genes` (genes from P/G-type anchors connected through
-  the loop network; for G-P loops, preferentially selects P-side genes).
-  Does not include linear nearest-gene fallback at this stage (added by
-  [`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)).
+  `Putative_Target_Genes` (all P/G anchor genes connected through the
+  loop network) and `Promoter_Target_Genes` (promoter-only subset,
+  P-side genes). G–P/P–G asymmetry is respected. Does not include linear
+  nearest-gene fallback.
 
 - `anchor_loci_annotation` – Non-redundant anchor-locus genomic
   classifications after within-cluster interval reduction.
@@ -291,7 +327,7 @@ A named list:
 
 - `promoter_centric_stats` – Gene-level connectivity statistics.
 
-- `distal_element_stats` – Distal-element connectivity statistics.
+- `distal_element_stats` – Distal anchor connectivity (E, dual, G, eG).
 
 - `plots` – Named list of ggplot/grob objects: `Basic_Donut`,
   `Basic_Circular`, `Basic_Flower`, `Karyo_LoopGenes`, `Karyo_Anchors`,
@@ -375,7 +411,7 @@ designs.
 |  |  |  |  |
 |----|----|----|----|
 | **Experimental design** | `anchor_gap` | `anchor_min_overlap` | `anchor_min_frac` |
-| Same-experiment HiChIP / ChIA-PET (default) | `0` | `1` | `0` |
+| Same-experiment HiChIP / ChIA-PET (default) | `-1` | `1` | `0` |
 | Cross-experiment (e.g. ATAC-seq peaks x HiChIP loops) | `200-500` | `10` | `0` |
 | Broad histone-mark peaks (H3K27ac, 2-5 kb) | `0` | `100` | `0.1` |
 | Super-enhancers / wide domains (20-80 kb) | `0` | `500` | `0.05` |
@@ -400,25 +436,25 @@ for automated functional profiling.
 ``` r
 # Minimal runnable example for package checks
 if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-    txdb_example <- AnnotationDbi::loadDb(
-        system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")
-    )
-    bedpe_path <- tempfile(fileext = ".bedpe")
-    writeLines(
-        "chr6\t10412000\t10412600\tchr6\t10415000\t10415600",
-        bedpe_path
-    )
+  txdb_example <- AnnotationDbi::loadDb(
+    system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")
+  )
+  bedpe_path <- tempfile(fileext = ".bedpe")
+  writeLines(
+    "chr6\t10412000\t10412600\tchr6\t10415000\t10415600",
+    bedpe_path
+  )
 
-    res <- annotate_peaks_and_loops(
-        bedpe_file = bedpe_path,
-        txdb = txdb_example,
-        org_db = "org.Hs.eg.db",
-        species = "hg19",
-        out_dir = tempdir(),
-        project_name = "Quick_Example",
-        write_output = FALSE,
-        quiet = TRUE
-    )
-    head(res$loop_annotation, 1)
+  res <- annotate_peaks_and_loops(
+    bedpe_file = bedpe_path,
+    txdb = txdb_example,
+    org_db = "org.Hs.eg.db",
+    species = "hg19",
+    out_dir = tempdir(),
+    project_name = "Quick_Example",
+    write_output = FALSE,
+    quiet = TRUE
+  )
+  head(res$loop_annotation, 1)
 }
 ```

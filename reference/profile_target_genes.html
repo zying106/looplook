@@ -83,7 +83,7 @@ protein-protein interaction (PPI) network construction."><meta property="og:imag
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.14</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.15</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -127,7 +127,7 @@ protein-protein interaction (PPI) network construction.</p>
 <span>  <span class="va">expr_matrix_file</span>,</span>
 <span>  <span class="va">metadata_file</span>,</span>
 <span>  target_source <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"loops"</span>, <span class="st">"targets"</span><span class="op">)</span>,</span>
-<span>  target_mapping_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"promoter"</span>, <span class="st">"active"</span><span class="op">)</span>,</span>
+<span>  target_mapping_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"all"</span>, <span class="st">"promoter"</span><span class="op">)</span>,</span>
 <span>  loop_types <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"E-P"</span>, <span class="st">"P-P"</span><span class="op">)</span>,</span>
 <span>  include_Filled <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  use_nearest_gene <span class="op">=</span> <span class="cn">FALSE</span>,</span>
@@ -138,14 +138,16 @@ protein-protein interaction (PPI) network construction.</p>
 <span>  genome_id <span class="op">=</span> <span class="st">"hg38"</span>,</span>
 <span>  motif_p_thresh <span class="op">=</span> <span class="fl">1e-04</span>,</span>
 <span>  motif_ntop <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  motif_n_perm <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  run_go <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  run_ppi <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  ppi_score <span class="op">=</span> <span class="fl">400</span>,</span>
 <span>  ppi_nSample <span class="op">=</span> <span class="fl">400</span>,</span>
 <span>  ppi_species_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  heatmap_nSample <span class="op">=</span> <span class="fl">99999</span>,</span>
-<span>  gsea_nSample <span class="op">=</span> <span class="fl">99999</span>,</span>
+<span>  gsea_nSample <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  cnet_nSample <span class="op">=</span> <span class="fl">50</span>,</span>
+<span>  universe_genes <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  stat_test <span class="op">=</span> <span class="st">"wilcox.test"</span>,</span>
 <span>  cor_method <span class="op">=</span> <span class="st">"pearson"</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span></span>
@@ -183,11 +185,12 @@ Default <code>c("loops", "targets")</code>.</p></dd>
 
 
 <dt id="arg-target-mapping-mode">target_mapping_mode<a class="anchor" aria-label="anchor" href="#arg-target-mapping-mode"></a></dt>
-<dd><p>Character. Mapping strategy: <code>"all"</code> (any
-anchor-gene connection), <code>"promoter"</code> (require direct promoter
-contact), or <code>"active"</code> (only expression-filtered active target
-genes; available only with <code>target_source = "loops"</code> after running
-<code><a href="refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></code>). Default <code>"all"</code>.</p></dd>
+<dd><p>Character. Mapping strategy: <code>"all"</code>
+(all anchor-gene connections, <code>Putative_Target_Genes</code>) or
+<code>"promoter"</code> (promoter-only subset, <code>Promoter_Target_Genes</code>).
+Expression filtering is determined by the refinement stage of the
+supplied annotation object, not by this parameter.
+Default <code>"all"</code>.</p></dd>
 
 
 <dt id="arg-loop-types">loop_types<a class="anchor" aria-label="anchor" href="#arg-loop-types"></a></dt>
@@ -240,6 +243,17 @@ Default <code>1e-4</code>.</p></dd>
 Default <code>5</code>.</p></dd>
 
 
+<dt id="arg-motif-n-perm">motif_n_perm<a class="anchor" aria-label="anchor" href="#arg-motif-n-perm"></a></dt>
+<dd><p>Integer. Number of within-component foreground/background
+label permutations for empirical motif P-value estimation. When positive,
+labels are shuffled within each loop component to partially account for
+anchor non-independence. <code>0</code> (default) retains Fisher exact test.
+Use <code>10-100</code> for testing. For inference, choose according to the
+number of motifs and desired P-value resolution; <code>1000</code> may be
+insufficient after multiple-testing correction across a full motif library.
+This is an exploratory calibration, not a fully component-level model.</p></dd>
+
+
 <dt id="arg-run-go">run_go<a class="anchor" aria-label="anchor" href="#arg-run-go"></a></dt>
 <dd><p>Logical. Whether to perform Gene Ontology (GO) enrichment.
 Default <code>FALSE</code>.</p></dd>
@@ -275,15 +289,24 @@ readable heatmaps.</p></dd>
 
 
 <dt id="arg-gsea-nsample">gsea_nSample<a class="anchor" aria-label="anchor" href="#arg-gsea-nsample"></a></dt>
-<dd><p>Numeric. Maximum number of target genes to sample for GSEA.
-Default <code>99999</code> (effectively no down-sampling; all target genes are
-used). When the gene set is large, set to a smaller value (e.g. <code>20</code>)
-to reduce enrichment bias. Set to <code>NULL</code> to always use the full set.</p></dd>
+<dd><p>Numeric or <code>NULL</code>. Maximum number of target genes
+to sample for GSEA. Default <code>NULL</code> (no down-sampling; all target
+genes are used). Down-sampling introduces Monte Carlo variance and
+should only be used when the target set is extremely large (&gt;1000 genes)
+for computational efficiency. For reproducible results, set the
+<code>seed</code> parameter when using down-sampling.</p></dd>
 
 
 <dt id="arg-cnet-nsample">cnet_nSample<a class="anchor" aria-label="anchor" href="#arg-cnet-nsample"></a></dt>
 <dd><p>Numeric. Number of top GO terms to display in cnetplot.
 Default <code>50</code>.</p></dd>
+
+
+<dt id="arg-universe-genes">universe_genes<a class="anchor" aria-label="anchor" href="#arg-universe-genes"></a></dt>
+<dd><p>Named numeric vector or <code>NULL</code>. GO background
+universe.  Names are gene symbols, values are ranking metrics (e.g. LFC).
+When <code>NULL</code>, the full differential table is used as background.
+Default <code>NULL</code>.</p></dd>
 
 
 <dt id="arg-stat-test">stat_test<a class="anchor" aria-label="anchor" href="#arg-stat-test"></a></dt>
@@ -310,6 +333,9 @@ reproducible results. The seed is recorded in the result object as
 Each element contains:</p><dl><dt><code>go_results</code></dt>
 <dd><p>Named list of data frames (one per gene set) containing GO enrichment results (if <code>run_go = TRUE</code>).</p></dd>
 
+<dt><code>motif_results</code></dt>
+<dd><p>Named list of motif enrichment result tables, indexed by analysis task. Each task contains <code>proximal</code> and <code>distal</code> data frames when available (if <code>run_motif = TRUE</code>).</p></dd>
+
 <dt><code>target_gene_sets</code></dt>
 <dd><p>Named list of character vectors containing target gene symbols.</p></dd>
 
@@ -323,18 +349,24 @@ Each element contains:</p><dl><dt><code>go_results</code></dt>
 </dl></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>Two analysis steps use random sampling: GSEA target-gene down-sampling
-(controlled by <code>gsea_nSample</code>, via unweighted sampling without
-replacement to reduce enrichment bias) and motif background anchor sampling
-(GC-matched, limited to 2 000 background regions per contrast).
-GSEA tie-breaking for duplicate ranked values is deterministic
-(position-based offset). For fully reproducible results, set the <code>seed</code>
+    <p>GSEA operates on the full target gene set by default (<code>gsea_nSample = NULL</code>).
+Down-sampling is available for very large sets but introduces Monte Carlo
+variance. Motif background anchor sampling is GC-matched, limited to 2 000
+background regions per contrast. GSEA tie-breaking for duplicate ranked
+values is deterministic (position-based offset). For fully reproducible
+results, set the <code>seed</code>
 parameter.</p>
 <p><strong>Exploratory modules:</strong> The GO enrichment (<code>run_go</code>), motif scanning
 (<code>run_motif</code>), and PPI network (<code>run_ppi</code>) modules are
 <em>research-grade</em> analyses that depend on external databases and algorithms.
 Results should be treated as hypothesis-generating and validated with
-independent experimental approaches. All three modules are disabled by default.</p>
+independent experimental approaches. All three modules are disabled by default.
+<strong>Motif enrichment note:</strong> By default, Fisher's exact test treats each
+anchor as an independent observation. When <code>motif_n_perm &gt; 0</code>,
+empirical P-values are estimated by shuffling foreground/background labels
+within loop components, which partially accounts for component dependence.
+Pure-label components are non-exchangeable; the procedure remains exploratory
+rather than a fully component-level inferential model.</p>
     </div>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>
@@ -360,16 +392,16 @@ modules to complete. To proactively disable specific modules, set
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/load.html" class="external-link">load</a></span><span class="op">(</span><span class="va">rdata_path</span>, envir <span class="op">=</span> <span class="va">tmp</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="va">tmp</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/ls.html" class="external-link">ls</a></span><span class="op">(</span><span class="va">tmp</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">]</span></span></span>
 <span class="r-in"><span><span class="va">profile_res</span> <span class="op">&lt;-</span> <span class="fu">profile_target_genes</span><span class="op">(</span></span></span>
-<span class="r-in"><span>    annotation_res <span class="op">=</span> <span class="va">res</span>,</span></span>
-<span class="r-in"><span>    diff_file <span class="op">=</span> <span class="va">diff_path</span>,</span></span>
-<span class="r-in"><span>    expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span></span>
-<span class="r-in"><span>    metadata_file <span class="op">=</span> <span class="va">meta_path</span>,</span></span>
-<span class="r-in"><span>    run_go <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>    run_ppi <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>    run_motif <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>    heatmap_nSample <span class="op">=</span> <span class="fl">20</span>,</span></span>
-<span class="r-in"><span>    gsea_nSample <span class="op">=</span> <span class="fl">20</span>,</span></span>
-<span class="r-in"><span>    cnet_nSample <span class="op">=</span> <span class="fl">5</span></span></span>
+<span class="r-in"><span>  annotation_res <span class="op">=</span> <span class="va">res</span>,</span></span>
+<span class="r-in"><span>  diff_file <span class="op">=</span> <span class="va">diff_path</span>,</span></span>
+<span class="r-in"><span>  expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span></span>
+<span class="r-in"><span>  metadata_file <span class="op">=</span> <span class="va">meta_path</span>,</span></span>
+<span class="r-in"><span>  run_go <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>  run_ppi <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>  run_motif <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>  heatmap_nSample <span class="op">=</span> <span class="fl">20</span>,</span></span>
+<span class="r-in"><span>  gsea_nSample <span class="op">=</span> <span class="fl">20</span>,</span></span>
+<span class="r-in"><span>  cnet_nSample <span class="op">=</span> <span class="fl">5</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Analysis Init | Root Project: Analysis</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- Reading files...</span>
@@ -390,8 +422,8 @@ modules to complete. To proactively disable specific modules, set
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ================================================================</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Processing Source: [targets]</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: Target_Genes (Valid Genes: 217) ---</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA: down-sampling 20 of 217 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --- Task: Target_Genes (Valid Genes: 216) ---</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>GSEA: down-sampling 20 of 216 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>ComplexHeatmap/circlize not installed; skipping heatmap.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>

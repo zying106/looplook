@@ -17,7 +17,7 @@ profile_target_genes(
   expr_matrix_file,
   metadata_file,
   target_source = c("loops", "targets"),
-  target_mapping_mode = c("all", "promoter", "active"),
+  target_mapping_mode = c("all", "promoter"),
   loop_types = c("E-P", "P-P"),
   include_Filled = TRUE,
   use_nearest_gene = FALSE,
@@ -28,14 +28,16 @@ profile_target_genes(
   genome_id = "hg38",
   motif_p_thresh = 1e-04,
   motif_ntop = 5,
+  motif_n_perm = 0L,
   run_go = FALSE,
   run_ppi = FALSE,
   ppi_score = 400,
   ppi_nSample = 400,
   ppi_species_id = NULL,
   heatmap_nSample = 99999,
-  gsea_nSample = 99999,
+  gsea_nSample = NULL,
   cnet_nSample = 50,
+  universe_genes = NULL,
   stat_test = "wilcox.test",
   cor_method = "pearson",
   seed = NULL
@@ -73,12 +75,11 @@ profile_target_genes(
 
 - target_mapping_mode:
 
-  Character. Mapping strategy: `"all"` (any anchor-gene connection),
-  `"promoter"` (require direct promoter contact), or `"active"` (only
-  expression-filtered active target genes; available only with
-  `target_source = "loops"` after running
-  [`refine_loop_anchors_by_expression`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)).
-  Default `"all"`.
+  Character. Mapping strategy: `"all"` (all anchor-gene connections,
+  `Putative_Target_Genes`) or `"promoter"` (promoter-only subset,
+  `Promoter_Target_Genes`). Expression filtering is determined by the
+  refinement stage of the supplied annotation object, not by this
+  parameter. Default `"all"`.
 
 - loop_types:
 
@@ -128,6 +129,18 @@ profile_target_genes(
 
   Numeric. Number of top enriched motifs to output. Default `5`.
 
+- motif_n_perm:
+
+  Integer. Number of within-component foreground/background label
+  permutations for empirical motif P-value estimation. When positive,
+  labels are shuffled within each loop component to partially account
+  for anchor non-independence. `0` (default) retains Fisher exact test.
+  Use `10-100` for testing. For inference, choose according to the
+  number of motifs and desired P-value resolution; `1000` may be
+  insufficient after multiple-testing correction across a full motif
+  library. This is an exploratory calibration, not a fully
+  component-level model.
+
 - run_go:
 
   Logical. Whether to perform Gene Ontology (GO) enrichment. Default
@@ -162,14 +175,22 @@ profile_target_genes(
 
 - gsea_nSample:
 
-  Numeric. Maximum number of target genes to sample for GSEA. Default
-  `99999` (effectively no down-sampling; all target genes are used).
-  When the gene set is large, set to a smaller value (e.g. `20`) to
-  reduce enrichment bias. Set to `NULL` to always use the full set.
+  Numeric or `NULL`. Maximum number of target genes to sample for GSEA.
+  Default `NULL` (no down-sampling; all target genes are used).
+  Down-sampling introduces Monte Carlo variance and should only be used
+  when the target set is extremely large (\>1000 genes) for
+  computational efficiency. For reproducible results, set the `seed`
+  parameter when using down-sampling.
 
 - cnet_nSample:
 
   Numeric. Number of top GO terms to display in cnetplot. Default `50`.
+
+- universe_genes:
+
+  Named numeric vector or `NULL`. GO background universe. Names are gene
+  symbols, values are ranking metrics (e.g. LFC). When `NULL`, the full
+  differential table is used as background. Default `NULL`.
 
 - stat_test:
 
@@ -199,6 +220,12 @@ An invisible nested list indexed by `target_source` (e.g., `"targets"`,
   Named list of data frames (one per gene set) containing GO enrichment
   results (if `run_go = TRUE`).
 
+- `motif_results`:
+
+  Named list of motif enrichment result tables, indexed by analysis
+  task. Each task contains `proximal` and `distal` data frames when
+  available (if `run_motif = TRUE`).
+
 - `target_gene_sets`:
 
   Named list of character vectors containing target gene symbols.
@@ -215,11 +242,11 @@ An invisible nested list indexed by `target_source` (e.g., `"targets"`,
 
 ## Details
 
-Two analysis steps use random sampling: GSEA target-gene down-sampling
-(controlled by `gsea_nSample`, via unweighted sampling without
-replacement to reduce enrichment bias) and motif background anchor
-sampling (GC-matched, limited to 2 000 background regions per contrast).
-GSEA tie-breaking for duplicate ranked values is deterministic
+GSEA operates on the full target gene set by default
+(`gsea_nSample = NULL`). Down-sampling is available for very large sets
+but introduces Monte Carlo variance. Motif background anchor sampling is
+GC-matched, limited to 2 000 background regions per contrast. GSEA
+tie-breaking for duplicate ranked values is deterministic
 (position-based offset). For fully reproducible results, set the `seed`
 parameter.
 
@@ -228,7 +255,13 @@ parameter.
 analyses that depend on external databases and algorithms. Results
 should be treated as hypothesis-generating and validated with
 independent experimental approaches. All three modules are disabled by
-default.
+default. **Motif enrichment note:** By default, Fisher's exact test
+treats each anchor as an independent observation. When
+`motif_n_perm > 0`, empirical P-values are estimated by shuffling
+foreground/background labels within loop components, which partially
+accounts for component dependence. Pure-label components are
+non-exchangeable; the procedure remains exploratory rather than a fully
+component-level inferential model.
 
 ## Note
 
@@ -256,16 +289,16 @@ tmp <- new.env()
 load(rdata_path, envir = tmp)
 res <- tmp[[ls(tmp)[1]]]
 profile_res <- profile_target_genes(
-    annotation_res = res,
-    diff_file = diff_path,
-    expr_matrix_file = expr_path,
-    metadata_file = meta_path,
-    run_go = FALSE,
-    run_ppi = FALSE,
-    run_motif = FALSE,
-    heatmap_nSample = 20,
-    gsea_nSample = 20,
-    cnet_nSample = 5
+  annotation_res = res,
+  diff_file = diff_path,
+  expr_matrix_file = expr_path,
+  metadata_file = meta_path,
+  run_go = FALSE,
+  run_ppi = FALSE,
+  run_motif = FALSE,
+  heatmap_nSample = 20,
+  gsea_nSample = 20,
+  cnet_nSample = 5
 )
 #> >>> Analysis Init | Root Project: Analysis
 #> --- Reading files...
@@ -286,8 +319,8 @@ profile_res <- profile_target_genes(
 #> ================================================================
 #> >>> Processing Source: [targets]
 #> 
-#> --- Task: Target_Genes (Valid Genes: 217) ---
-#> Warning: GSEA: down-sampling 20 of 217 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).
+#> --- Task: Target_Genes (Valid Genes: 216) ---
+#> Warning: GSEA: down-sampling 20 of 216 target genes. GSEA results represent a random subset, not the full gene set. Set gsea_nSample = NULL for full analysis. For fully reproducible results, set the `seed` parameter in profile_target_genes() (e.g., seed = 42).
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 

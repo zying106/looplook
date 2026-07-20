@@ -83,7 +83,7 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
 
     <a class="navbar-brand me-2" href="../index.html">looplook</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.14</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.99.15</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -124,6 +124,7 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
 <span>  org_db <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
 <span>  tss_region <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2000</span>, <span class="fl">2000</span><span class="op">)</span>,</span>
+<span>  anchor_merge_gap <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  out_dir <span class="op">=</span> <span class="st">"./results"</span>,</span>
 <span>  expr_matrix_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  sample_columns <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -132,6 +133,7 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
 <span>  karyo_bin_size <span class="op">=</span> <span class="fl">1e+05</span>,</span>
 <span>  neighbor_hop <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  hub_percentile <span class="op">=</span> <span class="fl">0.95</span>,</span>
+<span>  hub_metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"unique_contacts"</span>, <span class="st">"total_loops"</span><span class="op">)</span>,</span>
 <span>  min_expr <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  conflict_strategy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"biotype_first"</span>, <span class="st">"expression_first"</span><span class="op">)</span>,</span>
 <span>  co_dominance_ratio <span class="op">=</span> <span class="fl">0.1</span>,</span>
@@ -140,7 +142,8 @@ Feature-to-Target Mapping: Links 1D genomic features (e.g., GWAS risk SNPs, ATAC
 <span>  anchor_min_overlap <span class="op">=</span> <span class="fl">1L</span>,</span>
 <span>  anchor_min_frac <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  write_output <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  target_priority <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"promoter_then_distance"</span>, <span class="st">"distance_then_role"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -177,7 +180,18 @@ for karyotype ideograms and JASPAR motif species filtering.</p></dd>
 
 
 <dt id="arg-tss-region">tss_region<a class="anchor" aria-label="anchor" href="#arg-tss-region"></a></dt>
-<dd><p>Numeric vector of length 2. Promoter window around the TSS in bp. Default: <code>c(-2000, 2000)</code> (±2 kb; typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).</p></dd>
+<dd><p>Numeric vector of length 2. Promoter window around the TSS in bp. Default: <code>c(-2000, 2000)</code> (+/-2 kb; typical for mammalian protein-coding genes; may need widening for broad domains like HOX clusters, or narrowing for compact genomes).</p></dd>
+
+
+<dt id="arg-anchor-merge-gap">anchor_merge_gap<a class="anchor" aria-label="anchor" href="#arg-anchor-merge-gap"></a></dt>
+<dd><p>Integer. Merge loop anchors within this many bp on
+the same chromosome before building the connectivity graph. Default
+<code>0</code> (no merging; anchors must match exactly on chr, start, end).
+Set to <code>50--200</code> when input BEDPE comes directly from a loop caller
+without prior replicate consolidation – the same biological anchor may
+appear with slightly different boundaries in different loop rows, which
+would otherwise fragment the graph. Not needed when input is
+pre-consolidated via <code><a href="consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></code>.</p></dd>
 
 
 <dt id="arg-out-dir">out_dir<a class="anchor" aria-label="anchor" href="#arg-out-dir"></a></dt>
@@ -185,7 +199,7 @@ for karyotype ideograms and JASPAR motif species filtering.</p></dd>
 
 
 <dt id="arg-expr-matrix-file">expr_matrix_file<a class="anchor" aria-label="anchor" href="#arg-expr-matrix-file"></a></dt>
-<dd><p>Optional path to a normalised expression matrix (TPM/FPKM, genes x samples). Enables expression-aware conflict resolution. Default: <code>NULL</code>.</p></dd>
+<dd><p>Optional path to a normalised expression matrix (genes x samples). Accepts steady-state RNA-seq (TPM/FPKM), nascent transcription data (NET-seq, PRO-seq, GRO-seq, TT-seq), or CAGE-seq. Enables expression-aware conflict resolution. Default: <code>NULL</code>.</p></dd>
 
 
 <dt id="arg-sample-columns">sample_columns<a class="anchor" aria-label="anchor" href="#arg-sample-columns"></a></dt>
@@ -212,14 +226,20 @@ for karyotype ideograms and JASPAR motif species filtering.</p></dd>
 <dd><p>Numeric (0-1). Loop-count quantile for hub detection. Default: <code>0.95</code>. Genes or distal elements with connectivity at or above this quantile are flagged as hubs. A minimum floor of 3 (promoter-centric) or 2 (distal) is applied to avoid false hubs in small datasets.</p></dd>
 
 
+<dt id="arg-hub-metric">hub_metric<a class="anchor" aria-label="anchor" href="#arg-hub-metric"></a></dt>
+<dd><p>Character. Which connectivity count to use for hub detection. <code>"unique_contacts"</code> (default): counts distinct neighbour anchor IDs, robust to duplicate/replicate loop rows. <code>"total_loops"</code>: counts all loop rows (backward compatible; may inflate hub calls when input contains unconsolidated replicates).</p></dd>
+
+
 <dt id="arg-min-expr">min_expr<a class="anchor" aria-label="anchor" href="#arg-min-expr"></a></dt>
 <dd><p>Numeric. Minimum expression value for a gene to be considered
 active during anchor-level conflict resolution. Used only when
 <code>expr_matrix_file</code> is provided. Default: <code>0</code> (any non-zero
-expression, i.e. TPM &gt; 0). Increase to <code>1</code> or higher to require
+expression). Increase to <code>1</code> or higher to require
 stronger evidence. Note: when <code>min_expr = 0</code>, the code uses a strict
 greater-than comparison (<code>&gt; 0</code>) to exclude truly undetected genes;
-when <code>min_expr &gt;= 1</code>, it uses <code>&gt;= min_expr</code>.
+when <code>min_expr &gt;= 1</code>, it uses <code>&gt;= min_expr</code>. For nascent
+transcription data (NET-seq, PRO-seq), gene-body aggregated signal
+should be used as the quantitative input.
 See <code><a href="refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></code> for the
 separate <code>threshold</code> parameter that controls promoter reclassification.</p></dd>
 
@@ -250,11 +270,23 @@ Default: <code>c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")<
 
 
 <dt id="arg-anchor-gap">anchor_gap<a class="anchor" aria-label="anchor" href="#arg-anchor-gap"></a></dt>
-<dd><p>Integer. Search radius: how far apart (bp) can a peak and loop anchor be for the peak to be considered "near" the anchor? <code>-1L</code> (default): strict physical overlap required (GenomicRanges default – peak and anchor must share at least 1 bp). <code>0L</code>: adjacent intervals (peak end == anchor start) also count. <code>&gt;0</code>: explicit gap tolerance in bp (e.g. <code>200</code> = 200 bp tolerance for cross-experiment integration). When <code>&gt;= 0</code>, the result includes both physically overlapping pairs AND proximity-only pairs (within gap but no actual overlap). Use <code>anchor_min_overlap &gt; 1</code> to require actual physical overlap among these candidates.</p></dd>
+<dd><p>Integer. Candidate search radius in bp between a
+peak and a loop anchor. <code>-1L</code> (default): strict physical overlap
+required. When <code>&gt;= 0</code>, expands the candidate search window
+(e.g. <code>200</code> for cross-experiment coordinate shifts).
+<strong>Note:</strong> final retention always requires at least
+<code>anchor_min_overlap</code> bp of physical overlap; this parameter
+only controls which candidates are evaluated, not whether
+proximity-only pairs are retained.</p></dd>
 
 
 <dt id="arg-anchor-min-overlap">anchor_min_overlap<a class="anchor" aria-label="anchor" href="#arg-anchor-min-overlap"></a></dt>
-<dd><p>Integer. After candidate pairs are found (via <code>anchor_gap</code>), how many base pairs of actual physical overlap are required? Default <code>1L</code>: any touch counts (including proximity-only hits when <code>anchor_gap &gt;= 0</code>). Increase to <code>10-100</code> to filter out spurious boundary overlaps. Setting this <code>&gt; 1</code> with <code>anchor_gap &gt;= 0</code> ensures that even with gap tolerance, only pairs with genuine physical overlap are retained.</p></dd>
+<dd><p>Integer. Minimum required physical overlap
+(bp) between a peak and an anchor. Default <code>1L</code>: at least 1 bp
+of actual sequence overlap required — proximity-only pairs within
+the <code>anchor_gap</code> window but without physical overlap are
+excluded. Increase to <code>10-100</code> for broad peaks to avoid
+spurious boundary overlaps.</p></dd>
 
 
 <dt id="arg-anchor-min-frac">anchor_min_frac<a class="anchor" aria-label="anchor" href="#arg-anchor-min-frac"></a></dt>
@@ -268,16 +300,34 @@ Default: <code>c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")<
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
 <dd><p>Logical. If <code>TRUE</code>, suppress progress messages while preserving warnings. Default: <code>FALSE</code>.</p></dd>
 
+
+<dt id="arg-target-priority">target_priority<a class="anchor" aria-label="anchor" href="#arg-target-priority"></a></dt>
+<dd><p>Character. How to prioritise among multiple candidate
+target genes per input feature. The policy applies only within primary
+target links (default <code>path_length &lt;= 1</code>); longer paths are reported
+separately as <code>Expanded_Target_Genes</code> and do not participate in
+<code>Assigned_Target_Genes</code> selection.
+<code>"promoter_then_distance"</code> (default): within primary links,
+promoter evidence dominates — all promoter-linked genes beat all
+gene-body genes regardless of path length; within each tier shorter
+paths win.
+<code>"distance_then_role"</code>: within primary links, path-length dominates —
+the closest linked gene wins; at equal distance promoter beats gene-body
+(legacy behaviour).
+The policy affects <code>Assigned_Target_Genes</code> only.
+<code>Regulated_promoter_genes</code> always reports all promoter-linked
+genes regardless of the chosen policy.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A named list:</p><ul><li><p><code>target_annotation</code> – Target features (peaks) with gene assignments.
 Key columns include:</p><ul><li><p><code>All_Loop_Connected_Genes</code>: All genes from loop-connected anchors (P/G types).</p></li>
 <li><p><code>Regulated_promoter_genes</code>: Promoter genes supported by loop-anchor context.</p></li>
-<li><p><code>Assigned_Target_Genes</code>: Promoter-first 3D assignment (prioritises P &gt; G &gt; E).</p></li>
+<li><p><code>Assigned_Target_Genes</code>: Policy-based 3D assignment (default: promoter-first, then shorter path wins; see <code>target_priority</code>).</p></li>
 <li><p><code>*_Filled</code> variants: Linear nearest-gene fallback when strict 3D assignments are empty.</p></li>
 <li><p><code>Regulated_promoter_Evidence</code>: Provenance of <code>Regulated_promoter_genes</code>
-(e.g., <code>local_promoter_overlap</code>, <code>direct_opposite_promoter</code>).
+(e.g., <code>local_promoter_overlap</code>, <code>distal_promoter</code>).
 <strong>Read with</strong> <code>Regulated_promoter_genes</code>; do not cross-reference
 with <code>Assigned_Target_Genes</code> or other columns.</p></li>
 <li><p><code>Regulated_promoter_Fallback_Evidence</code>: Provenance of
@@ -295,7 +345,7 @@ assigned to each peak; do not interpret any one column in isolation.</p><ul><li>
 <li><p><code>source</code>: <code>"loop_anchor"</code> (3D-derived) or <code>"linear_annotation"</code> (nearest gene).</p></li>
 <li><p><code>evidence</code>: Provenance label –
 <code>"local_promoter_overlap"</code> (peak overlaps anchor promoter),
-<code>"direct_opposite_promoter"</code> (opposite anchor is promoter),
+<code>"distal_promoter"</code> (promoter on the distal loop anchor),
 <code>"gene_body_context"</code> (gene body linkage),
 <code>"expanded_promoter_loop"</code> (via ego-network expansion),
 <code>"linear_annotation"</code> (direct nearest gene),
@@ -309,14 +359,14 @@ Logical membership flags indicating which target annotation column(s)
 this gene appears in.</p></li>
 </ul></li>
 <li><p><code>loop_annotation</code> – Annotated 3D interactome with
-<code>Putative_Target_Genes</code> (genes from P/G-type anchors connected
-through the loop network; for G-P loops, preferentially selects
-P-side genes). Does not include linear nearest-gene fallback at
-this stage (added by <code><a href="refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></code>).</p></li>
+<code>Putative_Target_Genes</code> (all P/G anchor genes connected
+through the loop network) and <code>Promoter_Target_Genes</code>
+(promoter-only subset, P-side genes).  G–P/P–G asymmetry is
+respected.  Does not include linear nearest-gene fallback.</p></li>
 <li><p><code>anchor_loci_annotation</code> – Non-redundant anchor-locus genomic classifications after within-cluster interval reduction.</p></li>
 <li><p><code>anchor_annotation</code> – Backward-compatible alias of <code>anchor_loci_annotation</code>.</p></li>
 <li><p><code>promoter_centric_stats</code> – Gene-level connectivity statistics.</p></li>
-<li><p><code>distal_element_stats</code> – Distal-element connectivity statistics.</p></li>
+<li><p><code>distal_element_stats</code> – Distal anchor connectivity (E, dual, G, eG).</p></li>
 <li><p><code>plots</code> – Named list of ggplot/grob objects:
 <code>Basic_Donut</code>, <code>Basic_Circular</code>, <code>Basic_Flower</code>,
 <code>Karyo_LoopGenes</code>, <code>Karyo_Anchors</code>,
@@ -355,7 +405,7 @@ filters:</p><ol><li><p><code>anchor_gap</code> – expands the search radius aro
 <li><p><code>anchor_min_overlap</code> – requires a minimum physical overlap in bp.</p></li>
 <li><p><code>anchor_min_frac</code> – requires the overlap to cover a minimum fraction of the peak.</p></li>
 </ol><p>The table below lists suggested starting points for common experimental designs.</p>
-<table class="table table"><tr><td><strong>Experimental design</strong></td><td><code>anchor_gap</code></td><td><code>anchor_min_overlap</code></td><td><code>anchor_min_frac</code></td></tr><tr><td>Same-experiment HiChIP / ChIA-PET (default)</td><td><code>0</code></td><td><code>1</code></td><td><code>0</code></td></tr><tr><td>Cross-experiment (e.g. ATAC-seq peaks x HiChIP loops)</td><td><code>200-500</code></td><td><code>10</code></td><td><code>0</code></td></tr><tr><td>Broad histone-mark peaks (H3K27ac, 2-5 kb)</td><td><code>0</code></td><td><code>100</code></td><td><code>0.1</code></td></tr><tr><td>Super-enhancers / wide domains (20-80 kb)</td><td><code>0</code></td><td><code>500</code></td><td><code>0.05</code></td></tr><tr><td>Point features (GWAS SNPs, eQTLs, 1 bp)</td><td><code>0</code></td><td><code>1</code></td><td><code>0</code></td></tr><tr><td>Stringent (high-confidence only)</td><td><code>0</code></td><td><code>100</code></td><td><code>0.5</code></td></tr></table><p>When <code>quiet = FALSE</code> (default), the function prints a diagnostic line
+<table class="table table"><tr><td><strong>Experimental design</strong></td><td><code>anchor_gap</code></td><td><code>anchor_min_overlap</code></td><td><code>anchor_min_frac</code></td></tr><tr><td>Same-experiment HiChIP / ChIA-PET (default)</td><td><code>-1</code></td><td><code>1</code></td><td><code>0</code></td></tr><tr><td>Cross-experiment (e.g. ATAC-seq peaks x HiChIP loops)</td><td><code>200-500</code></td><td><code>10</code></td><td><code>0</code></td></tr><tr><td>Broad histone-mark peaks (H3K27ac, 2-5 kb)</td><td><code>0</code></td><td><code>100</code></td><td><code>0.1</code></td></tr><tr><td>Super-enhancers / wide domains (20-80 kb)</td><td><code>0</code></td><td><code>500</code></td><td><code>0.05</code></td></tr><tr><td>Point features (GWAS SNPs, eQTLs, 1 bp)</td><td><code>0</code></td><td><code>1</code></td><td><code>0</code></td></tr><tr><td>Stringent (high-confidence only)</td><td><code>0</code></td><td><code>100</code></td><td><code>0.5</code></td></tr></table><p>When <code>quiet = FALSE</code> (default), the function prints a diagnostic line
 reporting how many peaks overlapped loop anchors after filtering, helping you
 tune these thresholds for your data.</p>
     </div>
@@ -370,26 +420,26 @@ tune these thresholds for your data.</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Minimal runnable example for package checks</span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
-<span class="r-in"><span>    <span class="va">txdb_example</span> <span class="op">&lt;-</span> <span class="fu">AnnotationDbi</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/AnnotationDbi/man/AnnotationDb-class.html" class="external-link">loadDb</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>        <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"hg19_knownGene_sample.sqlite"</span>, package <span class="op">=</span> <span class="st">"GenomicFeatures"</span><span class="op">)</span></span></span>
-<span class="r-in"><span>    <span class="op">)</span></span></span>
-<span class="r-in"><span>    <span class="va">bedpe_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>        <span class="st">"chr6\t10412000\t10412600\tchr6\t10415000\t10415600"</span>,</span></span>
-<span class="r-in"><span>        <span class="va">bedpe_path</span></span></span>
-<span class="r-in"><span>    <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">txdb_example</span> <span class="op">&lt;-</span> <span class="fu">AnnotationDbi</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/AnnotationDbi/man/AnnotationDb-class.html" class="external-link">loadDb</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"hg19_knownGene_sample.sqlite"</span>, package <span class="op">=</span> <span class="st">"GenomicFeatures"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">bedpe_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="st">"chr6\t10412000\t10412600\tchr6\t10415000\t10415600"</span>,</span></span>
+<span class="r-in"><span>    <span class="va">bedpe_path</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>    <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">annotate_peaks_and_loops</span><span class="op">(</span></span></span>
-<span class="r-in"><span>        bedpe_file <span class="op">=</span> <span class="va">bedpe_path</span>,</span></span>
-<span class="r-in"><span>        txdb <span class="op">=</span> <span class="va">txdb_example</span>,</span></span>
-<span class="r-in"><span>        org_db <span class="op">=</span> <span class="st">"org.Hs.eg.db"</span>,</span></span>
-<span class="r-in"><span>        species <span class="op">=</span> <span class="st">"hg19"</span>,</span></span>
-<span class="r-in"><span>        out_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>        project_name <span class="op">=</span> <span class="st">"Quick_Example"</span>,</span></span>
-<span class="r-in"><span>        write_output <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
-<span class="r-in"><span>        quiet <span class="op">=</span> <span class="cn">TRUE</span></span></span>
-<span class="r-in"><span>    <span class="op">)</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">loop_annotation</span>, <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">annotate_peaks_and_loops</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    bedpe_file <span class="op">=</span> <span class="va">bedpe_path</span>,</span></span>
+<span class="r-in"><span>    txdb <span class="op">=</span> <span class="va">txdb_example</span>,</span></span>
+<span class="r-in"><span>    org_db <span class="op">=</span> <span class="st">"org.Hs.eg.db"</span>,</span></span>
+<span class="r-in"><span>    species <span class="op">=</span> <span class="st">"hg19"</span>,</span></span>
+<span class="r-in"><span>    out_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    project_name <span class="op">=</span> <span class="st">"Quick_Example"</span>,</span></span>
+<span class="r-in"><span>    write_output <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>    quiet <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">loop_annotation</span>, <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>
     </div>
