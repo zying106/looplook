@@ -86,7 +86,7 @@ Suggests:
     viridis,
     ggpubr,
     ggdist,
-    kableExtra,
+    magick,
     knitr,
     rmarkdown,
     rtracklayer,

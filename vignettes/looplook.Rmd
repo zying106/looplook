@@ -838,7 +838,7 @@ if (exists("refined_res") && exists("out_dir")) {
     ),
     anchor_gap = 200,
     anchor_min_overlap = 100,
-    recompute_targets = TRUE, # Rebuild target links with updated types
+    recompute_targets = FALSE, # Preserve target tables when TxDb not available
     species = "hg38",
     project_name = "Chromatin_Refined",
     out_dir = out_dir
