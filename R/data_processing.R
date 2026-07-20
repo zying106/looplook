@@ -10,54 +10,71 @@
 #' @keywords internal
 #' @noRd
 .validate_bedpe_df <- function(df, quiet = FALSE) {
-    if (ncol(df) < 6) {
-        stop("BEDPE file must have at least 6 columns.", call. = FALSE)
-    }
+  if (ncol(df) < 6) {
+    stop("BEDPE file must have at least 6 columns.", call. = FALSE)
+  }
 
-    coord_cols <- c(2, 3, 5, 6)
-    for (cc in coord_cols) {
-        df[[cc]] <- suppressWarnings(as.numeric(df[[cc]]))
-    }
-    coord_mat <- cbind(df[[2]], df[[3]], df[[5]], df[[6]])
-    if (any(is.na(coord_mat))) {
-        stop("BEDPE file contains non-numeric coordinate columns.", call. = FALSE)
-    }
-    if (any(df[[2]] >= df[[3]], na.rm = TRUE) || any(df[[5]] >= df[[6]], na.rm = TRUE)) {
-        stop("BEDPE file contains rows with start >= end (zero-width or invalid).", call. = FALSE)
-    }
+  coord_cols <- c(2, 3, 5, 6)
+  for (cc in coord_cols) {
+    df[[cc]] <- suppressWarnings(as.numeric(df[[cc]]))
+  }
+  coord_mat <- cbind(df[[2]], df[[3]], df[[5]], df[[6]])
+  if (any(is.na(coord_mat))) {
+    stop("BEDPE file contains non-numeric coordinate columns.", call. = FALSE)
+  }
+  if (any(!is.finite(coord_mat))) {
+    stop("BEDPE file contains non-finite coordinates (Inf, -Inf, NaN).", call. = FALSE)
+  }
+  if (any(coord_mat < 0)) {
+    stop("BEDPE file contains negative coordinates.", call. = FALSE)
+  }
+  if (any(df[[2]] >= df[[3]], na.rm = TRUE) || any(df[[5]] >= df[[6]], na.rm = TRUE)) {
+    stop("BEDPE file contains rows with start >= end (zero-width or invalid).", call. = FALSE)
+  }
+  if (any(coord_mat != floor(coord_mat))) {
+    stop("BEDPE file contains non-integer coordinates. Genomic coordinates must be integers.", call. = FALSE)
+  }
+  df[[1]] <- trimws(as.character(df[[1]]))
+  df[[4]] <- trimws(as.character(df[[4]]))
+  if (anyNA(df[[1]]) || anyNA(df[[4]]) ||
+    any(!nzchar(df[[1]])) || any(!nzchar(df[[4]]))) {
+    stop("BEDPE file contains empty or missing chromosome names.", call. = FALSE)
+  }
 
-    anchor_widths <- c(df[[3]] - df[[2]], df[[6]] - df[[5]])
-    narrow <- sum(anchor_widths < 10, na.rm = TRUE)
-    wide <- sum(anchor_widths > 50000, na.rm = TRUE)
-    if (!quiet && narrow > 0) {
-        warning(narrow, " anchor(s) are narrower than 10 bp. ",
-            "Very narrow anchors may indicate data artefacts.",
-            call. = FALSE
-        )
-    }
-    if (!quiet && wide > 0) {
-        warning(wide, " anchor(s) are wider than 50 kb. ",
-            "Unusually wide anchors may represent broad domains (e.g. super-enhancers).",
-            call. = FALSE
-        )
-    }
+  anchor_widths <- c(df[[3]] - df[[2]], df[[6]] - df[[5]])
+  narrow <- sum(anchor_widths < 10, na.rm = TRUE)
+  wide <- sum(anchor_widths > 50000, na.rm = TRUE)
+  if (!quiet && narrow > 0) {
+    warning(narrow, " anchor(s) are narrower than 10 bp. ",
+      "Very narrow anchors may indicate data artefacts.",
+      call. = FALSE
+    )
+  }
+  if (!quiet && wide > 0) {
+    warning(wide, " anchor(s) are wider than 50 kb. ",
+      "Unusually wide anchors may represent broad domains (e.g. super-enhancers).",
+      call. = FALSE
+    )
+  }
 
-    df <- as.data.frame(df)
+  df <- as.data.frame(df)
 
-    # Normalise anchor order: first anchor lexicographically <= second anchor.
-    # Only columns 1-6 are swapped; columns 7+ (name, score, strand, etc.)
-    # stay in place because they are interaction-level metadata, not
-    # per-anchor attributes. If columns 7+ represent per-anchor data
-    # (e.g. strand1 / strand2), reorder them before calling this function.
-    swap <- (df[, 1] > df[, 4]) | (df[, 1] == df[, 4] & df[, 2] > df[, 5])
-    if (any(swap)) {
-        df[swap, seq_len(6)] <- df[swap, c(4, 5, 6, 1, 2, 3)]
-    }
+  # Normalise anchor order: first anchor lexicographically <= second anchor.
+  # Only columns 1-6 are swapped; columns 7+ (name, score, strand, etc.)
+  # stay in place because they are interaction-level metadata, not
+  # per-anchor attributes. If columns 7+ represent per-anchor data
+  # (e.g. strand1 / strand2), reorder them before calling this function.
+  swap <- (df[, 1] > df[, 4]) |
+    (df[, 1] == df[, 4] & df[, 2] > df[, 5]) |
+    (df[, 1] == df[, 4] & df[, 2] == df[, 5] & df[, 3] > df[, 6])
+  if (any(swap)) {
+    df[swap, seq_len(6)] <- df[swap, c(4, 5, 6, 1, 2, 3)]
+  }
 
-    df[[2]] <- df[[2]] + 1L
-    df[[5]] <- df[[5]] + 1L
+  df[[2]] <- df[[2]] + 1L
+  df[[5]] <- df[[5]] + 1L
 
-    df
+  df
 }
 
 #' Internal: Compute Numeric Fraction of a Column
@@ -70,12 +87,12 @@
 #' @keywords internal
 #' @noRd
 .numeric_ratio <- function(x) {
-    x <- as.character(x)
-    x <- x[!is.na(x) & trimws(x) != ""]
-    if (length(x) == 0) {
-        return(0)
-    }
-    mean(!is.na(suppressWarnings(as.numeric(x))))
+  x <- as.character(x)
+  x <- x[!is.na(x) & trimws(x) != ""]
+  if (length(x) == 0) {
+    return(0)
+  }
+  mean(!is.na(suppressWarnings(as.numeric(x))))
 }
 
 #' Read BEDPE File into a GInteractions Object
@@ -135,85 +152,90 @@
 #' # Check the imported score column
 #' S4Vectors::mcols(gi)$score
 bedpe_to_gi <- function(bedpe_file, score_col = NULL, quiet = FALSE) {
-    if (is.null(bedpe_file) || !file.exists(bedpe_file)) {
-        stop("BEDPE file does not exist or path is invalid: ", bedpe_file)
+  if (is.null(bedpe_file) || !file.exists(bedpe_file)) {
+    stop("BEDPE file does not exist or path is invalid: ", bedpe_file)
+  }
+  df <- data.table::fread(bedpe_file, header = FALSE)
+
+  df <- .validate_bedpe_df(df, quiet = quiet)
+
+  # Score detection
+  .is_pvalue_like <- function(x) {
+    nums <- suppressWarnings(as.numeric(as.character(x)))
+    nums <- nums[!is.na(nums) & trimws(as.character(x)) != ""]
+    if (length(nums) == 0) {
+      return(FALSE)
     }
-    df <- data.table::fread(bedpe_file, header = FALSE)
+    mean(nums >= 0 & nums <= 1, na.rm = TRUE) >= 0.8
+  }
 
-    df <- .validate_bedpe_df(df, quiet = quiet)
+  final_scores <- rep(0, nrow(df))
+  found <- FALSE
+  score_is_pvalue <- FALSE
 
-    # Score detection
-    .is_pvalue_like <- function(x) {
-        nums <- suppressWarnings(as.numeric(as.character(x)))
-        nums <- nums[!is.na(nums) & trimws(as.character(x)) != ""]
-        if (length(nums) == 0) {
-            return(FALSE)
-        }
-        mean(nums >= 0 & nums <= 1, na.rm = TRUE) >= 0.8
+  if (!is.null(score_col)) {
+    if (!is.numeric(score_col) || length(score_col) != 1L ||
+      is.na(score_col) || !is.finite(score_col) ||
+      score_col < 1 || score_col != as.integer(score_col)) {
+      stop("score_col must be a single finite positive integer column index.", call. = FALSE)
     }
-
-    final_scores <- rep(0, nrow(df))
-    found <- FALSE
-    score_is_pvalue <- FALSE
-
-    if (!is.null(score_col)) {
-        if (!is.numeric(score_col) || length(score_col) != 1L ||
-            is.na(score_col) || score_col < 1 ||
-            score_col != as.integer(score_col)) {
-            stop("score_col must be a single positive integer column index.", call. = FALSE)
-        }
-        if (score_col > ncol(df)) {
-            stop("score_col = ", score_col, " exceeds file column count (", ncol(df), ")")
-        }
-        if (.numeric_ratio(df[[score_col]]) < 0.5) {
-            stop("score_col = ", score_col,
-                " does not contain predominantly numeric values.",
-                call. = FALSE
-            )
-        }
-        final_scores <- suppressWarnings(as.numeric(df[[score_col]]))
-        score_is_pvalue <- .is_pvalue_like(df[[score_col]])
-        found <- TRUE
-    } else {
-        if (ncol(df) >= 8 && .numeric_ratio(df[[8]]) >= 0.5) {
-            final_scores <- suppressWarnings(as.numeric(df[[8]]))
-            score_is_pvalue <- .is_pvalue_like(df[[8]])
-            found <- TRUE
-        }
-        if (!found && ncol(df) >= 7 && .numeric_ratio(df[[7]]) >= 0.5) {
-            final_scores <- suppressWarnings(as.numeric(df[[7]]))
-            score_is_pvalue <- .is_pvalue_like(df[[7]])
-            found <- TRUE
-        }
-        if (!quiet && !found && ncol(df) >= 7) {
-            warning("Scores defaulted to 0: no column beyond 6 had >50% numeric values")
-        }
-        if (!quiet && found && score_is_pvalue) {
-            warning("The auto-detected score column contains values predominantly ",
-                "in [0, 1], which resemble p-values. Downstream ",
-                "min_score / min_raw_score filtering assumes ",
-                "higher scores = better interactions. ",
-                "If this column contains p-values, convert it first ",
-                "(e.g., -log10(p)) or set score_col explicitly to another column.",
-                call. = FALSE
-            )
-        }
+    if (score_col > ncol(df)) {
+      stop("score_col = ", score_col, " exceeds file column count (", ncol(df), ")")
     }
+    if (.numeric_ratio(df[[score_col]]) < 0.5) {
+      stop("score_col = ", score_col,
+        " does not contain predominantly numeric values.",
+        call. = FALSE
+      )
+    }
+    final_scores <- suppressWarnings(as.numeric(df[[score_col]]))
+    score_is_pvalue <- .is_pvalue_like(df[[score_col]])
+    found <- TRUE
+  } else {
+    if (ncol(df) >= 8 && .numeric_ratio(df[[8]]) >= 0.5) {
+      final_scores <- suppressWarnings(as.numeric(df[[8]]))
+      score_is_pvalue <- .is_pvalue_like(df[[8]])
+      found <- TRUE
+    }
+    if (!found && ncol(df) >= 7 && .numeric_ratio(df[[7]]) >= 0.5) {
+      final_scores <- suppressWarnings(as.numeric(df[[7]]))
+      score_is_pvalue <- .is_pvalue_like(df[[7]])
+      found <- TRUE
+    }
+    if (!quiet && !found && ncol(df) >= 7) {
+      warning("Scores defaulted to 0: no column beyond 6 had >50% numeric values")
+    }
+    if (!quiet && found && score_is_pvalue) {
+      warning("The auto-detected score column contains values predominantly ",
+        "in [0, 1], which resemble p-values. Downstream ",
+        "min_score / min_raw_score filtering assumes ",
+        "higher scores = better interactions. ",
+        "If this column contains p-values, convert it first ",
+        "(e.g., -log10(p)) or set score_col explicitly to another column.",
+        call. = FALSE
+      )
+    }
+  }
 
-    final_scores[is.na(final_scores)] <- 0
+  final_scores[is.na(final_scores)] <- 0
+  if (any(!is.finite(final_scores))) {
+    stop("BEDPE score column contains non-finite values (Inf, -Inf, NaN).",
+      call. = FALSE
+    )
+  }
 
-    gr1 <- .with_known_upstream_noise_suppressed(
-        GenomicRanges::GRanges(df[, 1], IRanges::IRanges(df[, 2], df[, 3]))
-    )
-    gr2 <- .with_known_upstream_noise_suppressed(
-        GenomicRanges::GRanges(df[, 4], IRanges::IRanges(df[, 5], df[, 6]))
-    )
-    gi <- .with_known_upstream_noise_suppressed(
-        InteractionSet::GInteractions(gr1, gr2, mode = "strict")
-    )
-    S4Vectors::mcols(gi)$score <- final_scores
+  gr1 <- .with_known_upstream_noise_suppressed(
+    GenomicRanges::GRanges(df[, 1], IRanges::IRanges(df[, 2], df[, 3]))
+  )
+  gr2 <- .with_known_upstream_noise_suppressed(
+    GenomicRanges::GRanges(df[, 4], IRanges::IRanges(df[, 5], df[, 6]))
+  )
+  gi <- .with_known_upstream_noise_suppressed(
+    InteractionSet::GInteractions(gr1, gr2, mode = "strict")
+  )
+  S4Vectors::mcols(gi)$score <- final_scores
 
-    return(gi)
+  return(gi)
 }
 
 
@@ -249,24 +271,24 @@ bedpe_to_gi <- function(bedpe_file, score_col = NULL, quiet = FALSE) {
 #' head(res$membership)
 #' table(res$membership)
 reduce_ginteractions <- function(gi, gap = 1000) {
-    if (length(gi) == 0) {
-        return(list(gi = gi, membership = integer(0)))
-    }
+  if (length(gi) == 0) {
+    return(list(gi = gi, membership = integer(0)))
+  }
 
-    dt <- gi_to_dt(gi)
-    gap_diag <- .diagnose_gap(dt, gap, message)
-    dt <- cluster_loops_dt(dt, gap)
-    reduced_dt <- reduce_clusters_dt(dt)
-    gi_red <- dt_to_gi(reduced_dt)
-    cluster_diag <- .diagnose_clusters(gi_red, reduced_dt, gap, message,
-        med_width = if (!is.null(gap_diag)) gap_diag$anchor_width_median else NULL,
-        n_input_loops = nrow(dt)
-    )
+  dt <- gi_to_dt(gi)
+  gap_diag <- .diagnose_gap(dt, gap, message)
+  dt <- cluster_loops_dt(dt, gap)
+  reduced_dt <- reduce_clusters_dt(dt)
+  gi_red <- dt_to_gi(reduced_dt)
+  cluster_diag <- .diagnose_clusters(gi_red, reduced_dt, gap, message,
+    med_width = if (!is.null(gap_diag)) gap_diag$anchor_width_median else NULL,
+    n_input_loops = nrow(dt)
+  )
 
-    attr(gi_red, "looplook_gap_diagnosis") <- gap_diag
-    attr(gi_red, "looplook_cluster_diagnosis") <- cluster_diag
+  attr(gi_red, "looplook_gap_diagnosis") <- gap_diag
+  attr(gi_red, "looplook_cluster_diagnosis") <- cluster_diag
 
-    list(gi = gi_red, membership = dt$cluster)
+  list(gi = gi_red, membership = dt$cluster)
 }
 
 #' Filter Chromatin Loops by Blacklist and/or Region of Interest
@@ -308,9 +330,9 @@ reduce_ginteractions <- function(gi, gap = 1000) {
 #'
 #' # Score + blacklist + ROI (both)
 #' gi_strict <- filter_chromatin_loops(gi,
-#'     min_score = 5,
-#'     blacklist_species = "hg38", region_of_interest = roi_path,
-#'     roi_mode = "both", quiet = TRUE
+#'   min_score = 5,
+#'   blacklist_species = "hg38", region_of_interest = roi_path,
+#'   roi_mode = "both", quiet = TRUE
 #' )
 filter_chromatin_loops <- function(
   gi,
@@ -320,106 +342,107 @@ filter_chromatin_loops <- function(
   min_score = NULL,
   quiet = FALSE
 ) {
-    roi_mode <- match.arg(roi_mode)
-    log_message <- function(...) {
-        if (!quiet) message(...)
-    }
+  roi_mode <- match.arg(roi_mode)
+  log_message <- function(...) {
+    if (!quiet) message(...)
+  }
 
-    # Parameter validation (mirrors consolidate_chromatin_loops)
-    if (!is.null(blacklist_species)) {
-        if (!is.character(blacklist_species) || length(blacklist_species) != 1L ||
-            is.na(blacklist_species) || !nzchar(blacklist_species)) {
-            stop("`blacklist_species` must be a non-empty string or NULL", call. = FALSE)
-        }
+  # Parameter validation (mirrors consolidate_chromatin_loops)
+  if (!is.null(blacklist_species)) {
+    if (!is.character(blacklist_species) || length(blacklist_species) != 1L ||
+      is.na(blacklist_species) || !nzchar(blacklist_species)) {
+      stop("`blacklist_species` must be a non-empty string or NULL", call. = FALSE)
     }
-    if (!is.null(region_of_interest)) {
-        if (!is.character(region_of_interest) || length(region_of_interest) != 1L ||
-            is.na(region_of_interest) || !nzchar(region_of_interest)) {
-            stop("`region_of_interest` must be a non-empty file path or NULL", call. = FALSE)
-        }
-        if (!file.exists(region_of_interest)) {
-            stop("`region_of_interest` file not found: ", region_of_interest, call. = FALSE)
-        }
+  }
+  if (!is.null(region_of_interest)) {
+    if (!is.character(region_of_interest) || length(region_of_interest) != 1L ||
+      is.na(region_of_interest) || !nzchar(region_of_interest)) {
+      stop("`region_of_interest` must be a non-empty file path or NULL", call. = FALSE)
     }
+    if (!file.exists(region_of_interest)) {
+      stop("`region_of_interest` file not found: ", region_of_interest, call. = FALSE)
+    }
+  }
 
-    if (!inherits(gi, "GInteractions")) {
-        stop("`gi` must be a GInteractions object", call. = FALSE)
+  if (!inherits(gi, "GInteractions")) {
+    stop("`gi` must be a GInteractions object", call. = FALSE)
+  }
+  if (length(gi) == 0) {
+    return(gi)
+  }
+
+  # --- score filter ---
+  if (!is.null(min_score)) {
+    if (!is.numeric(min_score) || length(min_score) != 1L ||
+      is.na(min_score) || !is.finite(min_score)) {
+      stop("`min_score` must be a single finite number or NULL", call. = FALSE)
     }
+    # NA-guard: consolidated union-mode output can carry score = NA when
+    # every source had an NA score for a cluster. NA >= min_score is NA,
+    # which data.table / AtomicList indexing silently coerce to FALSE,
+    # dropping the cluster without diagnostic. Treat NA scores as
+    # "fails the floor" but make the drop explicit and counted.
+    scores <- S4Vectors::mcols(gi)$score
+    na_drop <- is.na(scores)
+    keep <- !na_drop & scores >= min_score
+    if (any(na_drop)) {
+      log_message(
+        "    Score filter: dropped ", sum(na_drop),
+        " loop(s) with NA score (no numeric mean across sources)."
+      )
+    }
+    gi <- gi[keep]
+    log_message(">>> Score filter (>= ", min_score, "): retained ", length(gi), " loops")
     if (length(gi) == 0) {
-        return(gi)
+      return(gi)
     }
+  }
 
-    # --- score filter ---
-    if (!is.null(min_score)) {
-        if (!is.numeric(min_score) || length(min_score) != 1L || is.na(min_score)) {
-            stop("`min_score` must be a single number or NULL", call. = FALSE)
-        }
-        # NA-guard: consolidated union-mode output can carry score = NA when
-        # every source had an NA score for a cluster. NA >= min_score is NA,
-        # which data.table / AtomicList indexing silently coerce to FALSE,
-        # dropping the cluster without diagnostic. Treat NA scores as
-        # "fails the floor" but make the drop explicit and counted.
-        scores <- S4Vectors::mcols(gi)$score
-        na_drop <- is.na(scores)
-        keep <- !na_drop & scores >= min_score
-        if (any(na_drop)) {
-            log_message(
-                "    Score filter: dropped ", sum(na_drop),
-                " loop(s) with NA score (no numeric mean across sources)."
-            )
-        }
-        gi <- gi[keep]
-        log_message(">>> Score filter (>= ", min_score, "): retained ", length(gi), " loops")
-        if (length(gi) == 0) {
-            return(gi)
-        }
+  # --- blacklist ---
+  if (!is.null(blacklist_species)) {
+    known_lists <- list(
+      "hg38" = "hg38-blacklist.v2.bed",
+      "hg19" = "hg19-blacklist.v2.bed",
+      "mm10" = "mm10-blacklist.v2.bed",
+      "mm9"  = "mm9-blacklist.v2.bed"
+    )
+    bl_path <- if (blacklist_species %in% names(known_lists)) {
+      system.file("extdata", known_lists[[blacklist_species]], package = "looplook")
+    } else {
+      blacklist_species
     }
+    if (!file.exists(bl_path)) stop("Blacklist file not found: ", blacklist_species)
+    log_message(">>> Filtering blacklist: ", basename(bl_path))
+    bl <- read_simple_bed(bl_path, quiet = quiet)
+    bl <- .harmonize_seqlevels(bl, InteractionSet::anchors(gi, "first"), "blacklist")
+    h1 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "first"), bl)
+    h2 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "second"), bl)
+    bad <- unique(c(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2)))
+    if (length(bad)) gi <- gi[-bad]
+    log_message("    Retained ", length(gi), " loops after blacklist")
+  }
 
-    # --- blacklist ---
-    if (!is.null(blacklist_species)) {
-        known_lists <- list(
-            "hg38" = "hg38-blacklist.v2.bed",
-            "hg19" = "hg19-blacklist.v2.bed",
-            "mm10" = "mm10-blacklist.v2.bed",
-            "mm9"  = "mm9-blacklist.v2.bed"
-        )
-        bl_path <- if (blacklist_species %in% names(known_lists)) {
-            system.file("extdata", known_lists[[blacklist_species]], package = "looplook")
-        } else {
-            blacklist_species
-        }
-        if (!file.exists(bl_path)) stop("Blacklist file not found: ", blacklist_species)
-        log_message(">>> Filtering blacklist: ", basename(bl_path))
-        bl <- read_simple_bed(bl_path, quiet = quiet)
-        bl <- .harmonize_seqlevels(bl, InteractionSet::anchors(gi, "first"), "blacklist")
-        h1 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "first"), bl)
-        h2 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "second"), bl)
-        bad <- unique(c(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2)))
-        if (length(bad)) gi <- gi[-bad]
-        log_message("    Retained ", length(gi), " loops after blacklist")
+  # --- region of interest ---
+  if (!is.null(region_of_interest)) {
+    if (!file.exists(region_of_interest)) stop("ROI file not found: ", region_of_interest)
+    log_message(">>> Filtering ROI (", roi_mode, "): ", basename(region_of_interest))
+    tg <- read_simple_bed(region_of_interest, quiet = quiet)
+    tg <- .harmonize_seqlevels(tg, InteractionSet::anchors(gi, "first"), "ROI")
+    h1 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "first"), tg)
+    h2 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "second"), tg)
+    keep <- if (roi_mode == "any") {
+      base::union(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2))
+    } else {
+      base::intersect(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2))
     }
-
-    # --- region of interest ---
-    if (!is.null(region_of_interest)) {
-        if (!file.exists(region_of_interest)) stop("ROI file not found: ", region_of_interest)
-        log_message(">>> Filtering ROI (", roi_mode, "): ", basename(region_of_interest))
-        tg <- read_simple_bed(region_of_interest, quiet = quiet)
-        tg <- .harmonize_seqlevels(tg, InteractionSet::anchors(gi, "first"), "ROI")
-        h1 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "first"), tg)
-        h2 <- GenomicRanges::findOverlaps(InteractionSet::anchors(gi, "second"), tg)
-        keep <- if (roi_mode == "any") {
-            base::union(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2))
-        } else {
-            base::intersect(S4Vectors::queryHits(h1), S4Vectors::queryHits(h2))
-        }
-        if (length(keep) > 0) {
-            gi <- gi[keep]
-        } else {
-            gi <- gi[0]
-        }
-        log_message("    Retained ", length(gi), " loops after ROI")
+    if (length(keep) > 0) {
+      gi <- gi[keep]
+    } else {
+      gi <- gi[0]
     }
-    gi
+    log_message("    Retained ", length(gi), " loops after ROI")
+  }
+  gi
 }
 
 #' Read a Simple BED File into a GRanges Object
@@ -449,58 +472,105 @@ filter_chromatin_loops <- function(
 #' print(gr)
 #' length(gr)
 read_simple_bed <- function(bed_file, quiet = FALSE) {
-    if (is.null(bed_file)) {
-        return(NULL)
-    }
-    if (!file.exists(bed_file)) {
-        stop("BED file does not exist: ", bed_file)
-    }
-
-    df <- data.table::fread(bed_file, header = FALSE, select = c(1, 2, 3))
-    # Auto-detect header: only examine the first row to avoid misidentifying
-    # a malformed data row as a header line.
-    has_header <- nrow(df) > 0 && (
-        is.na(suppressWarnings(as.numeric(df[[2]][1]))) ||
-            is.na(suppressWarnings(as.numeric(df[[3]][1]))))
-    if (has_header) {
-        df <- data.table::fread(bed_file, header = FALSE, select = c(1, 2, 3), skip = 1)
-    }
-    # Validate all coordinate columns are numeric after header handling
-    df[[2]] <- suppressWarnings(as.numeric(df[[2]]))
-    df[[3]] <- suppressWarnings(as.numeric(df[[3]]))
-    if (any(is.na(df[[2]]) | is.na(df[[3]]))) {
-        stop("BED file contains non-numeric start/end coordinates after header handling.",
-            call. = FALSE
-        )
-    }
-    if (nrow(df) > 0 && any(df[[2]] >= df[[3]], na.rm = TRUE)) {
-        stop("BED file contains intervals with start >= end (zero-width or invalid).",
-            call. = FALSE
-        )
-    }
-
-    # Check for unusually narrow or wide intervals (BED 0-based: width = end - start)
-    bed_widths <- df[[3]] - df[[2]]
-    narrow_bed <- sum(bed_widths < 10, na.rm = TRUE)
-    wide_bed <- sum(bed_widths > 50000, na.rm = TRUE)
-    if (!quiet && narrow_bed > 0) {
-        warning(narrow_bed, " interval(s) are narrower than 10 bp. ",
-            "Very narrow intervals may indicate data artefacts.",
-            call. = FALSE
-        )
-    }
-    if (!quiet && wide_bed > 0) {
-        warning(wide_bed, " interval(s) are wider than 50 kb. ",
-            "Unusually wide intervals may represent broad domains ",
-            "(e.g. super-enhancers) rather than focal peaks.",
-            call. = FALSE
-        )
-    }
-
-    # BED is 0-based half-open; GRanges expects 1-based closed
-    .with_known_upstream_noise_suppressed(
-        GenomicRanges::GRanges(df[[1]], IRanges::IRanges(df[[2]] + 1, df[[3]]))
+  if (is.null(bed_file)) {
+    return(NULL)
+  }
+  if (!is.character(bed_file) || length(bed_file) != 1L ||
+    is.na(bed_file) || !nzchar(trimws(bed_file))) {
+    stop("`bed_file` must be NULL or a single non-empty file path.",
+      call. = FALSE
     )
+  }
+  if (dir.exists(bed_file)) {
+    stop("`bed_file` points to a directory, not a BED file.",
+      call. = FALSE
+    )
+  }
+  if (!file.exists(bed_file)) {
+    stop("BED file does not exist: ", bed_file)
+  }
+  finfo <- file.info(bed_file)
+  if (is.na(finfo$size) || finfo$size == 0L) {
+    return(GenomicRanges::GRanges())
+  }
+
+  df <- data.table::fread(bed_file, header = FALSE, select = c(1, 2, 3))
+  if (nrow(df) == 0L || ncol(df) == 0L) {
+    return(GenomicRanges::GRanges())
+  }
+  if (ncol(df) < 3L) {
+    stop("BED file must contain at least 3 columns; found ", ncol(df), ".",
+      call. = FALSE
+    )
+  }
+  # Detect header only by explicit header tokens, not numeric failure.
+  # A malformed first row (e.g. chr1 abc 200) must error, not be skipped.
+  s1 <- tolower(trimws(as.character(df[[2]][1])))
+  s3 <- tolower(trimws(as.character(df[[3]][1])))
+  has_header <- s1 %in% c("start", "chromstart", "start1") &&
+    s3 %in% c("end", "chromend", "end1")
+  if (has_header) {
+    df <- data.table::fread(bed_file, header = FALSE, select = c(1, 2, 3), skip = 1)
+    if (nrow(df) == 0L || ncol(df) == 0L) {
+      return(GenomicRanges::GRanges())
+    }
+  }
+  # Validate all coordinate columns are numeric after header handling
+  df[[2]] <- suppressWarnings(as.numeric(df[[2]]))
+  df[[3]] <- suppressWarnings(as.numeric(df[[3]]))
+  if (any(is.na(df[[2]]) | is.na(df[[3]]))) {
+    stop("BED file contains non-numeric start/end coordinates after header handling.",
+      call. = FALSE
+    )
+  }
+  coord_mat <- cbind(df[[2]], df[[3]])
+  if (any(!is.finite(coord_mat))) {
+    stop("BED file contains non-finite coordinates (Inf, -Inf, NaN).", call. = FALSE)
+  }
+  if (any(coord_mat < 0, na.rm = TRUE)) {
+    stop("BED file contains negative coordinates.", call. = FALSE)
+  }
+  if (any(coord_mat != floor(coord_mat), na.rm = TRUE)) {
+    stop("BED file contains non-integer coordinates. Genomic coordinates must be integers.",
+      call. = FALSE
+    )
+  }
+  if (nrow(df) > 0 && any(df[[2]] >= df[[3]], na.rm = TRUE)) {
+    stop("BED file contains intervals with start >= end (zero-width or invalid).",
+      call. = FALSE
+    )
+  }
+
+  # Check for unusually narrow or wide intervals (BED 0-based: width = end - start)
+  bed_widths <- df[[3]] - df[[2]]
+  narrow_bed <- sum(bed_widths < 10, na.rm = TRUE)
+  wide_bed <- sum(bed_widths > 50000, na.rm = TRUE)
+  if (!quiet && narrow_bed > 0) {
+    warning(narrow_bed, " interval(s) are narrower than 10 bp. ",
+      "Very narrow intervals may indicate data artefacts.",
+      call. = FALSE
+    )
+  }
+  if (!quiet && wide_bed > 0) {
+    warning(wide_bed, " interval(s) are wider than 50 kb. ",
+      "Unusually wide intervals may represent broad domains ",
+      "(e.g. super-enhancers) rather than focal peaks.",
+      call. = FALSE
+    )
+  }
+
+  # Normalize chromosome names (trim whitespace silently)
+  df[[1]] <- trimws(as.character(df[[1]]))
+  if (anyNA(df[[1]]) || any(!nzchar(df[[1]]))) {
+    stop("BED file contains empty or missing chromosome names.",
+      call. = FALSE
+    )
+  }
+
+  # BED is 0-based half-open; GRanges expects 1-based closed
+  .with_known_upstream_noise_suppressed(
+    GenomicRanges::GRanges(df[[1]], IRanges::IRanges(df[[2]] + 1, df[[3]]))
+  )
 }
 
 
@@ -542,6 +612,15 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #' }
 #'
 #' @param files Character vector. Paths to BEDPE files (at least two).
+#'   \strong{Empty files:} A zero-byte BEDPE file is treated as an empty
+#'   replicate and triggers a warning. Empty replicates remain part of the
+#'   replicate set: they count toward the default consensus denominator
+#'   (\code{min_consensus}) and are required by intersect mode (which
+#'   demands support from all inputs). They contribute no interactions in
+#'   union mode. A file must be truly zero-byte to qualify as an empty
+#'   replicate; any non-empty file must be a valid BEDPE with at least six
+#'   columns. Verify that an empty file represents a legitimate biological
+#'   result rather than a failed loop-calling run.
 #' @param gap Numeric. Maximum distance (in base pairs) between loop anchors to consider them as overlapping. Default: \code{1000} (1 kb). Typical range: 500-5000 bp depending on data resolution. Use \code{gap = 0} for strict overlap only.
 #' @param mode Character. Choose one of the following: "consensus", "intersect", "union". Merge strategy:
 #'   \itemize{
@@ -624,28 +703,28 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #' # Example A: Intersect Mode
 #' # Only keeps loops present in f1 that are also supported by f2
 #' res_intersect <- consolidate_chromatin_loops(
-#'     files = c(f1, f2),
-#'     mode = "intersect",
-#'     gap = 1000,
-#'     out_file = tempfile(fileext = ".bedpe")
+#'   files = c(f1, f2),
+#'   mode = "intersect",
+#'   gap = 1000,
+#'   out_file = tempfile(fileext = ".bedpe")
 #' )
 #'
 #' # Example B: Consensus Mode (formerly Reproducible)
 #' # Finds consensus loops supported by both replicates (default for N=2)
 #' res_consensus <- consolidate_chromatin_loops(
-#'     files = c(f1, f2),
-#'     mode = "consensus",
-#'     gap = 1000,
-#'     out_file = tempfile(fileext = ".bedpe")
+#'   files = c(f1, f2),
+#'   mode = "consensus",
+#'   gap = 1000,
+#'   out_file = tempfile(fileext = ".bedpe")
 #' )
 #'
 #' # Example C: Union Mode
 #' # Merges all loops into a single map
 #' res_union <- consolidate_chromatin_loops(
-#'     files = c(f1, f2),
-#'     mode = "union",
-#'     gap = 1000,
-#'     out_file = tempfile(fileext = ".bedpe")
+#'   files = c(f1, f2),
+#'   mode = "union",
+#'   gap = 1000,
+#'   out_file = tempfile(fileext = ".bedpe")
 #' )
 #'
 #' # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -653,12 +732,12 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #' # 2. Merge: Find loops present in both replicates.
 #' # 3. Post-filter: Keep only strong consensus loops (score > 5).
 #' res_clean <- consolidate_chromatin_loops(
-#'     files = c(f1, f2),
-#'     mode = "consensus",
-#'     min_raw_score = 2, # Pre-filter (remove noise)
-#'     min_score = 5, # Post-filter (keep strong loops)
-#'     gap = 1000,
-#'     out_file = tempfile(fileext = ".bedpe")
+#'   files = c(f1, f2),
+#'   mode = "consensus",
+#'   min_raw_score = 2, # Pre-filter (remove noise)
+#'   min_score = 5, # Post-filter (keep strong loops)
+#'   gap = 1000,
+#'   out_file = tempfile(fileext = ".bedpe")
 #' )
 #'
 #' # Inspect results
@@ -680,129 +759,233 @@ consolidate_chromatin_loops <- function(
   write_output = TRUE,
   quiet = FALSE
 ) {
-    log_message <- function(...) {
-        if (!quiet) message(...)
-    }
+  log_message <- function(...) {
+    if (!quiet) message(...)
+  }
 
-    if (is.null(files) || length(files) < 2) {
-        stop("`files` must contain at least two BEDPE file paths.", call. = FALSE)
-    }
-    missing_files <- files[!file.exists(files)]
-    if (length(missing_files) > 0) {
-        stop("BEDPE files not found: ", paste(missing_files, collapse = ", "), call. = FALSE)
-    }
-    mode <- match.arg(mode)
-    roi_mode <- match.arg(roi_mode)
-    chaining_policy <- match.arg(chaining_policy)
-
-    # Parameter validation
-    if (!is.numeric(gap) || length(gap) != 1L || is.na(gap) || gap < 0) {
-        stop("`gap` must be a non-negative number", call. = FALSE)
-    }
-    if (!is.null(min_consensus) &&
-        (!is.numeric(min_consensus) || length(min_consensus) != 1L ||
-            is.na(min_consensus) || min_consensus < 1)) {
-        stop("`min_consensus` must be a positive integer or NULL", call. = FALSE)
-    }
-    if (!is.null(min_raw_score) &&
-        (!is.numeric(min_raw_score) || length(min_raw_score) != 1L ||
-            is.na(min_raw_score))) {
-        stop("`min_raw_score` must be a single number or NULL", call. = FALSE)
-    }
-    if (!is.null(min_score) &&
-        (!is.numeric(min_score) || length(min_score) != 1L ||
-            is.na(min_score))) {
-        stop("`min_score` must be a single number or NULL", call. = FALSE)
-    }
-    if (!is.null(blacklist_species)) {
-        if (!is.character(blacklist_species) || length(blacklist_species) != 1L ||
-            is.na(blacklist_species) || !nzchar(blacklist_species)) {
-            stop("`blacklist_species` must be a non-empty string or NULL", call. = FALSE)
-        }
-    }
-    if (!is.null(region_of_interest)) {
-        if (!is.character(region_of_interest) || length(region_of_interest) != 1L ||
-            is.na(region_of_interest) || !nzchar(region_of_interest)) {
-            stop("`region_of_interest` must be a non-empty file path or NULL", call. = FALSE)
-        }
-        if (!file.exists(region_of_interest)) {
-            stop("`region_of_interest` file not found: ", region_of_interest, call. = FALSE)
-        }
-    }
-
-    n_reps <- length(files)
-
-    # --- Read & pre-filter files ---
-    gi_list <- .consolidate_read_files(
-        files, score_col, min_raw_score, quiet, log_message
+  if (is.null(files) || length(files) < 2) {
+    stop("`files` must contain at least two BEDPE file paths.", call. = FALSE)
+  }
+  missing_files <- files[!file.exists(files)]
+  if (length(missing_files) > 0) {
+    stop("BEDPE files not found: ", paste(missing_files, collapse = ", "), call. = FALSE)
+  }
+  resolved <- normalizePath(files, winslash = "/", mustWork = TRUE)
+  dup <- duplicated(resolved) | duplicated(resolved, fromLast = TRUE)
+  if (any(dup)) {
+    stop("Duplicate BEDPE replicate path(s) detected: ",
+      paste(unique(basename(resolved[dup])), collapse = ", "),
+      ". Each input must represent an independent replicate.",
+      call. = FALSE
     )
+  }
+  mode <- match.arg(mode)
+  roi_mode <- match.arg(roi_mode)
+  chaining_policy <- match.arg(chaining_policy)
 
-    total_loops <- sum(vapply(gi_list, length, integer(1)))
-    if (total_loops == 0) {
-        if (!quiet) {
-            message(
-                "All loops filtered out by min_raw_score = ", min_raw_score,
-                ". Returning empty result."
-            )
-        }
-        empty_gi <- InteractionSet::GInteractions(
-            GenomicRanges::GRanges(), GenomicRanges::GRanges()
-        )
-        S4Vectors::mcols(empty_gi)$score <- numeric(0)
-        S4Vectors::mcols(empty_gi)$n_members <- integer(0)
-        S4Vectors::mcols(empty_gi)$n_reps <- integer(0)
-        return(empty_gi)
+  # Parameter validation
+  if (!is.numeric(gap) || length(gap) != 1L || is.na(gap) ||
+    !is.finite(gap) || gap != floor(gap) || gap < 0) {
+    stop("`gap` must be a non-negative number", call. = FALSE)
+  }
+  if (!is.null(min_consensus) &&
+    (!is.numeric(min_consensus) || length(min_consensus) != 1L ||
+      is.na(min_consensus) || !is.finite(min_consensus) ||
+      min_consensus != floor(min_consensus) || min_consensus < 1)) {
+    stop("`min_consensus` must be a finite positive integer or NULL", call. = FALSE)
+  }
+  if (!is.null(min_consensus) && min_consensus > length(files)) {
+    stop("`min_consensus` (", min_consensus,
+      ") exceeds the number of input files (", length(files), ").",
+      call. = FALSE
+    )
+  }
+  if (!is.null(min_raw_score) &&
+    (!is.numeric(min_raw_score) || length(min_raw_score) != 1L ||
+      is.na(min_raw_score) || !is.finite(min_raw_score))) {
+    stop("`min_raw_score` must be a single finite number or NULL", call. = FALSE)
+  }
+  if (!is.null(min_score) &&
+    (!is.numeric(min_score) || length(min_score) != 1L ||
+      is.na(min_score) || !is.finite(min_score))) {
+    stop("`min_score` must be a single finite number or NULL", call. = FALSE)
+  }
+  if (!is.null(blacklist_species)) {
+    if (!is.character(blacklist_species) || length(blacklist_species) != 1L ||
+      is.na(blacklist_species) || !nzchar(blacklist_species)) {
+      stop("`blacklist_species` must be a non-empty string or NULL", call. = FALSE)
     }
+  }
+  if (!is.null(region_of_interest)) {
+    if (!is.character(region_of_interest) || length(region_of_interest) != 1L ||
+      is.na(region_of_interest) || !nzchar(region_of_interest)) {
+      stop("`region_of_interest` must be a non-empty file path or NULL", call. = FALSE)
+    }
+    if (!file.exists(region_of_interest)) {
+      stop("`region_of_interest` file not found: ", region_of_interest, call. = FALSE)
+    }
+  }
 
-    # --- Merge by mode ---
-    if (mode == "intersect") {
-        result_gi <- .consolidate_intersect(gi_list, gap, n_reps, log_message)
+  n_reps <- length(files)
+
+  # --- Read & pre-filter files ---
+  read_res <- .consolidate_read_files(
+    files, score_col, min_raw_score, quiet, log_message
+  )
+  gi_list <- read_res$gi_list
+  raw_total <- sum(read_res$raw_counts)
+  retained_total <- sum(read_res$retained_counts)
+
+  # Compute effective min_consensus once, before any branch.
+  effective_min_consensus <- if (mode == "consensus") {
+    if (is.null(min_consensus)) {
+      if (n_reps <= 3L) n_reps else ceiling(0.75 * n_reps)
     } else {
-        result_gi <- .consolidate_cluster_mode(
-            gi_list, mode, gap, min_consensus, n_reps,
-            chaining_policy, log_message
-        )
+      min_consensus
     }
+  } else {
+    NA_integer_
+  }
 
-    # --- Post-filters ---
-    result_gi <- .consolidate_post_filters(
-        result_gi, min_score, blacklist_species,
-        region_of_interest, roi_mode, quiet, log_message
-    )
-
-    # --- Export ---
-    if (write_output && !is.null(out_file)) {
-        .consolidate_export(result_gi, out_file, log_message)
+  if (retained_total == 0) {
+    if (raw_total == 0L) {
+      qc_status <- "empty_input"
+      qc_reason <- "All input BEDPE files contained zero valid loops"
+    } else {
+      qc_status <- "empty_after_raw_score_filter"
+      qc_reason <- paste("All loops removed by min_raw_score =", min_raw_score)
     }
-
-    log_message("Finished! Final loops: ", length(result_gi))
-
-    # Collect diagnostic data attached by cluster_mode / intersect
-    gap_diag <- attr(result_gi, "looplook_gap_diagnosis")
-    cluster_diag <- attr(result_gi, "looplook_cluster_diagnosis")
-
-    attr(result_gi, "looplook_metadata") <- .build_looplook_metadata(
-        fun = "consolidate_chromatin_loops",
-        params = list(
-            files = basename(files), n_files = n_reps,
-            gap = gap, mode = mode,
-            min_consensus = min_consensus,
-            min_raw_score = min_raw_score, min_score = min_score,
-            chaining_policy = chaining_policy,
-            roi_mode = roi_mode,
-            blacklist_species = blacklist_species
-        ),
-        score_semantics = if (is.null(min_raw_score) && is.null(min_score)) {
-            "raw score (higher = better)"
-        } else {
-            "filtered score (higher = better)"
-        },
-        diagnostics = list(
-            gap = gap_diag,
-            cluster = cluster_diag
-        )
+    if (!quiet) {
+      message(qc_reason, ". Returning empty result.")
+    }
+    empty_gi <- InteractionSet::GInteractions(
+      GenomicRanges::GRanges(), GenomicRanges::GRanges()
     )
-    result_gi
+    S4Vectors::mcols(empty_gi)$score <- numeric(0)
+    S4Vectors::mcols(empty_gi)$n_members <- integer(0)
+    S4Vectors::mcols(empty_gi)$n_reps <- integer(0)
+    S4Vectors::mcols(empty_gi)$cluster_id <- character(0)
+    attr(empty_gi, "looplook_metadata") <- .build_looplook_metadata(
+      fun = "consolidate_chromatin_loops",
+      params = list(
+        files = basename(files), n_files = n_reps,
+        gap = gap, mode = mode,
+        min_consensus_requested = min_consensus,
+        min_consensus_effective = effective_min_consensus,
+        min_raw_score = min_raw_score, min_score = min_score,
+        chaining_policy = chaining_policy, roi_mode = roi_mode,
+        blacklist_species = blacklist_species,
+        qc_status = qc_status,
+        qc_reason = qc_reason
+      ),
+      diagnostics = list(
+        gap = NULL, cluster = NULL,
+        input_counts = data.frame(
+          replicate_id = seq_along(files),
+          file = basename(files),
+          raw_count = read_res$raw_counts,
+          retained_count = read_res$retained_counts,
+          stringsAsFactors = FALSE
+        )
+      ),
+      score_semantics = if (qc_status == "empty_input") {
+        "no valid interactions in input files"
+      } else {
+        "no retained interactions after raw-score filtering"
+      }
+    )
+    if (!is.null(out_file) && write_output) {
+      .consolidate_export(empty_gi, out_file, log_message)
+    }
+    return(empty_gi)
+  }
+
+  # --- Merge by mode ---
+  # effective_min_consensus was computed above (before pre-filter branch)
+  if (mode == "intersect") {
+    result_gi <- .consolidate_intersect(gi_list, gap, n_reps, log_message)
+  } else {
+    result_gi <- .consolidate_cluster_mode(
+      gi_list, mode, gap, effective_min_consensus, n_reps,
+      chaining_policy, log_message
+    )
+  }
+  n_after_merge <- length(result_gi)
+
+  # Save diagnostics while result_gi still has custom attributes
+  # (post-filter subsetting may or may not preserve them).
+  gap_diag <- attr(result_gi, "looplook_gap_diagnosis")
+  cluster_diag <- attr(result_gi, "looplook_cluster_diagnosis")
+
+  # --- Post-filters ---
+  result_gi <- .consolidate_post_filters(
+    result_gi, min_score, blacklist_species,
+    region_of_interest, roi_mode, quiet, log_message
+  )
+  n_after_postfilter <- length(result_gi)
+
+  log_message("Finished! Final loops: ", n_after_postfilter)
+
+  # --- QC status based on actual stage counts ---
+  if (n_after_merge == 0L) {
+    qc_status <- "empty_after_merge"
+    qc_reason <- switch(mode,
+      intersect = "No reference loop was supported by all required inputs",
+      consensus = "No cluster met the effective consensus threshold, or all clusters were removed by chaining policy",
+      union = "All union clusters were removed by chaining policy"
+    )
+  } else if (n_after_postfilter == 0L) {
+    qc_status <- "empty_after_postfilter"
+    active <- c(
+      if (!is.null(min_score) && is.finite(min_score)) "min_score",
+      if (!is.null(blacklist_species)) "blacklist",
+      if (!is.null(region_of_interest)) "ROI"
+    )
+    qc_reason <- paste(
+      "All merged loops were removed by:",
+      paste(active, collapse = ", ")
+    )
+  } else {
+    qc_status <- "ok"
+    qc_reason <- NULL
+  }
+  attr(result_gi, "looplook_metadata") <- .build_looplook_metadata(
+    fun = "consolidate_chromatin_loops",
+    params = list(
+      files = basename(files), n_files = n_reps,
+      gap = gap, mode = mode,
+      min_consensus_requested = min_consensus,
+      min_consensus_effective = effective_min_consensus,
+      min_raw_score = min_raw_score, min_score = min_score,
+      chaining_policy = chaining_policy,
+      roi_mode = roi_mode,
+      blacklist_species = blacklist_species,
+      qc_status = qc_status,
+      qc_reason = qc_reason
+    ),
+    diagnostics = list(
+      gap = gap_diag, cluster = cluster_diag,
+      input_counts = data.frame(
+        replicate_id = seq_along(files),
+        file = basename(files),
+        raw_count = read_res$raw_counts,
+        retained_count = read_res$retained_counts,
+        stringsAsFactors = FALSE
+      )
+    ),
+    score_semantics = if (is.null(min_raw_score) && is.null(min_score)) {
+      "raw score (higher = better)"
+    } else {
+      "filtered score (higher = better)"
+    }
+  )
+
+  # --- Export (after metadata: atomic — file written only on success) ---
+  if (write_output && !is.null(out_file)) {
+    .consolidate_export(result_gi, out_file, log_message)
+  }
+
+  result_gi
 }
 
 # --- Helpers extracted from consolidate_chromatin_loops ---
@@ -813,54 +996,108 @@ consolidate_chromatin_loops <- function(
 .consolidate_read_files <- function(
   files, score_col, min_raw_score, quiet, log_message
 ) {
-    log_message(">>> Reading BEDPE files")
-    gi_list <- lapply(files, function(f) {
-        gi <- bedpe_to_gi(f, score_col = score_col, quiet = quiet)
-        if (!is.null(min_raw_score)) {
-            if ("score" %in% colnames(S4Vectors::mcols(gi))) {
-                keep_idx <- S4Vectors::mcols(gi)$score >= min_raw_score
-                gi <- gi[keep_idx]
-            }
-        }
-        return(gi)
-    })
-    for (i in seq_along(gi_list)) {
-        if (length(gi_list[[i]]) > 0) {
-            S4Vectors::mcols(gi_list[[i]])$source <- i
-        }
-        log_message("    File ", i, ": ", length(gi_list[[i]]), " loops")
+  log_message(">>> Reading BEDPE files")
+  raw_counts <- integer(length(files))
+  retained_counts <- integer(length(files))
+  gi_list <- vector("list", length(files))
+  empty_replicates <- character(0)
+  for (i in seq_along(files)) {
+    finfo <- file.info(files[[i]])
+    if (!is.na(finfo$size) && finfo$size == 0L) {
+      # Empty file: return zero-length GInteractions so raw_counts[i]
+      # records 0 and the empty_input QC branch is reachable.
+      raw_counts[[i]] <- 0L
+      retained_counts[[i]] <- 0L
+      gi_list[[i]] <- InteractionSet::GInteractions(
+        GenomicRanges::GRanges(), GenomicRanges::GRanges()
+      )
+      S4Vectors::mcols(gi_list[[i]])$score <- numeric(0)
+      empty_replicates <- c(
+        empty_replicates,
+        paste0(i, ": '", basename(files[[i]]), "'")
+      )
+      next
     }
-    gi_list
+    gi <- tryCatch(
+      bedpe_to_gi(files[[i]], score_col = score_col, quiet = quiet),
+      error = function(e) {
+        stop(
+          "Failed to read BEDPE replicate '", basename(files[[i]]),
+          "' (replicate ", i, "): ", conditionMessage(e),
+          call. = FALSE
+        )
+      }
+    )
+    raw_counts[[i]] <- length(gi)
+    if (!is.null(min_raw_score)) {
+      if ("score" %in% colnames(S4Vectors::mcols(gi))) {
+        gi <- gi[S4Vectors::mcols(gi)$score >= min_raw_score]
+      }
+    }
+    retained_counts[[i]] <- length(gi)
+    if (length(gi) > 0) {
+      S4Vectors::mcols(gi)$source <- i
+    }
+    gi_list[[i]] <- gi
+    log_message("    File ", i, ": ", length(gi), " loops (raw: ", raw_counts[[i]], ")")
+  }
+  if (length(empty_replicates) > 0L) {
+    n_empty <- length(empty_replicates)
+    warning(
+      if (n_empty == 1L) {
+        paste0(
+          "Replicate ", empty_replicates[[1L]],
+          " is empty (0 bytes) and will remain part of the ",
+          "requested replicate set. This affects consensus and ",
+          "intersect behavior; it contributes no interactions ",
+          "in union mode. Verify that loop calling completed ",
+          "successfully for this replicate."
+        )
+      } else {
+        paste0(
+          "Replicate(s) ",
+          paste(empty_replicates, collapse = ", "),
+          " are empty (0 bytes) and will remain part of the ",
+          "requested replicate set. This affects consensus and ",
+          "intersect behavior; they contribute no interactions ",
+          "in union mode. Verify that loop calling completed ",
+          "successfully for these replicates."
+        )
+      },
+      call. = FALSE
+    )
+  }
+  list(gi_list = gi_list, raw_counts = raw_counts, retained_counts = retained_counts)
 }
 
 #' Internal: Intersect-mode consolidation (reference-based, no coordinate merging)
 #' @keywords internal
 #' @noRd
 .consolidate_intersect <- function(gi_list, gap, n_reps, log_message) {
-    log_message(">>> Intersect mode: Reference-based filtering (No Coordinate Merging)")
-    log_message("    Base: File 1 (first input). Output coordinates and scores come exclusively from File 1.")
-    current_gi <- gi_list[[1]]
-    for (i in 2:n_reps) {
-        if (length(current_gi) == 0) break
-        log_message("    Intersecting with File ", i, "...")
-        hits <- InteractionSet::findOverlaps(
-            current_gi, gi_list[[i]],
-            maxgap = gap, use.region = "both"
-        )
-        keep_idx <- unique(S4Vectors::queryHits(hits))
-        current_gi <- current_gi[keep_idx]
-    }
-    S4Vectors::mcols(current_gi)$n_reps <- n_reps
-    S4Vectors::mcols(current_gi)$n_members <- 1L
-    S4Vectors::mcols(current_gi)$cluster_id <- as.character(seq_along(current_gi))
-    # Erase per-source label so the schema matches cluster-mode output
-    # (dt_to_gi already drops `source` for consensus/union). The intersect
-    # output represents a multi-source consensus and must not carry a
-    # single-source label inherited from File 1.
-    if ("source" %in% colnames(S4Vectors::mcols(current_gi))) {
-        S4Vectors::mcols(current_gi)$source <- NULL
-    }
-    current_gi
+  log_message(">>> Intersect mode: Reference-based filtering (No Coordinate Merging)")
+  log_message("    Base: File 1 (first input). Output coordinates and scores come exclusively from File 1.")
+  current_gi <- gi_list[[1]]
+  for (i in 2:n_reps) {
+    if (length(current_gi) == 0) break
+    log_message("    Intersecting with File ", i, "...")
+    hits <- InteractionSet::findOverlaps(
+      current_gi, gi_list[[i]],
+      maxgap = gap, use.region = "both"
+    )
+    keep_idx <- unique(S4Vectors::queryHits(hits))
+    current_gi <- current_gi[keep_idx]
+  }
+  S4Vectors::mcols(current_gi)$n_reps <- rep.int(n_reps, length(current_gi))
+  S4Vectors::mcols(current_gi)$n_members <- rep.int(1L, length(current_gi))
+  S4Vectors::mcols(current_gi)$cluster_id <- as.character(seq_along(current_gi))
+  # Erase per-source label so the schema matches cluster-mode output
+  # (dt_to_gi already drops `source` for consensus/union). The intersect
+  # output represents a multi-source consensus and must not carry a
+  # single-source label inherited from File 1.
+  if ("source" %in% colnames(S4Vectors::mcols(current_gi))) {
+    S4Vectors::mcols(current_gi)$source <- NULL
+  }
+  current_gi
 }
 
 #' Internal: Cluster-mode consolidation (consensus/union) with chaining check
@@ -870,138 +1107,138 @@ consolidate_chromatin_loops <- function(
   gi_list, mode, gap, min_consensus, n_reps,
   chaining_policy, log_message
 ) {
-    log_message(">>> Clustering mode (Union/Consensus): Merging coordinates via Graph")
+  log_message(">>> Clustering mode (Union/Consensus): Merging coordinates via Graph")
 
-    # Seqlevels consistency check and harmonization across input files.
-    # chr1 vs 1, or mixed UCSC/Ensembl styles, cause silent false negatives
-    # in the string-based chr matching inside cluster_loops_dt().
-    # Actively harmonize all files to the style of the first non-empty file.
-    # Harmonize the full GInteractions object (both anchors at once) and
-    # assign back -- extracting anchors() returns a copy, so modifying it
-    # in place does not propagate to the underlying gi_list entry.
-    ref_idx <- which(vapply(gi_list, function(x) length(x) > 0, logical(1)))[1]
-    if (!is.na(ref_idx)) {
-        ref_anchors <- InteractionSet::anchors(gi_list[[ref_idx]], "first")
-        for (i in seq_along(gi_list)) {
-            if (i == ref_idx || length(gi_list[[i]]) == 0) next
-            gi_list[[i]] <- .harmonize_seqlevels(
-                gi_list[[i]], ref_anchors, paste0("File ", i)
-            )
-        }
+  # Seqlevels consistency check and harmonization across input files.
+  # chr1 vs 1, or mixed UCSC/Ensembl styles, cause silent false negatives
+  # in the string-based chr matching inside cluster_loops_dt().
+  # Actively harmonize all files to the style of the first non-empty file.
+  # Harmonize the full GInteractions object (both anchors at once) and
+  # assign back -- extracting anchors() returns a copy, so modifying it
+  # in place does not propagate to the underlying gi_list entry.
+  ref_idx <- which(vapply(gi_list, function(x) length(x) > 0, logical(1)))[1]
+  if (!is.na(ref_idx)) {
+    ref_anchors <- InteractionSet::anchors(gi_list[[ref_idx]], "first")
+    for (i in seq_along(gi_list)) {
+      if (i == ref_idx || length(gi_list[[i]]) == 0) next
+      gi_list[[i]] <- .harmonize_seqlevels(
+        gi_list[[i]], ref_anchors, paste0("File ", i)
+      )
     }
+  }
 
-    # Fallback: re-check after harmonization attempt
-    sl_styles <- unique(vapply(gi_list, function(gi) {
-        tryCatch(GenomeInfoDb::seqlevelsStyle(InteractionSet::anchors(gi, "first"))[1],
-            error = function(e) NA_character_
-        )
-    }, character(1)))
-    sl_styles <- sl_styles[!is.na(sl_styles)]
-    if (length(sl_styles) > 1L) {
-        warning("Input BEDPE files have mixed seqlevel styles: ",
-            paste(sl_styles, collapse = ", "), ". ",
-            "Loop clustering uses string-based chromosome matching. ",
-            "Mismatched styles (e.g. 'chr1' vs '1') will produce ",
-            "false negatives. Automatic harmonization failed. ",
-            "Please harmonise your input files manually.",
-            call. = FALSE
-        )
-    }
-
-    combined_dt <- data.table::rbindlist(lapply(gi_list, gi_to_dt))
-
-    # Pre-clustering gap diagnosis; capture anchor width for post-clustering use
-    gap_diag <- .diagnose_gap(combined_dt, gap, log_message)
-    med_width <- if (!is.null(gap_diag)) gap_diag$anchor_width_median else NULL
-    n_input <- nrow(combined_dt)
-
-    clustered <- cluster_loops_dt(combined_dt, gap)
-    reduced_dt <- reduce_clusters_dt(clustered)
-
-    if (mode == "consensus") {
-        if (is.null(min_consensus)) {
-            if (n_reps <= 3) {
-                min_consensus <- n_reps # 100% for 2-3 replicates
-            } else {
-                min_consensus <- ceiling(0.75 * n_reps) # >=75% for N >= 4
-            }
-        }
-        log_message(">>> Consensus mode: Keeping clusters in >= ", min_consensus, " replicates")
-        # Defensive NA guard. reduce_clusters_dt() leaves n_reps = NA only if a
-        # cluster has zero supporting sources (pathological: every row was
-        # stripped upstream). With the new reduce_clusters_dt() this branch
-        # should not trigger, but we keep the guard so future regressions
-        # cannot silently drop clusters via NA-propagation in the comparison.
-        keep <- !is.na(reduced_dt$n_reps) & reduced_dt$n_reps >= min_consensus
-        n_dropped_nareps <- sum(!keep & is.na(reduced_dt$n_reps))
-        if (n_dropped_nareps > 0) {
-            log_message(
-                "    Dropped ", n_dropped_nareps,
-                " cluster(s) with NA n_reps (no supporting source)."
-            )
-        }
-        reduced_dt <- reduced_dt[keep]
-    } else {
-        log_message(">>> Union mode: Keeping all clusters")
-    }
-
-    result_gi <- dt_to_gi(reduced_dt)
-
-    # Post-clustering diagnosis with anchor-width-aware chaining threshold
-    cluster_diag <- .diagnose_clusters(result_gi, reduced_dt, gap, log_message,
-        med_width = med_width, n_input_loops = n_input
+  # Fallback: re-check after harmonization attempt
+  sl_styles <- unique(vapply(gi_list, function(gi) {
+    tryCatch(GenomeInfoDb::seqlevelsStyle(InteractionSet::anchors(gi, "first"))[1],
+      error = function(e) NA_character_
     )
+  }, character(1)))
+  sl_styles <- sl_styles[!is.na(sl_styles)]
+  if (length(sl_styles) > 1L) {
+    warning("Input BEDPE files have mixed seqlevel styles: ",
+      paste(sl_styles, collapse = ", "), ". ",
+      "Loop clustering uses string-based chromosome matching. ",
+      "Mismatched styles (e.g. 'chr1' vs '1') will produce ",
+      "false negatives. Automatic harmonization failed. ",
+      "Please harmonise your input files manually.",
+      call. = FALSE
+    )
+  }
 
-    # Attach diagnostic metrics to result for programmatic access
-    attr(result_gi, "looplook_gap_diagnosis") <- gap_diag
-    attr(result_gi, "looplook_cluster_diagnosis") <- cluster_diag
+  combined_dt <- data.table::rbindlist(lapply(gi_list, gi_to_dt))
 
-    # Chaining span check (uses combined threshold: anchor-width-aware)
-    if (chaining_policy != "none" && length(result_gi) > 0) {
-        a1 <- InteractionSet::anchors(result_gi, "first")
-        a2 <- InteractionSet::anchors(result_gi, "second")
-        span1 <- GenomicRanges::end(a1) - GenomicRanges::start(a1) + 1L
-        span2 <- GenomicRanges::end(a2) - GenomicRanges::start(a2) + 1L
-        span_threshold <- if (!is.null(med_width) && is.finite(med_width) && med_width > 0) {
-            max(3 * gap, 5 * med_width * gap / 1000)
-        } else {
-            3 * gap
-        }
-        nm <- S4Vectors::mcols(result_gi)$n_members
-        # Only flag clusters with n_members > 2 as potential chaining.
-        # n_members == 2 typically means the same loop detected in two
-        # replicates; wide span is from naturally broad anchors (super-
-        # enhancers), not from chaining through intermediate loops.
-        wide_idx <- which(pmax(span1, span2) > span_threshold & nm > 2)
-        n_wide <- length(wide_idx)
-        if (n_wide > 0) {
-            if (chaining_policy == "warn") {
-                warning(
-                    n_wide, " cluster(s) have max_span > chaining threshold (",
-                    format(round(span_threshold), big.mark = ","), " bp). ",
-                    "Connected-component clustering may have chained ",
-                    "through intermediate loops. Consider reducing 'gap' ",
-                    "or inspecting clusters with large 'n_members'.",
-                    call. = FALSE
-                )
-            } else if (chaining_policy == "drop") {
-                log_message(
-                    ">>> Dropping ", n_wide, " cluster(s) with max_span ",
-                    "> chaining threshold (", format(round(span_threshold), big.mark = ","), " bp)"
-                )
-                result_gi <- result_gi[-wide_idx]
-            } else if (chaining_policy == "error") {
-                stop(
-                    n_wide, " cluster(s) have max_span > chaining threshold (",
-                    format(round(span_threshold), big.mark = ","), " bp). ",
-                    "Connected-component clustering may have chained ",
-                    "through intermediate loops. Set chaining_policy to ",
-                    "'warn', 'drop', or reduce 'gap'."
-                )
-            }
-        }
+  # Pre-clustering gap diagnosis; capture anchor width for post-clustering use
+  gap_diag <- .diagnose_gap(combined_dt, gap, log_message)
+  med_width <- if (!is.null(gap_diag)) gap_diag$anchor_width_median else NULL
+  n_input <- nrow(combined_dt)
+
+  clustered <- cluster_loops_dt(combined_dt, gap)
+  reduced_dt <- reduce_clusters_dt(clustered)
+
+  if (mode == "consensus") {
+    stopifnot(
+      "Internal error: min_consensus must be resolved upstream in public path" =
+        !is.null(min_consensus)
+    )
+    log_message(">>> Consensus mode: Keeping clusters in >= ", min_consensus, " replicates")
+    # Defensive NA guard. reduce_clusters_dt() leaves n_reps = NA only if a
+    # cluster has zero supporting sources (pathological: every row was
+    # stripped upstream). With the new reduce_clusters_dt() this branch
+    # should not trigger, but we keep the guard so future regressions
+    # cannot silently drop clusters via NA-propagation in the comparison.
+    keep <- !is.na(reduced_dt$n_reps) & reduced_dt$n_reps >= min_consensus
+    n_dropped_nareps <- sum(!keep & is.na(reduced_dt$n_reps))
+    if (n_dropped_nareps > 0) {
+      log_message(
+        "    Dropped ", n_dropped_nareps,
+        " cluster(s) with NA n_reps (no supporting source)."
+      )
     }
-    result_gi
+    reduced_dt <- reduced_dt[keep]
+  } else {
+    log_message(">>> Union mode: Keeping all clusters")
+  }
+
+  result_gi <- dt_to_gi(reduced_dt)
+
+  # Post-clustering diagnosis with anchor-width-aware chaining threshold
+  cluster_diag <- .diagnose_clusters(result_gi, reduced_dt, gap, log_message,
+    med_width = med_width, n_input_loops = n_input
+  )
+
+  # Attach diagnostic metrics to result for programmatic access
+  attr(result_gi, "looplook_gap_diagnosis") <- gap_diag
+  attr(result_gi, "looplook_cluster_diagnosis") <- cluster_diag
+
+  # Chaining span check (uses combined threshold: anchor-width-aware)
+  if (chaining_policy != "none" && length(result_gi) > 0) {
+    a1 <- InteractionSet::anchors(result_gi, "first")
+    a2 <- InteractionSet::anchors(result_gi, "second")
+    span1 <- GenomicRanges::end(a1) - GenomicRanges::start(a1) + 1L
+    span2 <- GenomicRanges::end(a2) - GenomicRanges::start(a2) + 1L
+    span_threshold <- if (!is.null(med_width) && is.finite(med_width) && med_width > 0) {
+      if (gap == 0) {
+        max(3 * med_width, 1000)
+      } else {
+        max(3 * gap, 5 * med_width * gap / 1000)
+      }
+    } else {
+      if (gap == 0) 1000 else 3 * gap
+    }
+    nm <- S4Vectors::mcols(result_gi)$n_members
+    # Only flag clusters with n_members > 2 as potential chaining.
+    # n_members == 2 typically means the same loop detected in two
+    # replicates; wide span is from naturally broad anchors (super-
+    # enhancers), not from chaining through intermediate loops.
+    wide_idx <- which(pmax(span1, span2) > span_threshold & nm > 2)
+    n_wide <- length(wide_idx)
+    if (n_wide > 0) {
+      if (chaining_policy == "warn") {
+        warning(
+          n_wide, " cluster(s) have max_span > chaining threshold (",
+          format(round(span_threshold), big.mark = ","), " bp). ",
+          "Connected-component clustering may have chained ",
+          "through intermediate loops. Consider reducing 'gap' ",
+          "or inspecting clusters with large 'n_members'.",
+          call. = FALSE
+        )
+      } else if (chaining_policy == "drop") {
+        log_message(
+          ">>> Dropping ", n_wide, " cluster(s) with max_span ",
+          "> chaining threshold (", format(round(span_threshold), big.mark = ","), " bp)"
+        )
+        result_gi <- result_gi[-wide_idx]
+      } else if (chaining_policy == "error") {
+        stop(n_wide,
+          " cluster(s) have max_span > chaining threshold (",
+          format(round(span_threshold), big.mark = ","),
+          " bp). Connected-component clustering may have chained through intermediate loops. ",
+          "Set chaining_policy to 'warn', 'drop', or reduce 'gap'.",
+          call. = FALSE)
+      }
+    }
+  }
+  result_gi
 }
 
 #' Internal: Apply post-merge filters (min_score, blacklist, ROI)
@@ -1011,189 +1248,189 @@ consolidate_chromatin_loops <- function(
   result_gi, min_score, blacklist_species,
   region_of_interest, roi_mode, quiet, log_message
 ) {
-    if (!is.null(min_score)) {
-        # NA-guard mirrors filter_chromatin_loops(): union-mode consolidated
-        # clusters can carry score = NA when all sources had NA per-row
-        # scores; NA >= min_score would silently drop them via NA -> FALSE.
-        scores <- S4Vectors::mcols(result_gi)$score
-        na_drop <- is.na(scores)
-        if (any(na_drop)) {
-            log_message(
-                "    Score filter: dropped ", sum(na_drop),
-                " loop(s) with NA score (no numeric mean across sources)."
-            )
-        }
-        keep <- !na_drop & scores >= min_score
-        result_gi <- result_gi[keep]
+  if (!is.null(min_score)) {
+    # NA-guard mirrors filter_chromatin_loops(): union-mode consolidated
+    # clusters can carry score = NA when all sources had NA per-row
+    # scores; NA >= min_score would silently drop them via NA -> FALSE.
+    scores <- S4Vectors::mcols(result_gi)$score
+    na_drop <- is.na(scores)
+    if (any(na_drop)) {
+      log_message(
+        "    Score filter: dropped ", sum(na_drop),
+        " loop(s) with NA score (no numeric mean across sources)."
+      )
     }
-    if (!is.null(blacklist_species) || !is.null(region_of_interest)) {
-        result_gi <- filter_chromatin_loops(
-            result_gi,
-            blacklist_species   = blacklist_species,
-            region_of_interest  = region_of_interest,
-            roi_mode            = roi_mode,
-            quiet               = quiet
-        )
-    }
-    result_gi
+    keep <- !na_drop & scores >= min_score
+    result_gi <- result_gi[keep]
+  }
+  if (!is.null(blacklist_species) || !is.null(region_of_interest)) {
+    result_gi <- filter_chromatin_loops(
+      result_gi,
+      blacklist_species   = blacklist_species,
+      region_of_interest  = region_of_interest,
+      roi_mode            = roi_mode,
+      quiet               = quiet
+    )
+  }
+  result_gi
 }
 
 #' Internal: Export consolidated loops to BEDPE file
 #' @keywords internal
 #' @noRd
 .consolidate_export <- function(result_gi, out_file, log_message) {
-    a1 <- InteractionSet::anchors(result_gi, "first")
-    a2 <- InteractionSet::anchors(result_gi, "second")
-    # BEDPE export: convert back from 1-based closed to 0-based half-open
-    out_df <- data.frame(
-        chr1 = as.character(GenomicRanges::seqnames(a1)),
-        start1 = GenomicRanges::start(a1) - 1L,
-        end1 = GenomicRanges::end(a1),
-        chr2 = as.character(GenomicRanges::seqnames(a2)),
-        start2 = GenomicRanges::start(a2) - 1L,
-        end2 = GenomicRanges::end(a2),
-        name = ".",
-        score = round(S4Vectors::mcols(result_gi)$score, 2),
-        n_members = if (!is.null(S4Vectors::mcols(result_gi)$n_members)) {
-            S4Vectors::mcols(result_gi)$n_members
-        } else {
-            rep(1L, length(result_gi))
-        },
-        n_reps = if (!is.null(S4Vectors::mcols(result_gi)$n_reps)) {
-            S4Vectors::mcols(result_gi)$n_reps
-        } else {
-            rep(1L, length(result_gi))
-        },
-        stringsAsFactors = FALSE
-    )
-    tryCatch(
-        {
-            dir.create(dirname(out_file), showWarnings = FALSE, recursive = TRUE)
-            utils::write.table(out_df, out_file,
-                sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE
-            )
-            log_message("Finished! Saved to ", out_file)
-        },
-        error = function(e) {
-            warning("Failed to save consolidated BEDPE: ", conditionMessage(e),
-                call. = FALSE
-            )
-        }
-    )
+  a1 <- InteractionSet::anchors(result_gi, "first")
+  a2 <- InteractionSet::anchors(result_gi, "second")
+  # BEDPE export: convert back from 1-based closed to 0-based half-open
+  out_df <- data.frame(
+    chr1 = as.character(GenomicRanges::seqnames(a1)),
+    start1 = GenomicRanges::start(a1) - 1L,
+    end1 = GenomicRanges::end(a1),
+    chr2 = as.character(GenomicRanges::seqnames(a2)),
+    start2 = GenomicRanges::start(a2) - 1L,
+    end2 = GenomicRanges::end(a2),
+    name = rep(".", length(result_gi)),
+    score = round(S4Vectors::mcols(result_gi)$score, 2),
+    n_members = if (!is.null(S4Vectors::mcols(result_gi)$n_members)) {
+      S4Vectors::mcols(result_gi)$n_members
+    } else {
+      rep(1L, length(result_gi))
+    },
+    n_reps = if (!is.null(S4Vectors::mcols(result_gi)$n_reps)) {
+      S4Vectors::mcols(result_gi)$n_reps
+    } else {
+      rep(1L, length(result_gi))
+    },
+    stringsAsFactors = FALSE
+  )
+  tryCatch(
+    {
+      dir.create(dirname(out_file), showWarnings = FALSE, recursive = TRUE)
+      utils::write.table(out_df, out_file,
+        sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE
+      )
+      log_message("Finished! Saved to ", out_file)
+    },
+    error = function(e) {
+      warning("Failed to save consolidated BEDPE: ", conditionMessage(e),
+        call. = FALSE
+      )
+    }
+  )
 }
 
 
 gi_to_dt <- function(gi) {
-    # Extracts 1-based closed coordinates from GInteractions (GRanges).
-    # All downstream cluster_loops_dt gap calculations operate on this
-    # 1-based closed system -- consistent with GRanges semantics and
-    # Bioconductor findOverlaps(maxgap=...) conventions.
-    a1 <- InteractionSet::anchors(gi, "first")
-    a2 <- InteractionSet::anchors(gi, "second")
+  # Extracts 1-based closed coordinates from GInteractions (GRanges).
+  # All downstream cluster_loops_dt gap calculations operate on this
+  # 1-based closed system -- consistent with GRanges semantics and
+  # Bioconductor findOverlaps(maxgap=...) conventions.
+  a1 <- InteractionSet::anchors(gi, "first")
+  a2 <- InteractionSet::anchors(gi, "second")
 
-    data.table::data.table(
-        chr1 = as.character(GenomicRanges::seqnames(a1)),
-        start1 = GenomicRanges::start(a1),
-        end1 = GenomicRanges::end(a1),
-        chr2 = as.character(GenomicRanges::seqnames(a2)),
-        start2 = GenomicRanges::start(a2),
-        end2 = GenomicRanges::end(a2),
-        score = if (!is.null(S4Vectors::mcols(gi)$score)) {
-            S4Vectors::mcols(gi)$score
-        } else {
-            rep(0, length(gi))
-        },
-        source = if (!is.null(S4Vectors::mcols(gi)$source)) {
-            S4Vectors::mcols(gi)$source
-        } else {
-            rep(1L, length(gi))
-        }
-    )
+  data.table::data.table(
+    chr1 = as.character(GenomicRanges::seqnames(a1)),
+    start1 = GenomicRanges::start(a1),
+    end1 = GenomicRanges::end(a1),
+    chr2 = as.character(GenomicRanges::seqnames(a2)),
+    start2 = GenomicRanges::start(a2),
+    end2 = GenomicRanges::end(a2),
+    score = if (!is.null(S4Vectors::mcols(gi)$score)) {
+      S4Vectors::mcols(gi)$score
+    } else {
+      rep(0, length(gi))
+    },
+    source = if (!is.null(S4Vectors::mcols(gi)$source)) {
+      S4Vectors::mcols(gi)$source
+    } else {
+      rep(1L, length(gi))
+    }
+  )
 }
 
 reduce_clusters_dt <- function(dt) {
-    cluster_coords <- dt[, list(
-        chr1 = chr1[1],
-        start1 = min(start1),
-        end1 = max(end1),
-        chr2 = chr2[1],
-        start2 = min(start2),
-        end2 = max(end2),
-        n_members = .N
-    ), by = cluster]
+  cluster_coords <- dt[, list(
+    chr1 = chr1[1],
+    start1 = min(start1),
+    end1 = max(end1),
+    chr2 = chr2[1],
+    start2 = min(start2),
+    end2 = max(end2),
+    n_members = .N
+  ), by = cluster]
 
-    # Per-source mean first (collapses each replicate's rows within a cluster).
-    src_means <- dt[, .(
-        src_mean = .mean_or_na(score)
-    ), by = .(cluster, source)]
+  # Per-source mean first (collapses each replicate's rows within a cluster).
+  src_means <- dt[, .(
+    src_mean = .mean_or_na(score)
+  ), by = .(cluster, source)]
 
-    # Replicate support counts EVERY source that contributed rows to the
-    # cluster, regardless of whether its score was NA. A row in the BEDPE
-    # already represents a called loop, so a replicate with NA score still
-    # "detected" the interaction and should count toward n_reps. The mean
-    # score, by contrast, drops NA per-source means (.mean_or_na strips NAs).
-    # Without this, a cluster whose every source has an NA score ends up with
-    # n_reps = NA after the all.x = TRUE merge, and is silently dropped by
-    # downstream `n_reps >= min_consensus` filters (NA >= k is NA -> FALSE).
-    cluster_scores <- src_means[, .(
-        score = .mean_or_na(src_mean),
-        n_reps = .N
-    ), by = cluster]
+  # Replicate support counts EVERY source that contributed rows to the
+  # cluster, regardless of whether its score was NA. A row in the BEDPE
+  # already represents a called loop, so a replicate with NA score still
+  # "detected" the interaction and should count toward n_reps. The mean
+  # score, by contrast, drops NA per-source means (.mean_or_na strips NAs).
+  # Without this, a cluster whose every source has an NA score ends up with
+  # n_reps = NA after the all.x = TRUE merge, and is silently dropped by
+  # downstream `n_reps >= min_consensus` filters (NA >= k is NA -> FALSE).
+  cluster_scores <- src_means[, .(
+    score = .mean_or_na(src_mean),
+    n_reps = .N
+  ), by = cluster]
 
-    reduced_dt <- merge(
-        cluster_coords,
-        cluster_scores,
-        by = "cluster",
-        all.x = TRUE,
-        sort = FALSE
-    )
-    data.table::setcolorder(reduced_dt, c(
-        "cluster", "chr1", "start1", "end1", "chr2", "start2", "end2",
-        "score", "n_members", "n_reps"
-    ))
-    reduced_dt
+  reduced_dt <- merge(
+    cluster_coords,
+    cluster_scores,
+    by = "cluster",
+    all.x = TRUE,
+    sort = FALSE
+  )
+  data.table::setcolorder(reduced_dt, c(
+    "cluster", "chr1", "start1", "end1", "chr2", "start2", "end2",
+    "score", "n_members", "n_reps"
+  ))
+  reduced_dt
 }
 
 .mean_or_na <- function(x) {
-    x <- x[!is.na(x)]
-    if (length(x) == 0) {
-        return(NA_real_)
-    }
-    mean(x)
+  x <- x[!is.na(x)]
+  if (length(x) == 0) {
+    return(NA_real_)
+  }
+  mean(x)
 }
 
 dt_to_gi <- function(dt) {
-    gr1 <- .with_known_upstream_noise_suppressed(
-        GenomicRanges::GRanges(
-            dt$chr1, IRanges::IRanges(dt$start1, dt$end1)
-        )
+  gr1 <- .with_known_upstream_noise_suppressed(
+    GenomicRanges::GRanges(
+      dt$chr1, IRanges::IRanges(dt$start1, dt$end1)
     )
-    gr2 <- .with_known_upstream_noise_suppressed(
-        GenomicRanges::GRanges(
-            dt$chr2, IRanges::IRanges(dt$start2, dt$end2)
-        )
+  )
+  gr2 <- .with_known_upstream_noise_suppressed(
+    GenomicRanges::GRanges(
+      dt$chr2, IRanges::IRanges(dt$start2, dt$end2)
     )
+  )
 
-    gi <- .with_known_upstream_noise_suppressed(
-        InteractionSet::GInteractions(gr1, gr2, mode = "strict")
-    )
-    # cluster_id stored as character so the metadata schema is identical
-    # across consolidation modes (.consolidate_intersect also emits
-    # as.character(seq_along(...))). Avoids silent integer-vs-character
-    # mismatch if a user combines gi objects from different modes.
-    S4Vectors::mcols(gi)$cluster_id <- as.character(dt$cluster)
-    S4Vectors::mcols(gi)$n_members <- dt$n_members
-    S4Vectors::mcols(gi)$score <- dt$score
-    S4Vectors::mcols(gi)$n_reps <- dt$n_reps
-    # Erase the per-source label carried by bedpe_to_gi / .consolidate_read_files
-    # so the consolidated output has a consistent schema regardless of mode:
-    # cluster mode already drops it via dt_to_gi; intersect mode otherwise
-    # keeps the File-1 `source = 1L`, which is misleading because the
-    # output is a multi-source consensus, not a single-sample object.
-    if ("source" %in% colnames(S4Vectors::mcols(gi))) {
-        S4Vectors::mcols(gi)$source <- NULL
-    }
-    gi
+  gi <- .with_known_upstream_noise_suppressed(
+    InteractionSet::GInteractions(gr1, gr2, mode = "strict")
+  )
+  # cluster_id stored as character so the metadata schema is identical
+  # across consolidation modes (.consolidate_intersect also emits
+  # as.character(seq_along(...))). Avoids silent integer-vs-character
+  # mismatch if a user combines gi objects from different modes.
+  S4Vectors::mcols(gi)$cluster_id <- as.character(dt$cluster)
+  S4Vectors::mcols(gi)$n_members <- dt$n_members
+  S4Vectors::mcols(gi)$score <- dt$score
+  S4Vectors::mcols(gi)$n_reps <- dt$n_reps
+  # Erase the per-source label carried by bedpe_to_gi / .consolidate_read_files
+  # so the consolidated output has a consistent schema regardless of mode:
+  # cluster mode already drops it via dt_to_gi; intersect mode otherwise
+  # keeps the File-1 `source = 1L`, which is misleading because the
+  # output is a multi-source consensus, not a single-sample object.
+  if ("source" %in% colnames(S4Vectors::mcols(gi))) {
+    S4Vectors::mcols(gi)$source <- NULL
+  }
+  gi
 }
 
 #' Internal: Diagnose Gap Parameter for Spatial Clustering
@@ -1212,146 +1449,146 @@ dt_to_gi <- function(dt) {
 #' @keywords internal
 #' @noRd
 .diagnose_gap <- function(dt, gap, log_message) {
-    if (nrow(dt) < 10) {
-        log_message("  [i]  Too few loops (< 10) for gap diagnosis; skipping.")
-        return(invisible(NULL))
+  if (nrow(dt) < 10) {
+    log_message("  [i]  Too few loops (< 10) for gap diagnosis; skipping.")
+    return(invisible(NULL))
+  }
+
+  # Anchor width in bp (1-based closed: end - start + 1)
+  w1 <- dt$end1 - dt$start1 + 1L
+  w2 <- dt$end2 - dt$start2 + 1L
+  all_widths <- c(w1, w2)
+
+  med_w <- stats::median(all_widths, na.rm = TRUE)
+  q25_w <- stats::quantile(all_widths, 0.25, na.rm = TRUE, names = FALSE)
+  q75_w <- stats::quantile(all_widths, 0.75, na.rm = TRUE, names = FALSE)
+
+  # True nearest-neighbour distance via distanceToNearest (per-chromosome).
+  .true_nearest_dist <- function(chr_vec, start_vec, end_vec) {
+    gr <- GenomicRanges::GRanges(chr_vec, IRanges::IRanges(start_vec, end_vec))
+    hits <- GenomicRanges::distanceToNearest(gr)
+    if (length(hits) == 0) {
+      return(numeric(0))
     }
+    S4Vectors::mcols(hits)$distance
+  }
+  dist1 <- .true_nearest_dist(dt$chr1, dt$start1, dt$end1)
+  dist2 <- .true_nearest_dist(dt$chr2, dt$start2, dt$end2)
+  all_dists <- c(dist1, dist2)
 
-    # Anchor width in bp (1-based closed: end - start + 1)
-    w1 <- dt$end1 - dt$start1 + 1L
-    w2 <- dt$end2 - dt$start2 + 1L
-    all_widths <- c(w1, w2)
+  med_dist <- if (length(all_dists) > 0) stats::median(all_dists, na.rm = TRUE) else NA_real_
+  near_fraction <- if (length(all_dists) > 0) mean(all_dists <= gap, na.rm = TRUE) else NA_real_
 
-    med_w <- stats::median(all_widths, na.rm = TRUE)
-    q25_w <- stats::quantile(all_widths, 0.25, na.rm = TRUE, names = FALSE)
-    q75_w <- stats::quantile(all_widths, 0.75, na.rm = TRUE, names = FALSE)
+  # Effective width ratio: (anchor_width + 2*gap) / anchor_width
+  # Measures how much gap inflates the anchor"s reach
+  effective_ratio <- (med_w + 2 * gap) / med_w
 
-    # True nearest-neighbour distance via distanceToNearest (per-chromosome).
-    .true_nearest_dist <- function(chr_vec, start_vec, end_vec) {
-        gr <- GenomicRanges::GRanges(chr_vec, IRanges::IRanges(start_vec, end_vec))
-        hits <- GenomicRanges::distanceToNearest(gr)
-        if (length(hits) == 0) {
-            return(numeric(0))
-        }
-        S4Vectors::mcols(hits)$distance
-    }
-    dist1 <- .true_nearest_dist(dt$chr1, dt$start1, dt$end1)
-    dist2 <- .true_nearest_dist(dt$chr2, dt$start2, dt$end2)
-    all_dists <- c(dist1, dist2)
-
-    med_dist <- if (length(all_dists) > 0) stats::median(all_dists, na.rm = TRUE) else NA_real_
-    near_fraction <- if (length(all_dists) > 0) mean(all_dists <= gap, na.rm = TRUE) else NA_real_
-
-    # Effective width ratio: (anchor_width + 2*gap) / anchor_width
-    # Measures how much gap inflates the anchor"s reach
-    effective_ratio <- (med_w + 2 * gap) / med_w
-
-    # --- Diagnostic messages ---
-    log_message("--- Gap Diagnosis ---")
+  # --- Diagnostic messages ---
+  log_message("--- Gap Diagnosis ---")
+  log_message(sprintf(
+    "  Anchor width: median = %s bp  (IQR: %s - %s bp)",
+    format(med_w, big.mark = ","),
+    format(q25_w, big.mark = ","),
+    format(q75_w, big.mark = ",")
+  ))
+  if (!is.na(med_dist)) {
     log_message(sprintf(
-        "  Anchor width: median = %s bp  (IQR: %s - %s bp)",
-        format(med_w, big.mark = ","),
-        format(q25_w, big.mark = ","),
-        format(q75_w, big.mark = ",")
+      "  Adjacent-anchor gap: median = %s bp  (%.0f%% within current gap = %s bp)",
+      format(med_dist, big.mark = ","),
+      near_fraction * 100, format(gap, big.mark = ",")
     ))
-    if (!is.na(med_dist)) {
-        log_message(sprintf(
-            "  Adjacent-anchor gap: median = %s bp  (%.0f%% within current gap = %s bp)",
-            format(med_dist, big.mark = ","),
-            near_fraction * 100, format(gap, big.mark = ",")
-        ))
-    }
+  }
+  log_message(sprintf(
+    "  Gap / median_anchor_width ratio: %.1fx  (effective width expansion: %.1fx)",
+    gap / med_w, effective_ratio
+  ))
+
+  # Risk assessment
+  # Use data-type-aware thresholds for better biological relevance
+  if (effective_ratio > 5 && gap > 500 && med_w < 500) {
     log_message(sprintf(
-        "  Gap / median_anchor_width ratio: %.1fx  (effective width expansion: %.1fx)",
-        gap / med_w, effective_ratio
+      "  [!!] RISK HIGH: gap=%s bp inflates narrow anchors (median %s bp) by %.0fx.",
+      format(gap, big.mark = ","), format(med_w, big.mark = ","), effective_ratio
     ))
-
-    # Risk assessment
-    # Use data-type-aware thresholds for better biological relevance
-    if (effective_ratio > 5 && gap > 500 && med_w < 500) {
-        log_message(sprintf(
-            "  [!!] RISK HIGH: gap=%s bp inflates narrow anchors (median %s bp) by %.0fx.",
-            format(gap, big.mark = ","), format(med_w, big.mark = ","), effective_ratio
-        ))
-        log_message("  Clustering is dominated by gap rather than anchor positions.")
-        log_message(sprintf(
-            "  Consider reducing gap to <= %s bp (2x median width) for these narrow peaks.",
-            format(round(med_w * 2), big.mark = ",")
-        ))
-        log_message(sprintf(
-            "  Suggested: gap = %s  (or gap = %s for conservative merging)",
-            format(round(med_w), big.mark = ","),
-            format(round(med_w * 0.5), big.mark = ",")
-        ))
-    } else if (effective_ratio > 3 && med_w < 1000) {
-        log_message(sprintf(
-            "  [!]  RISK MODERATE: gap=%s bp is %sx wider than median anchor (%s bp).",
-            format(gap, big.mark = ","), format(round(gap / med_w, 1), big.mark = ","), format(med_w, big.mark = ",")
-        ))
-        log_message("  Independent loops in dense regions may be merged.")
-        log_message(sprintf(
-            paste0(
-                "  If your data is TF HiChIP or ChIA-PET with narrow loop ",
-                "anchors, consider reducing gap to %s-%s bp."
-            ),
-            format(round(med_w * 0.5), big.mark = ","),
-            format(round(med_w * 2), big.mark = ",")
-        ))
-    } else if (effective_ratio > 2.5 && gap > med_w * 0.5) {
-        # Additional check for broad enhancer data where gap exceeds half the anchor width
-        log_message(sprintf(
-            "  [!]  RISK MODERATE: gap=%s bp is %.1fx the median anchor width (%s bp).",
-            format(gap, big.mark = ","), gap / med_w, format(med_w, big.mark = ",")
-        ))
-        log_message("  For broad regulatory domains, consider whether this gap merges independent elements.")
-        log_message(sprintf(
-            "  If your data contains dense regulatory regions, consider reducing gap to %s-%s bp.",
-            format(round(med_w * 0.3), big.mark = ","),
-            format(round(med_w * 0.5), big.mark = ",")
-        ))
-    } else {
-        log_message("  Gap appears appropriate for the anchor width distribution.")
-    }
-
-    # Adjacent-anchor distance insight
-    if (!is.na(near_fraction) && near_fraction < 0.01 && med_w < 1000 && gap > 1000) {
-        log_message(sprintf(
-            "  [i]  Only %.1f%% of adjacent anchors fall within gap=%s bp. ",
-            near_fraction * 100, format(gap, big.mark = ",")
-        ))
-        log_message(paste0(
-            "  Gap may be unnecessarily small; most anchors are far apart. ",
-            "Increasing gap would not cause over-merging for this dataset."
-        ))
-    }
-
-    # Data type inference (based on loop anchor width, not peak width)
-    if (med_w < 300) {
-        log_message("  [i]  TF-binding resolution (CTCF, Pol II HiChIP / ChIA-PET).")
-        dt_label <- "TF_binding"
-    } else if (med_w < 1000) {
-        log_message("  [i]  Narrow enhancer anchors -- typical of ATAC-seq HiChIP or focal histone marks.")
-        dt_label <- "narrow_enhancer"
-    } else if (med_w < 3000) {
-        log_message("  [i]  Broad enhancer anchors -- typical of H3K27ac / H3K4me3 HiChIP or PLAC-seq.")
-        dt_label <- "broad_enhancer"
-    } else if (med_w < 10000) {
-        log_message("  [i]  Super-enhancer-like anchors -- very broad regulatory domains.")
-        dt_label <- "super_enhancer"
-    } else {
-        log_message("  [i]  Hi-C bin / Capture Hi-C bait-level resolution.")
-        dt_label <- "HiC_bin"
-    }
-    log_message("--- End Gap Diagnosis ---")
-
-    invisible(list(
-        anchor_width_median = med_w,
-        anchor_width_iqr = c(q25_w, q75_w),
-        adjacent_gap_median = med_dist,
-        adjacent_gap_near_fraction = near_fraction,
-        effective_width_ratio = effective_ratio,
-        data_type = dt_label
+    log_message("  Clustering is dominated by gap rather than anchor positions.")
+    log_message(sprintf(
+      "  Consider reducing gap to <= %s bp (2x median width) for these narrow peaks.",
+      format(round(med_w * 2), big.mark = ",")
     ))
+    log_message(sprintf(
+      "  Suggested: gap = %s  (or gap = %s for conservative merging)",
+      format(round(med_w), big.mark = ","),
+      format(round(med_w * 0.5), big.mark = ",")
+    ))
+  } else if (effective_ratio > 3 && med_w < 1000) {
+    log_message(sprintf(
+      "  [!]  RISK MODERATE: gap=%s bp is %sx wider than median anchor (%s bp).",
+      format(gap, big.mark = ","), format(round(gap / med_w, 1), big.mark = ","), format(med_w, big.mark = ",")
+    ))
+    log_message("  Independent loops in dense regions may be merged.")
+    log_message(sprintf(
+      paste0(
+        "  If your data is TF HiChIP or ChIA-PET with narrow loop ",
+        "anchors, consider reducing gap to %s-%s bp."
+      ),
+      format(round(med_w * 0.5), big.mark = ","),
+      format(round(med_w * 2), big.mark = ",")
+    ))
+  } else if (effective_ratio > 2.5 && gap > med_w * 0.5) {
+    # Additional check for broad enhancer data where gap exceeds half the anchor width
+    log_message(sprintf(
+      "  [!]  RISK MODERATE: gap=%s bp is %.1fx the median anchor width (%s bp).",
+      format(gap, big.mark = ","), gap / med_w, format(med_w, big.mark = ",")
+    ))
+    log_message("  For broad regulatory domains, consider whether this gap merges independent elements.")
+    log_message(sprintf(
+      "  If your data contains dense regulatory regions, consider reducing gap to %s-%s bp.",
+      format(round(med_w * 0.3), big.mark = ","),
+      format(round(med_w * 0.5), big.mark = ",")
+    ))
+  } else {
+    log_message("  Gap appears appropriate for the anchor width distribution.")
+  }
+
+  # Adjacent-anchor distance insight
+  if (!is.na(near_fraction) && near_fraction < 0.01 && med_w < 1000 && gap > 1000) {
+    log_message(sprintf(
+      "  [i]  Only %.1f%% of adjacent anchors fall within gap=%s bp. ",
+      near_fraction * 100, format(gap, big.mark = ",")
+    ))
+    log_message(paste0(
+      "  Gap may be unnecessarily small; most anchors are far apart. ",
+      "Increasing gap would not cause over-merging for this dataset."
+    ))
+  }
+
+  # Data type inference (based on loop anchor width, not peak width)
+  if (med_w < 300) {
+    log_message("  [i]  TF-binding resolution (CTCF, Pol II HiChIP / ChIA-PET).")
+    dt_label <- "TF_binding"
+  } else if (med_w < 1000) {
+    log_message("  [i]  Narrow enhancer anchors -- typical of ATAC-seq HiChIP or focal histone marks.")
+    dt_label <- "narrow_enhancer"
+  } else if (med_w < 3000) {
+    log_message("  [i]  Broad enhancer anchors -- typical of H3K27ac / H3K4me3 HiChIP or PLAC-seq.")
+    dt_label <- "broad_enhancer"
+  } else if (med_w < 10000) {
+    log_message("  [i]  Super-enhancer-like anchors -- very broad regulatory domains.")
+    dt_label <- "super_enhancer"
+  } else {
+    log_message("  [i]  Hi-C bin / Capture Hi-C bait-level resolution.")
+    dt_label <- "HiC_bin"
+  }
+  log_message("--- End Gap Diagnosis ---")
+
+  invisible(list(
+    anchor_width_median = med_w,
+    anchor_width_iqr = c(q25_w, q75_w),
+    adjacent_gap_median = med_dist,
+    adjacent_gap_near_fraction = near_fraction,
+    effective_width_ratio = effective_ratio,
+    data_type = dt_label
+  ))
 }
 
 #' Internal: Diagnose Clustering Results
@@ -1377,220 +1614,230 @@ dt_to_gi <- function(dt) {
 #' @noRd
 .diagnose_clusters <- function(result_gi, reduced_dt, gap, log_message,
                                med_width = NULL, n_input_loops = NULL) {
-    n_clusters <- length(result_gi)
-    if (n_clusters == 0) {
-        log_message("--- Post-Clustering Diagnosis ---")
-        log_message("  No clusters survived filtering.")
-        log_message("--- End Post-Clustering Diagnosis ---")
-        return(invisible(NULL))
-    }
-
-    # --- Cluster size (n_members) distribution ---
-    nm <- reduced_dt$n_members
-    total_survived <- sum(nm)
-
+  n_clusters <- length(result_gi)
+  if (n_clusters == 0) {
     log_message("--- Post-Clustering Diagnosis ---")
-    log_message(sprintf(
-        "  Clusters formed: %s  (from %s loops surviving consensus)",
-        format(n_clusters, big.mark = ","),
-        format(total_survived, big.mark = ",")
-    ))
-    log_message(sprintf(
-        "  Members per cluster: median = %.0f, IQR = %.0f-%.0f, max = %.0f",
-        stats::median(nm), stats::quantile(nm, 0.25, names = FALSE),
-        stats::quantile(nm, 0.75, names = FALSE), max(nm)
-    ))
-
-    # --- Consensus retention ---
-    if (!is.null(n_input_loops) && n_input_loops > 0) {
-        retention <- total_survived / n_input_loops * 100
-        log_message(sprintf(
-            "  Consensus retention: %s / %s input loops (%.1f%%)",
-            format(total_survived, big.mark = ","),
-            format(n_input_loops, big.mark = ","),
-            retention
-        ))
-        if (retention < 20) {
-            log_message("  [i]  Low retention -- many loops failed consensus. Gap may be too small for reproducible calls across replicates.")
-        }
-    }
-
-    # --- Anchor span distribution ---
-    a1 <- InteractionSet::anchors(result_gi, "first")
-    a2 <- InteractionSet::anchors(result_gi, "second")
-    span1 <- GenomicRanges::end(a1) - GenomicRanges::start(a1) + 1L
-    span2 <- GenomicRanges::end(a2) - GenomicRanges::start(a2) + 1L
-    max_span <- pmax(span1, span2)
-
-    # --- Chaining threshold: combine gap-based and anchor-width-based ---
-    chain_threshold <- if (!is.null(med_width) && is.finite(med_width) && med_width > 0) {
-        max(3 * gap, 5 * med_width * gap / 1000)
-    } else {
-        3 * gap
-    }
-    threshold_src <- if (!is.null(med_width) && is.finite(med_width) && 5 * med_width * gap / 1000 > 3 * gap) {
-        sprintf("5xmed_width(%s) x gap/1000", format(med_width, big.mark = ","))
-    } else {
-        sprintf("3xgap(%s)", format(gap, big.mark = ","))
-    }
-
-    log_message(sprintf(
-        "  Cluster span: median = %s  |  max = %s  |  threshold = %s = %s bp",
-        format(round(stats::median(max_span)), big.mark = ","),
-        format(max(max_span), big.mark = ","),
-        threshold_src,
-        format(round(chain_threshold), big.mark = ",")
-    ))
-
-    # --- Top spans: show actual values of largest clusters ---
-    # n_members = 2 usually means the same loop detected in two replicates
-    # -- not pathological chaining.  Only flag clusters with n_members > 2.
-    n_above <- sum(max_span > chain_threshold & nm > 2)
-    n_show <- min(max(n_above, 3L), 5L)
-    top_idx <- head(order(max_span, decreasing = TRUE), n_show)
-    log_message("  Largest cluster spans:")
-    for (i in top_idx) {
-        flag <- if (max_span[i] > chain_threshold && nm[i] > 2) " [!]" else ""
-        log_message(sprintf(
-            "    #%s: max_span = %s bp, n_members = %.0f, n_reps = %.0f%s",
-            i, format(max_span[i], big.mark = ","),
-            nm[i], reduced_dt$n_reps[i], flag
-        ))
-    }
-
-    # --- Chaining risk summary ---
-    pct_chain <- n_above / n_clusters * 100
-    if (n_above == 0) {
-        log_message(sprintf("  Chaining: 0/%s above threshold -- PASS.", n_clusters))
-    } else if (pct_chain > 20) {
-        log_message(sprintf(
-            "  [!!] Chaining: %s/%s (%.0f%%) above threshold -- EXCESSIVE. Consider reducing gap.",
-            n_above, n_clusters, pct_chain
-        ))
-    } else if (pct_chain > 5) {
-        log_message(sprintf(
-            "  [!]  Chaining: %s/%s (%.0f%%) above threshold -- MODERATE. Inspect flagged clusters above.",
-            n_above, n_clusters, pct_chain
-        ))
-    } else {
-        log_message(sprintf(
-            "  Chaining: %s/%s (%.0f%%) above threshold -- minimal, acceptable.",
-            n_above, n_clusters, pct_chain
-        ))
-    }
-
-    # --- Membership skew warning ---
-    if (max(nm) > 10 && max(nm) / stats::median(nm) > 5) {
-        log_message(sprintf(
-            "  [i]  Skewed cluster sizes: max members (%.0f) >> median (%.0f). ",
-            max(nm), stats::median(nm)
-        ))
-        log_message("  A few super-clusters may absorb independent events. Inspect the largest clusters.")
-    }
-
+    log_message("  No clusters survived filtering.")
     log_message("--- End Post-Clustering Diagnosis ---")
+    return(invisible(NULL))
+  }
 
-    invisible(list(
-        n_clusters = n_clusters,
-        n_input_loops = n_input_loops,
-        n_survived_loops = total_survived,
-        members_median = stats::median(nm),
-        members_max = max(nm),
-        span_median = stats::median(max_span),
-        span_max = max(max_span),
-        n_above_chain_threshold = n_above,
-        pct_above_chain_threshold = pct_chain
+  # --- Cluster size (n_members) distribution ---
+  nm <- reduced_dt$n_members
+  total_survived <- sum(nm)
+
+  log_message("--- Post-Clustering Diagnosis ---")
+  log_message(sprintf(
+    "  Clusters formed: %s  (from %s loops surviving consensus)",
+    format(n_clusters, big.mark = ","),
+    format(total_survived, big.mark = ",")
+  ))
+  log_message(sprintf(
+    "  Members per cluster: median = %.0f, IQR = %.0f-%.0f, max = %.0f",
+    stats::median(nm), stats::quantile(nm, 0.25, names = FALSE),
+    stats::quantile(nm, 0.75, names = FALSE), max(nm)
+  ))
+
+  # --- Consensus retention ---
+  if (!is.null(n_input_loops) && n_input_loops > 0) {
+    retention <- total_survived / n_input_loops * 100
+    log_message(sprintf(
+      "  Consensus retention: %s / %s input loops (%.1f%%)",
+      format(total_survived, big.mark = ","),
+      format(n_input_loops, big.mark = ","),
+      retention
     ))
+    if (retention < 20) {
+      log_message("  [i]  Low retention -- many loops failed consensus. Gap may be too small for reproducible calls across replicates.")
+    }
+  }
+
+  # --- Anchor span distribution ---
+  a1 <- InteractionSet::anchors(result_gi, "first")
+  a2 <- InteractionSet::anchors(result_gi, "second")
+  span1 <- GenomicRanges::end(a1) - GenomicRanges::start(a1) + 1L
+  span2 <- GenomicRanges::end(a2) - GenomicRanges::start(a2) + 1L
+  max_span <- pmax(span1, span2)
+
+  # --- Chaining threshold: combine gap-based and anchor-width-based ---
+  chain_threshold <- if (!is.null(med_width) && is.finite(med_width) && med_width > 0) {
+    if (gap == 0) {
+      max(3 * med_width, 1000)
+    } else {
+      max(3 * gap, 5 * med_width * gap / 1000)
+    }
+  } else {
+    if (gap == 0) 1000 else 3 * gap
+  }
+  threshold_src <- if (gap == 0) {
+    sprintf(
+      "max(3xmed_width(%s), 1000) [gap=0 anchor-width-based]",
+      format(med_width, big.mark = ",")
+    )
+  } else if (!is.null(med_width) && is.finite(med_width) &&
+    5 * med_width * gap / 1000 > 3 * gap) {
+    sprintf("5xmed_width(%s) x gap/1000", format(med_width, big.mark = ","))
+  } else {
+    sprintf("3xgap(%s)", format(gap, big.mark = ","))
+  }
+
+  log_message(sprintf(
+    "  Cluster span: median = %s  |  max = %s  |  threshold = %s = %s bp",
+    format(round(stats::median(max_span)), big.mark = ","),
+    format(max(max_span), big.mark = ","),
+    threshold_src,
+    format(round(chain_threshold), big.mark = ",")
+  ))
+
+  # --- Top spans: show actual values of largest clusters ---
+  # n_members = 2 usually means the same loop detected in two replicates
+  # -- not pathological chaining.  Only flag clusters with n_members > 2.
+  n_above <- sum(max_span > chain_threshold & nm > 2)
+  n_show <- min(max(n_above, 3L), 5L)
+  top_idx <- head(order(max_span, decreasing = TRUE), n_show)
+  log_message("  Largest cluster spans:")
+  for (i in top_idx) {
+    flag <- if (max_span[i] > chain_threshold && nm[i] > 2) " [!]" else ""
+    log_message(sprintf(
+      "    #%s: max_span = %s bp, n_members = %.0f, n_reps = %.0f%s",
+      i, format(max_span[i], big.mark = ","),
+      nm[i], reduced_dt$n_reps[i], flag
+    ))
+  }
+
+  # --- Chaining risk summary ---
+  pct_chain <- n_above / n_clusters * 100
+  if (n_above == 0) {
+    log_message(sprintf("  Chaining: 0/%s above threshold -- PASS.", n_clusters))
+  } else if (pct_chain > 20) {
+    log_message(sprintf(
+      "  [!!] Chaining: %s/%s (%.0f%%) above threshold -- EXCESSIVE. Consider reducing gap.",
+      n_above, n_clusters, pct_chain
+    ))
+  } else if (pct_chain > 5) {
+    log_message(sprintf(
+      "  [!]  Chaining: %s/%s (%.0f%%) above threshold -- MODERATE. Inspect flagged clusters above.",
+      n_above, n_clusters, pct_chain
+    ))
+  } else {
+    log_message(sprintf(
+      "  Chaining: %s/%s (%.0f%%) above threshold -- minimal, acceptable.",
+      n_above, n_clusters, pct_chain
+    ))
+  }
+
+  # --- Membership skew warning ---
+  if (max(nm) > 10 && max(nm) / stats::median(nm) > 5) {
+    log_message(sprintf(
+      "  [i]  Skewed cluster sizes: max members (%.0f) >> median (%.0f). ",
+      max(nm), stats::median(nm)
+    ))
+    log_message("  A few super-clusters may absorb independent events. Inspect the largest clusters.")
+  }
+
+  log_message("--- End Post-Clustering Diagnosis ---")
+
+  invisible(list(
+    n_clusters = n_clusters,
+    n_input_loops = n_input_loops,
+    n_survived_loops = total_survived,
+    members_median = stats::median(nm),
+    members_max = max(nm),
+    span_median = stats::median(max_span),
+    span_max = max(max_span),
+    n_above_chain_threshold = n_above,
+    pct_above_chain_threshold = pct_chain
+  ))
 }
 
 #' Internal: Core clustering for one chromosome-pair subset
 #' @keywords internal
 #' @noRd
 .cluster_loops_inner <- function(dt, gap) {
-    n_loops <- nrow(dt)
-    if (n_loops == 0) {
-        return(dt)
-    }
-    # Remap idx to local range (1..n_loops) so igraph vertex IDs stay in bounds.
-    # The original idx values are from the global table before chr-pair splitting.
-    dt[, idx := seq_len(n_loops)]
+  n_loops <- nrow(dt)
+  if (n_loops == 0) {
+    return(dt)
+  }
+  # Remap idx to local range (1..n_loops) so igraph vertex IDs stay in bounds.
+  # The original idx values are from the global table before chr-pair splitting.
+  dt[, idx := seq_len(n_loops)]
 
-    hits <- dt[dt, on = .(
-        chr1 = chr1,
-        a1_l <= end1,
-        a1_r >= start1,
-        chr2 = chr2,
-        a2_l <= end2,
-        a2_r >= start2
-    ), nomatch = NULL, allow.cartesian = TRUE]
+  hits <- dt[dt, on = .(
+    chr1 = chr1,
+    a1_l <= end1,
+    a1_r >= start1,
+    chr2 = chr2,
+    a2_l <= end2,
+    a2_r >= start2
+  ), nomatch = NULL, allow.cartesian = TRUE]
 
-    edges <- hits[idx < i.idx, .(from = idx, to = i.idx)]
+  edges <- hits[idx < i.idx, .(from = idx, to = i.idx)]
 
-    g <- igraph::make_empty_graph(n = n_loops, directed = FALSE)
-    if (nrow(edges) > 0) {
-        edge_vec <- as.vector(rbind(edges$from, edges$to))
-        g <- igraph::add_edges(g, edge_vec)
-    }
+  g <- igraph::make_empty_graph(n = n_loops, directed = FALSE)
+  if (nrow(edges) > 0) {
+    edge_vec <- as.vector(rbind(edges$from, edges$to))
+    g <- igraph::add_edges(g, edge_vec)
+  }
 
-    comp <- igraph::components(g)
-    dt[, cluster := comp$membership]
-    dt
+  comp <- igraph::components(g)
+  dt[, cluster := comp$membership]
+  dt
 }
 
 cluster_loops_dt <- function(dt, gap) {
-    # All coordinates are 1-based closed (from gi_to_dt).
-    # gap=0: only overlapping anchors merge (end1 >= start2 and end2 >= start1).
-    #   Touching boundaries (end1 == start2) DO merge -- consistent with
-    #   Bioconductor"s findOverlaps(maxgap=0) semantics.
-    # gap=N: anchors within N bp merge (end1 + N >= start2).
-    #
-    # Clustering is batched by chromosome pair (chr1, chr2) to avoid O(N^2)
-    # self-join on large datasets.  The join condition requires chr1 == chr1
-    # and chr2 == chr2, so splitting is lossless.
-    dt[, idx := .I]
-    dt[, `:=`(
-        a1_l = start1 - gap,
-        a1_r = end1 + gap,
-        a2_l = start2 - gap,
-        a2_r = end2 + gap
-    )]
+  # All coordinates are 1-based closed (from gi_to_dt).
+  # gap=0: only overlapping anchors merge (end1 >= start2 and end2 >= start1).
+  #   Touching boundaries (end1 == start2) DO merge -- consistent with
+  #   Bioconductor"s findOverlaps(maxgap=0) semantics.
+  # gap=N: anchors within N bp merge (end1 + N >= start2).
+  #
+  # Clustering is batched by chromosome pair (chr1, chr2) to avoid O(N^2)
+  # self-join on large datasets.  The join condition requires chr1 == chr1
+  # and chr2 == chr2, so splitting is lossless.
+  dt[, idx := .I]
+  dt[, `:=`(
+    a1_l = start1 - gap,
+    a1_r = end1 + gap,
+    a2_l = start2 - gap,
+    a2_r = end2 + gap
+  )]
 
-    n_loops <- nrow(dt)
-    if (n_loops > 50000) {
-        message(
-            "Clustering ", n_loops, " loops with gap = ", gap, " bp. ",
-            "Large datasets may require significant memory. ",
-            "Consider pre-filtering or reducing gap."
-        )
+  n_loops <- nrow(dt)
+  if (n_loops > 50000) {
+    message(
+      "Clustering ", n_loops, " loops with gap = ", gap, " bp. ",
+      "Large datasets may require significant memory. ",
+      "Consider pre-filtering or reducing gap."
+    )
+  }
+
+  # Split by chromosome pair and cluster independently
+  dt_list <- split(dt, by = c("chr1", "chr2"), drop = TRUE)
+  n_chunks <- length(dt_list)
+  if (n_chunks > 10) message("Clustering loops across ", n_chunks, " chromosome pairs...")
+  clust_offset <- 0L
+  result_list <- vector("list", length(dt_list))
+  for (i in seq_along(dt_list)) {
+    chunk <- .cluster_loops_inner(dt_list[[i]], gap)
+    if (clust_offset > 0L) {
+      chunk[, cluster := cluster + clust_offset]
     }
+    clust_offset <- max(chunk$cluster)
+    result_list[[i]] <- chunk
+  }
+  dt <- data.table::rbindlist(result_list)
 
-    # Split by chromosome pair and cluster independently
-    dt_list <- split(dt, by = c("chr1", "chr2"), drop = TRUE)
-    n_chunks <- length(dt_list)
-    if (n_chunks > 10) message("Clustering loops across ", n_chunks, " chromosome pairs...")
-    clust_offset <- 0L
-    result_list <- vector("list", length(dt_list))
-    for (i in seq_along(dt_list)) {
-        chunk <- .cluster_loops_inner(dt_list[[i]], gap)
-        if (clust_offset > 0L) {
-            chunk[, cluster := cluster + clust_offset]
-        }
-        clust_offset <- max(chunk$cluster)
-        result_list[[i]] <- chunk
-    }
-    dt <- data.table::rbindlist(result_list)
-
-    dt[, `:=`(idx = NULL, a1_l = NULL, a1_r = NULL, a2_l = NULL, a2_r = NULL)]
-    dt
+  dt[, `:=`(idx = NULL, a1_l = NULL, a1_r = NULL, a2_l = NULL, a2_r = NULL)]
+  dt
 }
 
 if (getRversion() >= "2.15.1") {
-    utils::globalVariables(c(
-        "V1", "V2", "V3", "V4", "V5", "V6", "V7",
-        "chr1", "start1", "end1", "chr2", "start2", "end2",
-        "idx", "i.idx", "cluster", "score", "source", "n_members", "n_reps", "src_mean",
-        "a1_l", "a1_r", "a2_l", "a2_r", ".N", ".I", ".SD", ".SDcols", "..coord_cols",
-        ".dt1", ".dt2", ".g1", ".g2", ".p1", ".p2",
-        ".topo_genes", ".topo_promoter"
-    ))
+  utils::globalVariables(c(
+    "V1", "V2", "V3", "V4", "V5", "V6", "V7",
+    "chr1", "start1", "end1", "chr2", "start2", "end2",
+    "idx", "i.idx", "cluster", "score", "source", "n_members", "n_reps", "src_mean",
+    "a1_l", "a1_r", "a2_l", "a2_r", ".N", ".I", ".SD", ".SDcols", "..coord_cols",
+    ".dt1", ".dt2", ".g1", ".g2", ".p1", ".p2",
+    ".topo_genes", ".topo_promoter"
+  ))
 }

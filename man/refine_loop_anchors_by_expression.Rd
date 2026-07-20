@@ -283,17 +283,17 @@ raw_annotation$promoter_centric_stats <- head(raw_annotation$promoter_centric_st
 raw_annotation$distal_element_stats <- head(raw_annotation$distal_element_stats, 6)
 
 res_reclassified <- refine_loop_anchors_by_expression(
-    annotation_res = raw_annotation,
-    expr_matrix_file = expr_path,
-    sample_columns = "con1",
-    threshold = 1.0,
-    unit_type = "TPM",
-    species = "hg38",
-    out_dir = tempdir(),
-    project_name = "Example_Reclassified",
-    reclassify_by_expression = TRUE,
-    write_output = FALSE,
-    quiet = TRUE
+  annotation_res = raw_annotation,
+  expr_matrix_file = expr_path,
+  sample_columns = "con1",
+  threshold = 1.0,
+  unit_type = "TPM",
+  species = "hg38",
+  out_dir = tempdir(),
+  project_name = "Example_Reclassified",
+  reclassify_by_expression = TRUE,
+  write_output = FALSE,
+  quiet = TRUE
 )
 print(table(res_reclassified$loop_annotation$loop_type))
 }

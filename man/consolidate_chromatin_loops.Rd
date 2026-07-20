@@ -22,7 +22,16 @@ consolidate_chromatin_loops(
 )
 }
 \arguments{
-\item{files}{Character vector. Paths to BEDPE files (at least two).}
+\item{files}{Character vector. Paths to BEDPE files (at least two).
+\strong{Empty files:} A zero-byte BEDPE file is treated as an empty
+replicate and triggers a warning. Empty replicates remain part of the
+replicate set: they count toward the default consensus denominator
+(\code{min_consensus}) and are required by intersect mode (which
+demands support from all inputs). They contribute no interactions in
+union mode. A file must be truly zero-byte to qualify as an empty
+replicate; any non-empty file must be a valid BEDPE with at least six
+columns. Verify that an empty file represents a legitimate biological
+result rather than a failed loop-calling run.}
 
 \item{gap}{Numeric. Maximum distance (in base pairs) between loop anchors to consider them as overlapping. Default: \code{1000} (1 kb). Typical range: 500-5000 bp depending on data resolution. Use \code{gap = 0} for strict overlap only.}
 
@@ -150,28 +159,28 @@ f2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
 # Example A: Intersect Mode
 # Only keeps loops present in f1 that are also supported by f2
 res_intersect <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "intersect",
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
+  files = c(f1, f2),
+  mode = "intersect",
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
 )
 
 # Example B: Consensus Mode (formerly Reproducible)
 # Finds consensus loops supported by both replicates (default for N=2)
 res_consensus <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "consensus",
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
+  files = c(f1, f2),
+  mode = "consensus",
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
 )
 
 # Example C: Union Mode
 # Merges all loops into a single map
 res_union <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "union",
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
+  files = c(f1, f2),
+  mode = "union",
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
 )
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -179,12 +188,12 @@ res_union <- consolidate_chromatin_loops(
 # 2. Merge: Find loops present in both replicates.
 # 3. Post-filter: Keep only strong consensus loops (score > 5).
 res_clean <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "consensus",
-    min_raw_score = 2, # Pre-filter (remove noise)
-    min_score = 5, # Post-filter (keep strong loops)
-    gap = 1000,
-    out_file = tempfile(fileext = ".bedpe")
+  files = c(f1, f2),
+  mode = "consensus",
+  min_raw_score = 2, # Pre-filter (remove noise)
+  min_score = 5, # Post-filter (keep strong loops)
+  gap = 1000,
+  out_file = tempfile(fileext = ".bedpe")
 )
 
 # Inspect results

@@ -1,4 +1,4 @@
-Gene	con1	con2	trt1	trt2
+	con1	con2	trt1	trt2
 STPG1	5.44	11.33	10.27	9.21
 NIPAL3	21.7	45.86	52.86	47.34
 AK2	218.94	208.22	174.24	184.19

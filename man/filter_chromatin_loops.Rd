@@ -56,8 +56,8 @@ gi_roi <- filter_chromatin_loops(gi, region_of_interest = roi_path, roi_mode = "
 
 # Score + blacklist + ROI (both)
 gi_strict <- filter_chromatin_loops(gi,
-    min_score = 5,
-    blacklist_species = "hg38", region_of_interest = roi_path,
-    roi_mode = "both", quiet = TRUE
+  min_score = 5,
+  blacklist_species = "hg38", region_of_interest = roi_path,
+  roi_mode = "both", quiet = TRUE
 )
 }

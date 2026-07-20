@@ -26,12 +26,12 @@ Uses grid graphics capture to ensure plot generation in all environments.
 }
 \examples{
 gene_sets <- list(
-    Upregulated = c("TP53", "BRCA1", "MYC", "EGFR"),
-    Downregulated = c("BRCA1", "MYC", "CDKN1A", "BAX"),
-    Bound_by_TF = c("MYC", "EGFR", "CDKN1A", "KRAS")
+  Upregulated = c("TP53", "BRCA1", "MYC", "EGFR"),
+  Downregulated = c("BRCA1", "MYC", "CDKN1A", "BAX"),
+  Bound_by_TF = c("MYC", "EGFR", "CDKN1A", "KRAS")
 )
 draw_upset_intersections(
-    gene_lists = gene_sets,
-    project_name = "Transcriptional Regulation"
+  gene_lists = gene_sets,
+  project_name = "Transcriptional Regulation"
 )
 }

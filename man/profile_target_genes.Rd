@@ -202,16 +202,16 @@ tmp <- new.env()
 load(rdata_path, envir = tmp)
 res <- tmp[[ls(tmp)[1]]]
 profile_res <- profile_target_genes(
-    annotation_res = res,
-    diff_file = diff_path,
-    expr_matrix_file = expr_path,
-    metadata_file = meta_path,
-    run_go = FALSE,
-    run_ppi = FALSE,
-    run_motif = FALSE,
-    heatmap_nSample = 20,
-    gsea_nSample = 20,
-    cnet_nSample = 5
+  annotation_res = res,
+  diff_file = diff_path,
+  expr_matrix_file = expr_path,
+  metadata_file = meta_path,
+  run_go = FALSE,
+  run_ppi = FALSE,
+  run_motif = FALSE,
+  heatmap_nSample = 20,
+  gsea_nSample = 20,
+  cnet_nSample = 5
 )
 names(profile_res)
 

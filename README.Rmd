@@ -31,7 +31,7 @@ Beyond its utility as a tool for integrative target annotation, `looplook` can b
 
 - **Genomic annotation** provides the baseline anchor assignment from genomic coordinates.
 - **Expression-aware refinement** adds transcriptional-activity context.
-- **Chromatin-state reclassification** supplies orthogonal histone-mark validation.
+- **Chromatin-Aware Refinement** supplies orthogonal histone-mark validation.
 
 These anchor-level classifications propagate through the loop network to determine target-gene assignments for every auxiliary feature (ChIP-seq peaks, ATAC-seq regions, GWAS variants). Because the layers function independently, users may deploy **any subset matched to their available data modalities** — a single layer for exploratory annotation, two for partial orthogonal support, or all three for maximally resolved regulatory-element classification.
 
@@ -88,6 +88,7 @@ In 3D genomics analyses, individual replicates typically exhibit **certain degre
 * **`mode`**: Defines the overarching merging algorithm. The **`"consensus"`** mode (recommended) **employs graph-based connected component analysis** to cluster nearby chromatin loop anchors across biological/technical samples. The **`"intersect"`** mode applies strict reference-based filtering to retain only overlapping interactions, while the **`"union"`** mode retains all detected interactions for **exploratory pan-tissue analyses**.
 * **`min_raw_score` & `min_score`** (The Dual-Filter): `min_raw_score` acts as a **pre-filter** applied to individual BEDPE files before clustering (e.g., removing singleton noise to help reduce computational memory overhead). `min_score` serves as a **post-filter** applied to the final merged chromatin interactome to improve confidence. In `"consensus"` and `"union"` modes, the representative score is **replicate-balanced**: the package first averages clustered loop scores within each replicate, then averages across replicates, so one replicate with denser loop calls does not dominate the final score.
 * **`gap`**: Defines the **maximum spatial distance** (in base pairs) allowed between loop anchors for consideration as part of the same physical cluster.
+* **`chaining_policy`**: Controls how transitive chaining (A-B and B-C merging A-C into the same cluster) is handled. `"warn"` (default): emits a warning when any cluster span exceeds the chaining threshold; does not remove affected clusters. `"none"`: silent chaining allowed. `"drop"`: excludes wide chained clusters from output. `"error"`: stops with an error.
 * **`blacklist_species`**: Automatically excludes chromatin loops overlapping with high-variance, artifact-prone genomic regions (e.g., centromeres, telomeres) by integrating the official ENCODE blacklist for specified species (e.g., `"hg38"`, `"mm10"`).
 * **`region_of_interest`**: Accepts an **auxiliary BED file** (e.g., a specific disease-associated locus or ChIP-seq peak set) to filter for loops with physical connectivity to the target genomic region.
 
@@ -99,11 +100,11 @@ f1 <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
 f2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
 
 consensus_global <- consolidate_chromatin_loops(
-    files = c(f1, f2),
-    mode = "consensus",
-    gap = 1000,
-    out_file = file.path(out_dir, "consensus_loops.bedpe"),
-    quiet = TRUE
+  files = c(f1, f2),
+  mode = "consensus",
+  gap = 1000,
+  out_file = file.path(out_dir, "consensus_loops.bedpe"),
+  quiet = TRUE
 )
 ```
 
@@ -116,33 +117,35 @@ This module serves as the **core target mapping engine**. It resolves locus assi
 * **`expr_matrix_file` & `sample_columns`**: Providing an RNA-seq matrix allows the engine to activate the Expression Pre-filter and Tiebreaker logic, drastically reducing false-positive gene assignments in **genomic regions harboring multiple genes**.
 * **`biotype_order`**: Custom ordering of biotype categories for conflict resolution. Default: `c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")`. Set `c("lncRNA", "protein")` to prioritise lncRNAs.
 * **`neighbor_hop`**: An advanced topological parameter for 3D chromatin interactome network traversal. Target gene assignment uses `neighbor_hop + 1` graph steps to capture genes at opposite anchors. A value of 0 restricts loop topology to direct contacts (target genes searched within 1-hop); a value of 1 (Hub Mode) extends both to secondary network effects.
+* **`hub_metric`**: Which connectivity count to use for hub detection. `"unique_contacts"` (default): counts distinct neighbour anchor IDs, robust to duplicate/replicate loop rows. `"total_loops"`: counts all loop rows (backward compatible; may inflate hub calls with unconsolidated replicates).
+* **`target_priority`**: Policy for prioritising multiple candidate target genes per feature. Applies only within primary target links (default `path_length <= 1`); longer paths are reported separately as `Expanded_Target_Genes` and do not compete for `Assigned_Target_Genes`. `"promoter_then_distance"` (default): within primary links, promoter-linked genes beat gene-body genes, with shorter paths breaking ties. `"distance_then_role"`: path-length dominates — the closest linked gene wins; at equal distance, promoter beats gene-body (legacy behaviour).
 * **`tss_region`**: Defines the **spatial boundary of gene promoters** relative to the Transcription Start Site (TSS).
 
 ```{r, eval = requireNamespace("looplook", quietly = TRUE)}
 # Annotate chromatin loops and map features to target genes via 3D contacts
 # When TxDb/OrgDb are installed, runs the full pipeline; otherwise loads pre-computed result
 if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
-    requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-    bedpe_file <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
-    atac_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
-    expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
+  requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+  bedpe_file <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
+  atac_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
+  expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
 
-    res_integrated <- annotate_peaks_and_loops(
-        bedpe_file       = bedpe_file, # Chromatin loops (BEDPE)
-        target_bed       = atac_path, # Genomic features to map
-        expr_matrix_file = expr_path, # RNA-seq expression matrix
-        sample_columns   = c("con1", "con2"), # Samples for baseline expression
-        species          = "hg38",
-        neighbor_hop     = 0, # Direct contacts only
-        hub_percentile   = 0.95, # Top 5% as regulatory hubs
-        out_dir          = out_dir,
-        project_name     = "HiChIP_Integrative",
-        quiet            = TRUE
-    )
+  res_integrated <- annotate_peaks_and_loops(
+    bedpe_file       = bedpe_file, # Chromatin loops (BEDPE)
+    target_bed       = atac_path, # Genomic features to map
+    expr_matrix_file = expr_path, # RNA-seq expression matrix
+    sample_columns   = c("con1", "con2"), # Samples for baseline expression
+    species          = "hg38",
+    neighbor_hop     = 0, # Direct contacts only
+    hub_percentile   = 0.95, # Top 5% as regulatory hubs
+    out_dir          = out_dir,
+    project_name     = "HiChIP_Integrative",
+    quiet            = TRUE
+  )
 } else {
-    tmp <- new.env()
-    load(system.file("extdata", "analysis_results.RData", package = "looplook"), envir = tmp)
-    res_integrated <- tmp[[ls(tmp)[1]]]
+  tmp <- new.env()
+  load(system.file("extdata", "analysis_results.RData", package = "looplook"), envir = tmp)
+  res_integrated <- tmp[[ls(tmp)[1]]]
 }
 ```
 
@@ -162,7 +165,7 @@ The module exports a multi-layered tabular catalog (e.g., `*_Basic_Results.xlsx`
 </div>
 
 ### Module 3A: Expression-Aware Refinement
-Physical proximity is a structural prerequisite, but not a direct proxy for active **transcriptional regulation**. This module integrates quantitative transcriptome data to annotate each loop with expression-aware functional status. All structural loops are preserved; the pipeline reclassifies silent anchors (P to eP, G to eG), flags which loops belong to the high-confidence functional subset (`Retained_In_Functional_Network`), and exposes `Refinement_Action` for transparent interpretation.
+Physical proximity is a structural prerequisite, but not a direct proxy for active **transcriptional regulation**. This module integrates quantitative transcriptome data to annotate each loop with expression-aware functional status. All structural loops are preserved; the pipeline reclassifies silent anchors (P to eP, G to eG), flags which loops belong to the expression-supported functional subset (`Retained_In_Functional_Network`), and exposes `Refinement_Action` for transparent interpretation.
 
 **Key Parameters:**
 
@@ -174,22 +177,22 @@ Physical proximity is a structural prerequisite, but not a direct proxy for acti
 expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
 
 refined_res <- refine_loop_anchors_by_expression(
-    annotation_res = res_integrated,
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
-    threshold = 1,
-    unit_type = "TPM",
-    reclassify_by_expression = TRUE,
-    out_dir = out_dir,
-    project_name = "Refined_Network",
-    quiet = TRUE
+  annotation_res = res_integrated,
+  expr_matrix_file = expr_path,
+  sample_columns = c("con1", "con2"),
+  threshold = 1,
+  unit_type = "TPM",
+  reclassify_by_expression = TRUE,
+  out_dir = out_dir,
+  project_name = "Refined_Network",
+  quiet = TRUE
 )
 ```
 
 **Output Data Dictionary: The Functionally Active Regulome**
-Following transcriptome integration, the refined tabular outputs represent a high-confidence, functionally active subset of the initial 3D chromatin interactome. The **key features** of these output are as follows:
+Following transcriptome integration, the refined tabular outputs represent an expression-supported, functionally active subset of the initial 3D chromatin interactome. The **key features** of these output are as follows:
 
-* **Expression-Aware Refinement**: All structural loops are preserved. The pipeline annotates each loop with expression-aware functional status (`Has_Active_Target`, `Retained_In_Functional_Network`, `Refinement_Action`) and provides a high-confidence functional subset for downstream analysis, without discarding structural evidence.
+* **Expression-Aware Refinement**: All structural loops are preserved. The pipeline annotates each loop with expression-aware functional status (`Has_Active_Target`, `Retained_In_Functional_Network`, `Refinement_Action`) and provides an expression-supported functional subset for downstream analysis, without discarding structural evidence.
 * **Dynamic Topological Reclassification**: The topological annotations within the `loop_type` are biologically recalibrated. By dynamically reclassifying transcriptionally silent promoters (**P**) as enhancer-like elements (**eP**), the catalog fundamentally corrects the spatial regulatory syntax (e.g., transforming a silent **P-P** loop into an **eP-P** interaction axis).
 * **Filtered Target Gene Links**: The refined provenance sheet retains only peak-gene links still used by the refined target columns and appends `Mean_Expression` plus `Passes_Expression_Filter`, so inactive Basic-stage links are not carried forward as active refined evidence.
 
@@ -200,41 +203,41 @@ The `eP` and `eG` labels denote expression-inactive promoter- or gene-body-assoc
   <p><em>Figure 2: <strong>Representative outputs of Expression-Aware Refinement.</strong> As shown by the Multi-Omics Sankey Tracking, this curated visualization dynamically traces the fate of peak through 3D chromatin topological interactions to their corresponding transcriptionally active target genes.</em></p>
 </div>
 
-### Module 3B: Chromatin-Aware Reclassification
-While expression data identify transcriptionally active anchors, orthogonal chromatin marks (ChIP-seq, CUT&Tag, ATAC-seq) provide direct evidence of regulatory element identity. Module 3B offers two complementary functions for chromatin-based anchor validation:
+### Module 3B: Chromatin-Aware Refinement
+While expression data identify transcriptionally active anchors, orthogonal chromatin marks (ChIP-seq, CUT&Tag, ATAC-seq) provide orthogonal chromatin-state evidence of regulatory element identity. Module 3B offers two complementary functions for chromatin-based anchor validation:
 
-**`validate_epeG_by_chromatin()`** — Tests eP/eG (or P/G/E) anchors against user-supplied chromatin mark BED files. Each anchor is scored against ENCODE active-enhancer criteria: `canonical` (H3K4me1+, H3K27ac+, ATAC+, H3K4me3-, H3K27me3-), `strong`, `supported`, limited, or `uncertain`.
+**`validate_epeG_by_chromatin()`** — Tests eP/eG (or P/G/E) anchors against user-supplied chromatin mark BED files. Each anchor is scored against ENCODE-inspired active-enhancer criteria: `canonical` (H3K4me1+, H3K27ac+, ATAC+, H3K4me3-, H3K27me3-), `strong`, `supported`, limited, or `uncertain`.
 
-**`refine_loop_anchors_by_chromatin()`** — Applies chromatin-mark evidence to **reclassify** anchors and update loop topologies. H3K4me3-positive anchors default to P or G; true dual-function elements require either bigWig confirmation (H3K4me1/H3K4me3 ≥ 3 via `chromatin_bw`) or overlap with a curated enhancer BED (`enhancer_bed`). Also supports: P + enhancer marks → `E`; eP/eG + promoter marks → `P` (H3K4me3+ inside a gene body → alternate TSS); E + H3K4me3 only → `P` (unannotated promoter). Supports `recompute_targets = TRUE` to rebuild target gene links with updated anchor types, producing chromatin-aware `target_annotation` and `target_gene_links`.
+**`refine_loop_anchors_by_chromatin()`** — Applies chromatin-mark evidence to **reclassify** anchors and update loop topologies. H3K4me3-positive anchors default to P or G; dual-signature elements are identified when bigWig evidence supports H3K4me1 dominance (H3K4me1/H3K4me3 ≥ 3 via `chromatin_bw`) or overlap with a curated enhancer BED (`enhancer_bed`). Also supports: P + enhancer marks → `E`; eP/eG + promoter marks → `P` (H3K4me3+ inside a gene body → alternate TSS); E + H3K4me3 only → `P` (unannotated promoter). Supports `recompute_targets = TRUE` to rebuild target gene links with updated anchor types, producing chromatin-aware `target_annotation` and `target_gene_links`.
 
 ```{r, eval=FALSE}
 # Validate eP/eG anchors against chromatin marks
 val <- validate_epeG_by_chromatin(
-    annotation_res = refined_res,
-    chromatin_beds = list(
-        H3K4me1  = "H3K4me1_peaks.bed",
-        H3K27ac  = "H3K27ac_peaks.bed",
-        ATAC     = "atac_peaks.bed"
-    )
+  annotation_res = refined_res,
+  chromatin_beds = list(
+    H3K4me1  = "H3K4me1_peaks.bed",
+    H3K27ac  = "H3K27ac_peaks.bed",
+    ATAC     = "atac_peaks.bed"
+  )
 )
 table(val$enhancer_evidence)
 
 # Chromatin-aware reclassification with target link recomputation
 cr <- refine_loop_anchors_by_chromatin(
-    annotation_res = refined_res,
-    chromatin_beds = list(
-        H3K4me1  = "H3K4me1_peaks.bed",
-        H3K4me3  = "H3K4me3_peaks.bed",
-        H3K27ac  = "H3K27ac_peaks.bed"
-    ),
-    recompute_targets = TRUE
+  annotation_res = refined_res,
+  chromatin_beds = list(
+    H3K4me1  = "H3K4me1_peaks.bed",
+    H3K4me3  = "H3K4me3_peaks.bed",
+    H3K27ac  = "H3K27ac_peaks.bed"
+  ),
+  recompute_targets = TRUE
 )
 table(cr$loop_annotation$loop_type)
 ```
 
 <div align="center">
   <img src="man/figures/g4.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Chromatin Refinement Results" />
-  <p><em>Figure 4: <strong>Chromatin-Aware Reclassification outputs.</strong> Right: Sankey flow diagram tracing each anchor's reclassification path (Before → After) with colourblind-safe Wong palette. Left: aggregated heatmap showing the percentage of anchors in each reclassification group positive for each chromatin mark (green = present, lighter = lower enrichment).</em></p>
+  <p><em>Figure 4: <strong>Chromatin-Aware Refinement outputs.</strong> Right: Sankey flow diagram tracing each anchor's reclassification path (Before → After) with colourblind-safe Wong palette. Left: aggregated heatmap showing the percentage of anchors in each reclassification group positive for each chromatin mark (green = present, lighter = lower enrichment).</em></p>
 </div>
 
 ### Module 4: Automated Functional Profiling
@@ -256,19 +259,19 @@ diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
 meta_path <- system.file("extdata", "example_coldata.txt", package = "looplook")
 
 res_profile <- profile_target_genes(
-    annotation_res = refined_res,
-    diff_file = diff_path,
-    lfc_col = "log2FoldChange",
-    expr_matrix_file = expr_path,
-    metadata_file = meta_path,
-    target_source = c("loops", "targets"),
-    target_mapping_mode = "all",
-    include_Filled = TRUE,
-    use_nearest_gene = FALSE,
-    project_name = "Functional_Profiling",
-    run_motif = FALSE,
-    run_go = FALSE,
-    run_ppi = FALSE
+  annotation_res = refined_res,
+  diff_file = diff_path,
+  lfc_col = "log2FoldChange",
+  expr_matrix_file = expr_path,
+  metadata_file = meta_path,
+  target_source = c("loops", "targets"),
+  target_mapping_mode = "all",
+  include_Filled = TRUE,
+  use_nearest_gene = FALSE,
+  project_name = "Functional_Profiling",
+  run_motif = FALSE,
+  run_go = FALSE,
+  run_ppi = FALSE
 )
 ```
 
@@ -292,18 +295,18 @@ bedpe_path <- system.file("extdata", "example_loops_1.bedpe", package = "looploo
 bed_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
 
 track_plot <- plot_peaks_interactions(
-    bedpe_file = bedpe_path,
-    target_bed = bed_path,
-    chr = "chr1",
-    from = 11884299,
-    to = 12106581,
-    species = "hg38"
+  bedpe_file = bedpe_path,
+  target_bed = bed_path,
+  chr = "chr1",
+  from = 11884299,
+  to = 12106581,
+  species = "hg38"
 )
 ```
 
 <div align="center">
   <img src="man/figures/plot1.jpg" width="800" style="border: 1px solid #ddd; border-radius: 4px; padding: 5px;" alt="Track Plot Results" />
-  <p><em>Figure 4: Integrative genomic browser view displaying 3D chromatin loops, genomic regions, and directional gene models.</em></p>
+  <p><em>Figure 5: Integrative genomic browser view displaying 3D chromatin loops, genomic regions, and directional gene models.</em></p>
 </div>
 ---
 
@@ -314,12 +317,12 @@ To facilitate intuitive data exploration and result interpretation, an integrate
 ```{r, eval = FALSE}
 # One-click report (renders a standalone HTML via nested rmarkdown)
 looplook::looplook_report(
-    bedpe_file = system.file("extdata", "example_loops_1.bedpe", package = "looplook"),
-    target_bed = system.file("extdata", "example_peaks.bed", package = "looplook"),
-    expr_matrix_file = system.file("extdata", "example_tpm.txt", package = "looplook"),
-    diff_file = system.file("extdata", "example_deg.txt", package = "looplook"),
-    metadata_file = system.file("extdata", "example_coldata.txt", package = "looplook"),
-    project_name = "My HiChIP Study"
+  bedpe_file = system.file("extdata", "example_loops_1.bedpe", package = "looplook"),
+  target_bed = system.file("extdata", "example_peaks.bed", package = "looplook"),
+  expr_matrix_file = system.file("extdata", "example_tpm.txt", package = "looplook"),
+  diff_file = system.file("extdata", "example_deg.txt", package = "looplook"),
+  metadata_file = system.file("extdata", "example_coldata.txt", package = "looplook"),
+  project_name = "My HiChIP Study"
 )
 ```
 
@@ -368,8 +371,8 @@ For reproducibility, `looplook` is developed and tested under the following envi
 
 ```{r session_info, eval = TRUE, echo = FALSE}
 if (requireNamespace("devtools", quietly = TRUE)) {
-    devtools::session_info()
+  devtools::session_info()
 } else {
-    sessionInfo()
+  sessionInfo()
 }
 ```

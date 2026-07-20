@@ -4,13 +4,14 @@ Changes in version 0.99.15 (2026-07-18)
 Algorithm Correctness
 
 * Added `target_priority` parameter (default `"promoter_then_distance"`) to
-  `annotate_peaks_and_loops()`.  Priority policy: `promoter_then_distance`
-  gives all promoter-linked evidence priority over gene-body links regardless
-  of path length; `distance_then_role` restores the legacy path-length-dominant
-  behaviour.  This parameter is propagated through expression refinement and
-  chromatin refinement, consistently affecting `Assigned_Target_Genes` across
-  all pipeline stages.  Tied genes with the same optimal priority are preserved
-  (semicolon-delimited).
+  `annotate_peaks_and_loops()`.  The policy applies only within primary target
+  links (default `path_length <= 1`); longer paths are reported separately as
+  `Expanded_Target_Genes` and do not compete for `Assigned_Target_Genes`.
+  `promoter_then_distance` gives promoter-linked evidence priority over
+  gene-body links within the primary-link scope; `distance_then_role` restores
+  the legacy path-length-dominant behaviour.  This parameter is propagated
+  through expression refinement and chromatin refinement.  Tied genes with the
+  same optimal priority are preserved (semicolon-delimited).
 * Reordered chromatin reclassification rules to fix three blocking issues:
   (1) enhancer BED is now truly highest priority; (2) eP/eG dual_like anchors
   correctly resolve via bigWig ratio (me1_dominant → dual, unresolved → keep,
@@ -18,6 +19,10 @@ Algorithm Correctness
   (promoter_like) revert to P.  Bivalent H3K4me3+/H3K27me3+ anchors are
   resolved by these rules (H3K4me3 defines promoter identity), not by the
   generic conflicting_marks clause.
+* Triple-positive anchors (H3K4me1+/H3K4me3+/H3K27me3+) are now classified
+  as conflicting_marks and retain their previous eP/eG type. Peak
+  co-occurrence from bulk ChIP alone is not considered sufficient evidence
+  for restoration to a functional promoter state.
 * Removed duplicate E/G dual-positive rules that became unreachable after
   reordering.
 * Fixed duplicate `mutate()` columns (role_rank, path_rank) that caused

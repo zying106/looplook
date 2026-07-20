@@ -22,7 +22,8 @@ refine_loop_anchors_by_chromatin(
   chromatin_bw = NULL,
   bw_ratio_threshold = 3,
   enhancer_bed = NULL,
-  hub_metric = c("unique_contacts", "total_loops")
+  hub_metric = c("unique_contacts", "total_loops"),
+  allow_rerefine = FALSE
 )
 }
 \arguments{
@@ -35,14 +36,15 @@ refine_loop_anchors_by_chromatin(
 reclassification; \code{H3K27ac}, \code{ATAC}, and \code{H3K27me3}
 improve confidence but are optional.}
 
-\item{anchor_gap}{Integer. Gap tolerance for mark overlap. Default \code{200}.}
+\item{anchor_gap}{Integer. Candidate search radius in bp between an anchor
+and a chromatin mark peak. Default \code{200}. Does \emph{not} bypass the
+physical-overlap requirement enforced by \code{anchor_min_overlap}.}
 
-\item{anchor_min_overlap}{Integer. Minimum physical overlap (bp) between
-an anchor and a chromatin mark peak, or between an anchor and an external
-enhancer BED region (\code{enhancer_bed}). Requires actual base-pair
-intersection; proximity-only matches are excluded. Default \code{100 bp}
-is appropriate for ChIP-seq peaks and ENCODE cCREs. Reduce to
-\code{1--10} for narrow features (TFBS, DHS, SNPs).}
+\item{anchor_min_overlap}{Integer. Minimum required physical overlap (bp)
+between an anchor and a chromatin mark or enhancer BED region. Default
+\code{100}. Proximity-only matches (within \code{anchor_gap} but without
+actual base-pair intersection) are excluded. Reduce to \code{1--10}
+for narrow features (TFBS, DHS, SNPs).}
 
 \item{species}{Character. Genome assembly. Default \code{"hg38"}.}
 
@@ -103,7 +105,17 @@ bigWig signals provide the quantitative H3K4me1/H3K4me3 ratio needed
 to distinguish dual-signature elements from promoter-proximal
 H3K4me1 shoulders.  Use the companion script
 \code{inst/scripts/diagnose_h3k4me_ratio.R} to explore the ratio
-distribution in your data and choose an appropriate threshold.}
+distribution in your data and choose an appropriate threshold.
+\strong{Important:} The H3K4me1/H3K4me3 ratio is only interpretable
+when both bigWig tracks are generated with comparable normalization
+(e.g., both CPM, both RPGC), identical scaling, binning, and
+smoothing, from matched biological material. Do not mix tracks with
+different normalization schemes (e.g., one fold-enrichment and one
+raw coverage) or from different cell types or batches. A separate
+low-signal threshold is not applied because input peaks already
+pass a peak caller (e.g. MACS2) and represent statistically
+enriched regions; signal at called peaks is expected to be well
+above noise.}
 
 \item{bw_ratio_threshold}{Numeric. Minimum H3K4me1/H3K4me3 ratio to
 classify a dual-positive anchor as true \code{"dual"}.  Anchors
@@ -121,6 +133,13 @@ over chromatin-mark-derived enhancer evidence levels.  Default: \code{NULL}.}
 
 \item{hub_metric}{Character. Which connectivity count to use for hub
 detection. \code{"unique_contacts"} (default) or \code{"total_loops"}.}
+
+\item{allow_rerefine}{Logical. If \code{FALSE} (default), stops when
+the input has already undergone chromatin refinement. Repeated chromatin
+refinement is not guaranteed to be idempotent (anchor types and TSS
+assignments have already been modified). Set \code{TRUE} only for
+exploratory use and restart from a common upstream object for formal
+parameter comparisons.}
 }
 \value{
 An invisible named list with updated \code{loop_annotation},
@@ -176,25 +195,30 @@ H3K4me1 alone).
 chromatin -> \code{"E"} (enhancer identity confirmed; matches the
 P->E rule to guarantee the same outcome whether expression or
 chromatin refinement runs first).
-\item eP + promoter_like (H3K4me3+, irrespective of H3K27me3 status) -> \code{"P"} (revert).
-\item eG + promoter_like -> \code{"P"} (H3K4me3+ inside a gene body most
-likely indicates an internal promoter or alternate TSS).
-\item E + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (dual-signature).
+\item eP/eG with H3K4me3(+) but without H3K4me1(+) -> \code{"P"} (revert
+to promoter). This includes H3K4me3(+)/H3K27me3(+) bivalent anchors.
+\item Triple-positive H3K4me1(+)/H3K4me3(+)/H3K27me3(+) eP/eG anchors
+are classified as \code{conflicting_marks} and retain their
+previous eP/eG type. Peak co-occurrence alone is not sufficient
+evidence for restoration to a functional promoter state.
+\item E + H3K4me1(+) and H3K4me3(+) -> resolved by bigWig ratio:
+me1-dominant -> \code{"dual"}, unresolved (no bigWig) -> keep \code{"E"},
+not-me1-dominant -> \code{"P"}.
 \item E + H3K4me3(+) without H3K4me1 -> \code{"P"} (unannotated promoter).
-\item G + H3K4me1(+) and H3K4me3(+) -> \code{"dual"} (gene-body dual).
+\item G + H3K4me1(+) and H3K4me3(+) -> same three-way bigWig resolution
+as E above.
 \item G + H3K4me3(+) without H3K4me1 -> \code{"P"} (internal promoter).
 \item G + H3K4me1(+) and H3K4me3(-) \emph{and} (H3K27ac(+) or ATAC(+))
 -> \code{"E"} (conservative intronic enhancer).
 \item All other anchors: unchanged.
 }
 
-\strong{Important  --  H3K4me3 dependency:} Rules that test for H3K4me3
-\emph{absence} (e.g., P -> E, G -> E) require H3K4me3 to be provided and
-explicitly called as absent at the anchor. When \code{H3K4me3} is not
-included in \code{chromatin_beds}, H3K4me3 is \code{NA} for all anchors,
-and these rules are skipped entirely (conservative: no reclassification
-without explicit data). Include \code{H3K4me3} to enable the full set of
-reclassification rules.
+\strong{Required inputs:} \code{H3K4me1} and \code{H3K4me3} are required.
+Their BED files must exist and contain at least one peak (an empty
+required-mark file cannot be interpreted as genome-wide negative evidence).
+Optional marks (\code{H3K27ac}, \code{ATAC}, \code{H3K27me3}) that are not
+provided are recorded as \code{NA} (not_tested), and rules that depend on
+their absence are skipped conservatively.
 
 \strong{Chromatin state inference:} Each anchor is also assigned a
 \code{chromatin_state} based on its mark combination (highest-priority
@@ -227,12 +251,16 @@ coexisting alongside active marks (H3K4me3+, H3K4me1+, or H3K27ac+)
 receive \code{chromatin_state = "conflicting_marks"}. This is common in
 stem-cell and developmental contexts, where H3K4me3+/H3K27me3+ bivalent
 domains poise genes for activation while maintaining transcriptional
-silence. The reclassification rules do \emph{not} override positional
-anchor types for conflicting-mark anchors alone: active histone marks
-(e.g.\ H3K4me3) carry stronger weight for promoter/enhancer identity
-than H3K27me3. To distinguish active from poised promoters, run
-expression refinement before chromatin refinement and use the
-retained expression state together with
+silence. The reclassification rules distinguish between:
+bivalent double-positive anchors (H3K4me3+ / H3K27me3+, H3K4me1-),
+which are restored to \code{P} while retaining the
+\code{conflicting_marks} state; and triple-positive anchors
+(H3K4me1+ / H3K4me3+ / H3K27me3+), which retain their previous
+eP/eG type because the co-presence of three marks on bulk ChIP
+does not resolve whether H3K4me1 and H3K4me3 come from the
+same nucleosome, allele, or cell. To distinguish active from
+poised promoters, run expression refinement before chromatin
+refinement and use the retained expression state together with
 \code{chromatin_state = "conflicting_marks"}. The \code{chromatin_state} column in
 \code{chromatin_validation} remains available for independent filtering
 of conflicting-mark anchors.
@@ -275,18 +303,18 @@ raw_annotation$target_annotation <- head(raw_annotation$target_annotation, 3)
 
 # 3. Run chromatin-aware refinement
 res_chromatin <- refine_loop_anchors_by_chromatin(
-    annotation_res = raw_annotation,
-    chromatin_beds = list(
-        H3K4me1 = k4me1_path,
-        H3K4me3 = k4me3_path
-    ),
-    anchor_gap = 500,
-    anchor_min_overlap = 100,
-    species = "hg38",
-    out_dir = tempdir(),
-    project_name = "Example_Chromatin",
-    write_output = FALSE,
-    quiet = TRUE
+  annotation_res = raw_annotation,
+  chromatin_beds = list(
+    H3K4me1 = k4me1_path,
+    H3K4me3 = k4me3_path
+  ),
+  anchor_gap = 500,
+  anchor_min_overlap = 100,
+  species = "hg38",
+  out_dir = tempdir(),
+  project_name = "Example_Chromatin",
+  write_output = FALSE,
+  quiet = TRUE
 )
 table(res_chromatin$loop_annotation$loop_type)
 }

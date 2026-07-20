@@ -112,9 +112,21 @@ Five keywords: \code{"protein"}, \code{"small_ncRNA"}, \code{"antisense"},
 unlisted keep their default relative order appended at the bottom.
 Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")}.}
 
-\item{anchor_gap}{Integer. Search radius: how far apart (bp) can a peak and loop anchor be for the peak to be considered "near" the anchor? \code{-1L} (default): strict physical overlap required (GenomicRanges default -- peak and anchor must share at least 1 bp). \code{0L}: adjacent intervals (peak end == anchor start) also count. \code{>0}: explicit gap tolerance in bp (e.g. \code{200} = 200 bp tolerance for cross-experiment integration). When \code{>= 0}, the result includes both physically overlapping pairs AND proximity-only pairs (within gap but no actual overlap). Use \code{anchor_min_overlap > 1} to require actual physical overlap among these candidates.}
+\item{anchor_gap}{Integer. Candidate search radius in bp between a
+peak and a loop anchor. \code{-1L} (default): strict physical overlap
+required. When \code{>= 0}, expands the candidate search window
+(e.g. \code{200} for cross-experiment coordinate shifts).
+\strong{Note:} final retention always requires at least
+\code{anchor_min_overlap} bp of physical overlap; this parameter
+only controls which candidates are evaluated, not whether
+proximity-only pairs are retained.}
 
-\item{anchor_min_overlap}{Integer. After candidate pairs are found (via \code{anchor_gap}), how many base pairs of actual physical overlap are required? Default \code{1L}: at least 1 bp of sequence overlap is required even when \code{anchor_gap >= 0}. Increase to \code{10-100} to filter out spurious boundary overlaps. This filter is always applied (including at the default value) so that proximity-only pairs within the gap but without physical overlap are excluded.}
+\item{anchor_min_overlap}{Integer. Minimum required physical overlap
+(bp) between a peak and an anchor. Default \code{1L}: at least 1 bp
+of actual sequence overlap required — proximity-only pairs within
+the \code{anchor_gap} window but without physical overlap are
+excluded. Increase to \code{10-100} for broad peaks to avoid
+spurious boundary overlaps.}
 
 \item{anchor_min_frac}{Numeric (0-1). After the first two filters, what fraction of the \emph{peak} width must physically overlap the anchor? Default \code{0}: any fraction accepted. Set to \code{0.1-0.5} when peaks are broad (e.g. H3K27ac domains, 2-5 kb) so a 1 bp overlap does not link the entire broad peak. Ignored for point features (SNPs, eQTLs). Applied last, only to pairs that passed \code{anchor_gap} and \code{anchor_min_overlap}.}
 
@@ -123,11 +135,17 @@ Default: \code{c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene")}
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.}
 
 \item{target_priority}{Character. How to prioritise among multiple candidate
-target genes per input feature. \code{"promoter_then_distance"} (default):
-evidence tier dominates — all promoter-linked genes beat all gene-body
-genes regardless of path length; within each tier shorter paths win.
-\code{"distance_then_role"}: path-length dominates — the closest linked
-gene wins; at equal distance promoter beats gene-body (legacy behaviour).
+target genes per input feature. The policy applies only within primary
+target links (default \code{path_length <= 1}); longer paths are reported
+separately as \code{Expanded_Target_Genes} and do not participate in
+\code{Assigned_Target_Genes} selection.
+\code{"promoter_then_distance"} (default): within primary links,
+promoter evidence dominates — all promoter-linked genes beat all
+gene-body genes regardless of path length; within each tier shorter
+paths win.
+\code{"distance_then_role"}: within primary links, path-length dominates —
+the closest linked gene wins; at equal distance promoter beats gene-body
+(legacy behaviour).
 The policy affects \code{Assigned_Target_Genes} only.
 \code{Regulated_promoter_genes} always reports all promoter-linked
 genes regardless of the chosen policy.}
@@ -260,26 +278,26 @@ tune these thresholds for your data.
 \examples{
 # Minimal runnable example for package checks
 if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-    txdb_example <- AnnotationDbi::loadDb(
-        system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")
-    )
-    bedpe_path <- tempfile(fileext = ".bedpe")
-    writeLines(
-        "chr6\t10412000\t10412600\tchr6\t10415000\t10415600",
-        bedpe_path
-    )
+  txdb_example <- AnnotationDbi::loadDb(
+    system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")
+  )
+  bedpe_path <- tempfile(fileext = ".bedpe")
+  writeLines(
+    "chr6\t10412000\t10412600\tchr6\t10415000\t10415600",
+    bedpe_path
+  )
 
-    res <- annotate_peaks_and_loops(
-        bedpe_file = bedpe_path,
-        txdb = txdb_example,
-        org_db = "org.Hs.eg.db",
-        species = "hg19",
-        out_dir = tempdir(),
-        project_name = "Quick_Example",
-        write_output = FALSE,
-        quiet = TRUE
-    )
-    head(res$loop_annotation, 1)
+  res <- annotate_peaks_and_loops(
+    bedpe_file = bedpe_path,
+    txdb = txdb_example,
+    org_db = "org.Hs.eg.db",
+    species = "hg19",
+    out_dir = tempdir(),
+    project_name = "Quick_Example",
+    write_output = FALSE,
+    quiet = TRUE
+  )
+  head(res$loop_annotation, 1)
 }
 }
 \seealso{

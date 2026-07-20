@@ -24,13 +24,13 @@ comparison of shared vs. condition-specific genes across 2-6 groups.
 }
 \examples{
 gene_sets <- list(
-    Control = c("TP53", "BRCA1", "MYC", "EGFR"),
-    Treated = c("BRCA1", "MYC", "EGFR", "KRAS"),
-    Resistant = c("MYC", "EGFR", "KRAS", "BRAF")
+  Control = c("TP53", "BRCA1", "MYC", "EGFR"),
+  Treated = c("BRCA1", "MYC", "EGFR", "KRAS"),
+  Resistant = c("MYC", "EGFR", "KRAS", "BRAF")
 )
 draw_flower_simplified(
-    gene_lists = gene_sets,
-    project_name = "Drug Response",
-    group_colors = c(Control = "#E41A1C", Treated = "#377EB8", Resistant = "#4DAF4A")
+  gene_lists = gene_sets,
+  project_name = "Drug Response",
+  group_colors = c(Control = "#E41A1C", Treated = "#377EB8", Resistant = "#4DAF4A")
 )
 }

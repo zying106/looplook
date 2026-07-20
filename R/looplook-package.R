@@ -9,7 +9,7 @@
 #'     from genomic coordinates (TSS and gene-body overlap).
 #'   \item \strong{Expression-aware refinement} adds transcriptional-activity
 #'     context from transcriptomic data (CAGE-seq, RNA-seq, TT-seq, SLAM-seq).
-#'   \item \strong{Chromatin-state reclassification} supplies orthogonal
+#'   \item \strong{Chromatin-Aware Refinement} supplies orthogonal
 #'     histone-mark validation (ChIP-seq, CUT&Tag, ATAC-seq).
 #' }
 #' These anchor-level classifications propagate through the loop network to
