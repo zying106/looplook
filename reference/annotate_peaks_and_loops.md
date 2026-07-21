@@ -138,9 +138,11 @@ annotate_peaks_and_loops(
 
   Integer. k-hop ego-network expansion order via
   [`igraph::ego()`](https://r.igraph.org/reference/ego.html). `0`
-  restricts to direct contacts. Default: `0`. Target gene assignment
-  searches one additional hop (`neighbor_hop + 1`) to capture genes at
-  the opposite anchor of directly connected loops.
+  (default) restricts to direct loop contacts. `1` additionally includes
+  2-hop expanded targets for exploratory network analysis. Values
+  greater than `1` are not supported. Target gene assignment searches
+  one additional hop (`neighbor_hop + 1`) to capture genes at the
+  opposite anchor of directly connected loops.
 
 - hub_percentile:
 

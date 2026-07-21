@@ -217,7 +217,7 @@ Default <code>TRUE</code>.</p></dd>
 
 
 <dt id="arg-neighbor-hop">neighbor_hop<a class="anchor" aria-label="anchor" href="#arg-neighbor-hop"></a></dt>
-<dd><p>Integer. k-hop ego-network expansion order for loop connectivity analysis. Default <code>0</code>.</p></dd>
+<dd><p>Integer. k-hop ego-network expansion order for loop connectivity analysis. <code>0</code> (default) restricts to direct loop contacts. <code>1</code> additionally includes 2-hop expanded targets. Values greater than <code>1</code> are not supported.</p></dd>
 
 
 <dt id="arg-hub-percentile">hub_percentile<a class="anchor" aria-label="anchor" href="#arg-hub-percentile"></a></dt>
@@ -407,16 +407,16 @@ results.</p>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/files.html" class="external-link">file.exists</a></span><span class="op">(</span><span class="va">report_path</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/Rtmpfn1TIQ/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/Rtmpfn1TIQ/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/Rtmpfn1TIQ/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/Rtmpfn1TIQ/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/Rtmpfn1TIQ/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/Rtmpfn1TIQ/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/Rtmpfn1TIQ/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/Rtmpfn1TIQ/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/Rtmpfn1TIQ/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/Rtmpfn1TIQ/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpwD8XlJ/looplook-example-report_files/figure-html/annotation-donut-1.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpwD8XlJ/looplook-example-report_files/figure-html/annotation-plots-1.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpwD8XlJ/looplook-example-report_files/figure-html/annotation-plots-2.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpwD8XlJ/looplook-example-report_files/figure-html/annotation-plots-3.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpwD8XlJ/looplook-example-report_files/figure-html/annotation-plots-4.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpwD8XlJ/looplook-example-report_files/figure-html/annotation-plots-5.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpwD8XlJ/looplook-example-report_files/figure-html/annotation-plots-6.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpwD8XlJ/looplook-example-report_files/figure-html/annotation-karyo-1.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpwD8XlJ/looplook-example-report_files/figure-html/annotation-karyo-2.png" but not available.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> The magick package is required to crop "/tmp/RtmpwD8XlJ/looplook-example-report_files/figure-html/annotation-karyo-3.png" but not available.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] TRUE</span>
 </code></pre></div>
     </div>

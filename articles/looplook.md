@@ -465,7 +465,8 @@ This multi-omic integration relies on several key parameters:
   - `0` *(Default)*: Loop topology restricted to direct contacts; target
     genes searched within 1-hop.
   - `1` *(Hub Mode)*: Loop topology includes secondary contacts; target
-    genes searched within 2-hop.
+    genes searched within 2-hop. Values greater than 1 are not
+    supported.
 - **`anchor_gap`** (integer, default `-1`): Candidate search radius (bp)
   between a target peak and a loop anchor. `-1` (default): strict
   physical overlap. `>= 0`: expands the candidate search window

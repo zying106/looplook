@@ -219,7 +219,7 @@ pre-consolidated via <code><a href="consolidate_chromatin_loops.html">consolidat
 
 
 <dt id="arg-neighbor-hop">neighbor_hop<a class="anchor" aria-label="anchor" href="#arg-neighbor-hop"></a></dt>
-<dd><p>Integer. k-hop ego-network expansion order via <code><a href="https://r.igraph.org/reference/ego.html" class="external-link">igraph::ego()</a></code>. <code>0</code> restricts to direct contacts. Default: <code>0</code>. Target gene assignment searches one additional hop (<code>neighbor_hop + 1</code>) to capture genes at the opposite anchor of directly connected loops.</p></dd>
+<dd><p>Integer. k-hop ego-network expansion order via <code><a href="https://r.igraph.org/reference/ego.html" class="external-link">igraph::ego()</a></code>. <code>0</code> (default) restricts to direct loop contacts. <code>1</code> additionally includes 2-hop expanded targets for exploratory network analysis. Values greater than <code>1</code> are not supported. Target gene assignment searches one additional hop (<code>neighbor_hop + 1</code>) to capture genes at the opposite anchor of directly connected loops.</p></dd>
 
 
 <dt id="arg-hub-percentile">hub_percentile<a class="anchor" aria-label="anchor" href="#arg-hub-percentile"></a></dt>
