@@ -75,7 +75,7 @@ pre-consolidated via \code{\link{consolidate_chromatin_loops}}.}
 
 \item{karyo_bin_size}{Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default: \code{1e5} (100 kb). Typical range: 5e4-5e5 depending on genome size and resolution.}
 
-\item{neighbor_hop}{Integer. k-hop ego-network expansion order via \code{igraph::ego()}. \code{0} restricts to direct contacts. Default: \code{0}. Target gene assignment searches one additional hop (\code{neighbor_hop + 1}) to capture genes at the opposite anchor of directly connected loops.}
+\item{neighbor_hop}{Integer. k-hop ego-network expansion order via \code{igraph::ego()}. \code{0} (default) restricts to direct loop contacts. \code{1} additionally includes 2-hop expanded targets for exploratory network analysis. Values greater than \code{1} are not supported. Target gene assignment searches one additional hop (\code{neighbor_hop + 1}) to capture genes at the opposite anchor of directly connected loops.}
 
 \item{hub_percentile}{Numeric (0-1). Loop-count quantile for hub detection. Default: \code{0.95}. Genes or distal elements with connectivity at or above this quantile are flagged as hubs. A minimum floor of 3 (promoter-centric) or 2 (distal) is applied to avoid false hubs in small datasets.}
 

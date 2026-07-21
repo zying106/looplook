@@ -2851,7 +2851,7 @@ run_distal_motif_analysis <- function(
 #'   BED file (e.g. FANTOM5, ENCODE cCREs). Default: \code{NULL}.
 #' @param unit_type Character. Expression unit label for plot annotations. Default \code{"TPM"}.
 #' @param tss_region Numeric vector of length 2. TSS flanking region in bp. Default \code{c(-2000, 2000)}.
-#' @param neighbor_hop Integer. k-hop ego-network expansion order for loop connectivity analysis. Default \code{0}.
+#' @param neighbor_hop Integer. k-hop ego-network expansion order for loop connectivity analysis. \code{0} (default) restricts to direct loop contacts. \code{1} additionally includes 2-hop expanded targets. Values greater than \code{1} are not supported.
 #' @param hub_percentile Numeric. Quantile threshold for hub classification. Default \code{0.95}.
 #' @param color_palette Character. RColorBrewer qualitative palette name. Default \code{"Set2"}.
 #' @param target_mapping_mode Character. Mapping strategy for target genes. Default \code{"all"}.

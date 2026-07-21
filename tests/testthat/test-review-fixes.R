@@ -1670,3 +1670,181 @@ test_that("invalid optional BED path warns and skips", {
     "not found"
   )
 })
+
+# ══════════════════════════════════════════════════════════════════════════
+# End-to-end neighbor_hop = 1 test (2-hop target expansion)
+# ══════════════════════════════════════════════════════════════════════════
+
+test_that("annotate_peaks_and_loops with neighbor_hop=1 validates 2-hop results", {
+  skip_if_not_installed("org.Hs.eg.db")
+  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
+    package = "GenomicFeatures")
+  skip_if(sample_txdb == "", "Sample TxDb not available")
+  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+
+  # A1(100-600) —L1— A2(1100-1600) —L2— A3(10415000-10415600,gene)
+  #                                 \_L3— A4(200000-200600,no gene)
+  # neighbor_hop=1 → reaches A3 (2-hop) but not A4 (3-hop)
+  tmp_bedpe <- tempfile(fileext = ".bedpe")
+  writeLines(c(
+    "chr6\t100\t600\tchr6\t1100\t1600",               # L1
+    "chr6\t1100\t1600\tchr6\t10415000\t10415600",     # L2: A3 has TFAP2A-AS1
+    "chr6\t10415000\t10415600\tchr6\t200000\t200600"  # L3: A4 no gene
+  ), tmp_bedpe)
+  tmp_target <- tempfile(fileext = ".bed")
+  writeLines("chr6\t100\t600", tmp_target)
+
+  res <- annotate_peaks_and_loops(
+    bedpe_file = tmp_bedpe, target_bed = tmp_target,
+    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
+    neighbor_hop = 1,
+    out_dir = tempdir(), write_output = FALSE, quiet = TRUE
+  )
+
+  links <- res$target_gene_links
+  expect_true(!is.null(links) && nrow(links) > 0)
+
+  # Primary targets must have path_length <= 1
+  primary <- links[links$anchor_role %in% c("local_anchor", "opposite_anchor"), ]
+  expect_true(all(primary$path_length <= 1L))
+
+  # 2-hop expanded targets should exist (A3 is 2 hops from A1)
+  expanded <- links[links$anchor_role == "expanded_anchor", ]
+  expect_gt(nrow(expanded), 0L)
+  expect_equal(unique(expanded$path_length), 2L,
+    info = "expanded targets must have path_length 2")
+
+  # Primary targets invariant between hop=0 and hop=1
+  res0 <- annotate_peaks_and_loops(
+    bedpe_file = tmp_bedpe, target_bed = tmp_target,
+    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
+    neighbor_hop = 0,
+    out_dir = tempdir(), write_output = FALSE, quiet = TRUE
+  )
+  expect_equal(res0$target_annotation$Assigned_Target_Genes,
+    res$target_annotation$Assigned_Target_Genes)
+
+  unlink(c(tmp_bedpe, tmp_target))
+})
+
+# ══════════════════════════════════════════════════════════════════════════
+# Lazy ego vs full ego equivalence test
+# ══════════════════════════════════════════════════════════════════════════
+
+test_that("lazy target ego produces same links as full ego", {
+  skip_if_not_installed("igraph")
+  # Chain: A1–A2–A3 (2 edges, no ring).  A3 is promoter with GENE3.
+  # distance(A1, A3) = 2 → GENE3 is expanded_anchor.
+  g <- igraph::graph_from_edgelist(
+    matrix(c("A1","A2", "A2","A3"), ncol = 2, byrow = TRUE),
+    directed = FALSE
+  )
+  igraph::E(g)$n_support <- c(1, 1)
+
+  hit_df <- data.frame(qid = 1L, sid = 1L, anchor_id = "A1",
+    stringsAsFactors = FALSE)
+  bed_info <- data.frame(input_id = "Peak_1", stringsAsFactors = FALSE)
+  la <- data.frame(
+    loop_ID = c("L1", "L2"),
+    a1_id = c("A1", "A2"),
+    a2_id = c("A2", "A3"),
+    stringsAsFactors = FALSE
+  )
+  map_info <- data.frame(
+    anchor_id = c("A1", "A2", "A3"),
+    type_code = c("E", "E", "P"),
+    SYMBOL = c("", "", "GENE3"),
+    stringsAsFactors = FALSE
+  )
+
+  # Full ego
+  nodes_in_graph <- igraph::V(g)$name
+  full_ego <- igraph::ego(g, order = 2L, nodes = nodes_in_graph, mode = "all")
+  names(full_ego) <- nodes_in_graph
+
+  links_full <- looplook:::.build_target_gene_links(
+    hit_df = hit_df, bed_info = bed_info,
+    loop_annotation_final = la, map_info = map_info,
+    ego_list_target = full_ego, g = g, neighbor_hop = 1L
+  )
+
+  # Lazy ego (empty cache, computed on demand)
+  links_lazy <- looplook:::.build_target_gene_links(
+    hit_df = hit_df, bed_info = bed_info,
+    loop_annotation_final = la, map_info = map_info,
+    ego_list_target = list(), g = g, neighbor_hop = 1L
+  )
+
+  # GENE3 must be 2-hop expanded in both
+  g3_full <- links_full[links_full$gene == "GENE3" &
+    links_full$anchor_role == "expanded_anchor", ]
+  g3_lazy <- links_lazy[links_lazy$gene == "GENE3" &
+    links_lazy$anchor_role == "expanded_anchor", ]
+  expect_equal(nrow(g3_full), 1L)
+  expect_equal(nrow(g3_lazy), 1L)
+  expect_equal(g3_full$path_length, 2L)
+  expect_equal(g3_lazy$path_length, 2L)
+
+  cols <- c("input_id", "anchor_id", "gene", "path_length",
+    "anchor_role", "evidence")
+  expect_equal(
+    links_full[order(links_full$gene), cols],
+    links_lazy[order(links_lazy$gene), cols],
+    ignore_attr = TRUE
+  )
+})
+
+# ══════════════════════════════════════════════════════════════════════════
+# Pair broadcast test: multiple peaks hitting same anchor
+# ══════════════════════════════════════════════════════════════════════════
+
+test_that("pair dedup + join preserves per-peak expanded rows", {
+  skip_if_not_installed("igraph")
+  # Chain: A1–A2–A3.  Two peaks both hit A1 → both see GENE3.
+  g <- igraph::graph_from_edgelist(
+    matrix(c("A1","A2", "A2","A3"), ncol = 2, byrow = TRUE),
+    directed = FALSE
+  )
+  igraph::E(g)$n_support <- c(1, 1)
+
+  hit_df <- data.frame(
+    qid = c(1L, 2L), sid = c(1L, 1L),
+    anchor_id = c("A1", "A1"),
+    stringsAsFactors = FALSE
+  )
+  bed_info <- data.frame(
+    input_id = c("Peak_1", "Peak_2"),
+    stringsAsFactors = FALSE
+  )
+  la <- data.frame(
+    loop_ID = c("L1", "L2"),
+    a1_id = c("A1", "A2"),
+    a2_id = c("A2", "A3"),
+    stringsAsFactors = FALSE
+  )
+  map_info <- data.frame(
+    anchor_id = c("A1", "A2", "A3"),
+    type_code = c("E", "E", "P"),
+    SYMBOL = c("", "", "GENE3"),
+    stringsAsFactors = FALSE
+  )
+
+  links <- looplook:::.build_target_gene_links(
+    hit_df = hit_df, bed_info = bed_info,
+    loop_annotation_final = la, map_info = map_info,
+    ego_list_target = list(), g = g, neighbor_hop = 1L
+  )
+
+  g3 <- links[links$gene == "GENE3" &
+    links$anchor_role == "expanded_anchor", ]
+  expect_equal(sort(g3$input_id), c("Peak_1", "Peak_2"),
+    info = "both peaks must see the 2-hop gene GENE3 as expanded")
+  expect_true(all(g3$path_length == 2L))
+})
+
+test_that("neighbor_hop > 1 is rejected", {
+  expect_error(
+    annotate_peaks_and_loops(bedpe_file = "no", neighbor_hop = 2),
+    "not supported"
+  )
+})

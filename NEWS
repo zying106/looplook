@@ -1,6 +1,27 @@
 Changes in version 0.99.15 (2026-07-18)
 -----------------------------------------
 
+Performance
+
+* neighbor_hop = 1 no longer performs one igraph::distances() call per
+  expanded anchor pair.  Because candidates are exactly 2 hops away by
+  construction (2-hop ego minus direct neighbours), path_length is assigned
+  directly, removing repeated graph traversals without changing results.
+* Target 2-hop ego networks are now generated lazily only for anchors
+  hit by the target BED, rather than for every graph node.
+* First-order neighbours are cached across unique expanded anchor pairs.
+* Expanded-seed anchors without gene assignments are filtered before path
+  computation.  Direct-neighbour lookups use a pre-built index to avoid
+  scanning the full edge table.  Identical (local, expanded) graph pairs
+  are deduplicated before path computation.
+* These changes affect computation only and do not alter target semantics
+  or output schemas.
+
+API
+
+* neighbor_hop is now capped at 1.  Values >= 2 raise an error.  Direct
+  1-hop loop targets are always evaluated regardless of neighbor_hop.
+
 Algorithm Correctness
 
 * Added `target_priority` parameter (default `"promoter_then_distance"`) to

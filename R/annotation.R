@@ -317,7 +317,7 @@
 .build_target_hit_linkage <- function(
   hits, gr_anchors, anchor_topo_map,
   loop_annotation_final, bed_info, map_info, ego_list_target,
-  g = NULL
+  g = NULL, neighbor_hop = 0L
 ) {
   target_connected_loops <- NULL
   target_gene_links <- NULL
@@ -367,7 +367,7 @@
       hit_df = hit_df, bed_info = bed_info,
       loop_annotation_final = loop_annotation_final,
       map_info = map_info, ego_list_target = ego_list_target,
-      g = g
+      g = g, neighbor_hop = neighbor_hop
     )
   } else {
     bed_info$All_Loop_Connected_Genes <- NA
@@ -383,7 +383,7 @@
       bed_info = bed_info,
       loop_annotation_final = loop_annotation_final,
       map_info = map_info, ego_list_target = ego_list_target,
-      g = g
+      g = g, neighbor_hop = neighbor_hop
     )
   }
 
@@ -518,19 +518,32 @@
 #' @keywords internal
 #' @noRd
 .relocate_target_annotation_columns <- function(bed_info) {
-  if ("Linked_Loop_IDs" %in% colnames(bed_info)) {
-    after_col <- if ("Gene_description" %in% colnames(bed_info)) {
-      "Gene_description"
-    } else if ("SYMBOL" %in% colnames(bed_info)) {
-      "SYMBOL"
-    } else {
-      NULL
-    }
-    if (!is.null(after_col)) {
-      bed_info <- bed_info %>%
-        dplyr::relocate(Linked_Loop_IDs, .after = dplyr::all_of(after_col))
-    }
-  }
+  if (is.null(bed_info)) return(bed_info)
+
+  # Core target columns in logical reading order:
+  # ChIPseeker annotation → loop connectivity → primary targets →
+  # expanded/candidate → linear-fallback fill → evidence
+  ordered_target_cols <- c(
+    "Linked_Loop_IDs",
+    "All_Loop_Connected_Genes",
+    "Regulated_promoter_genes",
+    "Assigned_Target_Genes",
+    "Expanded_Target_Genes",
+    "Candidate_Positional_Genes",
+    "All_Loop_Connected_Genes_Filled",
+    "Regulated_promoter_genes_Filled",
+    "Assigned_Target_Genes_Filled",
+    "Regulated_promoter_Evidence",
+    "Regulated_promoter_Fallback_Evidence"
+  )
+
+  present_target <- intersect(ordered_target_cols, colnames(bed_info))
+  other_cols <- setdiff(colnames(bed_info), present_target)
+
+  # Explicit select() with ordered columns ensures nothing is dropped
+  # and target columns appear in the declared order
+  bed_info <- bed_info %>%
+    dplyr::select(dplyr::all_of(other_cols), dplyr::all_of(present_target))
   bed_info
 }
 
@@ -547,6 +560,7 @@
   conflict_strategy,
   gr_anchors, anchor_topo_map, loop_annotation_final, map_info, ego_list_target,
   log_message,
+  neighbor_hop = 0L,
   anchor_gap = -1L, anchor_min_overlap = 1L, anchor_min_frac = 0,
   co_dominance_ratio = 0.1,
   biotype_order = c("protein", "small_ncRNA", "antisense", "lncRNA", "pseudogene"),
@@ -597,7 +611,7 @@
     loop_annotation_final = loop_annotation_final,
     bed_info = bed_info, map_info = map_info,
     ego_list_target = ego_list_target,
-    g = g
+    g = g, neighbor_hop = neighbor_hop
   )
   bed_info <- linkage$bed_info
   target_connected_loops <- linkage$target_connected_loops
@@ -759,7 +773,7 @@
 #' @param project_name Character. Prefix for output files and plot titles. Default: \code{"HiChIP"}.
 #' @param color_palette Character. RColorBrewer palette name. Default: \code{"Set2"}.
 #' @param karyo_bin_size Integer. Bin width in base pairs (bp) for karyotype heatmaps. Default: \code{1e5} (100 kb). Typical range: 5e4-5e5 depending on genome size and resolution.
-#' @param neighbor_hop Integer. k-hop ego-network expansion order via \code{igraph::ego()}. \code{0} restricts to direct contacts. Default: \code{0}. Target gene assignment searches one additional hop (\code{neighbor_hop + 1}) to capture genes at the opposite anchor of directly connected loops.
+#' @param neighbor_hop Integer. k-hop ego-network expansion order via \code{igraph::ego()}. \code{0} (default) restricts to direct loop contacts. \code{1} additionally includes 2-hop expanded targets for exploratory network analysis. Values greater than \code{1} are not supported. Target gene assignment searches one additional hop (\code{neighbor_hop + 1}) to capture genes at the opposite anchor of directly connected loops.
 #' @param anchor_gap Integer. Candidate search radius in bp between a
 #'   peak and a loop anchor. \code{-1L} (default): strict physical overlap
 #'   required. When \code{>= 0}, expands the candidate search window
@@ -1049,6 +1063,7 @@ annotate_peaks_and_loops <- function(
       map_info = class_data$map_info,
       ego_list_target = class_data$ego_list_target,
       log_message = log_message,
+      neighbor_hop = neighbor_hop,
       anchor_gap = anchor_gap,
       anchor_min_overlap = anchor_min_overlap,
       anchor_min_frac = anchor_min_frac,
@@ -1211,6 +1226,9 @@ annotate_peaks_and_loops <- function(
     is.na(neighbor_hop) || !is.finite(neighbor_hop) ||
     neighbor_hop < 0 || neighbor_hop != floor(neighbor_hop)) {
     stop("neighbor_hop must be a finite non-negative integer", call. = FALSE)
+  }
+  if (neighbor_hop > 1L) {
+    stop("neighbor_hop > 1 is not supported. Direct 1-hop loop targets are always evaluated; larger values trigger computationally intractable network expansion.", call. = FALSE)
   }
   if (!is.numeric(karyo_bin_size) || length(karyo_bin_size) != 1L ||
     is.na(karyo_bin_size) || !is.finite(karyo_bin_size) ||
@@ -1628,11 +1646,10 @@ annotate_peaks_and_loops <- function(
     order = input_hop, nodes = nodes_in_graph, mode = "all"
   )
   names(ego_list_loop) <- nodes_in_graph
-  ego_list_target <- igraph::ego(
-    g,
-    order = input_hop + 1, nodes = nodes_in_graph, mode = "all"
-  )
-  names(ego_list_target) <- nodes_in_graph
+  ego_list_target <- list()
+  # Target ego networks are generated lazily in .build_target_gene_links()
+  # after target-anchor overlaps are known, avoiding precomputation of
+  # 2-hop neighbourhoods for every graph node.
 
   anchor_topo_map <- data.frame(
     anchor_id = nodes_in_graph,
@@ -2282,7 +2299,7 @@ annotate_peaks_and_loops <- function(
 
 .build_target_gene_links <- function(
   hit_df, bed_info, loop_annotation_final, map_info, ego_list_target,
-  g = NULL
+  g = NULL, neighbor_hop = 0L
 ) {
   base_cols <- c(
     "input_id", "loop_ID", "anchor_id", "gene", "gene_role",
@@ -2309,6 +2326,23 @@ annotate_peaks_and_loops <- function(
       local_anchor_id = as.character(anchor_id)
     ) %>%
     dplyr::distinct()
+
+  # Lazy target ego: compute 2-hop neighbourhoods only for anchors
+  # that are actually hit by the target BED, avoiding precomputation
+  # for every graph node.
+  if (neighbor_hop == 1L && !is.null(g) && nrow(hit_base) > 0L) {
+    if (is.null(ego_list_target)) ego_list_target <- list()
+    cached_ids <- names(ego_list_target)
+    if (is.null(cached_ids)) cached_ids <- character(0)
+    required_ids <- unique(hit_base$local_anchor_id)
+    missing_ids <- setdiff(required_ids, cached_ids)
+    valid_ids <- intersect(missing_ids, igraph::V(g)$name)
+    if (length(valid_ids) > 0L) {
+      lazy_ego <- igraph::ego(g, order = 2L, nodes = valid_ids, mode = "all")
+      names(lazy_ego) <- valid_ids
+      ego_list_target <- c(ego_list_target, lazy_ego)
+    }
+  }
 
   edge_long <- dplyr::bind_rows(
     loop_annotation_final %>% dplyr::select(loop_ID, local_anchor_id = a1_id, opposite_anchor_id = a2_id),
@@ -2362,6 +2396,8 @@ annotate_peaks_and_loops <- function(
       path_length = 1L
     )
 
+  # Pre-build direct neighbour index: avoids scanning edge_long for each hit
+  direct_index <- split(edge_long$opposite_anchor_id, edge_long$local_anchor_id)
   expanded_seed <- do.call(rbind, lapply(seq_len(nrow(hit_base)), function(i) {
     local_id <- hit_base$local_anchor_id[[i]]
     ego_ids <- if (local_id %in% names(ego_list_target)) {
@@ -2369,7 +2405,8 @@ annotate_peaks_and_loops <- function(
     } else {
       character(0)
     }
-    direct_ids <- edge_long$opposite_anchor_id[edge_long$local_anchor_id == local_id]
+    direct_ids <- direct_index[[local_id]]
+    if (is.null(direct_ids)) direct_ids <- character(0)
     expanded_ids <- setdiff(ego_ids, c(local_id, direct_ids))
     if (length(expanded_ids) == 0) {
       return(NULL)
@@ -2382,6 +2419,19 @@ annotate_peaks_and_loops <- function(
     )
   }))
   expanded_rows <- empty
+  if (!is.null(expanded_seed) && nrow(expanded_seed) > 0) {
+    # Pre-filter: drop expanded anchors without gene assignments.
+    # This avoids path computation for anchors that cannot produce
+    # target genes, reducing the path loop size.
+    gene_anchor_ids <- gene_map %>%
+      dplyr::filter(!is.na(.data$gene), .data$gene != "") %>%
+      dplyr::distinct(.data$anchor_id)
+    expanded_seed <- expanded_seed %>%
+      dplyr::semi_join(gene_anchor_ids, by = "anchor_id")
+    if (nrow(expanded_seed) == 0) {
+      expanded_seed <- NULL
+    }
+  }
   if (!is.null(expanded_seed) && nrow(expanded_seed) > 0) {
     # Compute shortest-path info BEFORE joining gene_map so that the
     # one-row-per-anchor alignment is unambiguous.  Joining gene_map
@@ -2418,11 +2468,29 @@ annotate_peaks_and_loops <- function(
       # weighted shortest paths may have different hop counts;
       # hop count must be the primary objective.
       max_sp <- 200L
-      path_info <- lapply(seq_len(nrow(expanded_seed)), function(j) {
-        from <- expanded_seed$local_anchor_id[j]
-        to <- expanded_seed$anchor_id[j]
-        # Unweighted distance: determines minimum hop count
-        d <- tryCatch(
+      h1 <- neighbor_hop == 1L
+      # Deduplicate (local_anchor_id, anchor_id) pairs: multiple target
+      # peaks may hit the same local anchor, producing identical graph
+      # node pairs.  Compute paths once, then join back.
+      unique_pairs <- expanded_seed %>%
+        dplyr::distinct(.data$local_anchor_id, .data$anchor_id)
+      # Cache first-order neighbours for all nodes referenced by
+      # unique_pairs, avoiding repeated igraph::neighbors() calls
+      # when a single node appears in many pairs.
+      needed_nodes <- unique(c(unique_pairs$local_anchor_id, unique_pairs$anchor_id))
+      neighbor_cache <- stats::setNames(
+        lapply(needed_nodes, function(node_id) {
+          .igraph_vertex_ids(igraph::neighbors(g, node_id, mode = "all"), g)
+        }),
+        needed_nodes
+      )
+      path_info <- lapply(seq_len(nrow(unique_pairs)), function(j) {
+        from <- unique_pairs$local_anchor_id[j]
+        to <- unique_pairs$anchor_id[j]
+        # Unweighted distance: determines minimum hop count.
+        # When neighbor_hop = 1, all expanded candidates are
+        # exactly 2 hops away (2-hop ego minus direct neighbours).
+        d <- if (h1) 2L else tryCatch(
           igraph::distances(g,
             v = from, to = to, mode = "all",
             weights = NA
@@ -2436,8 +2504,8 @@ annotate_peaks_and_loops <- function(
           # 2-hop: each common neighbour forms one path.
           # No need to call all_shortest_paths(); O(degree)
           # is safe and avoids the enumeration risk entirely.
-          nb_from <- .igraph_vertex_ids(igraph::neighbors(g, from, mode = "all"), g)
-          nb_to <- .igraph_vertex_ids(igraph::neighbors(g, to, mode = "all"), g)
+          nb_from <- neighbor_cache[[from]]
+          nb_to <- neighbor_cache[[to]]
           common <- intersect(nb_from, nb_to)
           if (length(common) == 0L) {
             return(c(loop_ID = NA_character_, path_length = NA_integer_))
@@ -2447,7 +2515,7 @@ annotate_peaks_and_loops <- function(
           .mid_support <- function(mid) {
             vp <- as.character(c(from, mid, mid, to))
             names(vp) <- NULL
-            eids <- igraph::get.edge.ids(g,
+            eids <- igraph::get_edge_ids(g,
               vp = vp,
               directed = FALSE, error = FALSE
             )
@@ -2513,8 +2581,10 @@ annotate_peaks_and_loops <- function(
         if (is.na(lid_str) || lid_str == "") lid_str <- NA_character_
         c(loop_ID = lid_str, path_length = as.character(n_hops))
       })
-      expanded_seed$loop_ID_path <- vapply(path_info, `[`, character(1), "loop_ID")
-      expanded_seed$path_length <- as.integer(vapply(path_info, `[`, character(1), "path_length"))
+      unique_pairs$loop_ID_path <- vapply(path_info, `[`, character(1), "loop_ID")
+      unique_pairs$path_length <- as.integer(vapply(path_info, `[`, character(1), "path_length"))
+      expanded_seed <- expanded_seed %>%
+        dplyr::left_join(unique_pairs, by = c("local_anchor_id", "anchor_id"))
     } else {
       expanded_seed$loop_ID_path <- NA_character_
       expanded_seed$path_length <- NA_integer_
@@ -4220,6 +4290,7 @@ refine_loop_anchors_by_expression <- function(
       )
       bed_info <- final$target_annotation
       target_gene_links <- final$target_gene_links
+      bed_info <- .relocate_target_annotation_columns(bed_info)
     }
   }
 
@@ -7384,7 +7455,8 @@ refine_loop_anchors_by_chromatin <- function(
     loop_annotation_final = annotation_res$loop_annotation,
     map_info = map_info,
     ego_list_target = ego_list_target,
-    g = anchor_state$g
+    g = anchor_state$g,
+    neighbor_hop = if (is.null(neighbor_hop)) 0L else neighbor_hop
   )
 
   # --- 3.5 Inherit expression provenance ---
@@ -7565,7 +7637,7 @@ refine_loop_anchors_by_chromatin <- function(
     max_primary_hop = up_max_primary_hop
   )
   list(
-    target_annotation = final$target_annotation,
+    target_annotation = .relocate_target_annotation_columns(final$target_annotation),
     target_gene_links = final$target_gene_links
   )
 }

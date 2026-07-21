@@ -80,7 +80,7 @@ Default \code{TRUE}.}
 
 \item{tss_region}{Numeric vector of length 2. TSS flanking region in bp. Default \code{c(-2000, 2000)}.}
 
-\item{neighbor_hop}{Integer. k-hop ego-network expansion order for loop connectivity analysis. Default \code{0}.}
+\item{neighbor_hop}{Integer. k-hop ego-network expansion order for loop connectivity analysis. \code{0} (default) restricts to direct loop contacts. \code{1} additionally includes 2-hop expanded targets. Values greater than \code{1} are not supported.}
 
 \item{hub_percentile}{Numeric. Quantile threshold for hub classification. Default \code{0.95}.}
 

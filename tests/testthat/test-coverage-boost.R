@@ -1526,7 +1526,7 @@ test_that(".validate_annotation_params rejects invalid inputs directly", {
   )
   # Valid values must pass silently
   expect_silent(looplook:::.validate_annotation_params(200, 10, 0.5, 0.5, 0, 1e5))
-  expect_silent(looplook:::.validate_annotation_params(-1L, 1, 0, 0.5, 2, 5e4))
+  expect_error(looplook:::.validate_annotation_params(-1L, 1, 0, 0.5, 2, 5e4), "not supported")
 })
 
 

@@ -37,6 +37,7 @@
 ^looplook.*_(review|optimization|fix|stopline|audit|algorithm).*\.md$
 ^looplook_BiocCheck.*\.md$
 ^looplook_Bioconductor.*\.md$
+^looplook_neighbor_hop_performance_and_api_solution_zh\.md$
 ^tests/testthat/test-coverage-boost\.R$
 ^tests/testthat/test-coverage-analysis\.R$
 ^\.git$
