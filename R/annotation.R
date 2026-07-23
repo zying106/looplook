@@ -799,9 +799,9 @@
 #'   separately as \code{Expanded_Target_Genes} and do not participate in
 #'   \code{Assigned_Target_Genes} selection.
 #'   \code{"promoter_then_distance"} (default): within primary links,
-#'   promoter evidence dominates -- all promoter-linked genes beat all
-#'   gene-body genes regardless of path length; within each tier shorter
-#'   paths win.  Exception: direct strict promoter--promoter contacts
+#'   strict promoter genes outrank strict gene-body genes, which outrank
+#'   structurally supported strict enhancer candidates; within each tier
+#'   shorter paths win.  Exception: direct strict promoter--promoter contacts
 #'   (same loop, path0 + path1) co-assign both endpoints via union,
 #'   because the technical endpoint orientation does not reflect
 #'   biological regulatory direction.
