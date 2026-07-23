@@ -191,10 +191,25 @@ test_that("enrichGO output has p.adjust column", {
       keyType = "ENTREZID", ont = "BP",
       pvalueCutoff = 1, qvalueCutoff = 1,
       minGSSize = 100, maxGSSize = 200
-    )
-  })
-  # Even if empty, the column should exist
+  )
+})
   expect_true("p.adjust" %in% colnames(as.data.frame(go)))
+})
+
+test_that("basic annotation records neighbor_hop=0 in metadata and state", {
+  skip_if_not_installed("org.Hs.eg.db")
+  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
+    package = "GenomicFeatures")
+  skip_if(sample_txdb == "", "Sample TxDb not available")
+  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  tmp_bedpe <- tempfile(fileext = ".bedpe")
+  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
+  res <- annotate_peaks_and_loops(bedpe_file = tmp_bedpe,
+    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
+    neighbor_hop = 0, out_dir = tempdir(), write_output = FALSE, quiet = TRUE)
+  expect_equal(res$metadata$parameters$neighbor_hop, 0L)
+  expect_equal(attr(res, "looplook_anchor_state")$neighbor_hop, 0L)
+  unlink(tmp_bedpe)
 })
 
 
@@ -937,6 +952,91 @@ test_that("chromatin validator rejects unnamed chromatin_beds list", {
   )
 })
 
+# ══════════════════════════════════════════════════════════════════════════
+# Metadata inheritance: neighbor_hop across refinement stages
+# ══════════════════════════════════════════════════════════════════════════
+
+test_that("basic annotation records neighbor_hop in metadata and state", {
+  skip_if_not_installed("org.Hs.eg.db")
+  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
+    package = "GenomicFeatures")
+  skip_if(sample_txdb == "", "Sample TxDb not available")
+  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  tmp_bedpe <- tempfile(fileext = ".bedpe")
+  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
+
+  res <- annotate_peaks_and_loops(bedpe_file = tmp_bedpe,
+    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
+    neighbor_hop = 1, out_dir = tempdir(), write_output = FALSE, quiet = TRUE)
+
+  expect_equal(res$metadata$parameters$neighbor_hop, 1L)
+  expect_equal(attr(res, "looplook_anchor_state")$neighbor_hop, 1L)
+  unlink(tmp_bedpe)
+})
+
+test_that("metadata: expression refinement inherits neighbor_hop (state >= metadata)", {
+  skip_if_not_installed("org.Hs.eg.db")
+  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
+    package = "GenomicFeatures")
+  skip_if(sample_txdb == "", "Sample TxDb not available")
+  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  tmp_bedpe <- tempfile(fileext = ".bedpe")
+  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
+
+  res <- annotate_peaks_and_loops(bedpe_file = tmp_bedpe,
+    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
+    neighbor_hop = 1, out_dir = tempdir(), write_output = FALSE, quiet = TRUE)
+
+  expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
+  skip_if(expr_path == "", "Example TPM file not available")
+  refined <- refine_loop_anchors_by_expression(res,
+    expr_matrix_file = expr_path, sample_columns = c("con1", "con2"),
+    threshold = 1, out_dir = tempdir(), write_output = FALSE, quiet = TRUE)
+
+  expect_equal(refined$metadata$parameters$neighbor_hop, 1L)
+  expect_equal(attr(refined, "looplook_anchor_state")$neighbor_hop, 1L)
+  unlink(tmp_bedpe)
+})
+
+# ══════════════════════════════════════════════════════════════════════════
+# Regulated promoter evidence strict filtering tests
+# ══════════════════════════════════════════════════════════════════════════
+
+test_that("regulated evidence: strict promoter retained", {
+  links <- data.frame(
+    input_id = "P1", source = "loop_anchor",
+    gene = "G1", gene_role = "promoter",
+    strict_assignment_eligible = TRUE,
+    path_length = 0L, evidence = "local_promoter_overlap",
+    stringsAsFactors = FALSE
+  )
+  res <- looplook:::.summarise_regulated_promoter_evidence(links)
+  expect_false(res$Regulated_promoter_Evidence[1] == "none")
+})
+
+test_that("regulated evidence: non-strict promoter excluded", {
+  links <- data.frame(
+    input_id = "P1", source = "loop_anchor",
+    gene = "G1", gene_role = "promoter",
+    strict_assignment_eligible = FALSE,
+    path_length = 0L, evidence = "local_promoter_overlap",
+    stringsAsFactors = FALSE
+  )
+  res <- looplook:::.summarise_regulated_promoter_evidence(links)
+  expect_equal(nrow(res), 0L)
+})
+
+test_that("regulated evidence: old schema promoter (no strict col) retained", {
+  links <- data.frame(
+    input_id = "P1", source = "loop_anchor",
+    gene = "G1", gene_role = "promoter",
+    path_length = 0L, evidence = "local_promoter_overlap",
+    stringsAsFactors = FALSE
+  )
+  res <- looplook:::.summarise_regulated_promoter_evidence(links)
+  expect_false(res$Regulated_promoter_Evidence[1] == "none")
+})
+
 test_that("chromatin validator rejects NA or empty mark names", {
   expect_error(
     looplook:::.validate_chromatin_overlap_inputs(
@@ -945,7 +1045,7 @@ test_that("chromatin validator rejects NA or empty mark names", {
       anchor_gap = 200,
       anchor_min_overlap = 100
     ),
-    "NA or empty"
+    "names must not"
   )
   expect_error(
     looplook:::.validate_chromatin_overlap_inputs(
@@ -954,7 +1054,7 @@ test_that("chromatin validator rejects NA or empty mark names", {
       anchor_gap = 200,
       anchor_min_overlap = 100
     ),
-    "NA or empty"
+    "names must not"
   )
 })
 
@@ -1846,5 +1946,369 @@ test_that("neighbor_hop > 1 is rejected", {
   expect_error(
     annotate_peaks_and_loops(bedpe_file = "no", neighbor_hop = 2),
     "not supported"
+  )
+})
+
+# ══════════════════════════════════════════════════════════════════════════
+# .resolve_chromatin_gene_role() matrix tests
+# ══════════════════════════════════════════════════════════════════════════
+
+test_that("resolver: P/P retains promoter strict", {
+  r <- looplook:::.resolve_chromatin_gene_role("P", "P")
+  expect_equal(r$role, "promoter")
+  expect_equal(r$strict, TRUE)
+})
+
+test_that("resolver: P/E becomes enhancer_candidate strict", {
+  r <- looplook:::.resolve_chromatin_gene_role("P", "E")
+  expect_equal(r$role, "enhancer_candidate")
+  expect_equal(r$strict, TRUE)
+})
+
+test_that("resolver: G/P host gene becomes promoter strict", {
+  r <- looplook:::.resolve_chromatin_gene_role("G", "P")
+  expect_equal(r$role, "promoter")
+  expect_equal(r$strict, TRUE)
+})
+
+test_that("resolver: G/E becomes enhancer_candidate strict", {
+  r <- looplook:::.resolve_chromatin_gene_role("G", "E")
+  expect_equal(r$role, "enhancer_candidate")
+  expect_equal(r$strict, TRUE)
+})
+
+test_that("resolver: E/E becomes enhancer_candidate NOT strict", {
+  r <- looplook:::.resolve_chromatin_gene_role("E", "E")
+  expect_equal(r$role, "enhancer_candidate")
+  expect_equal(r$strict, FALSE)
+})
+
+test_that("resolver: E/P without TSS becomes positional_candidate NOT strict", {
+  r <- looplook:::.resolve_chromatin_gene_role("E", "P", tss_supported = FALSE)
+  expect_equal(r$role, "positional_candidate")
+  expect_equal(r$strict, FALSE)
+})
+
+test_that("resolver: E/P with TSS becomes promoter strict", {
+  r <- looplook:::.resolve_chromatin_gene_role("E", "P", tss_supported = TRUE)
+  expect_equal(r$role, "promoter")
+  expect_equal(r$strict, TRUE)
+})
+
+test_that("resolver: E/dual with TSS becomes promoter strict", {
+  r <- looplook:::.resolve_chromatin_gene_role("E", "dual", tss_supported = TRUE)
+  expect_equal(r$role, "promoter")
+  expect_equal(r$strict, TRUE)
+})
+
+test_that("resolver: has_gene=FALSE forces strict=FALSE regardless of type", {
+  r <- looplook:::.resolve_chromatin_gene_role("P", "P", has_gene = FALSE)
+  expect_equal(r$role, "promoter")
+  expect_equal(r$strict, FALSE)
+})
+
+test_that("resolver: eP/eG treated same as P/G for role", {
+  for (tt in c("eP", "eG")) {
+    r <- looplook:::.resolve_chromatin_gene_role(tt, tt)
+    expect_true(r$role %in% c("promoter", "gene_body"))
+    expect_true(r$strict)
+  }
+})
+
+test_that("resolver: vectorised form works correctly", {
+  old <- c("P", "G", "E", "E", "P")
+  final <- c("E", "P", "E", "P", "P")
+  tss <- c(FALSE, FALSE, FALSE, TRUE, TRUE)
+  r <- looplook:::.resolve_chromatin_gene_role(old, final, tss_supported = tss)
+  expect_equal(r$role, c("enhancer_candidate", "promoter",
+    "enhancer_candidate", "promoter", "promoter"))
+  expect_equal(r$strict, c(TRUE, TRUE, FALSE, TRUE, TRUE))
+})
+
+# ══════════════════════════════════════════════════════════════════════════
+# Layer consistency: anchor → loop → target must share role/strict
+# ══════════════════════════════════════════════════════════════════════════
+
+test_that("chromatin refinement propagates resolver result across layers", {
+  skip_if_not_installed("org.Hs.eg.db")
+  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
+    package = "GenomicFeatures")
+  skip_if(sample_txdb == "", "Sample TxDb not available")
+  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+
+  tmp_bedpe <- tempfile(fileext = ".bedpe")
+  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
+  tmp_target <- tempfile(fileext = ".bed")
+  writeLines("chr6\t10412000\t10412600", tmp_target)
+
+  res <- annotate_peaks_and_loops(
+    bedpe_file = tmp_bedpe, target_bed = tmp_target,
+    txdb = txdb_obj,
+    org_db = "org.Hs.eg.db", species = "hg19",
+    out_dir = tempdir(), write_output = FALSE, quiet = TRUE
+  )
+
+  h3k4me1 <- tempfile(fileext = ".bed")
+  h3k4me3 <- tempfile(fileext = ".bed")
+  writeLines("chr6\t10411900\t10412700", h3k4me1)
+  writeLines("chr6\t10411900\t10412700", h3k4me3)
+
+  cr <- refine_loop_anchors_by_chromatin(res,
+    chromatin_beds = list(H3K4me1 = h3k4me1, H3K4me3 = h3k4me3),
+    recompute_targets = TRUE, write_output = FALSE, quiet = TRUE
+  )
+
+  st <- attr(cr, "looplook_anchor_state")
+  mi <- st$map_info
+  la <- cr$loop_annotation
+
+  # Structural assertions: required columns must exist
+  expect_true(all(c("anchor_id", "effective_gene_role",
+    "strict_assignment_eligible") %in% colnames(mi)))
+  expect_true(all(c("a1_id", "a2_id", "anchor1_gene_role",
+    "anchor2_gene_role", "anchor1_strict_eligible",
+    "anchor2_strict_eligible") %in% colnames(la)))
+
+  role_map <- setNames(mi$effective_gene_role, mi$anchor_id)
+  strict_map <- setNames(mi$strict_assignment_eligible, mi$anchor_id)
+
+  # a1/a2 role/strict match between map_info and loop_annotation
+  expect_equal(unname(role_map[la$a1_id]), la$anchor1_gene_role)
+  expect_equal(unname(strict_map[la$a1_id]), la$anchor1_strict_eligible)
+  expect_equal(unname(role_map[la$a2_id]), la$anchor2_gene_role)
+  expect_equal(unname(strict_map[la$a2_id]), la$anchor2_strict_eligible)
+
+  # Check target_gene_links also shares the same resolver output
+  links <- cr$target_gene_links
+  expect_true(!is.null(links) && nrow(links) > 0,
+    info = "target_gene_links must be non-empty when target_bed is provided")
+  # Only compare loop-anchor links (exclude linear_annotation rows with NA anchor_id)
+  loop_links <- links[links$source == "loop_anchor" &
+    !is.na(links$anchor_id) & links$anchor_id != "", ]
+  expect_gt(nrow(loop_links), 0)
+  expect_equal(unname(role_map[loop_links$anchor_id]), loop_links$gene_role)
+  expect_equal(unname(strict_map[loop_links$anchor_id]),
+    loop_links$strict_assignment_eligible)
+
+  unlink(c(tmp_bedpe, tmp_target, h3k4me1, h3k4me3))
+})
+
+# ══════════════════════════════════════════════════════════════════════════
+# Old-schema fallback tests: enhancer_candidate without strict column
+# ══════════════════════════════════════════════════════════════════════════
+
+test_that("old-schema enhancer_candidate without strict column defaults to FALSE", {
+  mi <- data.frame(
+    anchor_id = c("A1", "A2"),
+    SYMBOL = c("SOX2", "MYC"),
+    type_code = c("E", "E"),
+    effective_gene_role = c("enhancer_candidate", "enhancer_candidate"),
+    stringsAsFactors = FALSE
+  )
+  # No strict_assignment_eligible column — simulates pre-87 RData
+  gm <- looplook:::.target_anchor_gene_map(mi)
+  expect_true(all(gm$strict_assignment_eligible == FALSE))
+  expect_true(all(gm$gene_role == "enhancer_candidate"))
+})
+
+test_that("old-schema promoter/gene_body without strict column defaults to TRUE", {
+  mi <- data.frame(
+    anchor_id = c("A1", "A2"),
+    SYMBOL = c("SOX2", "MYC"),
+    type_code = c("P", "G"),
+    effective_gene_role = c("promoter", "gene_body"),
+    stringsAsFactors = FALSE
+  )
+  gm <- looplook:::.target_anchor_gene_map(mi)
+  expect_true(all(gm$strict_assignment_eligible == TRUE))
+})
+
+test_that("old-schema enhancer_candidate with strict=NA resolved to FALSE in aggregator", {
+  links <- data.frame(
+    input_id = "Peak_1",
+    loop_ID = "L1",
+    anchor_id = "A1",
+    gene = "GENE1",
+    gene_role = "enhancer_candidate",
+    source = "loop_anchor",
+    evidence = "test",
+    anchor_role = "local_anchor",
+    path_length = 0L,
+    strict_assignment_eligible = NA,
+    stringsAsFactors = FALSE
+  )
+  bed_info <- data.frame(input_id = "Peak_1", stringsAsFactors = FALSE)
+  result <- looplook:::.aggregate_strict_targets(links, bed_info)
+  # Enhancer_candidate with NA strict should NOT enter strict target summary
+  expect_true(is.na(result$Assigned_Target_Genes[1]) ||
+    result$Assigned_Target_Genes[1] == "")
+})
+
+# ══════════════════════════════════════════════════════════════════════════
+# Direct P–P co-assignment tests
+# ══════════════════════════════════════════════════════════════════════════
+
+.make_pp_links <- function(genes, paths, anchors, loop = "L1", input = "P1",
+                            roles = rep("promoter", length(genes)),
+                            strict = rep(TRUE, length(genes))) {
+  data.frame(
+    input_id = input, loop_ID = loop, anchor_id = anchors,
+    gene = genes, gene_role = roles,
+    strict_assignment_eligible = strict,
+    path_length = paths,
+    source = "loop_anchor", evidence = "test",
+    anchor_role = ifelse(paths == 0, "local_anchor", "opposite_anchor"),
+    stringsAsFactors = FALSE
+  )
+}
+
+test_that("P-P: direct promoter pair co-assigned (promoter_then_distance)", {
+  links <- .make_pp_links(c("A","B"), c(0L,1L), c("X","Y"))
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A;B")
+  expect_equal(r$Regulated_promoter_genes[1], "A;B")
+})
+
+test_that("P-P: distance_then_role keeps local-only", {
+  links <- .make_pp_links(c("A","B"), c(0L,1L), c("X","Y"))
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "distance_then_role")
+  expect_equal(r$Assigned_Target_Genes[1], "A")
+  expect_equal(r$Regulated_promoter_genes[1], "A;B")
+})
+
+test_that("P-P: different loops are not paired", {
+  links <- rbind(
+    .make_pp_links("A", 0L, "X", loop = "L1"),
+    .make_pp_links("B", 1L, "Y", loop = "L2")
+  )
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A")
+})
+
+test_that("P-P: same anchor not counted as pair", {
+  links <- .make_pp_links(c("A","A"), c(0L,1L), c("X","X"))
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A")
+})
+
+test_that("P-P: one end not strict → not co-assigned", {
+  links <- .make_pp_links(c("A","B"), c(0L,1L), c("X","Y"),
+    strict = c(TRUE, FALSE))
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A")
+})
+
+test_that("P-P: positional_candidate cannot co-assign", {
+  links <- .make_pp_links(c("A","B"), c(0L,1L), c("X","Y"),
+    roles = c("promoter", "positional_candidate"),
+    strict = c(TRUE, FALSE))
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A")
+})
+
+test_that("P-P: multi-loop union preserves all genes", {
+  links <- rbind(
+    .make_pp_links(c("A","B"), c(0L,1L), c("X","Y"), loop = "L1"),
+    .make_pp_links(c("A","C"), c(0L,1L), c("X","Z"), loop = "L2")
+  )
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A;B;C")
+})
+
+test_that("P-P: same gene on both anchors deduplicated", {
+  links <- .make_pp_links(c("A","A"), c(0L,1L), c("X","Y"))
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A")
+})
+
+test_that("P-P: path2 promoter excluded", {
+  links <- rbind(
+    .make_pp_links("A", 0L, "X", loop = "L1"),
+    .make_pp_links("B", 2L, "Y", loop = "L1")
+  )
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A")
+})
+
+test_that("P-P: union preserves already-assigned genes from other loops", {
+  # A,C are each path0 on different loops → normal priority assigns A;C
+  # B is path1 on L1 with A → P-P co-assigns B
+  # Result: A;B;C (union)
+  links <- rbind(
+    .make_pp_links(c("A","B"), c(0L,1L), c("X","Y"), loop = "L1"),
+    .make_pp_links("C", 0L, "Z", loop = "L2")
+  )
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A;B;C")
+})
+
+test_that("P-P: empty anchor_id does not trigger co-assignment", {
+  links <- .make_pp_links(c("A","B"), c(0L,1L), c("X", NA_character_),
+    loop = "L1", input = "P1", strict = c(TRUE, TRUE))
+  links$anchor_id[2] <- NA
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A")
+})
+
+test_that("P-P: different inputs not merged", {
+  links <- rbind(
+    .make_pp_links(c("A","B"), c(0L,1L), c("X","Y"), loop = "L1", input = "P1"),
+    .make_pp_links("C", 0L, "Z", loop = "L1", input = "P2")
+  )
+  bed <- data.frame(input_id = c("P1","P2"), stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A;B")
+  expect_equal(r$Assigned_Target_Genes[2], "C")
+})
+
+test_that("P-P: empty string anchor_id does not trigger co-assignment", {
+  links <- .make_pp_links(c("A","B"), c(0L,1L), c("X","Y"))
+  links$anchor_id[2] <- ""
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance")
+  expect_equal(r$Assigned_Target_Genes[1], "A")
+})
+
+test_that("P-P: max_primary_hop=0 excludes path1 from primary", {
+  links <- .make_pp_links(c("A","B"), c(0L,1L), c("X","Y"))
+  bed <- data.frame(input_id = "P1", stringsAsFactors = FALSE)
+  r <- looplook:::.aggregate_strict_targets(links, bed,
+    target_priority = "promoter_then_distance", max_primary_hop = 0L)
+  expect_equal(r$Assigned_Target_Genes[1], "A")
+})
+
+test_that("dual is rejected as explicit chromatin candidate_type", {
+  expect_error(
+    looplook:::.validate_chromatin_overlap_inputs(
+      chromatin_beds = list(H3K4me1 = "x.bed"),
+      candidate_types = "dual",
+      anchor_gap = 200,
+      anchor_min_overlap = 100
+    ),
+    "Unknown candidate_type"
   )
 })

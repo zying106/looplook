@@ -133,7 +133,7 @@ reclassified in place for silent elements); filter on
 \item \code{target_annotation} -- Target features (peaks) with gene assignments.
 Key columns include:
 \itemize{
-\item \code{All_Loop_Connected_Genes}: All genes from loop-connected anchors (P/G types).
+\item \code{All_Loop_Connected_Genes}: Inclusive provenance union of all loop-anchor gene links. May include strict assignment-eligible targets and non-strict positional/enhancer candidates. Not a confirmed target-gene set.
 \item \code{Regulated_promoter_genes}: Promoter genes supported by loop-anchor context.
 \item \code{Assigned_Target_Genes}: Policy-based 3D assignment (default: promoter-first, then shorter path wins; see \code{target_priority}).
 \item \code{*_Filled} variants: Linear nearest-gene fallback when strict 3D assignments are empty.
@@ -154,12 +154,16 @@ assigned to each peak; do not interpret any one column in isolation.
 \itemize{
 \item \code{input_id}, \code{loop_ID}, \code{anchor_id}: Identifiers.
 \item \code{gene}: Linked gene symbol.
-\item \code{gene_role}: \code{"promoter"}, \code{"gene_body"}, or \code{"linear_annotation"}.
+\item \code{gene_role}: \code{"promoter"}, \code{"gene_body"},
+\code{"enhancer_candidate"}, \code{"positional_candidate"},
+or \code{"linear_annotation"}.
 \item \code{source}: \code{"loop_anchor"} (3D-derived) or \code{"linear_annotation"} (nearest gene).
 \item \code{evidence}: Provenance label --
 \code{"local_promoter_overlap"} (peak overlaps anchor promoter),
 \code{"distal_promoter"} (promoter on the distal loop anchor),
-\code{"gene_body_context"} (gene body linkage),
+\code{"gene_body_context"} / \code{"distal_gene_body_context"} (gene body linkage),
+\code{"local_enhancer_candidate"} / \code{"distal_enhancer_candidate"} /
+\code{"expanded_enhancer_candidate"} (enhancer-associated linkage),
 \code{"expanded_promoter_loop"} (via ego-network expansion),
 \code{"linear_annotation"} (direct nearest gene),
 or \code{"linear_fallback"} (filled when 3D assignment was empty).

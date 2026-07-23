@@ -422,7 +422,7 @@ test_that("target_priority: tied promoter genes are all retained", {
 # 14. strict_assignment_eligible filtering in target aggregation
 # ══════════════════════════════════════════════════════════════════════════
 
-test_that("G→P no TSS: gene_body role keeps strict eligibility", {
+test_that("strict gene_body link remains assignment-eligible after chromatin refinement", {
   links <- data.frame(
     input_id = "p1", gene = "MYC",
     gene_role = "gene_body", source = "loop_anchor",
@@ -436,7 +436,114 @@ test_that("G→P no TSS: gene_body role keeps strict eligibility", {
   expect_true(is.na(res$Expanded_Target_Genes) | res$Expanded_Target_Genes == "")
 })
 
-test_that("E→P no TSS: positional_candidate excluded from strict target", {
+test_that("resolve_chromatin_gene_role maps final types correctly", {
+  # Unified resolver: final_type + old_type + TSS determines role + strict.
+  # Test final-type-only role mapping (all old_type="P", no TSS):
+  r <- looplook:::.resolve_chromatin_gene_role(
+    old_type   = c("P", "P", "P", "P", "P", "P", NA),
+    final_type = c("P", "eP", "dual", "G", "eG", "E", NA),
+    tss_supported = FALSE,
+    has_gene   = TRUE
+  )
+  # NA old_type + NA final_type → role=NA, strict=NA (unresolved anchor)
+  expect_equal(r$role,
+    c("promoter", "promoter", "promoter", "gene_body", "gene_body",
+      "enhancer_candidate", NA_character_))
+  expect_equal(r$strict,
+    c(TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, NA))
+})
+
+test_that("P0-2: E->P/dual without TSS is positional_candidate, not strict", {
+  # E->P/dual anchors have promoter-like chromatin but the nearest gene
+  # is not reliable.  Until TSS reannotation confirms gene identity,
+  # the link stays positional_candidate and does NOT enter strict targets.
+  links <- data.frame(
+    input_id = "p1", gene = "SOX2",
+    gene_role = "positional_candidate", source = "loop_anchor",
+    evidence = "positional_candidate_after_chromatin",
+    path_length = 1L, strict_assignment_eligible = FALSE,
+    stringsAsFactors = FALSE
+  )
+  bed <- data.frame(input_id = "p1", stringsAsFactors = FALSE)
+  res <- looplook:::.aggregate_strict_targets(links, bed, max_primary_hop = 1L)
+  expect_true(is.na(res$Assigned_Target_Genes) | res$Assigned_Target_Genes == "")
+  expect_true(is.na(res$Regulated_promoter_genes) |
+    res$Regulated_promoter_genes == "")
+})
+
+test_that("P0-1: E->E unchanged nearest gene is NOT strict-eligible", {
+  # Unchanged E anchors carry only ChIPseeker nearest genes.
+  # These must not enter strict target columns even when the E anchor
+  # participates in a loop (source == "loop_anchor").
+  links <- data.frame(
+    input_id = "p1", gene = "SOX2",
+    gene_role = "enhancer_candidate", source = "loop_anchor",
+    evidence = "local_enhancer_candidate",
+    path_length = 0L, strict_assignment_eligible = FALSE,
+    stringsAsFactors = FALSE
+  )
+  bed <- data.frame(input_id = "p1", stringsAsFactors = FALSE)
+  res <- looplook:::.aggregate_strict_targets(links, bed, max_primary_hop = 1L)
+  # All_Loop_Connected_Genes includes it (structural connectivity)
+  expect_equal(res$All_Loop_Connected_Genes, "SOX2")
+  # But strict columns exclude it (no structural gene provenance)
+  expect_true(is.na(res$Assigned_Target_Genes) | res$Assigned_Target_Genes == "")
+})
+
+test_that("G->P/dual host gene enters strict target as promoter (rank 1)", {
+  # G/eG anchors have structural gene-body overlap.  When chromatin promotes
+  # them to P/dual, the host gene is a valid promoter-associated target.
+  links <- data.frame(
+    input_id = "p1", gene = "MYC",
+    gene_role = "promoter", source = "loop_anchor",
+    evidence = "distal_promoter",
+    path_length = 1L, strict_assignment_eligible = TRUE,
+    stringsAsFactors = FALSE
+  )
+  bed <- data.frame(input_id = "p1", stringsAsFactors = FALSE)
+  res <- looplook:::.aggregate_strict_targets(links, bed, max_primary_hop = 1L)
+  expect_equal(res$Assigned_Target_Genes, "MYC")
+  expect_equal(res$Regulated_promoter_genes, "MYC")
+})
+
+test_that("P/eP->E structurally supported gene enters as enhancer_candidate (rank 3)", {
+  # P/eP anchors have annotated promoter genes.  When chromatin downgrades
+  # them to E, the gene is still structurally valid but at rank 3.
+  links <- data.frame(
+    input_id = "p1", gene = "TP53",
+    gene_role = "enhancer_candidate", source = "loop_anchor",
+    evidence = "distal_enhancer_candidate",
+    path_length = 1L, strict_assignment_eligible = TRUE,
+    stringsAsFactors = FALSE
+  )
+  bed <- data.frame(input_id = "p1", stringsAsFactors = FALSE)
+  res <- looplook:::.aggregate_strict_targets(links, bed, max_primary_hop = 1L)
+  expect_equal(res$Assigned_Target_Genes, "TP53")
+  # Must NOT be in Regulated_promoter_genes (no longer promoter role)
+  expect_true(is.na(res$Regulated_promoter_genes) |
+    res$Regulated_promoter_genes == "")
+})
+
+test_that("enhancer_candidate: rank 3, loses to gene_body at rank 2", {
+  links <- data.frame(
+    input_id = c("p1", "p1"),
+    gene = c("SOX2", "MYC"),
+    gene_role = c("enhancer_candidate", "gene_body"),
+    source = "loop_anchor",
+    evidence = c("distal_enhancer_candidate", "gene_body_context"),
+    path_length = c(1L, 1L),
+    strict_assignment_eligible = TRUE,
+    stringsAsFactors = FALSE
+  )
+  bed <- data.frame(input_id = "p1", stringsAsFactors = FALSE)
+  res <- looplook:::.aggregate_strict_targets(links, bed, max_primary_hop = 1L)
+  # gene_body (rank 2) beats enhancer_candidate (rank 3)
+  expect_equal(res$Assigned_Target_Genes, "MYC")
+  expect_true(grepl("SOX2", res$All_Loop_Connected_Genes))
+})
+
+test_that("positional_candidate excluded from strict target", {
+  # Positional candidates are never strict-eligible; always excluded.
   links <- data.frame(
     input_id = "p1", gene = "SOX2",
     gene_role = "positional_candidate", source = "loop_anchor",
@@ -490,7 +597,7 @@ test_that("positional_candidate is in all-connected but excluded from strict and
   expect_true(is.na(res$Expanded_Target_Genes) | res$Expanded_Target_Genes == "")
 })
 
-test_that("G→E preserves gene_body role", {
+test_that("gene_body role enters strict target at rank 2", {
   links <- data.frame(
     input_id = "p1", gene = "MYC",
     gene_role = "gene_body", source = "loop_anchor",
@@ -503,7 +610,7 @@ test_that("G→E preserves gene_body role", {
   expect_equal(res$Assigned_Target_Genes, "MYC")
 })
 
-test_that("P→E preserves promoter role", {
+test_that("promoter role preserved as rank 1 in aggregation", {
   links <- data.frame(
     input_id = "p1", gene = "TP53",
     gene_role = "promoter", source = "loop_anchor",
@@ -516,7 +623,7 @@ test_that("P→E preserves promoter role", {
   expect_equal(res$Assigned_Target_Genes, "TP53")
 })
 
-test_that("TSS NA handled same as FALSE: E→P positional_candidate", {
+test_that("positional_candidate always excluded regardless of provenance flags", {
   links <- data.frame(
     input_id = "p1", gene = "SOX2",
     gene_role = "positional_candidate", source = "loop_anchor",

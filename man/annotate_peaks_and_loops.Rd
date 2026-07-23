@@ -123,7 +123,7 @@ proximity-only pairs are retained.}
 
 \item{anchor_min_overlap}{Integer. Minimum required physical overlap
 (bp) between a peak and an anchor. Default \code{1L}: at least 1 bp
-of actual sequence overlap required — proximity-only pairs within
+of actual sequence overlap required -- proximity-only pairs within
 the \code{anchor_gap} window but without physical overlap are
 excluded. Increase to \code{10-100} for broad peaks to avoid
 spurious boundary overlaps.}
@@ -140,10 +140,13 @@ target links (default \code{path_length <= 1}); longer paths are reported
 separately as \code{Expanded_Target_Genes} and do not participate in
 \code{Assigned_Target_Genes} selection.
 \code{"promoter_then_distance"} (default): within primary links,
-promoter evidence dominates — all promoter-linked genes beat all
+promoter evidence dominates -- all promoter-linked genes beat all
 gene-body genes regardless of path length; within each tier shorter
-paths win.
-\code{"distance_then_role"}: within primary links, path-length dominates —
+paths win.  Exception: direct strict promoter--promoter contacts
+(same loop, path0 + path1) co-assign both endpoints via union,
+because the technical endpoint orientation does not reflect
+biological regulatory direction.
+\code{"distance_then_role"}: within primary links, path-length dominates --
 the closest linked gene wins; at equal distance promoter beats gene-body
 (legacy behaviour).
 The policy affects \code{Assigned_Target_Genes} only.
@@ -156,7 +159,7 @@ A named list:
 \item \code{target_annotation} -- Target features (peaks) with gene assignments.
 Key columns include:
 \itemize{
-\item \code{All_Loop_Connected_Genes}: All genes from loop-connected anchors (P/G types).
+\item \code{All_Loop_Connected_Genes}: Inclusive provenance union of all loop-anchor gene links. May include strict assignment-eligible targets and non-strict positional/enhancer candidates. Not a confirmed target-gene set.
 \item \code{Regulated_promoter_genes}: Promoter genes supported by loop-anchor context.
 \item \code{Assigned_Target_Genes}: Policy-based 3D assignment (default: promoter-first, then shorter path wins; see \code{target_priority}).
 \item \code{*_Filled} variants: Linear nearest-gene fallback when strict 3D assignments are empty.
@@ -177,12 +180,16 @@ assigned to each peak; do not interpret any one column in isolation.
 \itemize{
 \item \code{input_id}, \code{loop_ID}, \code{anchor_id}: Identifiers.
 \item \code{gene}: Linked gene symbol.
-\item \code{gene_role}: \code{"promoter"}, \code{"gene_body"}, or \code{"linear_annotation"}.
+\item \code{gene_role}: \code{"promoter"}, \code{"gene_body"},
+\code{"enhancer_candidate"}, \code{"positional_candidate"},
+or \code{"linear_annotation"}.
 \item \code{source}: \code{"loop_anchor"} (3D-derived) or \code{"linear_annotation"} (nearest gene).
 \item \code{evidence}: Provenance label --
 \code{"local_promoter_overlap"} (peak overlaps anchor promoter),
 \code{"distal_promoter"} (promoter on the distal loop anchor),
-\code{"gene_body_context"} (gene body linkage),
+\code{"gene_body_context"} / \code{"distal_gene_body_context"} (gene body linkage),
+\code{"local_enhancer_candidate"} / \code{"distal_enhancer_candidate"} /
+\code{"expanded_enhancer_candidate"} (enhancer-associated linkage),
 \code{"expanded_promoter_loop"} (via ego-network expansion),
 \code{"linear_annotation"} (direct nearest gene),
 or \code{"linear_fallback"} (filled when 3D assignment was empty).

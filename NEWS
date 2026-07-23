@@ -1,5 +1,75 @@
-Changes in version 0.99.15 (2026-07-18)
+Changes in version 0.99.15 (2026-07-23)
 -----------------------------------------
+
+Algorithm Correctness
+
+* Chromatin-aware target gene calling now uses a unified origin-aware
+  resolver (`.resolve_chromatin_gene_role()`) that combines chromatin
+  final type with anchor origin (old_type) and TSS validation.  This
+  replaces the previous two-layer system where anchor-level and
+  link-level role logic could diverge, and ensures consistent role
+  and strict-eligibility across all output layers: map_info,
+  loop_annotation, target_gene_links, and target_annotation.
+* E->E (unchanged enhancer) ChIPseeker nearest genes no longer enter
+  strict target columns (`Assigned_Target_Genes`, `Regulated_promoter_genes`,
+  `Expanded_Target_Genes`).  They remain visible in `All_Loop_Connected_Genes`
+  and `Candidate_Positional_Genes` for provenance tracking.
+* E->P/dual anchors without independent TSS-supported gene mapping now
+  retain `positional_candidate` role with `strict_assignment_eligible=FALSE`.
+  Chromatin state is correctly recorded as promoter-like, but the
+  ChIPseeker nearest gene is not promoted to a rank-1 promoter target.
+  E->P/dual anchors WITH TSS-validated gene mapping are correctly
+  promoted to `promoter` role with `strict_assignment_eligible=TRUE`.
+* G/eG->P/dual anchors use their structural host gene (from gene-body
+  overlap) as promoter-associated targets.  TSS support is not required
+  for strict eligibility; when TxDb identifies an overlapping TSS gene,
+  it is used as the high-confidence assignment; otherwise the host gene
+  is retained with `provisional` confidence.  Evidence label changed from
+  `positional_gene+promoter_like_chromatin` to
+  `gene_body_host+promoter_like_chromatin`.
+* New `enhancer_candidate` role (rank 3) for anchors with
+  structurally-supported genes that are chromatin-downgraded to
+  enhancer (P/eP/G/eG -> E).  Target priority is now:
+  promoter (rank 1) > gene_body (rank 2) > enhancer_candidate (rank 3)
+  > positional/fallback (rank 4).
+* `.rebuild_loop_gene_summaries()` now uses `strict_assignment_eligible`
+  to filter topology-expanded gene sets, preventing E-origin nearest-gene
+  contamination in `Putative_Target_Genes` and `Promoter_Target_Genes`.
+* `.compute_raw_promoter_stats()` now checks `anchor*_strict_eligible`
+  in addition to `anchor*_gene_role`, preventing unresolved E->P/dual
+  anchors from inflating promoter-centric statistics.
+* `Candidate_Positional_Genes` at the loop level now aggregates all
+  `strict_assignment_eligible=FALSE` gene links (including E->E
+  nearest-gene candidates), not only `positional_candidate`-role links.
+* Direct strict promoter–promoter co-assignment is enabled under
+  `target_priority = "promoter_then_distance"`.  When path-0 and
+  path-1 strict promoter links arise from two distinct anchors of
+  the same direct loop and input feature, both promoter genes are
+  retained in `Assigned_Target_Genes` using union semantics.
+  `distance_then_role` preserves local path-first behaviour.
+  `Regulated_promoter_genes` retains all eligible primary strict
+  promoter links and therefore already includes both endpoints
+  of a qualifying direct P–P contact.
+
+New Evidence Labels
+
+* `local_enhancer_candidate`, `distal_enhancer_candidate`,
+  `expanded_enhancer_candidate` for enhancer-associated linkages.
+* `distal_gene_body_context`, `expanded_gene_body_context` for
+  gene-body linkages at path > 0.
+* `expanded_positional_candidate`, `positional_candidate` for
+  non-strict positional links.
+* `gene_body_host+promoter_like_chromatin` for G/eG->P/dual
+  host-gene evidence (replaces `positional_gene+promoter_like_chromatin`
+  for G/eG-origin anchors).
+
+Documentation
+
+* Updated vignette reference tables for `gene_role` and `evidence`
+  values to include `enhancer_candidate`, `positional_candidate`,
+  and new evidence labels.
+* Updated `All_Loop_Connected_Genes` Rd description to reflect
+  inclusive semantics (may include enhancer and positional candidates).
 
 Performance
 

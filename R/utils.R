@@ -69,7 +69,9 @@ if (getRversion() >= "2.15.1") {
     "is_true_dual", "is_enhancer_bed",
     "anchor1_gene_role", "anchor2_gene_role",
     "effective_gene_role", "strict_assignment_eligible",
-    "Neighbor_Role"
+    "Neighbor_Role",
+    "anchor1_strict_eligible", "anchor2_strict_eligible",
+    "pp_genes", "PP_CoAssigned_Genes"
   ))
 }
 
@@ -1072,9 +1074,22 @@ clean_anchor <- function(g, t, allow, down, measured = NULL) {
     loop_df$contact_id2 <- seq_len(nrow(loop_df))
   }
   has_roles <- all(c("anchor1_gene_role", "anchor2_gene_role") %in% colnames(loop_df))
+  has_strict <- all(c("anchor1_strict_eligible", "anchor2_strict_eligible") %in%
+    colnames(loop_df))
   if (has_roles) {
-    promoter_filter1 <- loop_df$anchor1_gene_role == "promoter" & !is.na(loop_df$anchor1_gene)
-    promoter_filter2 <- loop_df$anchor2_gene_role == "promoter" & !is.na(loop_df$anchor2_gene)
+    if (has_strict) {
+      promoter_filter1 <- loop_df$anchor1_gene_role == "promoter" &
+        !is.na(loop_df$anchor1_gene) &
+        !is.na(loop_df$anchor1_strict_eligible) &
+        loop_df$anchor1_strict_eligible
+      promoter_filter2 <- loop_df$anchor2_gene_role == "promoter" &
+        !is.na(loop_df$anchor2_gene) &
+        !is.na(loop_df$anchor2_strict_eligible) &
+        loop_df$anchor2_strict_eligible
+    } else {
+      promoter_filter1 <- loop_df$anchor1_gene_role == "promoter" & !is.na(loop_df$anchor1_gene)
+      promoter_filter2 <- loop_df$anchor2_gene_role == "promoter" & !is.na(loop_df$anchor2_gene)
+    }
   } else {
     promoter_filter1 <- .is_promoter_like(loop_df$anchor1_type) & !is.na(loop_df$anchor1_gene)
     promoter_filter2 <- .is_promoter_like(loop_df$anchor2_type) & !is.na(loop_df$anchor2_gene)

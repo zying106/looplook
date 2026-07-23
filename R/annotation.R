@@ -465,7 +465,7 @@
 #' \code{\link{refine_loop_anchors_by_expression}} and
 #' \code{\link{refine_loop_anchors_by_chromatin}}.
 #'
-#' @param x Any object (NULL / non-list inputs are safe — returns FALSE).
+#' @param x Any object (NULL / non-list inputs are safe -- returns FALSE).
 #' @return Logical.
 #' @keywords internal
 #' @noRd
@@ -479,7 +479,7 @@
 #' Internal: Terminal empty annotation result with standard slots
 #'
 #' Returns a minimal terminal empty result for diagnostics and reporting.
-#' Refinement is not supported on this object — callers must guard with
+#' Refinement is not supported on this object -- callers must guard with
 #' \code{\link{.is_empty_annotation_result}}.
 #'
 #' @param reason Character string explaining why the result is empty.
@@ -521,8 +521,8 @@
   if (is.null(bed_info)) return(bed_info)
 
   # Core target columns in logical reading order:
-  # ChIPseeker annotation → loop connectivity → primary targets →
-  # expanded/candidate → linear-fallback fill → evidence
+  # ChIPseeker annotation -> loop connectivity -> primary targets ->
+  # expanded/candidate -> linear-fallback fill -> evidence
   ordered_target_cols <- c(
     "Linked_Loop_IDs",
     "All_Loop_Connected_Genes",
@@ -784,7 +784,7 @@
 #'   proximity-only pairs are retained.
 #' @param anchor_min_overlap Integer. Minimum required physical overlap
 #'   (bp) between a peak and an anchor. Default \code{1L}: at least 1 bp
-#'   of actual sequence overlap required — proximity-only pairs within
+#'   of actual sequence overlap required -- proximity-only pairs within
 #'   the \code{anchor_gap} window but without physical overlap are
 #'   excluded. Increase to \code{10-100} for broad peaks to avoid
 #'   spurious boundary overlaps.
@@ -799,10 +799,13 @@
 #'   separately as \code{Expanded_Target_Genes} and do not participate in
 #'   \code{Assigned_Target_Genes} selection.
 #'   \code{"promoter_then_distance"} (default): within primary links,
-#'   promoter evidence dominates — all promoter-linked genes beat all
+#'   promoter evidence dominates -- all promoter-linked genes beat all
 #'   gene-body genes regardless of path length; within each tier shorter
-#'   paths win.
-#'   \code{"distance_then_role"}: within primary links, path-length dominates —
+#'   paths win.  Exception: direct strict promoter--promoter contacts
+#'   (same loop, path0 + path1) co-assign both endpoints via union,
+#'   because the technical endpoint orientation does not reflect
+#'   biological regulatory direction.
+#'   \code{"distance_then_role"}: within primary links, path-length dominates --
 #'   the closest linked gene wins; at equal distance promoter beats gene-body
 #'   (legacy behaviour).
 #'   The policy affects \code{Assigned_Target_Genes} only.
@@ -814,7 +817,7 @@
 #'   \item \code{target_annotation} -- Target features (peaks) with gene assignments.
 #'     Key columns include:
 #'     \itemize{
-#'       \item \code{All_Loop_Connected_Genes}: All genes from loop-connected anchors (P/G types).
+#'       \item \code{All_Loop_Connected_Genes}: Inclusive provenance union of all loop-anchor gene links. May include strict assignment-eligible targets and non-strict positional/enhancer candidates. Not a confirmed target-gene set.
 #'       \item \code{Regulated_promoter_genes}: Promoter genes supported by loop-anchor context.
 #'       \item \code{Assigned_Target_Genes}: Policy-based 3D assignment (default: promoter-first, then shorter path wins; see \code{target_priority}).
 #'       \item \code{*_Filled} variants: Linear nearest-gene fallback when strict 3D assignments are empty.
@@ -835,12 +838,16 @@
 #'     \itemize{
 #'       \item \code{input_id}, \code{loop_ID}, \code{anchor_id}: Identifiers.
 #'       \item \code{gene}: Linked gene symbol.
-#'       \item \code{gene_role}: \code{"promoter"}, \code{"gene_body"}, or \code{"linear_annotation"}.
+#'       \item \code{gene_role}: \code{"promoter"}, \code{"gene_body"},
+#'       \code{"enhancer_candidate"}, \code{"positional_candidate"},
+#'       or \code{"linear_annotation"}.
 #'       \item \code{source}: \code{"loop_anchor"} (3D-derived) or \code{"linear_annotation"} (nearest gene).
 #'       \item \code{evidence}: Provenance label --
 #'         \code{"local_promoter_overlap"} (peak overlaps anchor promoter),
 #'         \code{"distal_promoter"} (promoter on the distal loop anchor),
-#'         \code{"gene_body_context"} (gene body linkage),
+#'         \code{"gene_body_context"} / \code{"distal_gene_body_context"} (gene body linkage),
+#'         \code{"local_enhancer_candidate"} / \code{"distal_enhancer_candidate"} /
+#'         \code{"expanded_enhancer_candidate"} (enhancer-associated linkage),
 #'         \code{"expanded_promoter_loop"} (via ego-network expansion),
 #'         \code{"linear_annotation"} (direct nearest gene),
 #'         or \code{"linear_fallback"} (filled when 3D assignment was empty).
@@ -1490,7 +1497,7 @@ annotate_peaks_and_loops <- function(
   # is stored as an edge attribute for downstream confidence weighting.
   #
   # Semantics of n_support: n_support counts raw BEDPE row multiplicity
-  # per canonical edge — i.e. how many loop rows from the input map to
+  # per canonical edge -- i.e. how many loop rows from the input map to
   # the same (a1_id, a2_id) pair.  It does NOT automatically incorporate
   # replicate-level metadata (n_reps, n_members) from consolidated input.
   # When input has been pre-consolidated via consolidate_chromatin_loops(),
@@ -2072,6 +2079,105 @@ annotate_peaks_and_loops <- function(
   paste(sort(x), collapse = ";")
 }
 
+#' Resolve chromatin-aware gene role and strict eligibility from origin + final type.
+#'
+#' Single source of truth for both anchor-level (map_info, loop_df) and
+#' link-level (target_gene_links) role/eligibility decisions.  Prevents the
+#' two-layer inconsistency where anchor-level used final-type-only logic and
+#' link-level used origin-aware logic, producing contradictory roles for the
+#' same anchor.
+#'
+#' Rules:
+#'   - Chromatin state (final_type) determines the regulatory role category.
+#'   - Gene-identity confidence depends on origin (old_type) + TSS validation:
+#'     * P/eP/G/eG anchors carry structurally validated genes (TSS/gene-body overlap).
+#'     * E anchors carry only ChIPseeker nearest genes -- NOT reliable for strict
+#'       targets unless confirmed by independent TSS reannotation.
+#'
+#' @param old_type Character vector of pre-chromatin anchor types (P, eP, G, eG, E).
+#' @param final_type Character vector of chromatin-refined anchor types.
+#' @param tss_supported Logical vector: TRUE when TSS reannotation found a
+#'   TxDb-supported promoter gene for this anchor.
+#' @param has_gene Logical vector: TRUE when the anchor carries a non-empty gene symbol.
+#' @return A list with two parallel vectors: \code{role} (character) and
+#'   \code{strict} (logical).
+#' @keywords internal
+#' @noRd
+.resolve_chromatin_gene_role <- function(old_type, final_type,
+                                          tss_supported = FALSE,
+                                          has_gene = TRUE) {
+  # Coerce scalar or empty defaults to match input length (dplyr::case_when
+  # does not auto-recycle scalars or zero-length vectors in compound & conditions).
+  n <- length(old_type)
+  if (length(tss_supported) == 0L) {
+    tss_supported <- rep(FALSE, n)
+  } else if (length(tss_supported) == 1L && n > 1L) {
+    tss_supported <- rep(tss_supported, n)
+  }
+  if (length(has_gene) == 0L) {
+    has_gene <- rep(TRUE, n)
+  } else if (length(has_gene) == 1L && n > 1L) {
+    has_gene <- rep(has_gene, n)
+  }
+  tss_pos <- !is.na(tss_supported) & tss_supported
+  gene_ok <- !is.na(has_gene) & has_gene
+  has_info <- !is.na(old_type) & !is.na(final_type)
+
+  # Empty-input guard: dplyr::case_when with zero-length vectors can
+  # produce recycling errors when conditions differ in length.
+  if (n == 0L) {
+    return(list(role = character(0), strict = logical(0)))
+  }
+
+  # --- gene_role ---
+  role <- dplyr::case_when(
+    !has_info ~ NA_character_,
+    # E -> P/dual without TSS: chromatin state is promoter-like, but
+    # gene identity is unresolved (nearest gene only).
+    old_type == "E" &
+      final_type %in% c("P", "dual") &
+      !tss_pos ~ "positional_candidate",
+    # All other P/dual: promoter
+    final_type %in% c("P", "eP", "dual") ~ "promoter",
+    # G/eG: gene_body
+    final_type %in% c("G", "eG") ~ "gene_body",
+    # E (all origins): enhancer_candidate
+    final_type == "E" ~ "enhancer_candidate",
+    TRUE ~ "positional_candidate"
+  )
+
+  # --- strict_assignment_eligible ---
+  strict <- dplyr::case_when(
+    !has_info ~ NA,
+    # P/eP -> P/dual: annotated promoter gene, always strict
+    old_type %in% c("P", "eP") &
+      final_type %in% c("P", "eP", "dual") &
+      gene_ok ~ TRUE,
+    # G/eG -> P/dual: gene-body host gene, strict (moderate confidence)
+    old_type %in% c("G", "eG") &
+      final_type %in% c("P", "dual") &
+      gene_ok ~ TRUE,
+    # E -> P/dual WITH TSS: TSS-validated gene, strict
+    old_type == "E" &
+      final_type %in% c("P", "dual") &
+      tss_pos &
+      gene_ok ~ TRUE,
+    # G/eG -> G/eG (unchanged): gene_body, always strict
+    old_type %in% c("G", "eG") &
+      final_type %in% c("G", "eG") &
+      gene_ok ~ TRUE,
+    # P/eP/G/eG -> E: structurally supported gene, strict at rank 3
+    final_type == "E" &
+      old_type %in% c("P", "eP", "G", "eG") &
+      gene_ok ~ TRUE,
+    # Everything else (E->E, E->P/dual without TSS, positional, no gene):
+    # NOT strict
+    TRUE ~ FALSE
+  )
+
+  list(role = role, strict = strict)
+}
+
 .target_anchor_gene_map <- function(map_info) {
   if (is.null(map_info) || nrow(map_info) == 0 ||
     !all(c("anchor_id", "SYMBOL") %in% colnames(map_info))) {
@@ -2090,7 +2196,8 @@ annotate_peaks_and_loops <- function(
     } else {
       map_info$effective_gene_role %in% c("promoter", "gene_body")
     }
-    strict_col[is.na(strict_col)] <- map_info$effective_gene_role[is.na(strict_col)] %in% c("promoter", "gene_body")
+    strict_col[is.na(strict_col)] <- map_info$effective_gene_role[is.na(strict_col)] %in%
+      c("promoter", "gene_body")
     strict_col[map_info$effective_gene_role == "positional_candidate"] <- FALSE
     map_info %>%
       dplyr::mutate(
@@ -2101,7 +2208,7 @@ annotate_peaks_and_loops <- function(
       tidyr::separate_rows(SYMBOL, sep = ";") %>%
       dplyr::mutate(gene = trimws(SYMBOL)) %>%
       dplyr::filter(
-        gene_role %in% c("promoter", "gene_body", "positional_candidate"),
+        gene_role %in% c("promoter", "gene_body", "enhancer_candidate", "positional_candidate"),
         !is.na(gene), gene != ""
       ) %>%
       dplyr::select(anchor_id, gene, gene_role, strict_assignment_eligible) %>%
@@ -2171,7 +2278,7 @@ annotate_peaks_and_loops <- function(
 #'
 #' Builds a shortest-path DAG (only edges on minimum-hop routes from source
 #' to target) and uses layer-by-layer DP to select the path with maximum
-#' total n_support.  O(V + E) — avoids the combinatorial enumeration of
+#' total n_support.  O(V + E) -- avoids the combinatorial enumeration of
 #' all shortest paths that \code{all_shortest_paths()} performs.
 #'
 #' @param g An igraph object with edge attribute \code{n_support}
@@ -2374,7 +2481,12 @@ annotate_peaks_and_loops <- function(
       gene_role,
       strict_assignment_eligible,
       source = "loop_anchor",
-      evidence = dplyr::if_else(gene_role == "promoter", "local_promoter_overlap", "gene_body_context"),
+      evidence = dplyr::case_when(
+        gene_role == "promoter"           ~ "local_promoter_overlap",
+        gene_role == "gene_body"          ~ "gene_body_context",
+        gene_role == "enhancer_candidate"  ~ "local_enhancer_candidate",
+        TRUE                              ~ "positional_candidate"
+      ),
       anchor_role = "local_anchor",
       path_length = 0L
     )
@@ -2391,7 +2503,12 @@ annotate_peaks_and_loops <- function(
       gene_role,
       strict_assignment_eligible,
       source = "loop_anchor",
-      evidence = dplyr::if_else(gene_role == "promoter", "distal_promoter", "gene_body_context"),
+      evidence = dplyr::case_when(
+        gene_role == "promoter"           ~ "distal_promoter",
+        gene_role == "gene_body"          ~ "distal_gene_body_context",
+        gene_role == "enhancer_candidate"  ~ "distal_enhancer_candidate",
+        TRUE                              ~ "positional_candidate"
+      ),
       anchor_role = "opposite_anchor",
       path_length = 1L
     )
@@ -2545,7 +2662,7 @@ annotate_peaks_and_loops <- function(
             )$vpath[[1]])
           } else {
             # Keep only the lexicographically first best mid
-            # (sorted above).  Consistent with d≥3 which also
+            # (sorted above).  Consistent with d>=3 which also
             # returns a single deterministic path.  loop_ID
             # now always represents one path's edge set.
             ids <- as.character(c(from, best_mids[1L], to))
@@ -2554,7 +2671,7 @@ annotate_peaks_and_loops <- function(
           }
         } else {
           # d >= 3: use shortest-path DAG + DP to find the
-          # minimum-hop maximum-support path.  O(V+E) —
+          # minimum-hop maximum-support path.  O(V+E) --
           # avoids the combinatorial enumeration of
           # all_shortest_paths().
           best_path <- .dag_max_support_path(g, from, to, d)
@@ -2602,10 +2719,11 @@ annotate_peaks_and_loops <- function(
         strict_assignment_eligible,
         source = "loop_anchor",
         evidence = dplyr::case_when(
-          gene_role == "promoter" ~ "expanded_promoter_loop",
-          gene_role == "gene_body" ~ "expanded_gene_body_context",
+          gene_role == "promoter"            ~ "expanded_promoter_loop",
+          gene_role == "gene_body"           ~ "expanded_gene_body_context",
+          gene_role == "enhancer_candidate"   ~ "expanded_enhancer_candidate",
           gene_role == "positional_candidate" ~ "expanded_positional_candidate",
-          TRUE ~ "expanded_anchor"
+          TRUE                                ~ "expanded_anchor"
         ),
         anchor_role = "expanded_anchor",
         path_length = path_length
@@ -2626,9 +2744,17 @@ annotate_peaks_and_loops <- function(
     return(data.frame(input_id = character(), Regulated_promoter_Evidence = character()))
   }
   target_gene_links %>%
+    dplyr::mutate(
+      strict_assignment_eligible = if ("strict_assignment_eligible" %in% colnames(target_gene_links)) {
+        target_gene_links$strict_assignment_eligible
+      } else {
+        gene_role %in% c("promoter", "gene_body")
+      }
+    ) %>%
     dplyr::filter(
       source == "loop_anchor",
       gene_role == "promoter",
+      strict_assignment_eligible %in% TRUE,
       is.finite(path_length),
       path_length <= 1
     ) %>%
@@ -4065,7 +4191,7 @@ build_annotation_plots <- function(
 #'   \item \code{target_annotation} -- Target features (peaks) with gene assignments.
 #'     Key columns include:
 #'     \itemize{
-#'       \item \code{All_Loop_Connected_Genes}: All genes from loop-connected anchors (P/G types).
+#'       \item \code{All_Loop_Connected_Genes}: Inclusive provenance union of all loop-anchor gene links. May include strict assignment-eligible targets and non-strict positional/enhancer candidates. Not a confirmed target-gene set.
 #'       \item \code{Regulated_promoter_genes}: Promoter genes supported by loop-anchor context.
 #'       \item \code{Assigned_Target_Genes}: Policy-based 3D assignment (default: promoter-first, then shorter path wins; see \code{target_priority}).
 #'       \item \code{*_Filled} variants: Linear nearest-gene fallback when strict 3D assignments are empty.
@@ -4086,12 +4212,16 @@ build_annotation_plots <- function(
 #'     \itemize{
 #'       \item \code{input_id}, \code{loop_ID}, \code{anchor_id}: Identifiers.
 #'       \item \code{gene}: Linked gene symbol.
-#'       \item \code{gene_role}: \code{"promoter"}, \code{"gene_body"}, or \code{"linear_annotation"}.
+#'       \item \code{gene_role}: \code{"promoter"}, \code{"gene_body"},
+#'       \code{"enhancer_candidate"}, \code{"positional_candidate"},
+#'       or \code{"linear_annotation"}.
 #'       \item \code{source}: \code{"loop_anchor"} (3D-derived) or \code{"linear_annotation"} (nearest gene).
 #'       \item \code{evidence}: Provenance label --
 #'         \code{"local_promoter_overlap"} (peak overlaps anchor promoter),
 #'         \code{"distal_promoter"} (promoter on the distal loop anchor),
-#'         \code{"gene_body_context"} (gene body linkage),
+#'         \code{"gene_body_context"} / \code{"distal_gene_body_context"} (gene body linkage),
+#'         \code{"local_enhancer_candidate"} / \code{"distal_enhancer_candidate"} /
+#'         \code{"expanded_enhancer_candidate"} (enhancer-associated linkage),
 #'         \code{"expanded_promoter_loop"} (via ego-network expansion),
 #'         \code{"linear_annotation"} (direct nearest gene),
 #'         or \code{"linear_fallback"} (filled when 3D assignment was empty).
@@ -4275,7 +4405,7 @@ refine_loop_anchors_by_expression <- function(
     target_gene_links <- tgt_refined$target_gene_links
 
     # Re-aggregate strict target columns from current links using the
-    # unified distance-first finalizer.  This ensures a silent promoter
+    # unified policy-controlled finalizer.  This ensures a silent promoter
     # link does not block an active gene-body link from becoming the
     # Assigned_Target_Genes entry.
     up_meta_tp <- annotation_res$metadata$parameters$target_priority
@@ -4356,6 +4486,13 @@ refine_loop_anchors_by_expression <- function(
   # Capture upstream resource provenance for chain-of-custody tracking
   up_meta_params <- annotation_res$metadata$parameters
 
+  resolved_neighbor_hop <- {
+    st <- attr(annotation_res, "looplook_anchor_state", exact = TRUE)
+    if (!is.null(st$neighbor_hop)) st$neighbor_hop
+    else if (!is.null(up_meta_params$neighbor_hop)) up_meta_params$neighbor_hop
+    else 0L
+  }
+
   out <- list(
     loop_annotation = loop_df,
     anchor_loci_annotation = clust_info,
@@ -4412,6 +4549,7 @@ refine_loop_anchors_by_expression <- function(
         } else {
           1L
         },
+        neighbor_hop = resolved_neighbor_hop,
         species = species,
         measured_gene_count = length(names(vals)),
         active_gene_count = length(whitelist),
@@ -4450,6 +4588,7 @@ refine_loop_anchors_by_expression <- function(
     attr(out, "looplook_anchor_state") <- .update_anchor_state_from_loop_df(
       anchor_state, loop_df
     )
+    attr(out, "looplook_anchor_state")$neighbor_hop <- resolved_neighbor_hop
     # Store expression data so downstream chromatin -> recompute_targets
     # can recover expression provenance for genes newly assigned to
     # E->P anchors (genes that never appeared in pre-chromatin target links).
@@ -4458,7 +4597,7 @@ refine_loop_anchors_by_expression <- function(
     attr(out, "looplook_anchor_state")$measured_set <- measured_set
     # Update gene_assignment_policy with current expression map so that
     # downstream chromatin TSS re-annotation queries the same expression
-    # data.  conflict_min_expr is intentionally NOT updated — it controls
+    # data.  conflict_min_expr is intentionally NOT updated -- it controls
     # the multi-candidate gene conflict resolution policy and is distinct
     # from the expression refinement threshold (see vignette for details).
     if (!is.null(attr(out, "looplook_anchor_state")$gene_assignment_policy)) {
@@ -4505,7 +4644,7 @@ refine_loop_anchors_by_expression <- function(
       call. = FALSE
     )
   }
-  valid_types <- c("P", "G", "E", "eP", "eG", "dual")
+  valid_types <- c("P", "G", "E", "eP", "eG")
   if (!is.null(candidate_types)) {
     if (!is.character(candidate_types) || length(candidate_types) == 0L ||
       anyNA(candidate_types) || anyDuplicated(candidate_types)) {
@@ -4964,7 +5103,17 @@ refine_loop_anchors_by_chromatin <- function(
   tss_region <- validated$tss_region
   up_meta <- validated$up_meta
   anchor_state <- validated$anchor_state
-
+  # Resolve neighbor_hop early: old objects may carry metadata but
+  # lack the anchor_state field.  Restore it before target recomputation
+  # so that expanded targets use the correct hop setting.
+  if (is.null(anchor_state$neighbor_hop)) {
+    anchor_state$neighbor_hop <- if (!is.null(up_meta$parameters$neighbor_hop)) {
+      up_meta$parameters$neighbor_hop
+    } else {
+      0L
+    }
+    attr(annotation_res, "looplook_anchor_state") <- anchor_state
+  }
   .validate_chromatin_overlap_inputs(
     chromatin_beds, candidate_types,
     anchor_gap, anchor_min_overlap
@@ -4999,7 +5148,7 @@ refine_loop_anchors_by_chromatin <- function(
   if (!all(c("H3K4me1", "H3K4me3") %in% provided_marks)) {
     stop("chromatin_beds must include at least 'H3K4me1' and 'H3K4me3'.", call. = FALSE)
   }
-  valid_types <- c("P", "G", "E", "eP", "eG", "dual")
+  valid_types <- c("P", "G", "E", "eP", "eG")
   if (!is.null(candidate_types)) {
     if (!is.character(candidate_types) || length(candidate_types) == 0L ||
       any(is.na(candidate_types)) || anyDuplicated(candidate_types)) {
@@ -5392,6 +5541,7 @@ refine_loop_anchors_by_chromatin <- function(
         mi$type_code %in% c("G", "eG") ~ "gene_body",
         TRUE ~ "other"
       ),
+      strict_assignment_eligible = rep(NA, nrow(mi)),
       stringsAsFactors = FALSE
     )
     # Overlay chromatin refinement results when available
@@ -5406,25 +5556,38 @@ refine_loop_anchors_by_chromatin <- function(
       } else {
         over_df$TSS_supported <- NA
       }
-      tss_pos <- !is.na(over_df$TSS_supported) & over_df$TSS_supported
-      over_df$over_role <- dplyr::case_when(
-        # P/eP anchors retain promoter relationship regardless of final state
-        over_df$old_type %in% c("P", "eP") ~ "promoter",
-        # Positive TSS upgrades non-promoter anchors
-        tss_pos ~ "promoter",
-        # G/eG anchors retain gene_body regardless of final chromatin state
-        over_df$old_type %in% c("G", "eG") ~ "gene_body",
-        # E → P/dual without positive TSS: positional candidate
-        over_df$old_type == "E" &
-          over_df$new_type %in% c("P", "dual") &
-          !tss_pos ~ "positional_candidate",
-        TRUE ~ NA_character_
+      # Unified origin-aware resolver: same rules for anchor-level and
+      # link-level.  TSS validates E-origin gene identity but does not
+      # gate chromatin-state classification.  G/eG host genes are
+      # structurally supported and do not require TSS.
+      # gene_idx maps over_df (reclassified) -> mi (all anchors)
+      gene_idx <- match(over_df$anchor_id, mi$anchor_id)
+      gene_symbol <- as.character(mi$SYMBOL[gene_idx])
+      has_gene <- !is.na(gene_idx) & !is.na(gene_symbol) &
+        nzchar(trimws(gene_symbol))
+      resolved <- .resolve_chromatin_gene_role(
+        old_type     = over_df$old_type,
+        final_type   = over_df$new_type,
+        tss_supported = over_df$TSS_supported,
+        has_gene     = has_gene
       )
-      idx <- match(role_map$anchor_id, over_df$anchor_id)
-      ovr <- over_df$over_role[idx]
+      over_df$over_role <- resolved$role
+      over_df$over_strict <- resolved$strict
+      # overlay_idx maps role_map (all anchors) -> over_df (reclassified)
+      overlay_idx <- match(role_map$anchor_id, over_df$anchor_id)
+      ovr <- over_df$over_role[overlay_idx]
+      ovs <- over_df$over_strict[overlay_idx]
       role_map$effective_gene_role[!is.na(ovr)] <- ovr[!is.na(ovr)]
+      role_map$strict_assignment_eligible[!is.na(ovs)] <- ovs[!is.na(ovs)]
     }
-    role_map$strict_assignment_eligible <- role_map$effective_gene_role %in% c("promoter", "gene_body")
+    # Fill strict_assignment_eligible for anchors NOT in reclass_map
+    # (non-chromatin-evaluated anchors): P/eP/G/eG are strict, E is not.
+    na_strict <- is.na(role_map$strict_assignment_eligible)
+    if (any(na_strict)) {
+      role_map$strict_assignment_eligible[na_strict] <-
+        role_map$effective_gene_role[na_strict] %in%
+        c("promoter", "gene_body")
+    }
     # Write to anchor_state$map_info
     map_idx <- match(anchor_state$map_info$anchor_id, role_map$anchor_id)
     anchor_state$map_info$effective_gene_role <- role_map$effective_gene_role[map_idx]
@@ -5436,13 +5599,18 @@ refine_loop_anchors_by_chromatin <- function(
     loop_df$anchor2_gene_role <- unname(role_lookup[as.character(loop_df$a2_id)])
     loop_df$anchor1_strict_eligible <- unname(eligible_lookup[as.character(loop_df$a1_id)])
     loop_df$anchor2_strict_eligible <- unname(eligible_lookup[as.character(loop_df$a2_id)])
-    # Positional candidate genes (E → P/dual, no TSS) — per-loop collapse
+    # Candidate positional genes: anchors whose own-gene link is NOT
+    # strict-eligible (E->E nearest gene, E->P/dual unresolved, etc.).
+    # Uses strict_assignment_eligible instead of checking gene_role alone,
+    # so that enhancer_candidate with strict=FALSE (E->E) is also captured.
     loop_df <- loop_df %>%
       dplyr::rowwise() %>%
       dplyr::mutate(
         Candidate_Positional_Genes = extract_genes(c(
-          if (isTRUE(anchor1_gene_role == "positional_candidate")) anchor1_gene else NA_character_,
-          if (isTRUE(anchor2_gene_role == "positional_candidate")) anchor2_gene else NA_character_
+          if (isTRUE(!is.na(anchor1_strict_eligible) && !anchor1_strict_eligible &&
+            !is.na(anchor1_gene) && nzchar(anchor1_gene))) anchor1_gene else NA_character_,
+          if (isTRUE(!is.na(anchor2_strict_eligible) && !anchor2_strict_eligible &&
+            !is.na(anchor2_gene) && nzchar(anchor2_gene))) anchor2_gene else NA_character_
         ))
       ) %>%
       dplyr::ungroup()
@@ -5489,6 +5657,36 @@ refine_loop_anchors_by_chromatin <- function(
       log_message(sprintf("  TSS not available : %d anchors", n_tss_unavailable))
     }
   }
+  # --- Role transition QC: verify that chromatin reclassification is
+  #     actually propagating to target gene roles.  If links are reclassified
+  #     but no target summary rows change, warn loudly. ---
+  n_target_reclassified <- sum(
+    reclass_map$changed &
+      reclass_map$old_type %in% c("P", "eP", "G", "eG", "E") &
+      reclass_map$new_type %in% c("P", "eP", "dual", "G", "eG", "E"),
+    na.rm = TRUE
+  )
+  # Count role transitions on reclassified anchors
+  n_g_to_p <- sum(reclass_map$old_type %in% c("G", "eG") &
+    reclass_map$new_type %in% c("P", "dual"), na.rm = TRUE)
+  n_e_to_p <- sum(reclass_map$old_type == "E" &
+    reclass_map$new_type %in% c("P", "dual"), na.rm = TRUE)
+  n_p_to_e <- sum(reclass_map$old_type %in% c("P", "eP") &
+    reclass_map$new_type == "E", na.rm = TRUE)
+  n_g_to_e <- sum(reclass_map$old_type %in% c("G", "eG") &
+    reclass_map$new_type == "E", na.rm = TRUE)
+
+  log_message("--- Role Transition QC ---")
+  log_message(sprintf("  G/eG -> P/dual   : %d anchors", n_g_to_p))
+  log_message(sprintf("  E -> P/dual      : %d anchors", n_e_to_p))
+  log_message(sprintf("  P/eP -> E        : %d anchors", n_p_to_e))
+  log_message(sprintf("  G/eG -> E        : %d anchors", n_g_to_e))
+  log_message(sprintf("  reclassified total : %d anchors", n_target_reclassified))
+
+  if (n_target_reclassified > 0 && n_g_to_p + n_e_to_p == 0 && n_p_to_e == 0) {
+    log_message("  (all role transitions are within same category -- target impact expected to be minimal)")
+  }
+
   log_message("--- End Chromatin Refinement ---")
 
   # --- 6b. Visualization ---
@@ -5660,6 +5858,13 @@ refine_loop_anchors_by_chromatin <- function(
       dplyr::left_join(loop_cluster_genes, by = "cluster_id")
   }
 
+  resolved_neighbor_hop <- {
+    if (!is.null(final_anchor_state$neighbor_hop)) final_anchor_state$neighbor_hop
+    else if (!is.null(up_meta$parameters$neighbor_hop)) up_meta$parameters$neighbor_hop
+    else 0L
+  }
+  final_anchor_state$neighbor_hop <- resolved_neighbor_hop
+
   out <- list(
     loop_annotation = loop_df,
     chromatin_validation = validation,
@@ -5710,6 +5915,7 @@ refine_loop_anchors_by_chromatin <- function(
         } else {
           1L
         },
+        neighbor_hop = resolved_neighbor_hop,
         dual_ratio_definition = "anchor_wide_mean_log2_ratio",
         provided_chromatin_marks = sort(valid_provided_marks),
         tss_support_policy = "provisional_on_no_annotated_TSS",
@@ -5840,22 +6046,22 @@ refine_loop_anchors_by_chromatin <- function(
 
       # --- anchor-type reclassification (first match wins) ---
       new_type = dplyr::case_when(
-        # 1. Enhancer BED — highest priority curated knowledge
+        # 1. Enhancer BED -- highest priority curated knowledge
         #    (FANTOM5, ENCODE cCREs).  Overrides all signal-level
         #    rules including conflicting_marks and dual_like.
         is_enhancer_bed & h3k4me3_p ~ "dual",
         is_enhancer_bed & h3k4me3_not_called ~ "E",
         # 2. eP/eG + dual_like: resolved by bigWig ratio when available.
-        #    me1-dominant → dual-signature element.
-        #    unresolved (no bigWig) → keep old type (conservative).
-        #    not_me1_dominant (K4me3 dominates) → promoter identity.
+        #    me1-dominant -> dual-signature element.
+        #    unresolved (no bigWig) -> keep old type (conservative).
+        #    not_me1_dominant (K4me3 dominates) -> promoter identity.
         old_type %in% c("eP", "eG") & chromatin_state == "dual_like" &
           dual_ratio_state == "me1_dominant" ~ "dual",
         old_type %in% c("eP", "eG") & chromatin_state == "dual_like" &
           dual_ratio_state == "unresolved" ~ old_type,
         old_type %in% c("eP", "eG") & chromatin_state == "dual_like" ~ "P",
         # 3. eP/eG with H3K4me3+ but NOT dual_like (i.e. H3K4me3
-        #    without H3K4me1) → promoter identity.  This catches
+        #    without H3K4me1) -> promoter identity.  This catches
         #    promoter_like anchors and bivalent (H3K4me3+H3K27me3)
         #    anchors that lack H3K4me1.  H3K4me3 defines promoter
         #    identity; conflicting H3K27me3 indicates poised status
@@ -5866,7 +6072,7 @@ refine_loop_anchors_by_chromatin <- function(
           (is.na(validation$H3K4me1) | !validation$H3K4me1) ~ "P",
         old_type == "eG" & !is.na(validation$H3K4me3) & validation$H3K4me3 &
           (is.na(validation$H3K4me1) | !validation$H3K4me1) ~ "P",
-        # 4. eP/eG + canonical/strong active-enhancer chromatin → E
+        # 4. eP/eG + canonical/strong active-enhancer chromatin -> E
         old_type == "eP" &
           conf_chr %in% c("canonical", "strong") &
           chromatin_state %in% c("active_enhancer_like", "intermediate_enhancer_like") ~ "E",
@@ -5874,13 +6080,13 @@ refine_loop_anchors_by_chromatin <- function(
           conf_chr %in% c("canonical", "strong") &
           chromatin_state %in% c("active_enhancer_like", "intermediate_enhancer_like") ~ "E",
         # 5. eP/eG + promoter_like (H3K4me3+ only, no dual_like or
-        #    active-enhancer caught above) → P.  This is the general
+        #    active-enhancer caught above) -> P.  This is the general
         #    rule: any eP/eG with K4me3 should be a promoter.
         #    (Note: rules 2-3 already handle the specific subcases.)
         old_type == "eP" & chromatin_state == "promoter_like" ~ "P",
         old_type == "eG" & chromatin_state == "promoter_like" ~ "P",
         # 6. Conflicting active + repressive marks (H3K27me3+ with
-        #    H3K4me1/me3/H3K27ac/ATAC) → bivalent/poised chromatin.
+        #    H3K4me1/me3/H3K27ac/ATAC) -> bivalent/poised chromatin.
         #    Keep original type for non-eP/eG anchors; do not output
         #    a high-confidence P/E/dual classification.
         chromatin_state == "conflicting_marks" ~ old_type,
@@ -5905,7 +6111,7 @@ refine_loop_anchors_by_chromatin <- function(
           dual_ratio_state == "unresolved" ~ old_type,
         old_type == "G" & h3k4me1_p & h3k4me3_p ~ "P",
         old_type == "G" & h3k4me3_p & h3k4me1_not_called ~ "P",
-        # 9. G → E: intronic enhancer (H3K4me1+ H3K4me3- + H3K27ac/ATAC)
+        # 9. G -> E: intronic enhancer (H3K4me1+ H3K4me3- + H3K27ac/ATAC)
         old_type == "G" & h3k4me1_p & h3k4me3_not_called &
           (h3k27ac_p | atac_p) ~ "E",
         TRUE ~ old_type
@@ -6015,7 +6221,7 @@ refine_loop_anchors_by_chromatin <- function(
   # Align ChIPseeker output to input GRanges.  Three-tier strategy:
   #   1. metadata_id:     explicit looplook_anchor_id in mcols (preferred)
   #   2. coordinate_join: match by seqnames/start/end (fallback)
-  #   3. unmatched:       rows without ID or coordinate match → NA
+  #   3. unmatched:       rows without ID or coordinate match -> NA
   input_names <- val_sub$anchor_id
   alignment_method <- rep(NA_character_, length(input_names))
 
@@ -6044,7 +6250,7 @@ refine_loop_anchors_by_chromatin <- function(
     id_match_idx <- match(input_names, out_names)
     n_matched <- sum(!is.na(id_match_idx))
     if (n_matched == length(input_names)) {
-      # All anchors matched by metadata ID — reorder and return.
+      # All anchors matched by metadata ID -- reorder and return.
       df <- df[id_match_idx, , drop = FALSE]
       alignment_method <- rep("metadata_id", length(input_names))
       out_names <- input_names
@@ -6387,9 +6593,13 @@ refine_loop_anchors_by_chromatin <- function(
         gene_lookup[restore$anchor_id[no_txdb_idx]] != ""
       restore$Gene_Assignment_Confidence[no_txdb_idx] <-
         ifelse(has_gene, "provisional", "unresolved")
+      is_g_origin <- restore$old_type[no_txdb_idx] %in% c("G", "eG")
       restore$Gene_Assignment_Evidence[no_txdb_idx] <-
         ifelse(has_gene,
-          "positional_gene+promoter_like_chromatin",
+          ifelse(is_g_origin,
+            "gene_body_host+promoter_like_chromatin",
+            "positional_gene+promoter_like_chromatin"
+          ),
           "promoter_like_chromatin_only"
         )
     }
@@ -6417,12 +6627,15 @@ refine_loop_anchors_by_chromatin <- function(
         restore$Gene_Assignment_Evidence[j] <- "annotated_TSS"
       } else if (requires_tss[j] &&
         !is.na(gene_lookup[aid]) && gene_lookup[aid] != "") {
-        # No annotated TSS, but original positional gene retained
+        # No annotated TSS, but original gene retained.
+        # Distinguish G/eG structural host gene from E positional nearest gene.
         restore$TSS_supported[j] <- FALSE
         restore$TSS_support_status[j] <- "no_annotated_TSS"
         restore$Gene_Assignment_Confidence[j] <- "provisional"
+        is_g <- restore$old_type[j] %in% c("G", "eG")
         restore$Gene_Assignment_Evidence[j] <-
-          "positional_gene+promoter_like_chromatin"
+          if (is_g) "gene_body_host+promoter_like_chromatin"
+          else "positional_gene+promoter_like_chromatin"
       } else if (requires_tss[j]) {
         # No TSS, no gene: unresolved
         restore$TSS_supported[j] <- FALSE
@@ -6618,20 +6831,36 @@ refine_loop_anchors_by_chromatin <- function(
   has_roles <- all(c("anchor1_gene_role", "anchor2_gene_role") %in%
     colnames(loop_df))
 
-  # All_Anchor_Genes: strictly structural -- promoter-like (P/eP/dual)
-  # and gene-body-like (G/eG) anchors.  E anchors (enhancers) may carry
-  # a ChIPseeker nearest gene which is NOT a structural anchor gene.
-  # When effective_gene_role columns are available (post-chromatin), use
-  # them instead of anchor_type.  Positional candidates are excluded from
-  # All_Anchor_Genes but remain in All_Loop_Connected_Genes.
+  # All_Anchor_Genes: strictly structural -- promoter-role and gene_body-role
+  # anchors only.  This reflects the anchor's own classification, not whether
+  # the gene is valid.  After chromatin refinement:
+  #   - P/eP/G/eG -> E downgrades produce enhancer_candidate (strict=TRUE).
+  #     Their genes are structurally valid but the anchor is now enhancer-class,
+  #     so they are excluded from All_Anchor_Genes.  They remain visible in
+  #     Putative_Target_Genes (topology expansion, strict=TRUE),
+  #     All_Loop_Connected_Genes, and compete in Assigned_Target_Genes at rank 3.
+  #   - E anchors (any role): ChIPseeker nearest genes are NOT structural
+  #     anchor genes and are excluded regardless of role.
+  #   - Positional candidates are excluded from All_Anchor_Genes but remain
+  #     in All_Loop_Connected_Genes and Candidate_Positional_Genes.
+  has_strict <- all(c("anchor1_strict_eligible", "anchor2_strict_eligible") %in%
+    colnames(loop_df))
   if (has_roles) {
     loop_df <- loop_df %>%
       dplyr::rowwise() %>%
       dplyr::mutate(
-        .p1 = if (isTRUE(anchor1_gene_role == "promoter")) extract_genes(anchor1_gene) else NA_character_,
-        .p2 = if (isTRUE(anchor2_gene_role == "promoter")) extract_genes(anchor2_gene) else NA_character_,
-        .g1 = if (isTRUE(anchor1_gene_role == "gene_body")) extract_genes(anchor1_gene) else NA_character_,
-        .g2 = if (isTRUE(anchor2_gene_role == "gene_body")) extract_genes(anchor2_gene) else NA_character_,
+        .p1 = if (isTRUE(anchor1_gene_role == "promoter") &&
+                  (!has_strict || isTRUE(anchor1_strict_eligible)))
+              extract_genes(anchor1_gene) else NA_character_,
+        .p2 = if (isTRUE(anchor2_gene_role == "promoter") &&
+                  (!has_strict || isTRUE(anchor2_strict_eligible)))
+              extract_genes(anchor2_gene) else NA_character_,
+        .g1 = if (isTRUE(anchor1_gene_role == "gene_body") &&
+                  (!has_strict || isTRUE(anchor1_strict_eligible)))
+              extract_genes(anchor1_gene) else NA_character_,
+        .g2 = if (isTRUE(anchor2_gene_role == "gene_body") &&
+                  (!has_strict || isTRUE(anchor2_strict_eligible)))
+              extract_genes(anchor2_gene) else NA_character_,
         All_Anchor_Genes = extract_genes(c(.p1, .p2, .g1, .g2))
       ) %>%
       dplyr::ungroup()
@@ -6663,17 +6892,36 @@ refine_loop_anchors_by_chromatin <- function(
     # computation, preserving neighbor_hop semantics.
     map_info$SYMBOL <- trimws(map_info$SYMBOL)
     has_roles <- "effective_gene_role" %in% colnames(map_info)
+    has_map_strict <- "strict_assignment_eligible" %in% colnames(map_info)
     if (has_roles) {
-      valid_pg <- map_info %>%
-        dplyr::filter(
-          effective_gene_role %in% c("promoter", "gene_body"),
-          !is.na(SYMBOL), SYMBOL != ""
-        )
-      valid_p <- map_info %>%
-        dplyr::filter(
-          effective_gene_role == "promoter",
-          !is.na(SYMBOL), SYMBOL != ""
-        )
+      # Use strict eligibility to filter topology-expanded gene sources.
+      # This excludes E->E nearest genes (strict=FALSE) and E->P/dual
+      # unresolved (positional_candidate, strict=FALSE), while retaining
+      # G->P/dual host genes and P/G->E structurally-supported candidates.
+      if (has_map_strict) {
+        valid_pg <- map_info %>%
+          dplyr::filter(
+            strict_assignment_eligible %in% TRUE,
+            !is.na(SYMBOL), SYMBOL != ""
+          )
+        valid_p <- map_info %>%
+          dplyr::filter(
+            effective_gene_role == "promoter",
+            strict_assignment_eligible %in% TRUE,
+            !is.na(SYMBOL), SYMBOL != ""
+          )
+      } else {
+        valid_pg <- map_info %>%
+          dplyr::filter(
+            effective_gene_role %in% c("promoter", "gene_body"),
+            !is.na(SYMBOL), SYMBOL != ""
+          )
+        valid_p <- map_info %>%
+          dplyr::filter(
+            effective_gene_role == "promoter",
+            !is.na(SYMBOL), SYMBOL != ""
+          )
+      }
     } else {
       valid_pg <- map_info %>%
         dplyr::filter(
@@ -6951,79 +7199,100 @@ refine_loop_anchors_by_chromatin <- function(
     }
   }
 
-  # --- Role correction and strict eligibility for chromatin-refined links ---
-
-  # Preserve basic annotation semantics for non-promoter anchors that become
-  # P/dual during chromatin refinement.  Gene-body identity is inherited from
-  # the basic annotation stage; TSS support is required to upgrade to promoter.
+  # --- Origin-aware role correction and strict eligibility ---
+  #
+  # Uses the same .resolve_chromatin_gene_role() resolver as the anchor-level
+  # (map_info / loop_df), guaranteeing consistent role/strict across all
+  # output layers.  The resolver combines final chromatin type with origin
+  # (old_type) and TSS validation to distinguish chromatin-state
+  # classification from gene-identity confidence.
   if ("anchor_type_before_chromatin" %in% colnames(new_links) &&
     "anchor_type_after_chromatin" %in% colnames(new_links)) {
-    basic_gene_body <- new_links$anchor_type_before_chromatin %in% c("G", "eG")
-    basic_distal <- new_links$anchor_type_before_chromatin %in% c("E")
-    became_promoter_like <- new_links$anchor_type_after_chromatin %in% c("P", "dual")
-    tss_supported <- !is.na(new_links$TSS_supported) & new_links$TSS_supported
-    no_tss_support <- became_promoter_like & !tss_supported
 
-    # Default: all links are eligible for strict assignment
-    if (!"strict_assignment_eligible" %in% colnames(new_links)) {
-      new_links$strict_assignment_eligible <- TRUE
-    }
+    has_chromatin <- !is.na(new_links$anchor_type_before_chromatin) &
+      !is.na(new_links$anchor_type_after_chromatin)
+    has_tss  <- !is.na(new_links$TSS_supported) & new_links$TSS_supported
+    has_gene <- !is.na(new_links$gene) & nzchar(new_links$gene)
 
-    # G/eG → P/dual without TSS: retain gene_body role, keep eligible
-    retain_as_gene_body <- basic_gene_body & no_tss_support
-    if (any(retain_as_gene_body, na.rm = TRUE)) {
-      new_links$gene_role[retain_as_gene_body] <- "gene_body"
-      new_links$evidence[retain_as_gene_body] <- "basic_gene_body_retained_after_chromatin"
-      new_links$Gene_Assignment_Confidence[retain_as_gene_body] <- "structural_gene_body"
-      new_links$Gene_Assignment_Evidence[retain_as_gene_body] <- "basic_annotation_gene_body"
-      new_links$strict_assignment_eligible[retain_as_gene_body] <- TRUE
-    }
+    resolved <- .resolve_chromatin_gene_role(
+      old_type     = new_links$anchor_type_before_chromatin,
+      final_type   = new_links$anchor_type_after_chromatin,
+      tss_supported = has_tss,
+      has_gene     = has_gene
+    )
 
-    # E → P/dual without TSS: positional candidate, NOT eligible for strict
-    provisional_positional <- basic_distal & no_tss_support
-    if (any(provisional_positional, na.rm = TRUE)) {
-      new_links$gene_role[provisional_positional] <- "positional_candidate"
-      new_links$evidence[provisional_positional] <- "positional_candidate_after_chromatin"
-      new_links$Gene_Assignment_Confidence[provisional_positional] <- "provisional"
-      new_links$Gene_Assignment_Evidence[provisional_positional] <- "basic_annotation_positional_only"
-      new_links$strict_assignment_eligible[provisional_positional] <- FALSE
-    }
-
-    # TSS-supported E/G/eG → P/dual: upgrade to promoter role
-    if (any(tss_supported & became_promoter_like, na.rm = TRUE)) {
-      new_links$gene_role[tss_supported & became_promoter_like] <- "promoter"
-      new_links$Gene_Assignment_Confidence[tss_supported & became_promoter_like] <- "tss_supported"
-      new_links$Gene_Assignment_Evidence[tss_supported & became_promoter_like] <- "txdb_promoter_overlap"
-      new_links$strict_assignment_eligible[tss_supported & became_promoter_like] <- TRUE
+    idx <- which(has_chromatin)
+    if (length(idx) > 0) {
+      new_links$gene_role[idx] <- resolved$role[idx]
+      new_links$strict_assignment_eligible[idx] <- resolved$strict[idx]
     }
   }
-  # --- Enforce positional candidate invariant ---
-  # positional_candidate must ALWAYS have strict_assignment_eligible = FALSE,
-  # regardless of whether this came from role correction or elsewhere.
-  if ("strict_assignment_eligible" %in% colnames(new_links)) {
-    new_links$strict_assignment_eligible <- as.logical(new_links$strict_assignment_eligible)
-    new_links$strict_assignment_eligible[
-      new_links$gene_role == "positional_candidate"
-    ] <- FALSE
-    # Default NA eligibility to TRUE for promoter/gene_body (conservative)
-    na_elig <- is.na(new_links$strict_assignment_eligible) &
-      new_links$gene_role %in% c("promoter", "gene_body")
-    new_links$strict_assignment_eligible[na_elig] <- TRUE
-  }
 
-  # Report role correction counts (after modification, by unique anchor)
-  n_body <- dplyr::n_distinct(new_links$anchor_id[
-    new_links$gene_role == "gene_body" &
-      new_links$anchor_type_before_chromatin %in% c("G", "eG") &
+  # --- QC: count role transitions and eligibility changes ---
+  n_promoter_gained <- length(unique(na.omit(new_links$anchor_id[
+    new_links$gene_role == "promoter" &
+      new_links$anchor_type_before_chromatin %in% c("G", "eG")
+  ])))
+  n_promoter_gained_tss <- length(unique(na.omit(new_links$anchor_id[
+    new_links$gene_role == "promoter" &
+      new_links$anchor_type_before_chromatin == "E"
+  ])))
+  n_promoter_lost <- length(unique(na.omit(new_links$anchor_id[
+    new_links$gene_role != "promoter" &
+      new_links$anchor_type_before_chromatin %in% c("P", "eP")
+  ])))
+  n_e_to_p_unresolved <- length(unique(na.omit(new_links$anchor_id[
+    new_links$gene_role == "positional_candidate" &
+      new_links$anchor_type_before_chromatin == "E" &
       new_links$anchor_type_after_chromatin %in% c("P", "dual") &
       !(!is.na(new_links$TSS_supported) & new_links$TSS_supported)
-  ], na.rm = TRUE)
-  n_pos <- dplyr::n_distinct(new_links$anchor_id[
+  ])))
+  n_e_unchanged_blocked <- length(unique(na.omit(new_links$anchor_id[
+    new_links$gene_role == "enhancer_candidate" &
+      new_links$anchor_type_before_chromatin == "E" &
+      new_links$anchor_type_after_chromatin == "E" &
+      !is.na(new_links$strict_assignment_eligible) &
+      !as.logical(new_links$strict_assignment_eligible)
+  ])))
+  n_enhancer_candidate <- length(unique(na.omit(new_links$anchor_id[
+    new_links$gene_role == "enhancer_candidate"
+  ])))
+  n_positional <- length(unique(na.omit(new_links$anchor_id[
     !is.na(new_links$strict_assignment_eligible) &
-      !new_links$strict_assignment_eligible
-  ], na.rm = TRUE)
-  if (n_body > 0) message(n_body, " basic gene-body anchor(s) reclassified to P/dual without TSS; retained as gene-body targets.")
-  if (n_pos > 0) warning(n_pos, " distal anchor(s) reclassified to P/dual without TSS; positional genes excluded from strict target assignment.", call. = FALSE)
+      !as.logical(new_links$strict_assignment_eligible)
+  ])))
+
+  if (n_promoter_gained > 0) {
+    message("  chromatin role: ", n_promoter_gained,
+      " anchor(s) gained promoter role (G/eG -> P/dual, host-gene)")
+  }
+  if (n_promoter_gained_tss > 0) {
+    message("  chromatin role: ", n_promoter_gained_tss,
+      " anchor(s) gained promoter role (E -> P/dual, TSS-validated)")
+  }
+  if (n_e_to_p_unresolved > 0) {
+    message("  chromatin role: ", n_e_to_p_unresolved,
+      " anchor(s) E -> P/dual with unresolved gene identity ",
+      "(kept as positional_candidate)")
+  }
+  if (n_promoter_lost > 0) {
+    message("  chromatin role: ", n_promoter_lost,
+      " anchor(s) lost promoter role (P/eP -> G/E)")
+  }
+  if (n_e_unchanged_blocked > 0) {
+    message("  chromatin role: ", n_e_unchanged_blocked,
+      " unchanged E anchor(s) blocked from strict target ",
+      "(nearest-gene not loop-supported)")
+  }
+  if (n_enhancer_candidate > 0) {
+    message("  chromatin role: ", n_enhancer_candidate,
+      " anchor(s) assigned enhancer_candidate role")
+  }
+  if (n_positional > 0) {
+    message("  chromatin role: ", n_positional,
+      " anchor(s) excluded from strict assignment (positional_candidate)")
+  }
+
   new_links
 }
 
@@ -7090,15 +7359,23 @@ refine_loop_anchors_by_chromatin <- function(
     )
 
   # Normalise schema before any filtering: old objects may lack
-  # strict_assignment_eligible.  NA means unknown — treated as eligible
-  # for backward compatibility, BUT positional_candidate is always
-  # ineligible regardless of column presence.
+  # strict_assignment_eligible.  Old objects lacking strict provenance are
+  # normalised conservatively: only promoter and gene_body are presumed
+  # eligible; enhancer_candidate and positional_candidate are not.
   if (!"strict_assignment_eligible" %in% colnames(loop_links)) {
     loop_links$strict_assignment_eligible <- NA
   }
   is_positional <- !is.na(loop_links$gene_role) &
     loop_links$gene_role == "positional_candidate"
   loop_links$strict_assignment_eligible[is_positional] <- FALSE
+  # NA strict on old objects: conservative -- only promoter/gene_body
+  # are presumed eligible; enhancer_candidate with unknown provenance
+  # defaults to ineligible.
+  na_strict <- is.na(loop_links$strict_assignment_eligible)
+  if (any(na_strict)) {
+    loop_links$strict_assignment_eligible[na_strict] <-
+      loop_links$gene_role[na_strict] %in% c("promoter", "gene_body")
+  }
 
   # For strict target aggregation, filter to eligible links only.
   strict_links <- loop_links %>%
@@ -7111,17 +7388,15 @@ refine_loop_anchors_by_chromatin <- function(
   ranked_links <- strict_links %>%
     dplyr::mutate(
       role_rank = dplyr::case_when(
-        gene_role == "promoter" | evidence %in% c(
-          "distal_promoter",
-          "local_promoter_overlap", "expanded_promoter_loop"
-        ) ~ 1L,
-        gene_role == "gene_body" ~ 2L,
-        TRUE ~ 3L
+        gene_role == "promoter"           ~ 1L,
+        gene_role == "gene_body"          ~ 2L,
+        gene_role == "enhancer_candidate"  ~ 3L,
+        TRUE                              ~ 4L
       ),
       path_rank = dplyr::coalesce(as.numeric(path_length), Inf)
     )
 
-  # Split by path rank: primary (finite, ≤ max_primary_hop) vs expanded (finite, > max_primary_hop)
+  # Split by path rank: primary (finite, <= max_primary_hop) vs expanded (finite, > max_primary_hop)
   has_path <- is.finite(ranked_links$path_rank)
   primary_links <- ranked_links %>% dplyr::filter(has_path, path_rank <= max_primary_hop)
   expanded_links <- ranked_links %>% dplyr::filter(has_path, path_rank > max_primary_hop)
@@ -7191,6 +7466,67 @@ refine_loop_anchors_by_chromatin <- function(
         Assigned_Target_Genes = paste(sort(unique(gene)), collapse = ";"),
         .groups = "drop"
       )
+  }
+
+  # --- Direct P--P co-assignment (promoter_then_distance only) ---
+  # For direct promoter--promoter contacts, the technical direction
+  # (path0 vs path1) is determined by which endpoint the input peak
+  # hits, not by biological regulatory direction.  Co-assign both
+  # strict promoter endpoints when they share a single direct loop.
+  has_loop_id  <- "loop_ID"  %in% colnames(primary_links)
+  has_anchor_id <- "anchor_id" %in% colnames(primary_links)
+  if (target_priority == "promoter_then_distance" && nrow(primary_links) > 0 &&
+      has_loop_id && has_anchor_id) {
+    pp_links <- primary_links %>%
+      dplyr::filter(
+        gene_role == "promoter",
+        strict_assignment_eligible %in% TRUE,
+        path_rank %in% c(0, 1),
+        !is.na(loop_ID), loop_ID != "",
+        !is.na(anchor_id), anchor_id != ""
+      )
+    if (nrow(pp_links) > 0) {
+      pp_agg <- pp_links %>%
+        dplyr::group_by(input_id, loop_ID) %>%
+        dplyr::filter(
+          any(path_rank == 0),
+          any(path_rank == 1),
+          dplyr::n_distinct(anchor_id) >= 2
+        ) %>%
+        dplyr::summarise(
+          pp_genes = paste(sort(unique(gene)), collapse = ";"),
+          .groups = "drop"
+        ) %>%
+        dplyr::group_by(input_id) %>%
+        dplyr::summarise(
+          PP_CoAssigned_Genes = paste(sort(unique(
+            unlist(strsplit(paste(pp_genes, collapse = ";"), ";", fixed = TRUE))
+          )), collapse = ";"),
+          .groups = "drop"
+        )
+      # Union PP co-assigned genes with existing Assigned
+      assigned_agg <- assigned_agg %>%
+        dplyr::full_join(pp_agg, by = "input_id") %>%
+        dplyr::rowwise() %>%
+        dplyr::mutate(
+          Assigned_Target_Genes = {
+            existing <- if (!is.na(Assigned_Target_Genes) && Assigned_Target_Genes != "") {
+              strsplit(Assigned_Target_Genes, ";", fixed = TRUE)[[1]]
+            } else {
+              character(0)
+            }
+            pp <- if (!is.na(PP_CoAssigned_Genes) && PP_CoAssigned_Genes != "") {
+              strsplit(PP_CoAssigned_Genes, ";", fixed = TRUE)[[1]]
+            } else {
+              character(0)
+            }
+            result <- paste(sort(unique(c(existing, pp))), collapse = ";")
+            if (result == "") NA_character_ else result
+          }
+        ) %>%
+        dplyr::ungroup() %>%
+        dplyr::select(-PP_CoAssigned_Genes)
+    }
   }
 
   # --- Positional candidate aggregation ---
@@ -7325,7 +7661,7 @@ refine_loop_anchors_by_chromatin <- function(
 #'
 #' Shared across basic annotation, expression refinement, and chromatin
 #' refinement.  Aggregates current target gene links into strict columns
-#' (distance-first priority), builds linear fallback columns, and marks
+#' (policy-controlled priority), builds linear fallback columns, and marks
 #' membership on the full provenance table.
 #'
 #' @param bed_info Target annotation data frame with \code{input_id}.
@@ -7636,6 +7972,82 @@ refine_loop_anchors_by_chromatin <- function(
     target_priority = up_target_priority,
     max_primary_hop = up_max_primary_hop
   )
+
+   # --- End-to-end QC: verify chromatin reclassification propagates to output ---
+  n_reclassified <- sum(reclass_map$changed, na.rm = TRUE)
+  # Determine which reclassified anchors are actually connected to targets
+  changed_ids <- reclass_map$anchor_id[reclass_map$changed %in% TRUE]
+  target_anchor_ids <- unique(new_links$anchor_id[
+    !is.na(new_links$anchor_id) & new_links$anchor_id != "" &
+    !is.na(new_links$gene_role) & new_links$gene_role %in%
+      c("promoter", "gene_body", "enhancer_candidate")
+  ])
+  target_changed_ids <- intersect(changed_ids, target_anchor_ids)
+  if (n_reclassified > 0 && length(target_changed_ids) > 0) {
+    old_bed <- original_res$target_annotation
+    new_bed <- final$target_annotation
+    if (!is.null(old_bed) && !is.null(new_bed) &&
+      "input_id" %in% colnames(old_bed) && "input_id" %in% colnames(new_bed)) {
+      # Canonicalise gene strings for robust set comparison
+      .canon_gene <- function(x) {
+        if (is.na(x) || !nzchar(trimws(x))) return(NA_character_)
+        g <- trimws(unlist(strsplit(x, ";", fixed = TRUE)))
+        g <- g[!is.na(g) & nzchar(g)]
+        if (length(g) == 0) return(NA_character_)
+        paste(sort(unique(g)), collapse = ";")
+      }
+      old_cmp <- data.frame(
+        input_id = old_bed$input_id,
+        old_reg = vapply(if ("Regulated_promoter_genes" %in% colnames(old_bed))
+          old_bed$Regulated_promoter_genes else rep(NA_character_, nrow(old_bed)),
+          .canon_gene, character(1), USE.NAMES = FALSE),
+        old_assign = vapply(if ("Assigned_Target_Genes" %in% colnames(old_bed))
+          old_bed$Assigned_Target_Genes else rep(NA_character_, nrow(old_bed)),
+          .canon_gene, character(1), USE.NAMES = FALSE),
+        stringsAsFactors = FALSE
+      )
+      new_cmp <- data.frame(
+        input_id = new_bed$input_id,
+        new_reg = vapply(if ("Regulated_promoter_genes" %in% colnames(new_bed))
+          new_bed$Regulated_promoter_genes else rep(NA_character_, nrow(new_bed)),
+          .canon_gene, character(1), USE.NAMES = FALSE),
+        new_assign = vapply(if ("Assigned_Target_Genes" %in% colnames(new_bed))
+          new_bed$Assigned_Target_Genes else rep(NA_character_, nrow(new_bed)),
+          .canon_gene, character(1), USE.NAMES = FALSE),
+        stringsAsFactors = FALSE
+      )
+      cmp <- merge(old_cmp, new_cmp, by = "input_id", all = TRUE, sort = FALSE)
+      # Treat NA and empty as equivalent null
+      .eq <- function(x, y) {
+        xn <- is.na(x) | !nzchar(x)
+        yn <- is.na(y) | !nzchar(y)
+        (xn & yn) | (!xn & !yn & x == y)
+      }
+      reg_changed <- sum(!.eq(cmp$old_reg, cmp$new_reg), na.rm = TRUE)
+      assign_changed <- sum(!.eq(cmp$old_assign, cmp$new_assign), na.rm = TRUE)
+
+      if (reg_changed == 0 && assign_changed == 0) {
+        warning(
+          "Chromatin reclassification affected ", length(target_changed_ids),
+          " target-connected anchors, but no Regulated_promoter_genes or ",
+          "Assigned_Target_Genes row changed. ",
+          "This can be valid when roles remain equivalent, genes are retained ",
+          "through alternative links, or P--P union preserves the final set. ",
+          "Inspect link-level provenance if unexpected.",
+          call. = FALSE
+        )
+      } else {
+        message(
+          "  chromatin target QC: ", reg_changed, " rows changed in ",
+          "Regulated_promoter_genes, ", assign_changed,
+          " rows changed in Assigned_Target_Genes (",
+          n_reclassified, " total reclassified, ",
+          length(target_changed_ids), " target-connected)"
+        )
+      }
+    }
+  }
+
   list(
     target_annotation = .relocate_target_annotation_columns(final$target_annotation),
     target_gene_links = final$target_gene_links
@@ -7713,7 +8125,7 @@ refine_loop_anchors_by_chromatin <- function(
     return(NULL)
   }
   # Use canonical Linked_Loop_IDs produced by main annotation via
-  # cascade-filtered peak–anchor overlaps. This avoids re-computing
+  # cascade-filtered peak--anchor overlaps. This avoids re-computing
   # overlaps with missing thresholds or mismatched seqlevels.
   if (!"Linked_Loop_IDs" %in% colnames(bed_info)) {
     return(NULL)
@@ -9163,7 +9575,7 @@ validate_epeG_by_chromatin <- function(
   if (!is.null(anchor_state) && !is.null(anchor_state$gr_anchors) &&
     !is.null(anchor_state$map_info)) {
     # Delegate to the canonical registry helper.  This ensures the
-    # same anchor_id ↔ coordinate mapping used by distal stats,
+    # same anchor_id <-> coordinate mapping used by distal stats,
     # motif, and chromatin refinement.
     reg <- .get_anchor_registry(annotation_res)
     m <- S4Vectors::mcols(reg)
