@@ -245,17 +245,17 @@ annotate_peaks_and_loops(
   (default `path_length <= 1`); longer paths are reported separately as
   `Expanded_Target_Genes` and do not participate in
   `Assigned_Target_Genes` selection. `"promoter_then_distance"`
-  (default): within primary links, promoter evidence dominates – all
-  promoter-linked genes beat all gene-body genes regardless of path
-  length; within each tier shorter paths win. Exception: direct strict
-  promoter–promoter contacts (same loop, path0 + path1) co-assign both
-  endpoints via union, because the technical endpoint orientation does
-  not reflect biological regulatory direction. `"distance_then_role"`:
-  within primary links, path-length dominates – the closest linked gene
-  wins; at equal distance promoter beats gene-body (legacy behaviour).
-  The policy affects `Assigned_Target_Genes` only.
-  `Regulated_promoter_genes` always reports all promoter-linked genes
-  regardless of the chosen policy.
+  (default): within primary links, strict promoter genes outrank strict
+  gene-body genes, which outrank structurally supported strict enhancer
+  candidates; within each tier shorter paths win. Exception: direct
+  strict promoter–promoter contacts (same loop, path0 + path1) co-assign
+  both endpoints via union, because the technical endpoint orientation
+  does not reflect biological regulatory direction.
+  `"distance_then_role"`: within primary links, path-length dominates –
+  the closest linked gene wins; at equal distance promoter beats
+  gene-body (legacy behaviour). The policy affects
+  `Assigned_Target_Genes` only. `Regulated_promoter_genes` always
+  reports all promoter-linked genes regardless of the chosen policy.
 
 ## Value
 
