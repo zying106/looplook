@@ -1164,9 +1164,12 @@ longer paths are reported separately as
 <code>Assigned_Target_Genes</code>.
 <code>"promoter_then_distance"</code> (default): within primary links,
 promoter-linked genes beat gene-body genes, with shorter paths breaking
-ties. <code>"distance_then_role"</code>: path-length dominates — the
-closest linked gene wins; at equal distance, promoter beats gene-body
-(legacy behaviour).</li>
+ties. Exception: direct strict promoter–promoter contacts (same loop,
+path0+path1) co-assign both endpoints via union, because endpoint
+orientation is technical rather than directional.
+<code>"distance_then_role"</code>: path-length dominates — the closest
+linked gene wins; at equal distance, promoter beats gene-body (legacy
+behaviour).</li>
 <li>
 <strong><code>hub_percentile</code></strong>: Node-degree quantile
 threshold for identifying highly connected regulatory elements (default:
@@ -1322,9 +1325,12 @@ input peaks (e.g., “Distal Intergenic”, “Promoter”).</li>
 <strong><code>Linked_Loop_IDs</code></strong>: Identifiers of 3D
 loops that overlap the peak.</li>
 <li>
-<strong><code>All_Loop_Connected_Genes</code></strong>: All genes
-(including promoters and gene bodies) topologically linked to the peak
-via 3D looping.</li>
+<strong><code>All_Loop_Connected_Genes</code></strong>: Inclusive
+provenance union of all loop-anchor gene links. May include strict
+promoter/gene-body targets and non-strict positional/enhancer
+candidates. Not a confirmed target-gene set — use
+<code>Assigned_Target_Genes</code> or
+<code>Regulated_promoter_genes</code> for final results.</li>
 <li>
 <strong><code>Regulated_promoter_genes</code></strong>: A stringent
 promoter-target set supported by loop-anchor context. A promoter gene
@@ -1338,10 +1344,13 @@ Semicolon-delimited evidence labels for
 <code>local_promoter_overlap</code>, <code>distal_promoter</code>, or
 <code>expanded_promoter_loop</code>.</li>
 <li>
-<strong><code>Assigned_Target_Genes</code></strong>: The default
-promoter-first 3D assignment. It prefers promoter genes reachable
-through the loop neighborhood and falls back to gene-body loop genes
-only when no promoter target is available.</li>
+<strong><code>Assigned_Target_Genes</code></strong>: Policy-based
+strict 3D assignment. Under default <code>promoter_then_distance</code>,
+strict promoter genes outrank strict gene-body genes, which outrank
+structurally supported strict enhancer candidates. Shorter paths break
+ties within a tier, except direct strict promoter–promoter contacts
+(same loop, both endpoints) are co-assigned. See
+<code>target_priority</code> for details.</li>
 <li>
 <strong><code>*_Filled</code> Columns (The “Smart Fallback”
 Logic)</strong>: Columns suffixed with <code>_Filled</code> (e.g.,
@@ -1360,16 +1369,19 @@ fallback (<code>local_promoter</code>, <code>local_gene_body</code>,
 <strong><code>Expanded_Target_Genes</code></strong>: Multi-hop
 target genes reachable through 3D shortest-path expansion beyond the
 primary loop neighbor. These have <code>path_length &gt; 1</code> and
-their evidence originates from <code>expanded_promoter_loop</code> or
-<code>gene_body_context</code> links. They are reported separately and
-do not compete with <code>Assigned_Target_Genes</code>.</li>
+aggregate only strict expanded links. The <code>target_gene_links</code>
+provenance table may carry broader expanded labels (including
+<code>expanded_positional_candidate</code>) but the
+<code>Expanded_Target_Genes</code> column itself includes only
+strict-eligible genes. They are reported separately and do not compete
+with <code>Assigned_Target_Genes</code>.</li>
 <li>
-<strong><code>Candidate_Positional_Genes</code></strong>: Genes that
-are spatially linked to a peak via 3D loops but lack strict promoter
-(TSS-supported) or gene-body evidence. This occurs primarily when an
-enhancer-distal anchor is reclassified as promoter-like by chromatin
-marks (H3K4me3) but has no TSS-proximal gene annotation — the gene is a
-<em>positional candidate</em>, not a confirmed target. These genes
+<strong><code>Candidate_Positional_Genes</code></strong>: Genes
+linked only through non-strict positional or unresolved anchor–gene
+evidence. Includes ordinary E→E nearest-gene candidates, E-origin
+promoter-like anchors without resolved gene identity (E→P/dual without
+TSS), and other <code>strict_assignment_eligible=FALSE</code> links.
+These are <em>positional candidates</em>, not confirmed targets. They
 appear in <code>All_Loop_Connected_Genes</code> but are excluded from
 <code>Assigned_Target_Genes</code>, <code>Expanded_Target_Genes</code>,
 and <code>Regulated_promoter_genes</code>.</li>
@@ -1381,12 +1393,15 @@ provenance table. Each row is one peak-gene link with
 <code>loop_ID</code>, fallback status, and membership flags for the
 summary columns. The column <code>gene_role</code> distinguishes
 <code>promoter</code>, <code>gene_body</code>,
-<code>positional_candidate</code>, and <code>linear_annotation</code>
-evidence. Only <code>promoter</code> and <code>gene_body</code> roles
-are eligible for strict target assignment. In the refined workbook,
-<code>Filtered Target Gene Links</code> keeps only links still used by
-the refined target columns and adds <code>Mean_Expression</code> plus
-<code>Passes_Expression_Filter</code>.</li>
+<code>enhancer_candidate</code>, <code>positional_candidate</code>, and
+<code>linear_annotation</code> evidence. Only <code>promoter</code> and
+<code>gene_body</code> roles are structurally strict.
+<code>enhancer_candidate</code> is strict only for P/eP/G/eG→E origins
+(structurally resolved); ordinary E→E nearest-gene candidates and
+<code>positional_candidate</code> are non-strict. In the refined
+workbook, <code>Filtered Target Gene Links</code> keeps only links still
+used by the refined target columns and adds <code>Mean_Expression</code>
+plus <code>Passes_Expression_Filter</code>.</li>
 <li>
 <strong><code>SYMBOL</code></strong>: The gene symbol resolved by
 the biotype-aware conflict resolution logic. May be a single gene or
@@ -1499,6 +1514,7 @@ reference:</p>
 <td><code>gene_role</code></td>
 <td>
 <code>promoter</code>, <code>gene_body</code>,
+<code>enhancer_candidate</code>, <code>positional_candidate</code>,
 <code>linear_annotation</code>
 </td>
 </tr>
@@ -1506,8 +1522,15 @@ reference:</p>
 <td><code>evidence</code></td>
 <td>
 <code>local_promoter_overlap</code>, <code>distal_promoter</code>,
-<code>gene_body_context</code>, <code>expanded_promoter_loop</code>,
-<code>linear_annotation</code>, <code>linear_fallback</code>
+<code>gene_body_context</code>, <code>distal_gene_body_context</code>,
+<code>expanded_gene_body_context</code>,
+<code>local_enhancer_candidate</code>,
+<code>distal_enhancer_candidate</code>,
+<code>expanded_enhancer_candidate</code>,
+<code>expanded_promoter_loop</code>,
+<code>expanded_positional_candidate</code>,
+<code>positional_candidate</code>, <code>linear_annotation</code>,
+<code>linear_fallback</code>
 </td>
 </tr>
 <tr class="even">
@@ -1542,8 +1565,18 @@ column(s) contain the gene; refined links additionally carry
 <strong><code>loop_type</code></strong>: Topological classification
 (e.g., E-P, P-P, E-E) determined by the biotype-aware logic.</li>
 <li>
-<strong><code>All_Anchor_Genes</code></strong>: All genes located
-linearly within the left and right anchors of a given loop.</li>
+<strong><code>All_Anchor_Genes</code></strong>: Genes from
+promoter-role (<code>promoter</code>) or gene-body-role
+(<code>gene_body</code>) anchors. This column reflects the anchors’ own
+structural classification: after chromatin refinement, a P/eP anchor
+downgraded to <code>enhancer_candidate</code> (e.g., P→E) is no longer a
+promoter, so its gene is excluded here. The gene remains valid and
+appears in <code>Putative_Target_Genes</code> (via topology expansion,
+since <code>strict_assignment_eligible = TRUE</code>),
+<code>All_Loop_Connected_Genes</code>, and competes in
+<code>Assigned_Target_Genes</code> at rank 3. E→E nearest-gene
+candidates and positional-only genes are also excluded — these lack
+structural or TSS-supported gene identity.</li>
 <li>
 <strong><code>Putative_Target_Genes</code></strong>: Biologically
 resolved target genes. For an E-P loop, this field will report only the
@@ -3488,7 +3521,7 @@ which bypasses the issue, or upgrade to patchwork ≥ 1.4.0:</p>
 <span><span class="co">#&gt;  [85] callr_3.8.0                 digest_0.6.39              </span></span>
 <span><span class="co">#&gt;  [87] gridGraphics_0.5-1          R6_2.6.1                   </span></span>
 <span><span class="co">#&gt;  [89] textshaping_1.0.5           colorspace_2.1-3           </span></span>
-<span><span class="co">#&gt;  [91] GO.db_3.23.1                dichromat_2.0-0.1          </span></span>
+<span><span class="co">#&gt;  [91] GO.db_3.23.1                dichromat_2.0-1            </span></span>
 <span><span class="co">#&gt;  [93] RSQLite_3.53.3              cigarillo_1.2.1            </span></span>
 <span><span class="co">#&gt;  [95] UpSetR_1.4.1                tidyr_1.3.2                </span></span>
 <span><span class="co">#&gt;  [97] generics_0.1.4              fontLiberation_0.1.0       </span></span>

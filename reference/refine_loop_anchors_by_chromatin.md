@@ -383,6 +383,9 @@ res_chromatin <- refine_loop_anchors_by_chromatin(
 )
 #> Chromatin Sankey skipped: install 'networkD3' and 'htmlwidgets' packages.
 #> Chromatin MarkHeatmap skipped: install 'ComplexHeatmap' and 'circlize' packages.
+#>   chromatin role: 1 unchanged E anchor(s) blocked from strict target (nearest-gene not loop-supported)
+#>   chromatin role: 1 anchor(s) assigned enhancer_candidate role
+#>   chromatin role: 1 anchor(s) excluded from strict assignment (positional_candidate)
 table(res_chromatin$loop_annotation$loop_type)
 #> 
 #> E-E E-P G-G G-P P-P 

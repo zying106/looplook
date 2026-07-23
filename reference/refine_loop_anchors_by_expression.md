@@ -219,8 +219,10 @@ A named list:
 - `target_annotation` – Target features (peaks) with gene assignments.
   Key columns include:
 
-  - `All_Loop_Connected_Genes`: All genes from loop-connected anchors
-    (P/G types).
+  - `All_Loop_Connected_Genes`: Inclusive provenance union of all
+    loop-anchor gene links. May include strict assignment-eligible
+    targets and non-strict positional/enhancer candidates. Not a
+    confirmed target-gene set.
 
   - `Regulated_promoter_genes`: Promoter genes supported by loop-anchor
     context.
@@ -251,14 +253,18 @@ A named list:
 
   - `gene`: Linked gene symbol.
 
-  - `gene_role`: `"promoter"`, `"gene_body"`, or `"linear_annotation"`.
+  - `gene_role`: `"promoter"`, `"gene_body"`, `"enhancer_candidate"`,
+    `"positional_candidate"`, or `"linear_annotation"`.
 
   - `source`: `"loop_anchor"` (3D-derived) or `"linear_annotation"`
     (nearest gene).
 
   - `evidence`: Provenance label – `"local_promoter_overlap"` (peak
     overlaps anchor promoter), `"distal_promoter"` (promoter on the
-    distal loop anchor), `"gene_body_context"` (gene body linkage),
+    distal loop anchor), `"gene_body_context"` /
+    `"distal_gene_body_context"` (gene body linkage),
+    `"local_enhancer_candidate"` / `"distal_enhancer_candidate"` /
+    `"expanded_enhancer_candidate"` (enhancer-associated linkage),
     `"expanded_promoter_loop"` (via ego-network expansion),
     `"linear_annotation"` (direct nearest gene), or `"linear_fallback"`
     (filled when 3D assignment was empty).

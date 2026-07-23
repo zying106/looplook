@@ -215,7 +215,7 @@ annotate_peaks_and_loops(
 
   Integer. Minimum required physical overlap (bp) between a peak and an
   anchor. Default `1L`: at least 1 bp of actual sequence overlap
-  required — proximity-only pairs within the `anchor_gap` window but
+  required – proximity-only pairs within the `anchor_gap` window but
   without physical overlap are excluded. Increase to `10-100` for broad
   peaks to avoid spurious boundary overlaps.
 
@@ -245,10 +245,13 @@ annotate_peaks_and_loops(
   (default `path_length <= 1`); longer paths are reported separately as
   `Expanded_Target_Genes` and do not participate in
   `Assigned_Target_Genes` selection. `"promoter_then_distance"`
-  (default): within primary links, promoter evidence dominates — all
+  (default): within primary links, promoter evidence dominates – all
   promoter-linked genes beat all gene-body genes regardless of path
-  length; within each tier shorter paths win. `"distance_then_role"`:
-  within primary links, path-length dominates — the closest linked gene
+  length; within each tier shorter paths win. Exception: direct strict
+  promoter–promoter contacts (same loop, path0 + path1) co-assign both
+  endpoints via union, because the technical endpoint orientation does
+  not reflect biological regulatory direction. `"distance_then_role"`:
+  within primary links, path-length dominates – the closest linked gene
   wins; at equal distance promoter beats gene-body (legacy behaviour).
   The policy affects `Assigned_Target_Genes` only.
   `Regulated_promoter_genes` always reports all promoter-linked genes
@@ -261,8 +264,10 @@ A named list:
 - `target_annotation` – Target features (peaks) with gene assignments.
   Key columns include:
 
-  - `All_Loop_Connected_Genes`: All genes from loop-connected anchors
-    (P/G types).
+  - `All_Loop_Connected_Genes`: Inclusive provenance union of all
+    loop-anchor gene links. May include strict assignment-eligible
+    targets and non-strict positional/enhancer candidates. Not a
+    confirmed target-gene set.
 
   - `Regulated_promoter_genes`: Promoter genes supported by loop-anchor
     context.
@@ -293,14 +298,18 @@ A named list:
 
   - `gene`: Linked gene symbol.
 
-  - `gene_role`: `"promoter"`, `"gene_body"`, or `"linear_annotation"`.
+  - `gene_role`: `"promoter"`, `"gene_body"`, `"enhancer_candidate"`,
+    `"positional_candidate"`, or `"linear_annotation"`.
 
   - `source`: `"loop_anchor"` (3D-derived) or `"linear_annotation"`
     (nearest gene).
 
   - `evidence`: Provenance label – `"local_promoter_overlap"` (peak
     overlaps anchor promoter), `"distal_promoter"` (promoter on the
-    distal loop anchor), `"gene_body_context"` (gene body linkage),
+    distal loop anchor), `"gene_body_context"` /
+    `"distal_gene_body_context"` (gene body linkage),
+    `"local_enhancer_candidate"` / `"distal_enhancer_candidate"` /
+    `"expanded_enhancer_candidate"` (enhancer-associated linkage),
     `"expanded_promoter_loop"` (via ego-network expansion),
     `"linear_annotation"` (direct nearest gene), or `"linear_fallback"`
     (filled when 3D assignment was empty).

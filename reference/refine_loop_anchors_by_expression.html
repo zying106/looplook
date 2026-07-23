@@ -304,7 +304,7 @@ reclassified in place for silent elements); filter on
 <li><p><code>promoter_centric_stats</code> – Gene-level connectivity statistics.</p></li>
 <li><p><code>distal_element_stats</code> – Distal anchor connectivity (E, dual, G, eG).</p></li>
 <li><p><code>target_annotation</code> – Target features (peaks) with gene assignments.
-Key columns include:</p><ul><li><p><code>All_Loop_Connected_Genes</code>: All genes from loop-connected anchors (P/G types).</p></li>
+Key columns include:</p><ul><li><p><code>All_Loop_Connected_Genes</code>: Inclusive provenance union of all loop-anchor gene links. May include strict assignment-eligible targets and non-strict positional/enhancer candidates. Not a confirmed target-gene set.</p></li>
 <li><p><code>Regulated_promoter_genes</code>: Promoter genes supported by loop-anchor context.</p></li>
 <li><p><code>Assigned_Target_Genes</code>: Policy-based 3D assignment (default: promoter-first, then shorter path wins; see <code>target_priority</code>).</p></li>
 <li><p><code>*_Filled</code> variants: Linear nearest-gene fallback when strict 3D assignments are empty.</p></li>
@@ -323,12 +323,16 @@ Each row records one peak-gene linkage with full provenance.
 <strong>together as a group</strong> – they jointly describe how each gene was
 assigned to each peak; do not interpret any one column in isolation.</p><ul><li><p><code>input_id</code>, <code>loop_ID</code>, <code>anchor_id</code>: Identifiers.</p></li>
 <li><p><code>gene</code>: Linked gene symbol.</p></li>
-<li><p><code>gene_role</code>: <code>"promoter"</code>, <code>"gene_body"</code>, or <code>"linear_annotation"</code>.</p></li>
+<li><p><code>gene_role</code>: <code>"promoter"</code>, <code>"gene_body"</code>,
+<code>"enhancer_candidate"</code>, <code>"positional_candidate"</code>,
+or <code>"linear_annotation"</code>.</p></li>
 <li><p><code>source</code>: <code>"loop_anchor"</code> (3D-derived) or <code>"linear_annotation"</code> (nearest gene).</p></li>
 <li><p><code>evidence</code>: Provenance label –
 <code>"local_promoter_overlap"</code> (peak overlaps anchor promoter),
 <code>"distal_promoter"</code> (promoter on the distal loop anchor),
-<code>"gene_body_context"</code> (gene body linkage),
+<code>"gene_body_context"</code> / <code>"distal_gene_body_context"</code> (gene body linkage),
+<code>"local_enhancer_candidate"</code> / <code>"distal_enhancer_candidate"</code> /
+<code>"expanded_enhancer_candidate"</code> (enhancer-associated linkage),
 <code>"expanded_promoter_loop"</code> (via ego-network expansion),
 <code>"linear_annotation"</code> (direct nearest gene),
 or <code>"linear_fallback"</code> (filled when 3D assignment was empty).</p></li>
