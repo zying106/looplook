@@ -135,8 +135,8 @@ if (getRversion() >= "2.15.1") {
     return(gr)
   }
 
-  style_gr <- GenomeInfoDb::seqlevelsStyle(gr)
-  style_ref <- GenomeInfoDb::seqlevelsStyle(ref_gr)
+  style_gr <- tryCatch(GenomeInfoDb::seqlevelsStyle(gr), error = function(e) NULL)
+  style_ref <- tryCatch(GenomeInfoDb::seqlevelsStyle(ref_gr), error = function(e) NULL)
 
   if (is.null(style_gr) || is.null(style_ref)) {
     return(gr)
