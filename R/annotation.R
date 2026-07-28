@@ -8391,8 +8391,8 @@ refine_loop_anchors_by_chromatin <- function(
   karyo_bin_size, red_palette, purple_palette
 ) {
   plot_list <- list()
-  txdb_pkg <- tryCatch(species_txdb_pkg(species), error = function(e) NULL)
-  org_db <- tryCatch(species_orgdb_pkg(species), error = function(e) NULL)
+  txdb_pkg <- species_txdb_pkg(species)
+  org_db <- species_orgdb_pkg(species)
   if (is.null(txdb_pkg) || is.null(org_db) ||
     !requireNamespace(txdb_pkg, quietly = TRUE) ||
     !requireNamespace(org_db, quietly = TRUE)) {

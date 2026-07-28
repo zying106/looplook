@@ -135,8 +135,8 @@ if (getRversion() >= "2.15.1") {
     return(gr)
   }
 
-  style_gr <- tryCatch(GenomeInfoDb::seqlevelsStyle(gr), error = function(e) NULL)
-  style_ref <- tryCatch(GenomeInfoDb::seqlevelsStyle(ref_gr), error = function(e) NULL)
+  style_gr <- GenomeInfoDb::seqlevelsStyle(gr)
+  style_ref <- GenomeInfoDb::seqlevelsStyle(ref_gr)
 
   if (is.null(style_gr) || is.null(style_ref)) {
     return(gr)
@@ -2197,12 +2197,12 @@ draw_pie_with_outside_labels <- function(data_df, group_col, title, palette) {
   }
   # Resolve species defaults for comparison / fallback
   species_txdb_pkg_name <- if (!is.null(species)) {
-    tryCatch(species_txdb_pkg(species), error = function(e) NULL)
+    species_txdb_pkg(species)
   } else {
     NULL
   }
   species_orgdb_pkg_name <- if (!is.null(species)) {
-    tryCatch(species_orgdb_pkg(species), error = function(e) NULL)
+    species_orgdb_pkg(species)
   } else {
     NULL
   }
