@@ -7,73 +7,72 @@
 #' @importFrom utils head read.table write.csv
 NULL
 
-if (getRversion() >= "2.15.1") {
-  utils::globalVariables(c(
-    ".", ".data", "All_Anchor_Genes", "All_Loop_Connected_Genes", "Assigned_Target_Genes",
-    "CleanLoopType", "Conn_Group", "Count", "Degree", "Description",
-    "Description_unique", "Distal_Anchor_ID", "Dominant_Interaction",
-    "Dominant_Interaction_Filtered", "Expression", "Expression_Status", "FDR",
-    "Feature", "Filtered", "Fraction", "GENENAME", "GENETYPE", "Gene",
-    "Genomic_Distribution", "Group", "High_Connectivity_Gene",
-    "Is_Active_Gene", "Is_High_Connectivity_Distal_Element",
-    "Is_High_Connectivity_Gene", "Is_High_Distal_Connectivity_Gene", "L1_Raw",
-    "L2_Raw", "L3_Raw", "LFC", "Label", "LabelText", "Label_Text",
-    "Linked_Loop_IDs", "Log10Degree", "LogFDR", "Loop_Type",
-    "Mean_Expression_Temp", "MotifLabel", "ONTOLOGY", "OddsRatio", "Original",
-    "PlotFamily", "Putative_Target_Genes", "Rank",
-    "Regulated_promoter_genes", "SANKEY_RAW_GENES", "SYMBOL", "SampleID",
-    "Simplified", "Source", "Target_Genes",
-    "Target_Genes_Filtered", "Total_Loops", "Total_Loops_Filtered",
-    "Unique_Gene_Count", "a1_id", "a2_id", "Putative_Target_Genes", "Promoter_Target_Genes", "all_cluster_loop_genes", "all_of",
-    "anchor1_gene", "anchor1_type", "anchor2_gene",
-    "anchor2_type", "anchor_id", "annotation", "chr",
-    "cluster_id", "col2rgb", "combined_score", "count", "deg", "detail_anno",
-    "elementNROWS", "everything", "expansion", "final_color", "final_fill",
-    "final_label", "final_symbols", "fraction",
-    "geneList",
-    "gene_id", "gene_level", "geom_hline", "group", "has_active", "head",
-    "is_active",
-    "hjust", "install.packages", "is_e_type", "is_lower_e", "label",
-    "label_text", "label_x", "len", "lfc", "linked_loops",
-    "logP", "loop_ID", "loop_genes", "loop_i",
-    "loop_type", "mid1", "mid2", "n", "n_Linked_Distal",
-    "n_Linked_Distal_Filtered", "n_Linked_Promoters",
-    "n_Linked_Promoters_Filtered", "name", "plot_label",
-    "prop", "proximate_loop_gene", "pvalue", "qid", "query_idx",
-    "read.table", "reg_loop_genes", "reorder", "rgb", "runif", "runningScore",
-    "scale_color_identity", "scale_fill_identity", "setNames",
-    "single_loop_genes", "strand", "t1", "t2", "tgt_genes_p",
-    "tgt_genes_pg", "tgt_genes_prio", "topo_genes_p", "topo_genes_pg", "tpm",
-    "tx_id", "type", "type_code", "type_rank", "valid_genes", "valid_tpms",
-    "var", "width", "write.csv", "y_mid", "ymax", "ymin", "ypos", ":=",
-    "Loop_Connection", "Neighbor_Gene", "Neighbor_Type", "s1", "s2", "x", "y",
-    "Conn_Group_jitter", "Conn_Group_num", "Conn_Group_slab",
-    "left_mid", "right_mid", ".fallback_ptg",
-    "Regulated_promoter_Evidence", "Regulated_promoter_Fallback_Evidence",
-    "Refined", "Retained_In_Functional_Network",
-    "gene", "input_id", "evidence", "gene_role", "source", "anchor_role", "used_as_fallback",
-    "in_regulated_promoter", "in_assigned_target", "in_all_loop_connected",
-    "in_regulated_promoter_filled", "in_assigned_target_filled",
-    "opposite_anchor_id", "local_anchor_id", "old_type", "new_type",
-    "chromatin_state", "total", "fill", "xmin", "xmax",
-    "N", "Reclassification", "Present", "Mark", "n_group", "pct",
-    "h3k4me1_p", "h3k4me3_p", "h3k27ac_p", "h3k27me3_p", "atac_p",
-    "h3k4me3_n", "h3k4me1_n", "is_promoter_like", "conf_chr",
-    "Mean_Expression",
-    "Passes_Expression_Filter", "retained_after_refinement",
-    "H3K4me1", "H3K27ac", "ATAC", "H3K27me3", "H3K4me3",
-    "anchor_type", "anchor_gene", "enhancer_evidence", "evidence",
-    "priority", "combination", "log_count", "present", "count",
-    "set_counts", "bin_mat", "bar_df",
-    "tooltip", "color", "data_id",
-    "is_true_dual", "is_enhancer_bed",
-    "anchor1_gene_role", "anchor2_gene_role",
-    "effective_gene_role", "strict_assignment_eligible",
-    "Neighbor_Role",
-    "anchor1_strict_eligible", "anchor2_strict_eligible",
-    "pp_genes", "PP_CoAssigned_Genes"
-  ))
-}
+utils::globalVariables(c(
+  ".", ".data", "All_Anchor_Genes", "All_Loop_Connected_Genes", "Assigned_Target_Genes",
+  "CleanLoopType", "Conn_Group", "Count", "Degree", "Description",
+  "Description_unique", "Distal_Anchor_ID", "Dominant_Interaction",
+  "Dominant_Interaction_Filtered", "Expression", "Expression_Status", "FDR",
+  "Feature", "Filtered", "Fraction", "GENENAME", "GENETYPE", "Gene",
+  "Genomic_Distribution", "Group", "High_Connectivity_Gene",
+  "Is_Active_Gene", "Is_High_Connectivity_Distal_Element",
+  "Is_High_Connectivity_Gene", "Is_High_Distal_Connectivity_Gene", "L1_Raw",
+  "L2_Raw", "L3_Raw", "LFC", "Label", "LabelText", "Label_Text",
+  "Linked_Loop_IDs", "Log10Degree", "LogFDR", "Loop_Type",
+  "Mean_Expression_Temp", "MotifLabel", "ONTOLOGY", "OddsRatio", "Original",
+  "PlotFamily", "Putative_Target_Genes", "Rank",
+  "Regulated_promoter_genes", "SANKEY_RAW_GENES", "SYMBOL", "SampleID",
+  "Simplified", "Source", "Target_Genes",
+  "Target_Genes_Filtered", "Total_Loops", "Total_Loops_Filtered",
+  "Unique_Gene_Count", "a1_id", "a2_id", "Putative_Target_Genes", "Promoter_Target_Genes", "all_cluster_loop_genes", "all_of",
+  "anchor1_gene", "anchor1_type", "anchor2_gene",
+  "anchor2_type", "anchor_id", "annotation", "chr",
+  "cluster_id", "col2rgb", "combined_score", "count", "deg", "detail_anno",
+  "elementNROWS", "everything", "expansion", "final_color", "final_fill",
+  "final_label", "final_symbols", "fraction",
+  "geneList",
+  "gene_id", "gene_level", "geom_hline", "group", "has_active", "head",
+  "is_active",
+  "hjust", "install.packages", "is_e_type", "is_lower_e", "label",
+  "label_text", "label_x", "len", "lfc", "linked_loops",
+  "logP", "loop_ID", "loop_genes", "loop_i",
+  "loop_type", "mid1", "mid2", "n", "n_Linked_Distal",
+  "n_Linked_Distal_Filtered", "n_Linked_Promoters",
+  "n_Linked_Promoters_Filtered", "name", "plot_label",
+  "prop", "proximate_loop_gene", "pvalue", "qid", "query_idx",
+  "read.table", "reg_loop_genes", "reorder", "rgb", "runif", "runningScore",
+  "scale_color_identity", "scale_fill_identity", "setNames",
+  "single_loop_genes", "strand", "t1", "t2", "tgt_genes_p",
+  "tgt_genes_pg", "tgt_genes_prio", "topo_genes_p", "topo_genes_pg", "tpm",
+  "tx_id", "type", "type_code", "type_rank", "valid_genes", "valid_tpms",
+  "var", "width", "write.csv", "y_mid", "ymax", "ymin", "ypos", ":=",
+  "Loop_Connection", "Neighbor_Gene", "Neighbor_Type", "s1", "s2", "x", "y",
+  "Conn_Group_jitter", "Conn_Group_num", "Conn_Group_slab",
+  "left_mid", "right_mid", ".fallback_ptg",
+  "Regulated_promoter_Evidence", "Regulated_promoter_Fallback_Evidence",
+  "Refined", "Retained_In_Functional_Network",
+  "gene", "input_id", "evidence", "gene_role", "source", "anchor_role", "used_as_fallback",
+  "in_regulated_promoter", "in_assigned_target", "in_all_loop_connected",
+  "in_regulated_promoter_filled", "in_assigned_target_filled",
+  "opposite_anchor_id", "local_anchor_id", "old_type", "new_type",
+  "chromatin_state", "total", "fill", "xmin", "xmax",
+  "N", "Reclassification", "Present", "Mark", "n_group", "pct",
+  "h3k4me1_p", "h3k4me3_p", "h3k27ac_p", "h3k27me3_p", "atac_p",
+  "h3k4me3_n", "h3k4me1_n", "is_promoter_like", "conf_chr",
+  "Mean_Expression",
+  "Passes_Expression_Filter", "retained_after_refinement",
+  "H3K4me1", "H3K27ac", "ATAC", "H3K27me3", "H3K4me3",
+  "anchor_type", "anchor_gene", "enhancer_evidence", "evidence",
+  "priority", "combination", "log_count", "present", "count",
+  "set_counts", "bin_mat", "bar_df",
+  "tooltip", "color", "data_id",
+  "is_true_dual", "is_enhancer_bed",
+  "anchor1_gene_role", "anchor2_gene_role",
+  "effective_gene_role", "strict_assignment_eligible",
+  "Neighbor_Role",
+  "anchor1_strict_eligible", "anchor2_strict_eligible",
+  "pp_genes", "PP_CoAssigned_Genes"
+))
+
 
 # Only suppress specific non-actionable upstream noise from third-party packages.
 # Only suppress truly non-actionable third-party noise (deprecation warnings
@@ -649,7 +648,7 @@ resolve_gene_conflicts <- function(
     stop("`min_expr` must be a single finite non-negative number.", call. = FALSE)
   }
   if (!is.character(biotype_order) || length(biotype_order) == 0L ||
-    anyNA(biotype_order) || any(!nzchar(biotype_order)) ||
+    anyNA(biotype_order) || !all(nzchar(biotype_order)) ||
     anyDuplicated(tolower(biotype_order))) {
     stop("`biotype_order` must be a character vector of unique, non-empty biotype names.",
       call. = FALSE
@@ -1013,7 +1012,7 @@ clean_anchor <- function(g, t, allow, down, measured = NULL) {
 #' @noRd
 .validate_tss_region <- function(x) {
   if (!is.numeric(x) || length(x) != 2L || anyNA(x) ||
-    any(!is.finite(x)) || x[1] > 0 || x[2] < 0) {
+    !all(is.finite(x)) || x[1] > 0 || x[2] < 0) {
     stop("`tss_region` must be a finite numeric vector of length 2 ",
       "such as c(-2000, 2000).",
       call. = FALSE
@@ -1242,14 +1241,14 @@ clean_anchor <- function(g, t, allow, down, measured = NULL) {
   # mcols$anchor_id.
   ids <- names(gr)
   if (is.null(ids) || length(ids) != length(gr) ||
-    anyNA(ids) || any(!nzchar(ids))) {
+    anyNA(ids) || !all(nzchar(ids))) {
     if ("anchor_id" %in% colnames(S4Vectors::mcols(gr))) {
       ids <- as.character(S4Vectors::mcols(gr)$anchor_id)
       names(gr) <- ids
     }
   }
   if (is.null(names(gr)) || length(names(gr)) != length(gr) ||
-    anyNA(names(gr)) || any(!nzchar(names(gr))) ||
+    anyNA(names(gr)) || !all(nzchar(names(gr))) ||
     anyDuplicated(names(gr))) {
     stop(
       "Canonical anchor registry does not contain unique anchor IDs. ",
@@ -1543,7 +1542,7 @@ clean_anchor <- function(g, t, allow, down, measured = NULL) {
       stringsAsFactors = FALSE
     )
     if (anyNA(anchor_map$anchor_id) ||
-      any(!nzchar(anchor_map$anchor_id)) ||
+      !all(nzchar(anchor_map$anchor_id)) ||
       anyDuplicated(anchor_map$anchor_id)) {
       stop("Canonical anchor registry must contain unique, non-empty anchor IDs.",
         call. = FALSE
@@ -1707,7 +1706,7 @@ load_expression_matrix <- function(expr_matrix_file, sample_columns = NULL) {
     stop("Expression matrix must contain a gene identifier column and at least one sample column.")
   }
   gene_ids <- trimws(as.character(d[[1]]))
-  if (anyNA(gene_ids) || any(!nzchar(gene_ids))) {
+  if (anyNA(gene_ids) || !all(nzchar(gene_ids))) {
     stop("Expression matrix contains blank or missing gene identifiers.", call. = FALSE)
   }
   dup_genes <- unique(gene_ids[duplicated(gene_ids)])
@@ -1730,7 +1729,7 @@ load_expression_matrix <- function(expr_matrix_file, sample_columns = NULL) {
   }
   sample_names <- trimws(colnames(d)[-1])
   colnames(d) <- c("gene_id", sample_names)
-  if (anyNA(sample_names) || any(!nzchar(sample_names))) {
+  if (anyNA(sample_names) || !all(nzchar(sample_names))) {
     stop("Expression matrix contains empty sample column names.")
   }
   if (anyDuplicated(sample_names)) {
@@ -1749,7 +1748,7 @@ load_expression_matrix <- function(expr_matrix_file, sample_columns = NULL) {
     if (length(missing_cols) > 0) stop("Requested sample columns not found in expression matrix: ", paste(missing_cols, collapse = ", "))
     sub_mat <- d[, sample_columns, drop = FALSE]
   } else {
-    if (!is.numeric(sample_columns) || anyNA(sample_columns) || any(!is.finite(sample_columns)) || any(sample_columns != floor(sample_columns))) {
+    if (!is.numeric(sample_columns) || anyNA(sample_columns) || !all(is.finite(sample_columns)) || any(sample_columns != floor(sample_columns))) {
       stop("Numeric `sample_columns` must be finite integer column indices.", call. = FALSE)
     }
     sample_columns <- as.integer(sample_columns)
