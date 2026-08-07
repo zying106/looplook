@@ -1302,7 +1302,7 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
     keys = clean_genes, column = primary_key,
     keytype = symbol_key, multiVals = "list"
   ))
-  n_multi <- sum(vapply(gene_entrez_list, length, integer(1)) > 1, na.rm = TRUE)
+  n_multi <- sum(lengths(gene_entrez_list) > 1, na.rm = TRUE)
   if (n_multi > 0) {
     message(sprintf("GO: %d gene(s) have multiple ENTREZID mappings (first kept).", n_multi))
   }
