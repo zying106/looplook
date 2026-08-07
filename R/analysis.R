@@ -2191,7 +2191,7 @@ run_heatmap_and_connectivity <- function(target_genes, tpm_mat_raw, meta_raw, lo
   col_t1 <- intersect(c("anchor1_type", "Anchor1_Type", "type1"), colnames(loop_df))[1]
   col_t2 <- intersect(c("anchor2_type", "Anchor2_Type", "type2"), colnames(loop_df))[1]
   required_cols <- c("chr1", "start1", "end1", "chr2", "start2", "end2")
-  if (any(is.na(c(col_g1, col_g2, col_t1, col_t2))) || !all(required_cols %in% colnames(loop_df))) {
+  if (anyNA(c(col_g1, col_g2, col_t1, col_t2)) || !all(required_cols %in% colnames(loop_df))) {
     return(empty_sets)
   }
 
