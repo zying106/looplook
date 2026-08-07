@@ -3899,7 +3899,7 @@ build_annotation_plots <- function(
   openxlsx::addWorksheet(wb, "Filtered Loop Annotation")
   openxlsx::writeData(wb, "Filtered Loop Annotation", loop_export)
 
-  functional_loops <- loop_export %>% dplyr::filter(Retained_In_Functional_Network == TRUE)
+  functional_loops <- loop_export %>% dplyr::filter(Retained_In_Functional_Network)
   openxlsx::addWorksheet(wb, "Functional Loop Annotation")
   openxlsx::writeData(wb, "Functional Loop Annotation", functional_loops)
 
