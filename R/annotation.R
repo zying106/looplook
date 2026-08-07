@@ -8327,7 +8327,7 @@ refine_loop_anchors_by_chromatin <- function(
 
   sn$sizingPolicy$defaultWidth <- "100%"
   sn$sizingPolicy$defaultHeight <- "450px"
-  sn <- htmlwidgets::onRender(sn, sprintf('
+  sn <- htmlwidgets::onRender(sn, '
     function(el, x) {
       var svg = d3.select(el).select("svg");
       function createValidID(name) {
@@ -8352,9 +8352,9 @@ refine_loop_anchors_by_chromatin <- function(
           var targetColor = d3.select(el).selectAll(".node")
             .filter(function(node) { return node.name === d.target.name; })
             .select("rect").style("fill");
-          gradient.append("stop").attr("offset", "0%%")
+          gradient.append("stop").attr("offset", "0%")
             .attr("stop-color", sourceColor);
-          gradient.append("stop").attr("offset", "100%%")
+          gradient.append("stop").attr("offset", "100%")
             .attr("stop-color", targetColor);
         }
         d3.select(this).style("stroke", "url(#" + gradientID + ")")
@@ -8368,7 +8368,7 @@ refine_loop_anchors_by_chromatin <- function(
         .style("font-size", "12px")
         .style("font-weight", "bold");
     }
-    '))
+    ')
   sn
 }
 
