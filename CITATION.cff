@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions"
+version: "0.99.15"
+date-released: "2026-08-08"
+authors:
+  - family-names: Zhang
+    given-names: Ying
+  - family-names: Huang
+    given-names: Xingze
+  - family-names: Chen
+    given-names: Ye
+  - family-names: Xu
+    given-names: Liang
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Zhang
+      given-names: Ying
+    - family-names: Huang
+      given-names: Xingze
+    - family-names: Chen
+      given-names: Ye
+    - family-names: Xu
+      given-names: Liang
+  title: "looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions"
+  year: 2026
+  journal: bioRxiv
+  doi: 10.64898/2026.04.03.715516

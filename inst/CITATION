@@ -1,5 +1,3 @@
-citHeader("To cite looplook in publications use:")
-
 bibentry(
     bibtype = "Article",
     title = "looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions",

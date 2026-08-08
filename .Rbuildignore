@@ -52,3 +52,4 @@
 ^docs/
 ^results/
 ^lib/
+^CITATION\.cff$
