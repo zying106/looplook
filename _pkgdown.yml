@@ -118,7 +118,6 @@ reference:
     contents:
       - plot_peaks_interactions
       - draw_flower_simplified    # 新增：花瓣图/维恩图展示
-      - draw_upset_intersections  # 新增：UpSet 交互分析图
 
   - title: "Package Overview & Report"
     desc: "Package-level documentation and one-click HTML report generation."

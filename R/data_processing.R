@@ -22,7 +22,7 @@
   if (anyNA(coord_mat)) {
     stop("BEDPE file contains non-numeric coordinate columns.", call. = FALSE)
   }
-  if (any(!is.finite(coord_mat))) {
+  if (!all(is.finite(coord_mat))) {
     stop("BEDPE file contains non-finite coordinates (Inf, -Inf, NaN).", call. = FALSE)
   }
   if (any(coord_mat < 0)) {
@@ -37,7 +37,7 @@
   df[[1]] <- trimws(as.character(df[[1]]))
   df[[4]] <- trimws(as.character(df[[4]]))
   if (anyNA(df[[1]]) || anyNA(df[[4]]) ||
-    any(!nzchar(df[[1]])) || any(!nzchar(df[[4]]))) {
+    !all(nzchar(df[[1]])) || !all(nzchar(df[[4]]))) {
     stop("BEDPE file contains empty or missing chromosome names.", call. = FALSE)
   }
 
@@ -234,7 +234,7 @@ bedpe_to_gi <- function(bedpe_file, score_col = NULL, quiet = FALSE) {
   }
 
   final_scores[is.na(final_scores)] <- 0
-  if (any(!is.finite(final_scores))) {
+  if (!all(is.finite(final_scores))) {
     stop("BEDPE score column contains non-finite values (Inf, -Inf, NaN).",
       call. = FALSE
     )
@@ -533,13 +533,13 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
   # Validate all coordinate columns are numeric after header handling
   df[[2]] <- suppressWarnings(as.numeric(df[[2]]))
   df[[3]] <- suppressWarnings(as.numeric(df[[3]]))
-  if (any(is.na(df[[2]]) | is.na(df[[3]]))) {
+  if (anyNA(df[[2]]) || anyNA(df[[3]])) {
     stop("BED file contains non-numeric start/end coordinates after header handling.",
       call. = FALSE
     )
   }
   coord_mat <- cbind(df[[2]], df[[3]])
-  if (any(!is.finite(coord_mat))) {
+  if (!all(is.finite(coord_mat))) {
     stop("BED file contains non-finite coordinates (Inf, -Inf, NaN).", call. = FALSE)
   }
   if (any(coord_mat < 0, na.rm = TRUE)) {
@@ -576,7 +576,7 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 
   # Normalize chromosome names (trim whitespace silently)
   df[[1]] <- trimws(as.character(df[[1]]))
-  if (anyNA(df[[1]]) || any(!nzchar(df[[1]]))) {
+  if (anyNA(df[[1]]) || !all(nzchar(df[[1]]))) {
     stop("BED file contains empty or missing chromosome names.",
       call. = FALSE
     )
@@ -1837,13 +1837,3 @@ cluster_loops_dt <- function(dt, gap) {
   dt
 }
 
-if (getRversion() >= "2.15.1") {
-  utils::globalVariables(c(
-    "V1", "V2", "V3", "V4", "V5", "V6", "V7",
-    "chr1", "start1", "end1", "chr2", "start2", "end2",
-    "idx", "i.idx", "cluster", "score", "source", "n_members", "n_reps", "src_mean",
-    "a1_l", "a1_r", "a2_l", "a2_r", ".N", ".I", ".SD", ".SDcols", "..coord_cols",
-    ".dt1", ".dt2", ".g1", ".g2", ".p1", ".p2",
-    ".topo_genes", ".topo_promoter"
-  ))
-}

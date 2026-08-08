@@ -238,7 +238,7 @@ profile_target_genes <- function(
   if (is.null(gene_ids) || length(gene_ids) == 0) {
     stop("Expression matrix has no row names (gene identifiers).")
   }
-  if (any(!nzchar(gene_ids))) {
+  if (!all(nzchar(gene_ids))) {
     stop("Expression matrix contains blank or missing gene identifiers.", call. = FALSE)
   }
   dup_ids <- unique(gene_ids[duplicated(gene_ids)])
@@ -263,7 +263,7 @@ profile_target_genes <- function(
   # Whitespace in headers is a common artefact of hand-edited tables/Excel exports.
   sample_cols <- trimws(colnames(tpm_mat_raw))
   colnames(tpm_mat_raw) <- sample_cols
-  if (anyNA(sample_cols) || any(!nzchar(sample_cols))) {
+  if (anyNA(sample_cols) || !all(nzchar(sample_cols))) {
     stop("Expression matrix contains empty or missing sample column names.")
   }
   if (anyDuplicated(sample_cols)) {
@@ -313,7 +313,7 @@ profile_target_genes <- function(
   colnames(meta_raw)[c(1, 2)] <- c("SampleID", "Group")
   meta_raw$SampleID <- trimws(as.character(meta_raw$SampleID))
   meta_raw$Group <- trimws(as.character(meta_raw$Group))
-  if (anyNA(meta_raw$SampleID) || any(!nzchar(meta_raw$SampleID))) {
+  if (anyNA(meta_raw$SampleID) || !all(nzchar(meta_raw$SampleID))) {
     stop("Metadata file contains blank or missing SampleID values.", call. = FALSE)
   }
   if (anyDuplicated(meta_raw$SampleID)) {
@@ -323,11 +323,11 @@ profile_target_genes <- function(
       call. = FALSE
     )
   }
-  if (anyNA(meta_raw$Group) || any(!nzchar(meta_raw$Group))) {
+  if (anyNA(meta_raw$Group) || !all(nzchar(meta_raw$Group))) {
     stop("Metadata file contains blank or missing Group values.", call. = FALSE)
   }
   if (!is.null(group_order)) {
-    if (anyNA(group_order) || any(!nzchar(trimws(group_order))) ||
+    if (anyNA(group_order) || !all(nzchar(trimws(group_order))) ||
       anyDuplicated(group_order)) {
       stop("`group_order` must contain unique, non-empty group labels.", call. = FALSE)
     }
@@ -367,7 +367,7 @@ profile_target_genes <- function(
 
   # Validate gene IDs in the differential file
   diff_ids <- trimws(rownames(clean_diff))
-  if (any(!nzchar(diff_ids))) {
+  if (!all(nzchar(diff_ids))) {
     stop("Differential file contains blank or missing gene identifiers.", call. = FALSE)
   }
   dup_ids <- unique(diff_ids[duplicated(diff_ids)])

@@ -181,10 +181,10 @@
   # Validate coordinates before conversion to GRanges.
   bed_target$start <- suppressWarnings(as.numeric(bed_target$start))
   bed_target$end <- suppressWarnings(as.numeric(bed_target$end))
-  if (any(is.na(bed_target$start) | is.na(bed_target$end))) {
+  if (anyNA(bed_target$start) || anyNA(bed_target$end)) {
     stop("Target BED contains non-numeric start/end coordinates.", call. = FALSE)
   }
-  if (any(!is.finite(bed_target$start) | !is.finite(bed_target$end))) {
+  if (!all(is.finite(bed_target$start)) || !all(is.finite(bed_target$end))) {
     stop("Target BED contains non-finite coordinates (Inf, -Inf, NaN).", call. = FALSE)
   }
   if (any(bed_target$start < 0 | bed_target$end < 0)) {
@@ -200,7 +200,7 @@
     )
   }
   chr_col <- trimws(as.character(bed_target[[1]]))
-  if (anyNA(chr_col) || any(!nzchar(chr_col))) {
+  if (anyNA(chr_col) || !all(nzchar(chr_col))) {
     stop("Target BED contains empty or missing chromosome names.", call. = FALSE)
   }
   bed_target[[1]] <- chr_col
@@ -2242,7 +2242,7 @@ annotate_peaks_and_loops <- function(
   # positive integer row counts).  A corrupt graph could produce NA/NaN DP.
   support <- igraph::E(g)$n_support
   if (is.null(support) || anyNA(support) ||
-    any(!is.finite(support)) || any(support < 0)) {
+    !all(is.finite(support)) || any(support < 0)) {
     stop("Graph edge attribute `n_support` must contain finite non-negative values.",
       call. = FALSE
     )
@@ -4574,7 +4574,7 @@ refine_loop_anchors_by_expression <- function(
       call. = FALSE
     )
   }
-  if (anyNA(names(chromatin_beds)) || any(!nzchar(names(chromatin_beds)))) {
+  if (anyNA(names(chromatin_beds)) || !all(nzchar(names(chromatin_beds)))) {
     stop("`chromatin_beds` names must not be NA or empty strings.",
       call. = FALSE
     )
@@ -5083,7 +5083,7 @@ refine_loop_anchors_by_chromatin <- function(
   valid_types <- c("P", "G", "E", "eP", "eG")
   if (!is.null(candidate_types)) {
     if (!is.character(candidate_types) || length(candidate_types) == 0L ||
-      any(is.na(candidate_types)) || anyDuplicated(candidate_types)) {
+      anyNA(candidate_types) || anyDuplicated(candidate_types)) {
       stop("`candidate_types` must be a character vector of unique, non-NA anchor types.",
         call. = FALSE
       )
@@ -9763,23 +9763,3 @@ validate_epeG_by_chromatin <- function(
   result
 }
 
-if (getRversion() >= "2.15.1") {
-  utils::globalVariables(c(
-    "contact_id", "contact_id1", "contact_id2",
-    "Distal_Type", "dual_ratio_state",
-    "Gene_Assignment_Confidence", "Gene_Assignment_Evidence",
-    "h3k4me1_not_called", "h3k4me3_not_called",
-    "is_promoter_after",
-    "loop_ID_path",
-    "measured",
-    "n_Linked_EnhancerLike", "n_Linked_EnhancerLike_Filtered",
-    "Expanded_Target_Genes",
-    "n_Unique_Contacts", "n_Unique_Contacts_Filtered",
-    "pair", "path_length", "path_rank",
-    "proximate_promoter_gene",
-    "res", "res_promoter", "role_rank",
-    "TSS_support_status", "TSS_supported",
-    "TSS_supported", "Gene_Assignment_Confidence",
-    "was_promoter_before"
-  ))
-}
