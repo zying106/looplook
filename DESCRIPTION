@@ -49,7 +49,6 @@ Imports:
     GenomicFeatures,
     InteractionSet,
     RColorBrewer,
-    UpSetR,
     data.table,
     fields,
     ggforce,

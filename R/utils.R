@@ -75,23 +75,72 @@ if (getRversion() >= "2.15.1") {
   ))
 }
 
-# Only suppress specific non-actionable upstream noise from third-party packages.
-# Only suppress truly non-actionable third-party noise (deprecation warnings
-# from upstream packages). Warnings about data integrity -- including
-# out-of-bound ranges, which often indicate genome-build mismatches or
-# coordinate errors -- must remain visible.
+# Create a message() logger whose output is gated on `quiet`.
+# Used by exported pipeline functions to provide progress feedback without
+# polluting R CMD check or user sessions when quiet = TRUE.
+.make_log_message <- function(quiet) {
+  function(...) {
+    if (!quiet) message(...)
+  }
+}
+
+# Internal: validate/ensure an output directory when writing is requested.
+# Used by the exported pipeline functions so that the "write_output requires
+# a non-empty out_dir" contract is enforced identically everywhere.
+.ensure_out_dir <- function(write_output, out_dir) {
+  if (!isTRUE(write_output)) {
+    return(invisible(NULL))
+  }
+  if (is.null(out_dir) || !nzchar(out_dir)) {
+    stop("`write_output = TRUE` requires a non-empty `out_dir`.", call. = FALSE)
+  }
+  if (!dir.exists(out_dir)) {
+    dir.create(out_dir, recursive = TRUE)
+  }
+  invisible(NULL)
+}
+
+# Internal: add a worksheet to an openxlsx workbook, skipping NULL (and
+# optionally empty) inputs.  `drop_cols` mirrors the caller's column-stripping
+# step so that downstream workbook sheets are byte-identical to the pre-refactor
+# exports.
+.add_sheet <- function(wb, name, data, drop_cols = NULL, require_rows = FALSE) {
+  if (is.null(data) || (require_rows && nrow(data) == 0L)) {
+    return(invisible(wb))
+  }
+  if (!is.null(drop_cols)) {
+    data <- data %>% dplyr::select(-dplyr::any_of(drop_cols))
+  }
+  openxlsx::addWorksheet(wb, name)
+  openxlsx::writeData(wb, name, data)
+  invisible(wb)
+}
+
+# Internal: save an openxlsx workbook with the standard failure fallback.
+.save_workbook <- function(wb, out_dir, project_name, suffix, fail_prefix) {
+  tryCatch(
+    openxlsx::saveWorkbook(
+      wb,
+      file.path(out_dir, paste0(project_name, suffix)),
+      overwrite = TRUE
+    ),
+    error = function(e) {
+      warning(fail_prefix, conditionMessage(e), call. = FALSE)
+    }
+  )
+}
+
+# Suppress only the single remaining non-actionable upstream deprecation
+# emitted by S4Vectors internals (unavoidable while depending on the
+# GenomicRanges/InteractionSet stack). All ggplot2 deprecation warnings were
+# removed from the package's own code (linewidth, no aes_()/aes_string());
+# any such warnings now indicate a real problem and must surface.
 .with_known_upstream_noise_suppressed <- function(expr) {
   withCallingHandlers(
     expr,
     warning = function(w) {
       msg <- conditionMessage(w)
-      if (
-        grepl("S4Vectors:::anyMissing\\(\\).*deprecated", msg) ||
-          grepl("`aes_()` was deprecated in ggplot2 3.0.0.", msg, fixed = TRUE) ||
-          grepl("`aes_string()` was deprecated in ggplot2 3.0.0.", msg, fixed = TRUE) ||
-          grepl("Using `size` aesthetic for lines was deprecated", msg, fixed = TRUE) ||
-          grepl("The `size` argument of `element_line()` is deprecated", msg, fixed = TRUE)
-      ) {
+      if (grepl("S4Vectors:::anyMissing\\(\\).*deprecated", msg)) {
         invokeRestart("muffleWarning")
       }
     },
@@ -213,9 +262,7 @@ clean_gene_names <- function(x, split = NULL) {
     return(org_db)
   }
   if (is.character(org_db) && length(org_db) == 1L && nzchar(org_db)) {
-    if (!requireNamespace(org_db, quietly = TRUE)) {
-      stop("Package '", org_db, "' is required but not installed.")
-    }
+    .require_pkg(org_db, "OrgDb/AnnotationDb resolution", "stop")
     return(utils::getFromNamespace(org_db, org_db))
   }
   stop("`org_db` must be an OrgDb/AnnotationDb object or an installed package name.")
@@ -376,7 +423,7 @@ clean_gene_names <- function(x, split = NULL) {
     )),
     error = function(e) NULL
   )
-  if (is.null(raw_map) || nrow(raw_map) == 0) {
+  if (.is_null_or_empty(raw_map)) {
     out <- .empty_orgdb_gene_map(gene_ids, columns)
     attr(out, "keytype") <- det$keytype
     attr(out, "hit_rate") <- det$hit_rate
@@ -445,9 +492,9 @@ clean_gene_names <- function(x, split = NULL) {
         }
         dplyr::first(types)
       },
-      SYMBOL_new = paste(sort(unique(
+      SYMBOL_new = .collapse_genes(
         stats::na.omit(unlist(strsplit(.data$SYMBOL_new, ";")))
-      )), collapse = ";"),
+      ),
       .groups = "drop"
     )
   # Empty SYMBOL strings -> NA (expression refinement may have cleared the gene)
@@ -485,6 +532,29 @@ extract_genes <- function(genes_vec) {
     return(NA_character_)
   }
   paste(res, collapse = ";")
+}
+
+# Internal: Collapse a character vector into a sorted, unique, semicolon-
+# delimited string. Bare equivalent of `paste(sort(unique(x)), collapse = ";")`
+# so behaviour is byte-identical to the inlined calls it replaces.
+# @param x Character vector.
+# @return Single string with unique values sorted and joined by ";".
+# @keywords internal
+# @noRd
+.collapse_genes <- function(x) {
+  paste(sort(unique(x)), collapse = ";")
+}
+
+# Internal: Test whether an object is NULL or an empty (0-row) data frame.
+# More lenient than the inlined `is.null(x) || nrow(x) == 0` it replaces:
+# non-data-frame, non-NULL inputs return FALSE instead of erroring. All
+# internal call sites pass data frames, so behaviour is unchanged in practice.
+# @param x Any object.
+# @return Logical scalar.
+# @keywords internal
+# @noRd
+.is_null_or_empty <- function(x) {
+  is.null(x) || (is.data.frame(x) && nrow(x) == 0L)
 }
 
 
@@ -644,10 +714,7 @@ resolve_gene_conflicts <- function(
 ) {
   conflict_strategy <- match.arg(conflict_strategy)
   unmeasured_policy <- match.arg(unmeasured_policy)
-  if (!is.numeric(min_expr) || length(min_expr) != 1L ||
-    is.na(min_expr) || !is.finite(min_expr) || min_expr < 0) {
-    stop("`min_expr` must be a single finite non-negative number.", call. = FALSE)
-  }
+  .assert_scalar_number(min_expr, "min_expr", min = 0)
   if (!is.character(biotype_order) || length(biotype_order) == 0L ||
     anyNA(biotype_order) || any(!nzchar(biotype_order)) ||
     anyDuplicated(tolower(biotype_order))) {
@@ -655,11 +722,7 @@ resolve_gene_conflicts <- function(
       call. = FALSE
     )
   }
-  if (!is.numeric(co_dominance_ratio) || length(co_dominance_ratio) != 1L ||
-    is.na(co_dominance_ratio) || !is.finite(co_dominance_ratio) ||
-    co_dominance_ratio < 0 || co_dominance_ratio > 1) {
-    stop("`co_dominance_ratio` must be a single finite number in [0, 1].", call. = FALSE)
-  }
+  .assert_scalar_number(co_dominance_ratio, "co_dominance_ratio", min = 0, max = 1)
   if (nrow(current_anno_df) == 0) {
     return(current_anno_df)
   }
@@ -729,7 +792,7 @@ resolve_gene_conflicts <- function(
           } else {
             max_tpm <- suppressWarnings(max(tpms, na.rm = TRUE))
             if (is.infinite(max_tpm) || max_tpm <= 0) {
-              paste(sort(unique(genes)), collapse = ";")
+              .collapse_genes(genes)
             } else {
               threshold <- max(max_tpm * co_dominance_ratio, 1e-6)
               active_genes <- genes[tpms >= threshold & !is.na(tpms)]
@@ -740,9 +803,9 @@ resolve_gene_conflicts <- function(
                 active_genes
               }
               if (length(final_genes) == 0) {
-                paste(sort(unique(genes)), collapse = ";")
+                .collapse_genes(genes)
               } else {
-                paste(sort(unique(final_genes)), collapse = ";")
+                .collapse_genes(final_genes)
               }
             }
           }
@@ -1002,12 +1065,106 @@ clean_anchor <- function(g, t, allow, down, measured = NULL) {
   return(e)
 }
 
-#' Internal: Validate TSS region window
+# Internal: Assert a single finite integer scalar (>= min).
+#' Internal: Assert a single finite integer scalar (>= min).
 #'
-#' Ensures the TSS region is a finite numeric vector of length 2 with
-#' upstream <= 0 and downstream >= 0.
+#' @param x Value to validate.
+#' @param arg Character. Argument name for the error message.
+#' @param min Numeric. Inclusive lower bound (default 0).
+#' @keywords internal
+#' @noRd
+.assert_scalar_count <- function(x, arg, min = 0) {
+  if (!is.numeric(x) || length(x) != 1L || is.na(x) ||
+    !is.finite(x) || x != floor(x) || x < min) {
+    msg <- if (min == 0) {
+      paste0(arg, " must be a single finite non-negative integer")
+    } else if (min == 1) {
+      paste0(arg, " must be a single finite positive integer")
+    } else {
+      paste0(arg, " must be a finite integer >= ", min)
+    }
+    stop(msg, call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+# Internal: Assert a single finite numeric scalar.
+# @param x Value to validate.
+# @param arg Character. Argument name for the error message.
+# @param min Numeric or NULL. Optional inclusive lower bound.
+# @param max Numeric or NULL. Optional inclusive upper bound.
+# @keywords internal
+# @noRd
+.assert_scalar_number <- function(x, arg, min = NULL, max = NULL) {
+  ok <- is.numeric(x) && length(x) == 1L && !is.na(x) && is.finite(x)
+  if (ok && !is.null(min)) ok <- x >= min
+  if (ok && !is.null(max)) ok <- x <= max
+  if (!ok) {
+    bound <- paste(
+      if (!is.null(min)) paste0(" >= ", min),
+      if (!is.null(max)) paste0(" <= ", max)
+    )
+    stop(arg, " must be a single finite number", bound,
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+# Internal: Assert a single non-empty character scalar.
+# @param x Value to validate.
+# @param arg Character. Argument name for the error message.
+# @keywords internal
+# @noRd
+.assert_nonempty_string <- function(x, arg) {
+  if (!is.character(x) || length(x) != 1L || is.na(x) || !nzchar(x)) {
+    stop(arg, " must be a single non-empty string", call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+# Internal: Assert that a file path exists.
+# @param path Character. File path to check.
+# @param arg Character. Argument name for the error message.
+# @keywords internal
+# @noRd
+.assert_file_exists <- function(path, arg) {
+  if (is.null(path) || !file.exists(path)) {
+    stop("`", arg, "` file does not exist: ", if (is.null(path)) "<NULL>" else path,
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+# Internal: Assert an optional package is installed, with a uniform message.
+# Returns invisible(TRUE) when the package is available. When missing, behaves
+# per on_missing: "stop" stops; "warn" warns and returns FALSE; "return"
+# messages and returns FALSE. Callers that need a function-specific return
+# value on failure branch on the return value.
+.require_pkg <- function(pkg, feature = NULL, on_missing = c("stop", "warn", "return")) {
+  if (requireNamespace(pkg, quietly = TRUE)) {
+    return(invisible(TRUE))
+  }
+  on_missing <- match.arg(on_missing)
+  base <- paste0("Package '", pkg, "' is required for ", feature, ".")
+  hint <- paste0(" Install with BiocManager::install('", pkg, "').")
+  if (on_missing == "stop") {
+    msg <- paste0(base, hint)
+    stop(msg, call. = FALSE)
+  } else if (on_missing == "warn") {
+    msg <- paste0(base, " Skipping.")
+    warning(msg, call. = FALSE)
+    invisible(FALSE)
+  } else {
+    msg <- paste0(base, " Skipping.")
+    message(msg)
+    invisible(FALSE)
+  }
+}
+
+#' Internal: Validate TSS Region
 #'
-#' @param x Numeric vector of length 2, e.g. \code{c(-2000, 2000)}.
 #' @return A validated, normalized numeric vector of length 2.
 #' @keywords internal
 #' @noRd
@@ -1827,6 +1984,15 @@ get_colors <- function(n, palette_input) {
   }
   safe_n <- max(1, n)
 
+  # Palette resolution accepts RColorBrewer palette names (e.g. "Set2",
+  # "Dark2", "Paired"). grDevices::palette.colors() provides the 8 matching
+  # qualitative palettes (with space-separated names, e.g. "Set 2"), but
+  # RColorBrewer remains the source of truth here because (a) the public
+  # `color_palette` API documents RColorBrewer names, (b) grDevices lacks the
+  # sequential and diverging ColorBrewer families (e.g. "YlOrRd", "PuOr"),
+  # and (c) ggplot2::scale_*_brewer()/scale_*_distiller() used elsewhere in
+  # the package depend on RColorBrewer directly.
+
   if (length(palette_input) == 1 && palette_input %in% row.names(RColorBrewer::brewer.pal.info)) {
     max_avail <- RColorBrewer::brewer.pal.info[palette_input, "maxcolors"]
     pal_n <- min(max(3, safe_n), max_avail)
@@ -2125,7 +2291,7 @@ simplify_annotation <- function(x) {
 #' @keywords internal
 #' @noRd
 draw_pie_with_outside_labels <- function(data_df, group_col, title, palette) {
-  if (is.null(data_df) || nrow(data_df) == 0) {
+  if (.is_null_or_empty(data_df)) {
     return(NULL)
   }
 

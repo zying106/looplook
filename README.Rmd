@@ -104,6 +104,7 @@ consensus_global <- consolidate_chromatin_loops(
   mode = "consensus",
   gap = 1000,
   out_file = file.path(out_dir, "consensus_loops.bedpe"),
+  write_output = TRUE,
   quiet = TRUE
 )
 ```
@@ -210,14 +211,15 @@ While expression data identify transcriptionally active anchors, orthogonal chro
 
 **`refine_loop_anchors_by_chromatin()`** — Applies chromatin-mark evidence to **reclassify** anchors and update loop topologies. H3K4me3-positive anchors default to P or G; dual-signature elements are identified when bigWig evidence supports H3K4me1 dominance (H3K4me1/H3K4me3 ≥ 3 via `chromatin_bw`) or overlap with a curated enhancer BED (`enhancer_bed`). Also supports: P + enhancer marks → `E`; eP/eG + promoter marks → `P` (H3K4me3+ inside a gene body → alternate TSS); E + H3K4me3 only → `P` (unannotated promoter). Supports `recompute_targets = TRUE` to rebuild target gene links with updated anchor types, producing chromatin-aware `target_annotation` and `target_gene_links`.
 
-```{r, eval=FALSE}
-# Validate eP/eG anchors against chromatin marks
+```{r, eval = requireNamespace("looplook", quietly = TRUE), warning = FALSE, message = FALSE}
+# Validate eP/eG anchors against chromatin marks (uses the packaged example
+# chromatin BED files; replace with your own ChIP-seq/CUT&Tag/ATAC-seq files)
 val <- validate_epeG_by_chromatin(
   annotation_res = refined_res,
   chromatin_beds = list(
-    H3K4me1  = "H3K4me1_peaks.bed",
-    H3K27ac  = "H3K27ac_peaks.bed",
-    ATAC     = "atac_peaks.bed"
+    H3K4me1  = system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook"),
+    H3K27ac  = system.file("extdata", "example_k27ac_peaks.bed", package = "looplook"),
+    ATAC     = system.file("extdata", "example_peaks.bed", package = "looplook")
   )
 )
 table(val$enhancer_evidence)
@@ -226,9 +228,9 @@ table(val$enhancer_evidence)
 cr <- refine_loop_anchors_by_chromatin(
   annotation_res = refined_res,
   chromatin_beds = list(
-    H3K4me1  = "H3K4me1_peaks.bed",
-    H3K4me3  = "H3K4me3_peaks.bed",
-    H3K27ac  = "H3K27ac_peaks.bed"
+    H3K4me1  = system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook"),
+    H3K4me3  = system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook"),
+    H3K27ac  = system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
   ),
   recompute_targets = TRUE
 )
@@ -351,17 +353,15 @@ For bug reports, feature requests, or questions regarding the package, please op
 
 If you use `looplook` in your research, please cite the preprint:
 
-> ZHANG Y, HUANG X, CHEN Y, XU L. **looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions.** *bioRxiv*, 2026. DOI: [10.64898/2026.04.03.715516](https://www.biorxiv.org/content/10.64898/2026.04.03.715516v1)
-
-```bibtex
-@article{zhang2026looplook,
-  title = {looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions},
-  author = {Zhang, Ying and Huang, Xingze and Chen, Ye and Xu, Liang},
-  year = {2026},
-  journal = {bioRxiv},
-  doi = {10.64898/2026.04.03.715516}
-}
+```{r citation, echo = FALSE}
+cat(format(citation("looplook"), style = "text"))
 ```
+
+The citation above is generated programmatically from `inst/CITATION` via
+`citation("looplook")`, which verifies that the `CITATION` file parses
+correctly and keeps the README citation in sync with the package.
+
+Preprint: [bioRxiv 10.64898/2026.04.03.715516](https://www.biorxiv.org/content/10.64898/2026.04.03.715516v1)
 
 ---
 

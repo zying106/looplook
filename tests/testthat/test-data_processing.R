@@ -285,6 +285,56 @@ test_that("bedpe_to_gi errors when score_col exceeds column count", {
   unlink(tmp)
 })
 
+test_that("bedpe_to_gi tolerates a header row via explicit header tokens", {
+  tmp <- tempfile(fileext = ".bedpe")
+  writeLines(c(
+    "chrom_left\tstart_left\tend_left\tchrom_right\tstart_right\tend_right\tpet_counts\tpvalue",
+    "chr1\t100\t200\tchr1\t400\t500\t3\t0.01",
+    "chr1\t300\t400\tchr2\t600\t700\t1\t0.05"
+  ), tmp)
+  gi <- suppressWarnings(looplook:::bedpe_to_gi(tmp, score_col = 7, quiet = TRUE))
+  expect_s4_class(gi, "GInteractions")
+  expect_equal(length(gi), 2)
+  expect_equal(S4Vectors::mcols(gi)$score, c(3, 1))
+  unlink(tmp)
+})
+
+test_that("bedpe_to_gi recovers n_members/n_reps extension columns from looplook export", {
+  f1 <- system.file("extdata", "example_loops_1.bedpe", package = "looplook")
+  f2 <- system.file("extdata", "example_loops_2.bedpe", package = "looplook")
+  skip_if(f1 == "" || f2 == "", "example data missing")
+  out <- tempfile(fileext = ".bedpe")
+  gi <- looplook::consolidate_chromatin_loops(
+    files = c(f1, f2), mode = "consensus", gap = 1000,
+    out_file = out, write_output = TRUE, quiet = TRUE
+  )
+  re <- looplook:::bedpe_to_gi(out, quiet = TRUE)
+  mc <- S4Vectors::mcols(re)
+  expect_true("n_members" %in% colnames(mc))
+  expect_true("n_reps" %in% colnames(mc))
+  expect_equal(mc$n_members, S4Vectors::mcols(gi)$n_members)
+  expect_equal(mc$n_reps, S4Vectors::mcols(gi)$n_reps)
+  unlink(out)
+})
+
+test_that("bedpe_to_gi does not mislabel non-extension columns as n_members/n_reps", {
+  # 12-column file with non-integer columns 11-12: gate must skip recovery.
+  f <- tempfile(fileext = ".bedpe")
+  writeLines("chr1\t100\t200\tchr1\t400\t500\tname\t42\t.\t.\tabc\txyz", f)
+  gi <- looplook:::bedpe_to_gi(f, quiet = TRUE)
+  expect_false("n_members" %in% colnames(S4Vectors::mcols(gi)))
+  expect_false("n_reps" %in% colnames(S4Vectors::mcols(gi)))
+  expect_equal(S4Vectors::mcols(gi)$score, 42)
+  unlink(f)
+
+  # Standard 10-column BEDPE: no extension columns expected.
+  f2 <- tempfile(fileext = ".bedpe")
+  writeLines("chr1\t100\t200\tchr1\t400\t500\tname\t42\t.\t.", f2)
+  gi2 <- looplook:::bedpe_to_gi(f2, quiet = TRUE)
+  expect_setequal(colnames(S4Vectors::mcols(gi2)), "score")
+  unlink(f2)
+})
+
 # --- read_simple_bed: edge cases ---
 test_that("read_simple_bed returns NULL for NULL input", {
   expect_null(looplook:::read_simple_bed(NULL))

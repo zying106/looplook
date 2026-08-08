@@ -19,7 +19,7 @@ profile_target_genes(
   project_name = "Analysis",
   org_db = "org.Hs.eg.db",
   run_motif = FALSE,
-  genome_id = "hg38",
+  genome_id = c("hg38", "hg19", "mm10", "mm9"),
   motif_p_thresh = 1e-04,
   motif_ntop = 5,
   motif_n_perm = 0L,
@@ -81,7 +81,7 @@ Default \code{"org.Hs.eg.db"}.}
 Default \code{FALSE}.}
 
 \item{genome_id}{Character. Reference genome assembly for motif sequence extraction.
-Default \code{"hg38"}.}
+Default \code{"hg38"}. One of \code{c("hg38", "hg19", "mm10", "mm9")}.}
 
 \item{motif_p_thresh}{Numeric. P-value threshold for scanning.
 Default \code{1e-4}.}
@@ -111,10 +111,12 @@ Default \code{400}.}
 Default \code{400}.}
 
 \item{ppi_species_id}{Integer or \code{NULL}. NCBI taxonomy ID for STRING
-PPI analysis (e.g.\ 9606 for human, 10090 for mouse). \code{NULL} (default)
-attempts automatic inference from the OrgDb package name. Set explicitly
-for species whose OrgDb naming is not recognised. See
-\url{https://string-db.org} for a complete taxonomy list.}
+PPI analysis (e.g.\ 9606 for human, 10090 for mouse). When \code{NULL}
+(default), the ID is resolved from the \code{org_db} package name (only
+standard \code{org.*.eg.db} packages are recognised: human, mouse, rat,
+fruit fly, worm, yeast, zebrafish). An error is raised when the species
+cannot be resolved -- no implicit guessing. Set explicitly for any other
+species. See \url{https://string-db.org} for a complete taxonomy list.}
 
 \item{heatmap_nSample}{Numeric. Maximum number of genes to plot in heatmap.
 Default \code{99999} (effectively no limit). Reduce to \code{20-50} for

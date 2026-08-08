@@ -152,10 +152,30 @@
 #' # Check the imported score column
 #' S4Vectors::mcols(gi)$score
 bedpe_to_gi <- function(bedpe_file, score_col = NULL, quiet = FALSE) {
-  if (is.null(bedpe_file) || !file.exists(bedpe_file)) {
-    stop("BEDPE file does not exist or path is invalid: ", bedpe_file)
-  }
+  .assert_file_exists(bedpe_file, "bedpe_file")
   df <- data.table::fread(bedpe_file, header = FALSE)
+
+  # Detect header only by explicit header tokens, not numeric failure.
+  # A malformed first row (e.g. chr1 abc 200) must error, not be skipped.
+  # Tolerates common loop-file headers such as those emitted by ChIA-PET
+  # callers (e.g. "chrom_left start_left end_left chrom_right start_right end_right").
+  s1 <- tolower(trimws(as.character(df[[1]][1])))
+  s2 <- tolower(trimws(as.character(df[[2]][1])))
+  s3 <- tolower(trimws(as.character(df[[3]][1])))
+  s4 <- tolower(trimws(as.character(df[[4]][1])))
+  s5 <- tolower(trimws(as.character(df[[5]][1])))
+  s6 <- tolower(trimws(as.character(df[[6]][1])))
+  has_header <- (
+    s1 %in% c("chrom", "chr", "chrom1", "chrom_left", "chrom_left") &&
+      s2 %in% c("start", "start1", "start_left") &&
+      s3 %in% c("end", "end1", "end_left") &&
+      s4 %in% c("chrom", "chr", "chrom2", "chrom_right", "chrom_right") &&
+      s5 %in% c("start", "start2", "start_right") &&
+      s6 %in% c("end", "end2", "end_right")
+  )
+  if (has_header) {
+    df <- data.table::fread(bedpe_file, header = FALSE, skip = 1)
+  }
 
   df <- .validate_bedpe_df(df, quiet = quiet)
 
@@ -174,11 +194,7 @@ bedpe_to_gi <- function(bedpe_file, score_col = NULL, quiet = FALSE) {
   score_is_pvalue <- FALSE
 
   if (!is.null(score_col)) {
-    if (!is.numeric(score_col) || length(score_col) != 1L ||
-      is.na(score_col) || !is.finite(score_col) ||
-      score_col < 1 || score_col != as.integer(score_col)) {
-      stop("score_col must be a single finite positive integer column index.", call. = FALSE)
-    }
+    .assert_scalar_count(score_col, "score_col", min = 1)
     if (score_col > ncol(df)) {
       stop("score_col = ", score_col, " exceeds file column count (", ncol(df), ")")
     }
@@ -234,6 +250,20 @@ bedpe_to_gi <- function(bedpe_file, score_col = NULL, quiet = FALSE) {
     InteractionSet::GInteractions(gr1, gr2, mode = "strict")
   )
   S4Vectors::mcols(gi)$score <- final_scores
+
+  # Recover the documented consensus-metadata extension columns (11-12:
+  # n_members / n_reps) written by consolidate_chromatin_loops(). Gate on
+  # integer-like content so arbitrary 12-column BEDPE files are not mislabelled.
+  if (ncol(df) >= 12L &&
+    .numeric_ratio(df[[11]]) >= 0.5 && .numeric_ratio(df[[12]]) >= 0.5) {
+    nm <- suppressWarnings(as.numeric(df[[11]]))
+    nr <- suppressWarnings(as.numeric(df[[12]]))
+    if (!anyNA(nm) && !anyNA(nr) &&
+      all(nm == floor(nm), na.rm = TRUE) && all(nr == floor(nr), na.rm = TRUE)) {
+      S4Vectors::mcols(gi)$n_members <- as.integer(nm)
+      S4Vectors::mcols(gi)$n_reps <- as.integer(nr)
+    }
+  }
 
   return(gi)
 }
@@ -343,25 +373,15 @@ filter_chromatin_loops <- function(
   quiet = FALSE
 ) {
   roi_mode <- match.arg(roi_mode)
-  log_message <- function(...) {
-    if (!quiet) message(...)
-  }
+  log_message <- .make_log_message(quiet)
 
   # Parameter validation (mirrors consolidate_chromatin_loops)
   if (!is.null(blacklist_species)) {
-    if (!is.character(blacklist_species) || length(blacklist_species) != 1L ||
-      is.na(blacklist_species) || !nzchar(blacklist_species)) {
-      stop("`blacklist_species` must be a non-empty string or NULL", call. = FALSE)
-    }
+    .assert_nonempty_string(blacklist_species, "blacklist_species")
   }
   if (!is.null(region_of_interest)) {
-    if (!is.character(region_of_interest) || length(region_of_interest) != 1L ||
-      is.na(region_of_interest) || !nzchar(region_of_interest)) {
-      stop("`region_of_interest` must be a non-empty file path or NULL", call. = FALSE)
-    }
-    if (!file.exists(region_of_interest)) {
-      stop("`region_of_interest` file not found: ", region_of_interest, call. = FALSE)
-    }
+    .assert_nonempty_string(region_of_interest, "region_of_interest")
+    .assert_file_exists(region_of_interest, "region_of_interest")
   }
 
   if (!inherits(gi, "GInteractions")) {
@@ -373,10 +393,7 @@ filter_chromatin_loops <- function(
 
   # --- score filter ---
   if (!is.null(min_score)) {
-    if (!is.numeric(min_score) || length(min_score) != 1L ||
-      is.na(min_score) || !is.finite(min_score)) {
-      stop("`min_score` must be a single finite number or NULL", call. = FALSE)
-    }
+    .assert_scalar_number(min_score, "min_score")
     # NA-guard: consolidated union-mode output can carry score = NA when
     # every source had an NA score for a cluster. NA >= min_score is NA,
     # which data.table / AtomicList indexing silently coerce to FALSE,
@@ -411,7 +428,7 @@ filter_chromatin_loops <- function(
     } else {
       blacklist_species
     }
-    if (!file.exists(bl_path)) stop("Blacklist file not found: ", blacklist_species)
+    .assert_file_exists(bl_path, "blacklist")
     log_message(">>> Filtering blacklist: ", basename(bl_path))
     bl <- read_simple_bed(bl_path, quiet = quiet)
     bl <- .harmonize_seqlevels(bl, InteractionSet::anchors(gi, "first"), "blacklist")
@@ -424,7 +441,7 @@ filter_chromatin_loops <- function(
 
   # --- region of interest ---
   if (!is.null(region_of_interest)) {
-    if (!file.exists(region_of_interest)) stop("ROI file not found: ", region_of_interest)
+    .assert_file_exists(region_of_interest, "region_of_interest")
     log_message(">>> Filtering ROI (", roi_mode, "): ", basename(region_of_interest))
     tg <- read_simple_bed(region_of_interest, quiet = quiet)
     tg <- .harmonize_seqlevels(tg, InteractionSet::anchors(gi, "first"), "ROI")
@@ -486,9 +503,7 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
       call. = FALSE
     )
   }
-  if (!file.exists(bed_file)) {
-    stop("BED file does not exist: ", bed_file)
-  }
+  .assert_file_exists(bed_file, "bed_file")
   finfo <- file.info(bed_file)
   if (is.na(finfo$size) || finfo$size == 0L) {
     return(GenomicRanges::GRanges())
@@ -670,7 +685,7 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #'   \code{"both"}: keep loops where \emph{both} anchors overlap the ROI
 #'   (suitable for TAD confinement or domain-internal interaction queries).
 #' @param out_file Character. The file name (including the file path) for saving results in the extended BEDPE format.
-#' @param write_output Logical. If \code{TRUE} (default), write the consolidated BEDPE file when \code{out_file} is provided. If \code{FALSE}, return the \code{GInteractions} object without creating directories or files.
+#' @param write_output Logical. If \code{TRUE}, write the consolidated BEDPE file when \code{out_file} is provided (default: \code{FALSE}). If \code{FALSE}, return the \code{GInteractions} object without creating directories or files.
 #' @param quiet Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.
 #' @return A filtered \code{\link[InteractionSet]{GInteractions}} object with metadata columns:
 #'   \describe{
@@ -685,9 +700,10 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #'   The returned object carries a \code{looplook_metadata} attribute (access via
 #'   \code{attr(x, "looplook_metadata")}) with package version, call parameters,
 #'   diagnostics, and database versions.
-#'   When \code{write_output = TRUE} and \code{out_file} is provided, an extended
-#'   BEDPE file is written with the additional columns \code{n_members} and
-#'   \code{n_reps} appended after the standard BEDPE fields.
+#'   When \code{write_output = TRUE} and \code{out_file} is provided, a standard
+#'   10-column BEDPE file is written (columns 9-10 are \code{strand1}/
+#'   \code{strand2}, set to \code{"."} as the data are not stranded), followed by
+#'   the documented extension columns 11-12 \code{n_members} and \code{n_reps}.
 #' @importFrom data.table fread
 #' @importFrom GenomicRanges GRanges seqnames start end
 #' @importFrom IRanges IRanges
@@ -706,7 +722,8 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #'   files = c(f1, f2),
 #'   mode = "intersect",
 #'   gap = 1000,
-#'   out_file = tempfile(fileext = ".bedpe")
+#'   out_file = tempfile(fileext = ".bedpe"),
+#'   write_output = TRUE
 #' )
 #'
 #' # Example B: Consensus Mode (formerly Reproducible)
@@ -715,7 +732,8 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #'   files = c(f1, f2),
 #'   mode = "consensus",
 #'   gap = 1000,
-#'   out_file = tempfile(fileext = ".bedpe")
+#'   out_file = tempfile(fileext = ".bedpe"),
+#'   write_output = TRUE
 #' )
 #'
 #' # Example C: Union Mode
@@ -724,7 +742,8 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #'   files = c(f1, f2),
 #'   mode = "union",
 #'   gap = 1000,
-#'   out_file = tempfile(fileext = ".bedpe")
+#'   out_file = tempfile(fileext = ".bedpe"),
+#'   write_output = TRUE
 #' )
 #'
 #' # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -737,7 +756,8 @@ read_simple_bed <- function(bed_file, quiet = FALSE) {
 #'   min_raw_score = 2, # Pre-filter (remove noise)
 #'   min_score = 5, # Post-filter (keep strong loops)
 #'   gap = 1000,
-#'   out_file = tempfile(fileext = ".bedpe")
+#'   out_file = tempfile(fileext = ".bedpe"),
+#'   write_output = TRUE
 #' )
 #'
 #' # Inspect results
@@ -756,12 +776,10 @@ consolidate_chromatin_loops <- function(
   region_of_interest = NULL,
   roi_mode = c("any", "both"),
   out_file = NULL,
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE
 ) {
-  log_message <- function(...) {
-    if (!quiet) message(...)
-  }
+  log_message <- .make_log_message(quiet)
 
   if (is.null(files) || length(files) < 2) {
     stop("`files` must contain at least two BEDPE file paths.", call. = FALSE)
@@ -784,15 +802,9 @@ consolidate_chromatin_loops <- function(
   chaining_policy <- match.arg(chaining_policy)
 
   # Parameter validation
-  if (!is.numeric(gap) || length(gap) != 1L || is.na(gap) ||
-    !is.finite(gap) || gap != floor(gap) || gap < 0) {
-    stop("`gap` must be a non-negative number", call. = FALSE)
-  }
-  if (!is.null(min_consensus) &&
-    (!is.numeric(min_consensus) || length(min_consensus) != 1L ||
-      is.na(min_consensus) || !is.finite(min_consensus) ||
-      min_consensus != floor(min_consensus) || min_consensus < 1)) {
-    stop("`min_consensus` must be a finite positive integer or NULL", call. = FALSE)
+  .assert_scalar_count(gap, "gap")
+  if (!is.null(min_consensus)) {
+    .assert_scalar_count(min_consensus, "min_consensus", min = 1)
   }
   if (!is.null(min_consensus) && min_consensus > length(files)) {
     stop("`min_consensus` (", min_consensus,
@@ -800,30 +812,18 @@ consolidate_chromatin_loops <- function(
       call. = FALSE
     )
   }
-  if (!is.null(min_raw_score) &&
-    (!is.numeric(min_raw_score) || length(min_raw_score) != 1L ||
-      is.na(min_raw_score) || !is.finite(min_raw_score))) {
-    stop("`min_raw_score` must be a single finite number or NULL", call. = FALSE)
+  if (!is.null(min_raw_score)) {
+    .assert_scalar_number(min_raw_score, "min_raw_score")
   }
-  if (!is.null(min_score) &&
-    (!is.numeric(min_score) || length(min_score) != 1L ||
-      is.na(min_score) || !is.finite(min_score))) {
-    stop("`min_score` must be a single finite number or NULL", call. = FALSE)
+  if (!is.null(min_score)) {
+    .assert_scalar_number(min_score, "min_score")
   }
   if (!is.null(blacklist_species)) {
-    if (!is.character(blacklist_species) || length(blacklist_species) != 1L ||
-      is.na(blacklist_species) || !nzchar(blacklist_species)) {
-      stop("`blacklist_species` must be a non-empty string or NULL", call. = FALSE)
-    }
+    .assert_nonempty_string(blacklist_species, "blacklist_species")
   }
   if (!is.null(region_of_interest)) {
-    if (!is.character(region_of_interest) || length(region_of_interest) != 1L ||
-      is.na(region_of_interest) || !nzchar(region_of_interest)) {
-      stop("`region_of_interest` must be a non-empty file path or NULL", call. = FALSE)
-    }
-    if (!file.exists(region_of_interest)) {
-      stop("`region_of_interest` file not found: ", region_of_interest, call. = FALSE)
-    }
+    .assert_nonempty_string(region_of_interest, "region_of_interest")
+    .assert_file_exists(region_of_interest, "region_of_interest")
   }
 
   n_reps <- length(files)
@@ -1281,7 +1281,11 @@ consolidate_chromatin_loops <- function(
 .consolidate_export <- function(result_gi, out_file, log_message) {
   a1 <- InteractionSet::anchors(result_gi, "first")
   a2 <- InteractionSet::anchors(result_gi, "second")
-  # BEDPE export: convert back from 1-based closed to 0-based half-open
+  # BEDPE export: convert back from 1-based closed to 0-based half-open.
+  # Columns 1-10 are standard BEDPE (9-10 = strand1/strand2, set to "." as the
+  # data are not stranded); columns 11-12 are documented looplook extensions
+  # (n_members, n_reps) so the file remains readable by standard tools such as
+  # rtracklayer while keeping the consensus metadata.
   out_df <- data.frame(
     chr1 = as.character(GenomicRanges::seqnames(a1)),
     start1 = GenomicRanges::start(a1) - 1L,
@@ -1291,6 +1295,8 @@ consolidate_chromatin_loops <- function(
     end2 = GenomicRanges::end(a2),
     name = rep(".", length(result_gi)),
     score = round(S4Vectors::mcols(result_gi)$score, 2),
+    strand1 = rep(".", length(result_gi)),
+    strand2 = rep(".", length(result_gi)),
     n_members = if (!is.null(S4Vectors::mcols(result_gi)$n_members)) {
       S4Vectors::mcols(result_gi)$n_members
     } else {

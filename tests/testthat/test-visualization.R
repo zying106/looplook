@@ -76,35 +76,6 @@ test_that("draw_flower_simplified returns ggplot and handles edge cases", {
   expect_null(p_null)
 })
 
-test_that("draw_upset_intersections returns grob and handles empty input", {
-  skip_if_not_installed("UpSetR")
-
-  gene_sets <- list(
-    Up = c("TP53", "BRCA1", "MYC"),
-    Down = c("BRCA1", "MYC", "CDKN1A")
-  )
-  g <- looplook:::draw_upset_intersections(gene_sets, "Test_UpSet")
-  # UpSetR returns a captured grob; may be NULL if rendering fails
-  if (!is.null(g)) {
-    expect_true(inherits(g, "grob"))
-  }
-
-  expect_null(
-    looplook:::draw_upset_intersections(
-      list(X = character(0), Y = character(0)),
-      "Empty"
-    )
-  )
-})
-
-test_that("draw_upset_intersections with single list returns NULL", {
-  expect_message(
-    g <- looplook:::draw_upset_intersections(list(A = c("X", "Y")), "Single"),
-    "Less than 2"
-  )
-  expect_null(g)
-})
-
 test_that("plot_peaks_interactions with score column", {
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("ggforce")

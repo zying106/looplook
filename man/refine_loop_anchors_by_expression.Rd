@@ -20,7 +20,7 @@ refine_loop_anchors_by_expression(
   hub_percentile = 0.95,
   hub_metric = c("unique_contacts", "total_loops"),
   chromatin_beds = list(),
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE,
   allow_rerefine = FALSE
 )
@@ -82,7 +82,7 @@ Note: if you plan to use \code{\link{refine_loop_anchors_by_chromatin}},
 the chromatin validation and reclassification are handled there; you can
 skip this parameter to avoid redundant BED file reads.}
 
-\item{write_output}{Logical. If \code{TRUE} (default), write the refined Excel workbook to \code{out_dir}. If \code{FALSE}, return results without creating directories or files.}
+\item{write_output}{Logical. If \code{TRUE}, write the refined Excel workbook to \code{out_dir} (default: \code{FALSE}). If \code{FALSE}, return results without creating directories or files.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.}
 

@@ -811,25 +811,6 @@ test_that("draw_flower_simplified: exported function with mock gene lists", {
   expect_null(p_null)
 })
 
-test_that("draw_upset_intersections: input validation and early returns", {
-  skip_if_not_installed("UpSetR")
-
-  # less than 2 lists → message + NULL
-  expect_message(
-    g1 <- draw_upset_intersections(list(A = c("X")), "One"),
-    "Less than 2"
-  )
-  expect_null(g1)
-
-  # 2 lists with content should work (rendering depends on graphics device,
-  # but at minimum should not error)
-  sets <- list(
-    Up = c("TP53", "BRCA1", "MYC", "EGFR"),
-    Down = c("BRCA1", "MYC", "CDKN1A", "BAX")
-  )
-  expect_no_error(draw_upset_intersections(sets, "Test"))
-})
-
 test_that("plot_peaks_interactions: renders without gene track", {
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("ggforce")

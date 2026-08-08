@@ -40,7 +40,7 @@
     return(list(obj = arg, pkg = .pkg_from_annotation_db(arg)))
   }
   if (is.character(arg) && nzchar(arg)) {
-    if (!requireNamespace(arg, quietly = TRUE)) stop(desc, " '", arg, "' not installed")
+    .require_pkg(arg, desc, "stop")
     return(list(obj = utils::getFromNamespace(arg, arg), pkg = arg))
   }
   pkg <- if (type == "txdb") species_txdb_pkg(species) else species_orgdb_pkg(species)
@@ -53,7 +53,7 @@
       "See ?annotate_peaks_and_loops for details."
     )
   }
-  if (!requireNamespace(pkg, quietly = TRUE)) stop(desc, " '", pkg, "' not installed")
+  .require_pkg(pkg, desc, "stop")
   list(obj = utils::getFromNamespace(pkg, pkg), pkg = pkg)
 }
 
@@ -791,7 +791,7 @@
 #' @param anchor_min_frac Numeric (0-1). After the first two filters, what fraction of the \emph{peak} width must physically overlap the anchor? Default \code{0}: any fraction accepted. Set to \code{0.1-0.5} when peaks are broad (e.g. H3K27ac domains, 2-5 kb) so a 1 bp overlap does not link the entire broad peak. Ignored for point features (SNPs, eQTLs). Applied last, only to pairs that passed \code{anchor_gap} and \code{anchor_min_overlap}.
 #' @param hub_percentile Numeric (0-1). Loop-count quantile for hub detection. Default: \code{0.95}. Genes or distal elements with connectivity at or above this quantile are flagged as hubs. A minimum floor of 3 (promoter-centric) or 2 (distal) is applied to avoid false hubs in small datasets.
 #' @param hub_metric Character. Which connectivity count to use for hub detection. \code{"unique_contacts"} (default): counts distinct neighbour anchor IDs, robust to duplicate/replicate loop rows. \code{"total_loops"}: counts all loop rows (backward compatible; may inflate hub calls when input contains unconsolidated replicates).
-#' @param write_output Logical. If \code{TRUE} (default), write the Excel workbook to \code{out_dir}. If \code{FALSE}, return results without creating directories or files.
+#' @param write_output Logical. If \code{TRUE}, write the Excel workbook to \code{out_dir} (default: \code{FALSE}). If \code{FALSE}, return results without creating directories or files.
 #' @param quiet Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.
 #' @param target_priority Character. How to prioritise among multiple candidate
 #'   target genes per input feature. The policy applies only within primary
@@ -937,13 +937,11 @@ annotate_peaks_and_loops <- function(
   anchor_gap = -1L,
   anchor_min_overlap = 1L,
   anchor_min_frac = 0,
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE,
   target_priority = c("promoter_then_distance", "distance_then_role")
 ) {
-  if (!is.character(species) || length(species) != 1L || is.na(species) || !nzchar(species)) {
-    stop("`species` must be a single non-empty string", call. = FALSE)
-  }
+  .assert_nonempty_string(species, "species")
   tss_region <- .validate_tss_region(tss_region)
   conflict_strategy <- match.arg(conflict_strategy)
   target_priority <- match.arg(target_priority)
@@ -952,15 +950,9 @@ annotate_peaks_and_loops <- function(
     anchor_gap, anchor_min_overlap, anchor_min_frac,
     hub_percentile, neighbor_hop, karyo_bin_size
   )
-  if (!is.numeric(anchor_merge_gap) || length(anchor_merge_gap) != 1L ||
-    is.na(anchor_merge_gap) || !is.finite(anchor_merge_gap) ||
-    anchor_merge_gap != floor(anchor_merge_gap) || anchor_merge_gap < 0) {
-    stop("`anchor_merge_gap` must be a finite non-negative integer.", call. = FALSE)
-  }
+  .assert_scalar_count(anchor_merge_gap, "anchor_merge_gap")
   hub_metric <- match.arg(hub_metric)
-  log_message <- function(...) {
-    if (!quiet) message(...)
-  }
+  log_message <- .make_log_message(quiet)
   # ChIPseeker::annotatePeak and GenomeInfoDb::seqlevelsStyle<- emit
   # genome-info lines to stdout via cat(). Suppress when quiet=TRUE.
   if (quiet) {
@@ -968,7 +960,7 @@ annotate_peaks_and_loops <- function(
     on.exit(sink(type = "output"), add = TRUE)
   }
 
-  if (write_output && !dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+  .ensure_out_dir(write_output, out_dir)
 
   tx_res <- .resolve_annotation_resource(txdb, "txdb", "TxDb", species)
   org_res <- .resolve_annotation_resource(org_db, "orgdb", "OrgDb", species)
@@ -1207,41 +1199,21 @@ annotate_peaks_and_loops <- function(
 #' @keywords internal
 #' @noRd
 .validate_annotation_params <- function(anchor_gap, anchor_min_overlap,
-                                        anchor_min_frac, hub_percentile,
-                                        neighbor_hop, karyo_bin_size) {
-  if (!is.numeric(anchor_gap) || length(anchor_gap) != 1L ||
-    is.na(anchor_gap) || !is.finite(anchor_gap) ||
-    anchor_gap != floor(anchor_gap) || anchor_gap < -1L) {
-    stop("anchor_gap must be a finite integer >= -1", call. = FALSE)
-  }
-  if (!is.numeric(anchor_min_overlap) || length(anchor_min_overlap) != 1L ||
-    is.na(anchor_min_overlap) || !is.finite(anchor_min_overlap) ||
-    anchor_min_overlap != floor(anchor_min_overlap) || anchor_min_overlap < 1L) {
-    stop("anchor_min_overlap must be a finite positive integer", call. = FALSE)
-  }
-  if (!is.numeric(anchor_min_frac) || length(anchor_min_frac) != 1L ||
-    is.na(anchor_min_frac) || !is.finite(anchor_min_frac) ||
-    anchor_min_frac < 0 || anchor_min_frac > 1) {
-    stop("anchor_min_frac must be a finite number in [0, 1]", call. = FALSE)
-  }
+                                         anchor_min_frac, hub_percentile,
+                                         neighbor_hop, karyo_bin_size) {
+  .assert_scalar_count(anchor_gap, "anchor_gap", min = -1L)
+  .assert_scalar_count(anchor_min_overlap, "anchor_min_overlap", min = 1L)
+  .assert_scalar_number(anchor_min_frac, "anchor_min_frac", min = 0, max = 1)
   if (!is.numeric(hub_percentile) || length(hub_percentile) != 1L ||
     is.na(hub_percentile) || !is.finite(hub_percentile) ||
     hub_percentile <= 0 || hub_percentile > 1) {
     stop("hub_percentile must be a finite number in (0, 1]", call. = FALSE)
   }
-  if (!is.numeric(neighbor_hop) || length(neighbor_hop) != 1L ||
-    is.na(neighbor_hop) || !is.finite(neighbor_hop) ||
-    neighbor_hop < 0 || neighbor_hop != floor(neighbor_hop)) {
-    stop("neighbor_hop must be a finite non-negative integer", call. = FALSE)
-  }
+  .assert_scalar_count(neighbor_hop, "neighbor_hop")
   if (neighbor_hop > 1L) {
     stop("neighbor_hop > 1 is not supported. Direct 1-hop loop targets are always evaluated; larger values trigger computationally intractable network expansion.", call. = FALSE)
   }
-  if (!is.numeric(karyo_bin_size) || length(karyo_bin_size) != 1L ||
-    is.na(karyo_bin_size) || !is.finite(karyo_bin_size) ||
-    karyo_bin_size != floor(karyo_bin_size) || karyo_bin_size < 1) {
-    stop("karyo_bin_size must be a positive number", call. = FALSE)
-  }
+  .assert_scalar_count(karyo_bin_size, "karyo_bin_size", min = 1L)
 }
 
 #' Internal: Generate annotation plots with optional message silencing
@@ -1288,11 +1260,7 @@ annotate_peaks_and_loops <- function(
 #' @noRd
 .read_and_cluster_bedpe <- function(bedpe_file, log_message, quiet,
                                     anchor_merge_gap = 0) {
-  if (!is.numeric(anchor_merge_gap) || length(anchor_merge_gap) != 1L ||
-    is.na(anchor_merge_gap) || !is.finite(anchor_merge_gap) ||
-    anchor_merge_gap < 0 || anchor_merge_gap != floor(anchor_merge_gap)) {
-    stop("`anchor_merge_gap` must be a single non-negative integer", call. = FALSE)
-  }
+  .assert_scalar_count(anchor_merge_gap, "anchor_merge_gap")
   anchor_merge_gap <- as.integer(anchor_merge_gap)
   log_message("Step 1: Reading BEDPE file...")
   loops <- data.table::fread(bedpe_file, header = FALSE)
@@ -1867,35 +1835,14 @@ annotate_peaks_and_loops <- function(
   distal_element_df, bed_info, target_gene_links, out_dir, project_name
 ) {
   wb <- openxlsx::createWorkbook()
-  openxlsx::addWorksheet(wb, "Loop Annotation")
-  openxlsx::writeData(wb, "Loop Annotation", loop_annotation_clean)
-  openxlsx::addWorksheet(wb, "Anchor Loci Annotation")
-  openxlsx::writeData(wb, "Anchor Loci Annotation", cluster_info)
-  openxlsx::addWorksheet(wb, "Promoter Stats")
-  openxlsx::writeData(wb, "Promoter Stats", promoter_centric_df)
-  if (!is.null(distal_element_df)) {
-    openxlsx::addWorksheet(wb, "Distal Element Stats")
-    openxlsx::writeData(wb, "Distal Element Stats", distal_element_df)
-  }
-  if (!is.null(bed_info)) {
-    openxlsx::addWorksheet(wb, "Target Annotation")
-    openxlsx::writeData(wb, "Target Annotation", bed_info)
-  }
-  if (!is.null(target_gene_links) && nrow(target_gene_links) > 0) {
-    openxlsx::addWorksheet(wb, "Target Gene Links")
-    openxlsx::writeData(wb, "Target Gene Links", target_gene_links)
-  }
-  tryCatch(
-    openxlsx::saveWorkbook(
-      wb,
-      file.path(out_dir, paste0(project_name, "_Basic_Results.xlsx")),
-      overwrite = TRUE
-    ),
-    error = function(e) {
-      warning("Failed to save Excel workbook: ", conditionMessage(e),
-        call. = FALSE
-      )
-    }
+  .add_sheet(wb, "Loop Annotation", loop_annotation_clean)
+  .add_sheet(wb, "Anchor Loci Annotation", cluster_info)
+  .add_sheet(wb, "Promoter Stats", promoter_centric_df)
+  .add_sheet(wb, "Distal Element Stats", distal_element_df)
+  .add_sheet(wb, "Target Annotation", bed_info)
+  .add_sheet(wb, "Target Gene Links", target_gene_links, require_rows = TRUE)
+  .save_workbook(wb, out_dir, project_name, "_Basic_Results.xlsx",
+    "Failed to save Excel workbook: "
   )
 }
 
@@ -2179,7 +2126,7 @@ annotate_peaks_and_loops <- function(
 }
 
 .target_anchor_gene_map <- function(map_info) {
-  if (is.null(map_info) || nrow(map_info) == 0 ||
+  if (.is_null_or_empty(map_info) ||
     !all(c("anchor_id", "SYMBOL") %in% colnames(map_info))) {
     return(data.frame(
       anchor_id = character(), gene = character(),
@@ -2238,7 +2185,7 @@ annotate_peaks_and_loops <- function(
     "source", "evidence", "anchor_role"
   )]
   linear_col <- .target_linear_gene_column(bed_info)
-  if (is.null(linear_col) || is.null(bed_info) || nrow(bed_info) == 0) {
+  if (is.null(linear_col) || .is_null_or_empty(bed_info)) {
     return(empty)
   }
 
@@ -2417,7 +2364,7 @@ annotate_peaks_and_loops <- function(
   gene_map <- .target_anchor_gene_map(map_info)
   linear_rows <- .linear_target_gene_links(bed_info)
 
-  if (is.null(hit_df) || nrow(hit_df) == 0 || nrow(gene_map) == 0) {
+  if (.is_null_or_empty(hit_df) || nrow(gene_map) == 0) {
     rows <- dplyr::bind_rows(linear_rows)
     if (nrow(rows) == 0) {
       return(.empty_target_gene_links())
@@ -2569,7 +2516,7 @@ annotate_peaks_and_loops <- function(
       ) %>%
         dplyr::group_by(pair) %>%
         dplyr::summarise(
-          loop_IDs = paste(sort(unique(loop_ID)), collapse = ";"),
+          loop_IDs = .collapse_genes(loop_ID),
           .groups = "drop"
         )
       pair_map <- setNames(pair_lookup$loop_IDs, pair_lookup$pair)
@@ -2694,7 +2641,7 @@ annotate_peaks_and_loops <- function(
           pair_keys <- paste(nodes[seq_len(n_hops)], nodes[-1], sep = "|||")
           all_lids <- c(all_lids, unname(pair_map[pair_keys]))
         }
-        lid_str <- paste(sort(unique(all_lids)), collapse = ";")
+        lid_str <- .collapse_genes(all_lids)
         if (is.na(lid_str) || lid_str == "") lid_str <- NA_character_
         c(loop_ID = lid_str, path_length = as.character(n_hops))
       })
@@ -2740,7 +2687,7 @@ annotate_peaks_and_loops <- function(
 }
 
 .summarise_regulated_promoter_evidence <- function(target_gene_links) {
-  if (is.null(target_gene_links) || nrow(target_gene_links) == 0) {
+  if (.is_null_or_empty(target_gene_links)) {
     return(data.frame(input_id = character(), Regulated_promoter_Evidence = character()))
   }
   target_gene_links %>%
@@ -2789,7 +2736,7 @@ annotate_peaks_and_loops <- function(
 }
 
 .mark_target_gene_link_membership <- function(target_gene_links, bed_info) {
-  if (is.null(target_gene_links) || nrow(target_gene_links) == 0) {
+  if (.is_null_or_empty(target_gene_links)) {
     return(.empty_target_gene_links())
   }
 
@@ -3118,7 +3065,7 @@ annotate_peaks_and_loops <- function(
 .build_target_rose_plot <- function(
   target_connected_loops, custom_colors, project_name
 ) {
-  if (is.null(target_connected_loops) || nrow(target_connected_loops) == 0) {
+  if (.is_null_or_empty(target_connected_loops)) {
     return(NULL)
   }
   rose_data <- target_connected_loops %>%
@@ -3324,7 +3271,8 @@ build_annotation_plots <- function(
 #' @noRd
 .refine_load_validate_data <- function(
   annotation_res, expr_matrix_file, sample_columns,
-  threshold, unit_type, log_message, ...
+  threshold, unit_type, log_message,
+  threshold_mode = c("absolute", "quantile")
 ) {
   log_message(">>> [Step 1] Loading Data & Expression Matrix...")
   if (is.null(annotation_res$loop_annotation)) stop("'loop_annotation' missing.")
@@ -3374,7 +3322,7 @@ build_annotation_plots <- function(
     stop("`expr_matrix_file` is required for expression refinement.", call. = FALSE)
   }
   vals <- load_expression_matrix(expr_matrix_file, sample_columns)
-  threshold_mode <- if (!is.null(list(...)$threshold_mode)) match.arg(list(...)$threshold_mode, c("absolute", "quantile")) else "absolute"
+  threshold_mode <- match.arg(threshold_mode)
   if (threshold_mode == "quantile") {
     if (!is.numeric(threshold) || length(threshold) != 1L ||
       !is.finite(threshold) || threshold < 0 || threshold > 1) {
@@ -3423,9 +3371,10 @@ build_annotation_plots <- function(
     # genuine identifier mismatch (e.g. SYMBOL vs Ensembl), whereas
     # low active rate may simply reflect biological silencing.
     measured_genes <- names(vals)
-    n_measured_mapped <- length(intersect(toupper(measured_genes), toupper(anno_genes)))
+    anno_genes_upper <- toupper(anno_genes)
+    n_measured_mapped <- length(intersect(toupper(measured_genes), anno_genes_upper))
     id_mapping_rate <- n_measured_mapped / length(anno_genes)
-    n_active_mapped <- length(intersect(toupper(whitelist), toupper(anno_genes)))
+    n_active_mapped <- length(intersect(toupper(whitelist), anno_genes_upper))
     active_fraction <- n_active_mapped / length(anno_genes)
     unmeasured_fraction <- 1 - id_mapping_rate
     log_message(sprintf(
@@ -3609,12 +3558,13 @@ build_annotation_plots <- function(
                                     orig_anchor2_type = NULL,
                                     measured_set = NULL,
                                     original_promoter_targets = NULL) {
+  whitelist_upper <- toupper(whitelist)
   filter_genes_wl <- function(x) {
     if (is.na(x) || x == "") {
       return(NA_character_)
     }
     gs <- trimws(unlist(strsplit(as.character(x), ";")))
-    gs <- unique(gs[toupper(gs) %in% toupper(whitelist)])
+    gs <- unique(gs[toupper(gs) %in% whitelist_upper])
     if (length(gs) == 0) {
       return(NA_character_)
     }
@@ -3627,7 +3577,7 @@ build_annotation_plots <- function(
     }
     keys <- toupper(gs)
     measured <- keys %in% toupper(measured_set)
-    active <- keys %in% toupper(whitelist)
+    active <- keys %in% whitelist_upper
     n_measured <- sum(measured)
     n_active <- sum(active)
     n_total <- length(gs)
@@ -3706,6 +3656,7 @@ build_annotation_plots <- function(
 #' @keywords internal
 #' @noRd
 .refine_target_annotations <- function(bed_info, loop_df, whitelist, target_gene_links, vals, threshold) {
+  whitelist_upper <- toupper(whitelist)
   cols_to_clean <- base::intersect(c(
     "All_Loop_Connected_Genes",
     "Regulated_promoter_genes",
@@ -3726,7 +3677,7 @@ build_annotation_plots <- function(
           return(NA_character_)
         }
         gs <- unlist(strsplit(x, ";"))
-        gs_active <- gs[toupper(trimws(gs)) %in% toupper(whitelist)]
+        gs_active <- gs[toupper(trimws(gs)) %in% whitelist_upper]
         if (length(gs_active) == 0) {
           return(NA_character_)
         }
@@ -3739,14 +3690,14 @@ build_annotation_plots <- function(
     if (is.na(s) || s == "") {
       return(FALSE)
     }
-    any(toupper(trimws(unlist(strsplit(as.character(s), ";")))) %in% toupper(whitelist))
+    any(toupper(trimws(unlist(strsplit(as.character(s), ";")))) %in% whitelist_upper)
   }
   filter_sym_expressed <- function(s) {
     if (is.na(s) || s == "") {
       return(NA_character_)
     }
     gs <- trimws(unlist(strsplit(as.character(s), ";")))
-    gs <- gs[toupper(gs) %in% toupper(whitelist)]
+    gs <- gs[toupper(gs) %in% whitelist_upper]
     if (length(gs) == 0) {
       return(NA_character_)
     }
@@ -3786,6 +3737,16 @@ build_annotation_plots <- function(
     }
   }
 
+  # NOTE (kept for reference, currently INERT): this loop-connected-gene fill
+  # block is overwritten by .finalize_current_target_annotation(), which runs
+  # after .refine_target_annotations() in the expression-refinement pipeline
+  # and unconditionally clears + re-aggregates all strict/Filled columns via
+  # .fill_fallback_targets().  The final *Filled columns are therefore always
+  # one-level fallbacks (strict -> expression-filtered linear gene), and the
+  # loop-filled genes written below never survive to the output.  It is
+  # retained only as documentation of the intended two-level design; remove
+  # or relocate it (into .fill_fallback_targets) if two-level filling is
+  # ever required.
   if ("Linked_Loop_IDs" %in% colnames(bed_info) &&
     "loop_ID" %in% colnames(loop_df) &&
     "Putative_Target_Genes" %in% colnames(loop_df)) {
@@ -3896,41 +3857,20 @@ build_annotation_plots <- function(
   loop_export <- loop_df %>%
     dplyr::select(-any_of(c("a1_id", "a2_id", "loop_genes", "single_loop_genes", "proximate_loop_gene")))
 
-  openxlsx::addWorksheet(wb, "Filtered Loop Annotation")
-  openxlsx::writeData(wb, "Filtered Loop Annotation", loop_export)
+  .add_sheet(wb, "Filtered Loop Annotation", loop_export)
 
   functional_loops <- loop_export %>% dplyr::filter(Retained_In_Functional_Network == TRUE)
-  openxlsx::addWorksheet(wb, "Functional Loop Annotation")
-  openxlsx::writeData(wb, "Functional Loop Annotation", functional_loops)
+  .add_sheet(wb, "Functional Loop Annotation", functional_loops)
 
-  openxlsx::addWorksheet(wb, "Filtered Anchor Loci Annotation")
-  openxlsx::writeData(wb, "Filtered Anchor Loci Annotation", clust_info)
+  .add_sheet(wb, "Filtered Anchor Loci Annotation", clust_info)
+  .add_sheet(wb, "Filtered Promoter Stats", promoter_centric_df)
+  .add_sheet(wb, "Filtered Distal Element Stats", distal_element_df)
+  .add_sheet(wb, "Filtered Target Annotation", bed_info, drop_cols = "SANKEY_RAW_GENES")
+  .add_sheet(wb, "Filtered Target Gene Links", target_gene_links, require_rows = TRUE)
+  .add_sheet(wb, "Chromatin Validation", chromatin_validation, require_rows = TRUE)
 
-  if (!is.null(promoter_centric_df)) {
-    openxlsx::addWorksheet(wb, "Filtered Promoter Stats")
-    openxlsx::writeData(wb, "Filtered Promoter Stats", promoter_centric_df)
-  }
-  if (!is.null(distal_element_df)) {
-    openxlsx::addWorksheet(wb, "Filtered Distal Element Stats")
-    openxlsx::writeData(wb, "Filtered Distal Element Stats", distal_element_df)
-  }
-  if (!is.null(bed_info)) {
-    bed_export <- bed_info %>% dplyr::select(-any_of("SANKEY_RAW_GENES"))
-    openxlsx::addWorksheet(wb, "Filtered Target Annotation")
-    openxlsx::writeData(wb, "Filtered Target Annotation", bed_export)
-  }
-  if (!is.null(target_gene_links) && nrow(target_gene_links) > 0) {
-    openxlsx::addWorksheet(wb, "Filtered Target Gene Links")
-    openxlsx::writeData(wb, "Filtered Target Gene Links", target_gene_links)
-  }
-  if (!is.null(chromatin_validation) && nrow(chromatin_validation) > 0) {
-    openxlsx::addWorksheet(wb, "Chromatin Validation")
-    openxlsx::writeData(wb, "Chromatin Validation", chromatin_validation)
-  }
-
-  tryCatch(
-    openxlsx::saveWorkbook(wb, file.path(out_dir, paste0(project_name, "_Refined_Results.xlsx")), overwrite = TRUE),
-    error = function(e) warning("Failed to save refined Excel workbook: ", conditionMessage(e), call. = FALSE)
+  .save_workbook(wb, out_dir, project_name, "_Refined_Results.xlsx",
+    "Failed to save refined Excel workbook: "
   )
 }
 #' Internal: Validate expression refinement inputs and load expression data
@@ -3948,14 +3888,12 @@ build_annotation_plots <- function(
   reclassify_by_expression, allow_rerefine, project_name,
   out_dir, write_output, quiet
 ) {
-  log_message <- function(...) {
-    if (!quiet) message(...)
-  }
+  log_message <- .make_log_message(quiet)
 
   if (!grepl("_Filtered$", project_name)) {
     project_name <- paste0(project_name, "_Filtered")
   }
-  if (write_output && !dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+  .ensure_out_dir(write_output, out_dir)
   log_message(">>> [Refinement] Project Name: ", project_name)
   if (isTRUE(reclassify_by_expression)) {
     log_message(">>> NOTE: eP/eG = element-Promoter like / element-Genebody like: structurally")
@@ -4146,7 +4084,7 @@ build_annotation_plots <- function(
 #'   Note: if you plan to use \code{\link{refine_loop_anchors_by_chromatin}},
 #'   the chromatin validation and reclassification are handled there; you can
 #'   skip this parameter to avoid redundant BED file reads.
-#' @param write_output Logical. If \code{TRUE} (default), write the refined Excel workbook to \code{out_dir}. If \code{FALSE}, return results without creating directories or files.
+#' @param write_output Logical. If \code{TRUE}, write the refined Excel workbook to \code{out_dir} (default: \code{FALSE}). If \code{FALSE}, return results without creating directories or files.
 #' @param quiet Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.
 #'
 #' @return A named list:
@@ -4315,18 +4253,14 @@ refine_loop_anchors_by_expression <- function(
   hub_percentile = 0.95,
   hub_metric = c("unique_contacts", "total_loops"),
   chromatin_beds = list(),
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE,
   allow_rerefine = FALSE
 ) {
   threshold_mode <- match.arg(threshold_mode)
   hub_metric <- match.arg(hub_metric)
-  if (!is.character(species) || length(species) != 1L || is.na(species) || !nzchar(species)) {
-    stop("`species` must be a single non-empty string", call. = FALSE)
-  }
-  log_message <- function(...) {
-    if (!quiet) message(...)
-  }
+  .assert_nonempty_string(species, "species")
+  log_message <- .make_log_message(quiet)
 
   # --- 0.  Empty annotation guard ---
   if (.is_empty_annotation_result(annotation_res)) {
@@ -4680,9 +4614,7 @@ refine_loop_anchors_by_expression <- function(
   annotation_res, allow_rerefine, tss_region, chromatin_beds, project_name,
   quiet
 ) {
-  log_message <- function(...) {
-    if (!quiet) message(...)
-  }
+  log_message <- .make_log_message(quiet)
 
   if (!is.numeric(bw_ratio_threshold) || length(bw_ratio_threshold) != 1L ||
     is.na(bw_ratio_threshold) || !is.finite(bw_ratio_threshold) ||
@@ -4702,6 +4634,8 @@ refine_loop_anchors_by_expression <- function(
         stop("bigWig file not found for '", nm, "': ", chromatin_bw[[nm]], call. = FALSE)
       }
     }
+    # Deliberately not routed through .require_pkg(): the semantics here are
+    # "warn and CONTINUE in BED-only mode", which matches no on_missing mode.
     if (!requireNamespace("rtracklayer", quietly = TRUE)) {
       warning("Package 'rtracklayer' is required for bigWig processing; falling back to BED-only mode.", call. = FALSE)
     }
@@ -4997,7 +4931,7 @@ refine_loop_anchors_by_expression <- function(
 #'   \code{annotation_res} to contain the \code{looplook_anchor_state}
 #'   attribute (present when using \code{\link{annotate_peaks_and_loops}}
 #'   output). Default \code{TRUE}.
-#' @param write_output Logical. Write Excel workbook. Default \code{TRUE}.
+#' @param write_output Logical. Write Excel workbook. Default \code{FALSE}.
 #' @param quiet Logical. Suppress messages. Default \code{FALSE}.
 #' @param allow_rerefine Logical. If \code{FALSE} (default), stops when
 #'   the input has already undergone chromatin refinement. Repeated chromatin
@@ -5070,7 +5004,7 @@ refine_loop_anchors_by_chromatin <- function(
   color_palette = "Paired",
   candidate_types = NULL,
   recompute_targets = TRUE,
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE,
   sankey_colors = NULL,
   chromatin_bw = NULL,
@@ -5080,13 +5014,10 @@ refine_loop_anchors_by_chromatin <- function(
   allow_rerefine = FALSE
 ) {
   hub_metric <- match.arg(hub_metric)
-  if (!is.character(species) || length(species) != 1L || is.na(species) || !nzchar(species)) {
-    stop("`species` must be a single non-empty string", call. = FALSE)
-  }
+  .assert_nonempty_string(species, "species")
   if (!grepl("_Chromatin$", project_name)) project_name <- paste0(project_name, "_Chromatin")
-  log_message <- function(...) {
-    if (!quiet) message(...)
-  }
+  log_message <- .make_log_message(quiet)
+  .ensure_out_dir(write_output, out_dir)
 
   # --- 0. Empty annotation guard ---
   if (.is_empty_annotation_result(annotation_res)) {
@@ -5422,40 +5353,14 @@ refine_loop_anchors_by_chromatin <- function(
   tss_reannotation, tss_provenance_out, out_dir, project_name
 ) {
   wb <- openxlsx::createWorkbook()
-  openxlsx::addWorksheet(wb, "Loop Annotation")
-  openxlsx::writeData(
-    wb, "Loop Annotation",
-    loop_df %>% dplyr::select(-any_of(c("a1_id", "a2_id")))
-  )
-  openxlsx::addWorksheet(wb, "Chromatin Validation")
-  openxlsx::writeData(wb, "Chromatin Validation", validation)
-  if (!is.null(ta) && nrow(ta) > 0) {
-    openxlsx::addWorksheet(wb, "Target Annotation")
-    openxlsx::writeData(wb, "Target Annotation", ta)
-  }
-  if (!is.null(tgl) && nrow(tgl) > 0) {
-    openxlsx::addWorksheet(wb, "Target Gene Links")
-    openxlsx::writeData(wb, "Target Gene Links", tgl)
-  }
-  if (!is.null(tss_reannotation) && nrow(tss_reannotation) > 0) {
-    openxlsx::addWorksheet(wb, "TSS Reannotation")
-    openxlsx::writeData(wb, "TSS Reannotation", tss_reannotation)
-  }
-  if (!is.null(tss_provenance_out) && nrow(tss_provenance_out) > 0) {
-    openxlsx::addWorksheet(wb, "TSS Assignment Provenance")
-    openxlsx::writeData(
-      wb, "TSS Assignment Provenance",
-      tss_provenance_out
-    )
-  }
-  tryCatch(
-    openxlsx::saveWorkbook(wb,
-      file.path(out_dir, paste0(project_name, "_Chromatin_Results.xlsx")),
-      overwrite = TRUE
-    ),
-    error = function(e) {
-      warning("Failed to save Excel: ", conditionMessage(e), call. = FALSE)
-    }
+  .add_sheet(wb, "Loop Annotation", loop_df, drop_cols = c("a1_id", "a2_id"))
+  .add_sheet(wb, "Chromatin Validation", validation)
+  .add_sheet(wb, "Target Annotation", ta, require_rows = TRUE)
+  .add_sheet(wb, "Target Gene Links", tgl, require_rows = TRUE)
+  .add_sheet(wb, "TSS Reannotation", tss_reannotation, require_rows = TRUE)
+  .add_sheet(wb, "TSS Assignment Provenance", tss_provenance_out, require_rows = TRUE)
+  .save_workbook(wb, out_dir, project_name, "_Chromatin_Results.xlsx",
+    "Failed to save Excel: "
   )
 }
 
@@ -6584,7 +6489,7 @@ refine_loop_anchors_by_chromatin <- function(
 
   # Backfill requires_tss anchors that didn't get TxDb validation:
   # mark as TSS_validation_unavailable instead of not_required
-  if (is.null(tss_reann_out) || nrow(tss_reann_out) == 0) {
+  if (.is_null_or_empty(tss_reann_out)) {
     no_txdb_idx <- which(requires_tss)
     if (length(no_txdb_idx) > 0) {
       restore$TSS_support_status[no_txdb_idx] <-
@@ -7065,7 +6970,7 @@ refine_loop_anchors_by_chromatin <- function(
           "active"
         }
         return(list(
-          genes = paste(sort(unique(genes[active])), collapse = ";"),
+          genes = .collapse_genes(genes[active]),
           state = state
         ))
       }
@@ -7341,7 +7246,7 @@ refine_loop_anchors_by_chromatin <- function(
                                       target_priority = c("promoter_then_distance", "distance_then_role"),
                                       max_primary_hop = 1L) {
   target_priority <- match.arg(target_priority)
-  if (is.null(bed_info) || is.null(new_links) || nrow(new_links) == 0) {
+  if (is.null(bed_info) || .is_null_or_empty(new_links)) {
     return(bed_info)
   }
   loop_links <- new_links %>%
@@ -7354,7 +7259,7 @@ refine_loop_anchors_by_chromatin <- function(
   all_agg <- loop_links %>%
     dplyr::group_by(input_id) %>%
     dplyr::summarise(
-      All_Loop_Connected_Genes = paste(sort(unique(gene)), collapse = ";"),
+      All_Loop_Connected_Genes = .collapse_genes(gene),
       .groups = "drop"
     )
 
@@ -7413,7 +7318,7 @@ refine_loop_anchors_by_chromatin <- function(
       dplyr::filter(gene_role == "promoter") %>%
       dplyr::group_by(input_id) %>%
       dplyr::summarise(
-        Regulated_promoter_genes = paste(sort(unique(gene)), collapse = ";"),
+        Regulated_promoter_genes = .collapse_genes(gene),
         .groups = "drop"
       )
   }
@@ -7434,7 +7339,7 @@ refine_loop_anchors_by_chromatin <- function(
       expanded_agg <- expanded_only %>%
         dplyr::group_by(input_id) %>%
         dplyr::summarise(
-          Expanded_Target_Genes = paste(sort(unique(gene)), collapse = ";"),
+          Expanded_Target_Genes = .collapse_genes(gene),
           .groups = "drop"
         )
     }
@@ -7463,7 +7368,7 @@ refine_loop_anchors_by_chromatin <- function(
 
     assigned_agg <- tmp %>%
       dplyr::summarise(
-        Assigned_Target_Genes = paste(sort(unique(gene)), collapse = ";"),
+        Assigned_Target_Genes = .collapse_genes(gene),
         .groups = "drop"
       )
   }
@@ -7494,14 +7399,14 @@ refine_loop_anchors_by_chromatin <- function(
           dplyr::n_distinct(anchor_id) >= 2
         ) %>%
         dplyr::summarise(
-          pp_genes = paste(sort(unique(gene)), collapse = ";"),
+          pp_genes = .collapse_genes(gene),
           .groups = "drop"
         ) %>%
         dplyr::group_by(input_id) %>%
         dplyr::summarise(
-          PP_CoAssigned_Genes = paste(sort(unique(
+          PP_CoAssigned_Genes = .collapse_genes(
             unlist(strsplit(paste(pp_genes, collapse = ";"), ";", fixed = TRUE))
-          )), collapse = ";"),
+          ),
           .groups = "drop"
         )
       # Union PP co-assigned genes with existing Assigned
@@ -7520,7 +7425,7 @@ refine_loop_anchors_by_chromatin <- function(
             } else {
               character(0)
             }
-            result <- paste(sort(unique(c(existing, pp))), collapse = ";")
+            result <- .collapse_genes(c(existing, pp))
             if (result == "") NA_character_ else result
           }
         ) %>%
@@ -7559,7 +7464,7 @@ refine_loop_anchors_by_chromatin <- function(
       positional_agg <- pos_links %>%
         dplyr::group_by(input_id) %>%
         dplyr::summarise(
-          Candidate_Positional_Genes = paste(sort(unique(gene)), collapse = ";"),
+          Candidate_Positional_Genes = .collapse_genes(gene),
           .groups = "drop"
         )
     }
@@ -7622,7 +7527,7 @@ refine_loop_anchors_by_chromatin <- function(
     ) %>%
     dplyr::group_by(input_id) %>%
     dplyr::summarise(
-      current_linear_fallback = paste(sort(unique(gene)), collapse = ";"),
+      current_linear_fallback = .collapse_genes(gene),
       .groups = "drop"
     )
   bed_info <- bed_info %>%
@@ -7682,7 +7587,7 @@ refine_loop_anchors_by_chromatin <- function(
   # strict and filled columns must be NA -- never retain previous values.
   bed_info <- .clear_target_summary_columns(bed_info)
 
-  if (is.null(all_target_gene_links) || nrow(all_target_gene_links) == 0) {
+  if (.is_null_or_empty(all_target_gene_links)) {
     if (!is.null(bed_info)) {
       bed_info$Regulated_promoter_Evidence <- "none"
       bed_info$Regulated_promoter_Fallback_Evidence <- "none"
@@ -7757,7 +7662,7 @@ refine_loop_anchors_by_chromatin <- function(
   g <- anchor_state$g
   neighbor_hop <- anchor_state$neighbor_hop
 
-  if (is.null(map_info) || nrow(map_info) == 0) {
+  if (.is_null_or_empty(map_info)) {
     return(list(target_annotation = NULL, target_gene_links = NULL))
   }
 
@@ -7775,7 +7680,7 @@ refine_loop_anchors_by_chromatin <- function(
 
   # --- 3. Build new target_gene_links ---
   hit_df <- anchor_state$target_hit_df
-  if (is.null(hit_df) || nrow(hit_df) == 0) {
+  if (.is_null_or_empty(hit_df)) {
     warning("No stored peak-to-anchor hit_df found; ",
       "target_gene_links will be linear-only.",
       call. = FALSE
@@ -7994,7 +7899,7 @@ refine_loop_anchors_by_chromatin <- function(
         g <- trimws(unlist(strsplit(x, ";", fixed = TRUE)))
         g <- g[!is.na(g) & nzchar(g)]
         if (length(g) == 0) return(NA_character_)
-        paste(sort(unique(g)), collapse = ";")
+        .collapse_genes(g)
       }
       old_cmp <- data.frame(
         input_id = old_bed$input_id,
@@ -8327,7 +8232,7 @@ refine_loop_anchors_by_chromatin <- function(
 
   sn$sizingPolicy$defaultWidth <- "100%"
   sn$sizingPolicy$defaultHeight <- "450px"
-  sn <- htmlwidgets::onRender(sn, sprintf('
+  sn <- htmlwidgets::onRender(sn, '
     function(el, x) {
       var svg = d3.select(el).select("svg");
       function createValidID(name) {
@@ -8352,9 +8257,9 @@ refine_loop_anchors_by_chromatin <- function(
           var targetColor = d3.select(el).selectAll(".node")
             .filter(function(node) { return node.name === d.target.name; })
             .select("rect").style("fill");
-          gradient.append("stop").attr("offset", "0%%")
+          gradient.append("stop").attr("offset", "0%")
             .attr("stop-color", sourceColor);
-          gradient.append("stop").attr("offset", "100%%")
+          gradient.append("stop").attr("offset", "100%")
             .attr("stop-color", targetColor);
         }
         d3.select(this).style("stroke", "url(#" + gradientID + ")")
@@ -8368,7 +8273,7 @@ refine_loop_anchors_by_chromatin <- function(
         .style("font-size", "12px")
         .style("font-weight", "bold");
     }
-    '))
+    ')
   sn
 }
 
@@ -8789,7 +8694,7 @@ refine_loop_anchors_by_chromatin <- function(
 #' @keywords internal
 #' @noRd
 .build_chromatin_sankey_plot <- function(reclass_map, project_name, sankey_colors = NULL) {
-  if (is.null(reclass_map) || nrow(reclass_map) == 0) {
+  if (.is_null_or_empty(reclass_map)) {
     return(NULL)
   }
   if (!requireNamespace("networkD3", quietly = TRUE) ||
@@ -9009,10 +8914,10 @@ refine_loop_anchors_by_chromatin <- function(
     message("Chromatin MarkHeatmap skipped: install 'ComplexHeatmap' and 'circlize' packages.")
     return(NULL)
   }
-  if (is.null(validation) || nrow(validation) == 0) {
+  if (.is_null_or_empty(validation)) {
     return(NULL)
   }
-  if (is.null(reclass_map) || nrow(reclass_map) == 0) {
+  if (.is_null_or_empty(reclass_map)) {
     return(NULL)
   }
 
@@ -9234,9 +9139,7 @@ format_annotation_columns <- function(df) {
 #' @keywords internal
 #' @noRd
 .compute_bw_ratio <- function(gr_anchors, mark_matrix, bw_me1, bw_me3) {
-  if (!requireNamespace("rtracklayer", quietly = TRUE)) {
-    stop("Package 'rtracklayer' is required to read bigWig files. Install with BiocManager::install('rtracklayer').")
-  }
+  .require_pkg("rtracklayer", "reading bigWig files", "stop")
   if (!file.exists(bw_me1)) stop("bigWig file not found: ", bw_me1)
   if (!file.exists(bw_me3)) stop("bigWig file not found: ", bw_me3)
 
@@ -9444,9 +9347,7 @@ validate_epeG_by_chromatin <- function(
   species = "hg38",
   quiet = FALSE
 ) {
-  log_message <- function(...) {
-    if (!quiet) message(...)
-  }
+  log_message <- .make_log_message(quiet)
 
   # ---- 0. Validate inputs ----
   .validate_chromatin_overlap_inputs(

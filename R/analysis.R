@@ -57,7 +57,7 @@
 #' @param run_motif Logical. Whether to perform Transcription Factor Binding Site motif analysis.
 #'   Default \code{FALSE}.
 #' @param genome_id Character. Reference genome assembly for motif sequence extraction.
-#'   Default \code{"hg38"}.
+#'   Default \code{"hg38"}. One of \code{c("hg38", "hg19", "mm10", "mm9")}.
 #' @param motif_p_thresh Numeric. P-value threshold for scanning.
 #'   Default \code{1e-4}.
 #' @param motif_ntop Numeric. Number of top enriched motifs to output.
@@ -83,10 +83,12 @@
 #' @param ppi_nSample Numeric. Maximum number of genes to include in PPI.
 #'   Default \code{400}.
 #' @param ppi_species_id Integer or \code{NULL}. NCBI taxonomy ID for STRING
-#'   PPI analysis (e.g.\ 9606 for human, 10090 for mouse). \code{NULL} (default)
-#'   attempts automatic inference from the OrgDb package name. Set explicitly
-#'   for species whose OrgDb naming is not recognised. See
-#'   \url{https://string-db.org} for a complete taxonomy list.
+#'   PPI analysis (e.g.\ 9606 for human, 10090 for mouse). When \code{NULL}
+#'   (default), the ID is resolved from the \code{org_db} package name (only
+#'   standard \code{org.*.eg.db} packages are recognised: human, mouse, rat,
+#'   fruit fly, worm, yeast, zebrafish). An error is raised when the species
+#'   cannot be resolved -- no implicit guessing. Set explicitly for any other
+#'   species. See \url{https://string-db.org} for a complete taxonomy list.
 #' @param heatmap_nSample Numeric. Maximum number of genes to plot in heatmap.
 #'   Default \code{99999} (effectively no limit). Reduce to \code{20-50} for
 #'   readable heatmaps.
@@ -165,7 +167,7 @@ profile_target_genes <- function(
   project_name = "Analysis",
   org_db = "org.Hs.eg.db",
   run_motif = FALSE,
-  genome_id = "hg38",
+  genome_id = c("hg38", "hg19", "mm10", "mm9"),
   motif_p_thresh = 1e-4,
   motif_ntop = 5,
   motif_n_perm = 0L,
@@ -184,26 +186,16 @@ profile_target_genes <- function(
 ) {
   target_source <- match.arg(target_source, several.ok = TRUE)
   target_mapping_mode <- match.arg(target_mapping_mode)
-  genome_id <- match.arg(genome_id, c("hg38", "hg19", "mm10", "mm9"))
+  genome_id <- match.arg(genome_id)
 
-  if (!is.numeric(motif_n_perm) || length(motif_n_perm) != 1L ||
-    is.na(motif_n_perm) || !is.finite(motif_n_perm) ||
-    motif_n_perm < 0 || motif_n_perm != floor(motif_n_perm)) {
-    stop("`motif_n_perm` must be a single finite non-negative integer.",
-      call. = FALSE
-    )
-  }
+  .assert_scalar_count(motif_n_perm, "motif_n_perm")
 
   # Seed management: withr::local_seed provides a local RNG context
   # without leaking .Random.seed into the global environment.
   if (!is.null(seed)) {
-    if (!is.numeric(seed) || length(seed) != 1L || is.na(seed) ||
-      seed != as.integer(seed) || seed < 1L) {
-      stop("`seed` must be a single positive integer or NULL.", call. = FALSE)
-    }
+    .assert_scalar_count(seed, "seed", min = 1)
     withr::local_seed(seed)
   }
-  used_seed <- if (!is.null(seed)) seed else NULL
 
   root_project_name <- project_name
   if (target_mapping_mode == "promoter") root_project_name <- paste0(root_project_name, "_Promoter")
@@ -216,9 +208,7 @@ profile_target_genes <- function(
   message(">>> Analysis Init | Root Project: ", root_project_name)
 
   if (run_go) {
-    if (!requireNamespace(org_db, quietly = TRUE)) {
-      stop("Package '", org_db, "' is required for GO analysis. Please install it.")
-    }
+    .require_pkg(org_db, "GO analysis", "stop")
   }
 
   if (run_motif) {
@@ -230,12 +220,8 @@ profile_target_genes <- function(
   }
 
   if (run_ppi) {
-    if (!requireNamespace("STRINGdb", quietly = TRUE)) {
-      stop("Package 'STRINGdb' is required for PPI analysis. Please install it.")
-    }
-    if (!requireNamespace("ggraph", quietly = TRUE)) {
-      stop("Package 'ggraph' is required for PPI analysis. Please install it.")
-    }
+    .require_pkg("STRINGdb", "PPI analysis", "stop")
+    .require_pkg("ggraph", "PPI analysis", "stop")
   }
 
   message("--- Reading files...")
@@ -274,6 +260,7 @@ profile_target_genes <- function(
     ), call. = FALSE)
   }
   # Validate sample column names (trim before checking)
+  # Whitespace in headers is a common artefact of hand-edited tables/Excel exports.
   sample_cols <- trimws(colnames(tpm_mat_raw))
   colnames(tpm_mat_raw) <- sample_cols
   if (anyNA(sample_cols) || any(!nzchar(sample_cols))) {
@@ -306,6 +293,8 @@ profile_target_genes <- function(
       nzchar(trimws(names(universe_genes))) &
       is.finite(universe_genes)
     universe_genes <- universe_genes[keep]
+    # Gene IDs from user-supplied ranked lists may carry trailing/leading
+    # whitespace (e.g. copied from spreadsheets); normalize once here.
     names(universe_genes) <- trimws(names(universe_genes))
     if (anyDuplicated(toupper(names(universe_genes)))) {
       stop("`universe_genes` contains duplicate or case-colliding gene IDs.",
@@ -488,7 +477,7 @@ profile_target_genes <- function(
     )
   }
   message("\n All analysis complete.")
-  attr(final_master_list, "seed") <- used_seed
+  attr(final_master_list, "seed") <- seed
   return(invisible(final_master_list))
 }
 
@@ -627,24 +616,23 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
   warn_env$warnings <- character()
 
   .safe_run <- function(module_name, expr) {
-    out <- tryCatch(
-      list(result = expr, warning = NULL),
+    tryCatch(
+      expr,
       error = function(e) {
         w_msg <- paste0("[", module_name, "] failed: ", conditionMessage(e))
-        warning(w_msg, call. = FALSE)
-        list(result = NULL, warning = w_msg)
+        warn_env$warnings <- c(warn_env$warnings, w_msg)
+        NULL
       }
     )
-    if (!is.null(out$warning)) {
-      warn_env$warnings <- c(warn_env$warnings, out$warning)
-    }
-    out$result
   }
+
+  # Case-insensitive lookup keys computed once for the whole task loop.
+  glist_upper <- toupper(names(global_glist))
 
   for (task_name in names(analysis_queue)) {
     target_genes <- analysis_queue[[task_name]]
     current_proj_name <- paste0(current_source_proj_name, "_", task_name)
-    idx <- match(toupper(target_genes), toupper(names(global_glist)))
+    idx <- match(toupper(target_genes), glist_upper)
     target_genes <- unique(names(global_glist)[idx[!is.na(idx)]])
     analysis_queue[[task_name]] <- target_genes
 
@@ -654,10 +642,10 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
       next
     }
 
-    mapped_upper <- toupper(target_genes)
-    if (any(duplicated(mapped_upper))) {
-      dup_upper <- unique(mapped_upper[duplicated(mapped_upper)])
-      collided <- unique(target_genes[toupper(target_genes) %in% dup_upper])
+    target_upper <- toupper(target_genes)
+    if (any(duplicated(target_upper))) {
+      dup_upper <- unique(target_upper[duplicated(target_upper)])
+      collided <- unique(target_genes[target_upper %in% dup_upper])
       if (length(collided) > 0) {
         warning(
           "Task '", task_name, "': ", length(dup_upper),
@@ -778,6 +766,10 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
       if (!is.null(p_ppi)) task_plots$PPI_Network <- p_ppi
     }
 
+    # Deduplicate plot keys: the distal-connectivity call can re-add the
+    # Scatter / Raincloud_* plots already produced by the total-loops call.
+    task_plots <- task_plots[!duplicated(names(task_plots))]
+
     plots[[task_name]] <- task_plots
   }
 
@@ -805,14 +797,17 @@ run_lfc_violin <- function(target_genes, global_glist, stat_test = c("wilcox.tes
     return(NULL)
   }
 
-  # Map uppercase back to original LFC names for value lookup
+  # Map uppercase back to original LFC names for value lookup.
+  # Uppercase once, then subset alongside the data vectors.
   lfc_lookup <- setNames(names(global_glist), lfc_names_upper)
-  target_lfc_raw <- global_glist[lfc_lookup[toupper(valid_targets)]]
+  valid_targets_upper <- toupper(valid_targets)
+  target_lfc_raw <- global_glist[lfc_lookup[valid_targets_upper]]
   # Remove non-finite LFC values BEFORE statistical computation,
   # using a shared boolean mask so genes and values never misalign.
   finite_idx <- is.finite(target_lfc_raw)
   target_lfc <- target_lfc_raw[finite_idx]
   valid_targets <- valid_targets[finite_idx]
+  valid_targets_upper <- valid_targets_upper[finite_idx]
   if (length(target_lfc) < 3L) {
     return(NULL)
   }
@@ -843,7 +838,7 @@ run_lfc_violin <- function(target_genes, global_glist, stat_test = c("wilcox.tes
         decile_breaks <- unique(decile_breaks)
         if (length(decile_breaks) > 1) {
           target_decile <- as.integer(cut(
-            expr_vals[expr_lookup[toupper(valid_targets)]],
+            expr_vals[expr_lookup[valid_targets_upper]],
             breaks = decile_breaks, include.lowest = TRUE
           ))
           all_decile <- as.integer(cut(
@@ -851,12 +846,11 @@ run_lfc_violin <- function(target_genes, global_glist, stat_test = c("wilcox.tes
             breaks = decile_breaks, include.lowest = TRUE
           ))
           k_per_target <- 1L
-          valid_target_keys <- toupper(valid_targets)
           matched_bg <- unlist(lapply(
             sort(unique(stats::na.omit(target_decile))),
             function(d) {
               n_target_d <- sum(target_decile == d, na.rm = TRUE)
-              pool_upper <- setdiff(common_upper[all_decile == d], valid_target_keys)
+              pool_upper <- setdiff(common_upper[all_decile == d], valid_targets_upper)
               if (length(pool_upper) == 0) {
                 return(character(0))
               }
@@ -878,7 +872,7 @@ run_lfc_violin <- function(target_genes, global_glist, stat_test = c("wilcox.tes
     list(
       values = global_glist[setdiff(
         names(global_glist),
-        lfc_lookup[toupper(valid_targets)]
+        lfc_lookup[valid_targets_upper]
       )],
       mode = "full_fallback"
     )
@@ -1268,11 +1262,13 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
     keep_uv <- !is.na(canonical_uv)
     universe_genes <- universe_genes[keep_uv]
     names(universe_genes) <- canonical_uv[keep_uv]
-    if (anyDuplicated(toupper(names(universe_genes)))) {
+    uv_names_upper <- toupper(names(universe_genes))
+    if (anyDuplicated(uv_names_upper)) {
       # Keep the entry with larger absolute value for duplicates
       uv_order <- order(abs(universe_genes), decreasing = TRUE)
       universe_genes <- universe_genes[uv_order]
-      universe_genes <- universe_genes[!duplicated(toupper(names(universe_genes)))]
+      uv_names_upper <- uv_names_upper[uv_order]
+      universe_genes <- universe_genes[!duplicated(uv_names_upper)]
     }
   }
 
@@ -1430,12 +1426,21 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 #' @param global_glist Named numeric vector (gene-level ranking metric).
 #'   Used to colour nodes by LFC and rank by connectivity.
 #' @param org_db Character. Organism annotation database package name
-#'   (e.g. \code{"org.Hs.eg.db"}). Used to resolve STRING species ID.
+#'   (e.g. \code{"org.Hs.eg.db"}). When \code{ppi_species_id} is \code{NULL},
+#'   a supported \code{org.*.eg.db} package name is used to resolve the
+#'   STRING species ID.
 #' @param ppi_score Numeric. Minimum STRING combined confidence score
 #'   for edge inclusion. Default \code{400}.
 #' @param ppi_ntop Integer. Maximum number of top-ranked target genes
 #'   to include in the PPI construction. Default \code{400}.
 #' @param current_proj_name Character. Prefix for plot titles.
+#' @param ppi_species_id Integer or \code{NULL}. NCBI taxonomy ID for STRING
+#'   PPI analysis (e.g.\ 9606 for human, 10090 for mouse). When \code{NULL},
+#'   the ID is resolved from the \code{org_db} package name (only standard
+#'   \code{org.*.eg.db} packages are recognised: human, mouse, rat, fruit fly,
+#'   worm, yeast, zebrafish). An error is raised when the species cannot be
+#'   resolved -- no implicit guessing. Set explicitly for any other species.
+#'   See \url{https://string-db.org} for a complete taxonomy list.
 #' @details
 #' Nodes are the top \code{ppi_ntop} target genes by \code{abs(LFC)}; edges
 #' are derived from the STRING knowledge base (combined score >=
@@ -1448,55 +1453,41 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 #' @keywords internal
 #' @noRd
 run_ppi_analysis <- function(target_genes, global_glist, org_db, ppi_score, ppi_ntop, current_proj_name, ppi_species_id = NULL) {
-  # Resolve STRING species ID from OrgDb package name.
-  # If ppi_species_id is explicitly provided (NCBI taxonomy ID), use it
-  # directly. Otherwise, try inference from the OrgDb package name.
+  # STRING species are identified by NCBI taxonomy ID. Resolution is fully
+  # deterministic: an explicit ppi_species_id always wins; otherwise the
+  # documented org.*.eg.db package name is looked up in a curated map. If
+  # neither resolves, fail loudly rather than guess from package names.
+  species_map <- c(
+    "org.Hs.eg.db" = 9606L, # human
+    "org.Mm.eg.db" = 10090L, # mouse
+    "org.Rn.eg.db" = 10116L, # rat
+    "org.Dm.eg.db" = 7227L, # fruit fly
+    "org.Ce.eg.db" = 6239L, # worm
+    "org.Sc.eg.db" = 4932L, # yeast
+    "org.Dr.eg.db" = 7955L # zebrafish
+  )
   if (!is.null(ppi_species_id)) {
     if (!is.numeric(ppi_species_id) || length(ppi_species_id) != 1L || is.na(ppi_species_id)) {
       stop("`ppi_species_id` must be a single NCBI taxonomy ID integer", call. = FALSE)
     }
     species_id <- as.integer(ppi_species_id)
+  } else if (is.character(org_db) && length(org_db) == 1L && org_db %in% names(species_map)) {
+    species_id <- unname(species_map[[org_db]])
   } else {
-    species_map <- c(
-      "org.Hs.eg.db" = 9606L, # human
-      "org.Mm.eg.db" = 10090L, # mouse
-      "org.Rn.eg.db" = 10116L, # rat
-      "org.Dm.eg.db" = 7227L, # fruit fly
-      "org.Ce.eg.db" = 6239L, # worm
-      "org.Sc.eg.db" = 4932L, # yeast
-      "org.Dr.eg.db" = 7955L # zebrafish
-    )
-    org_pkg_name <- if (is.character(org_db) && length(org_db) == 1L && nzchar(org_db)) {
-      org_db
+    org_desc <- if (is.character(org_db)) {
+      paste0("\"", paste(org_db, collapse = "\", \""), "\"")
+    } else if (is.null(org_db)) {
+      "NULL"
     } else {
-      attr(org_db, "package")
+      paste0("an object of class ", paste(class(org_db), collapse = "/"))
     }
-    species_id <- species_map[[org_pkg_name]]
-    if (is.null(species_id)) {
-      # Pattern-based detection for known-but-unlisted OrgDbs
-      species_id <- if (grepl("\\.[Mm]m\\.", org_pkg_name)) {
-        10090L
-      } else if (grepl("\\.[Rr]n\\.", org_pkg_name)) {
-        10116L
-      } else if (grepl("\\.[Dd]m\\.", org_pkg_name)) {
-        7227L
-      } else {
-        NULL
-      }
-      if (is.null(species_id)) {
-        warning("Could not resolve STRING species ID for OrgDb '", org_pkg_name,
-          "'. PPI analysis skipped. Supported OrgDbs include: ",
-          "org.Hs.eg.db, org.Mm.eg.db, org.Rn.eg.db, org.Dm.eg.db.",
-          call. = FALSE
-        )
-        return(NULL)
-      }
-      warning("Inferred STRING species ID ", species_id, " for '", org_pkg_name,
-        "'. If this is incorrect, verify the OrgDb package.",
-        call. = FALSE
-      )
-    }
-  } # end else (ppi_species_id not provided)
+    stop("Could not resolve STRING species ID from `org_db` (", org_desc, "). ",
+      "Please provide `ppi_species_id` (NCBI taxonomy ID) explicitly, or pass a ",
+      "supported org.*.eg.db package name: ",
+      paste(names(species_map), collapse = ", "), ".",
+      call. = FALSE
+    )
+  }
 
   string_db_obj <- tryCatch(
     suppressMessages(
@@ -1974,29 +1965,31 @@ run_heatmap_and_connectivity <- function(target_genes, tpm_mat_raw, meta_raw, lo
   }
 
   gene_col_name <- colnames(loop_stats_df)[1]
-  valid_targets <- target_genes[toupper(target_genes) %in%
-    toupper(loop_stats_df[[gene_col_name]])]
+  loop_genes_upper <- toupper(loop_stats_df[[gene_col_name]])
+  valid_targets <- target_genes[toupper(target_genes) %in% loop_genes_upper]
   if (length(valid_targets) < 5) {
     return(plots_list)
   }
 
   cols_to_extract <- unique(c(gene_col_name, use_col, intersect(colnames(loop_stats_df), c("Is_High_Connectivity_Gene", "Is_High_Distal_Connectivity_Gene", "High_Connectivity_Gene"))))
   # Case-insensitive filtering (supports mouse / mixed-case gene symbols)
-  stats_idx <- match(toupper(loop_stats_df[[gene_col_name]]), toupper(valid_targets))
+  stats_idx <- match(loop_genes_upper, toupper(valid_targets))
   stats_subset <- loop_stats_df[!is.na(stats_idx), cols_to_extract, drop = FALSE]
   colnames(stats_subset)[which(colnames(stats_subset) == use_col)] <- "Degree"
   colnames(stats_subset)[1] <- "Gene"
   # Case-insensitive matching (supports mouse / mixed-case gene symbols)
-  ci_idx <- match(toupper(stats_subset$Gene), toupper(rownames(curr_mat)))
+  subset_genes_upper <- toupper(stats_subset$Gene)
+  ci_idx <- match(subset_genes_upper, toupper(rownames(curr_mat)))
   valid_expr_targets <- which(!is.na(ci_idx))
   if (length(valid_expr_targets) < 5) {
     return(plots_list)
   }
   stats_subset <- stats_subset[valid_expr_targets, ]
+  subset_genes_upper <- subset_genes_upper[valid_expr_targets]
   # Use expression-matrix canonical case for subscripting
   expr_keys <- rownames(curr_mat)[ci_idx[valid_expr_targets]]
   lfc_keys <- names(global_glist)[match(
-    toupper(stats_subset$Gene),
+    subset_genes_upper,
     toupper(names(global_glist))
   )]
   plot_df <- stats_subset %>%
@@ -2100,7 +2093,7 @@ run_heatmap_and_connectivity <- function(target_genes, tpm_mat_raw, meta_raw, lo
 }
 
 .deduplicate_anchor_df <- function(anchor_df) {
-  if (is.null(anchor_df) || nrow(anchor_df) == 0) {
+  if (.is_null_or_empty(anchor_df)) {
     return(.empty_anchor_df())
   }
 
@@ -2446,8 +2439,7 @@ run_distal_motif_analysis <- function(
     return(.empty_motif_output())
   }
   if (is.null(jaspar_db)) {
-    if (!requireNamespace("JASPAR2020", quietly = TRUE)) {
-      warning("Package 'JASPAR2020' is required for motif analysis. Skipping.", call. = FALSE)
+    if (!.require_pkg("JASPAR2020", "motif analysis", "warn")) {
       return(.empty_motif_output())
     }
     jaspar_db <- JASPAR2020::JASPAR2020
@@ -2503,7 +2495,7 @@ run_distal_motif_analysis <- function(
 #' @keywords internal
 #' @noRd
 .plot_motif_rank_scatter <- function(res_df, prefix, fdr_thresh = 0.05) {
-  if (is.null(res_df) || nrow(res_df) == 0) {
+  if (.is_null_or_empty(res_df)) {
     return(NULL)
   }
   if (!"Family" %in% colnames(res_df)) res_df$Family <- "Unknown"
@@ -2545,8 +2537,7 @@ run_distal_motif_analysis <- function(
   max_bg = 2000L, gc_bins = 5L, n_perm = 0L
 ) {
   if (is.null(jaspar_db)) {
-    if (!requireNamespace("JASPAR2020", quietly = TRUE)) {
-      warning("Package 'JASPAR2020' is required for motif enrichment. Skipping.", call. = FALSE)
+    if (!.require_pkg("JASPAR2020", "motif enrichment", "warn")) {
       return(NULL)
     }
     jaspar_db <- JASPAR2020::JASPAR2020
@@ -2720,7 +2711,7 @@ run_distal_motif_analysis <- function(
 #' @keywords internal
 #' @noRd
 .plot_save_motif <- function(res_df, prefix) {
-  if (is.null(res_df) || nrow(res_df) == 0) {
+  if (.is_null_or_empty(res_df)) {
     return(NULL)
   }
   top_df <- head(res_df, 15)
@@ -2739,16 +2730,14 @@ run_distal_motif_analysis <- function(
   res_df, top_n,
   jaspar_db = NULL
 ) {
-  if (is.null(res_df) || nrow(res_df) == 0) {
+  if (.is_null_or_empty(res_df)) {
     return(NULL)
   }
-  if (!requireNamespace("TFBSTools", quietly = TRUE)) {
-    message("Motif family annotation skipped: install 'TFBSTools' package.")
+  if (!.require_pkg("TFBSTools", "Motif family annotation", "return")) {
     return(NULL)
   }
   if (is.null(jaspar_db)) {
-    if (!requireNamespace("JASPAR2020", quietly = TRUE)) {
-      message("Motif family annotation skipped: install 'JASPAR2020' package.")
+    if (!.require_pkg("JASPAR2020", "Motif family annotation", "return")) {
       return(NULL)
     }
     jaspar_db <- JASPAR2020::JASPAR2020
@@ -2767,8 +2756,7 @@ run_distal_motif_analysis <- function(
     return(NULL)
   }
 
-  if (!requireNamespace("ggseqlogo", quietly = TRUE)) {
-    message("Motif logo plot skipped: install 'ggseqlogo' package.")
+  if (!.require_pkg("ggseqlogo", "Motif logo plot", "return")) {
     return(NULL)
   }
   return(ggseqlogo::ggseqlogo(plot_list, ncol = 1) + ggplot2::theme_classic() + ggplot2::theme(axis.text.x = ggplot2::element_blank(), strip.text = ggplot2::element_text(size = 10, face = "bold", hjust = 0), strip.background = ggplot2::element_rect(fill = "grey95", color = NA)) + ggplot2::labs(y = "Bits", title = paste0("Top ", top_n, " Enriched Motifs (SeqLogo)")))
@@ -2782,16 +2770,14 @@ run_distal_motif_analysis <- function(
   res_df,
   jaspar_db = NULL, jaspar_collection = "CORE"
 ) {
-  if (is.null(res_df) || nrow(res_df) == 0) {
+  if (.is_null_or_empty(res_df)) {
     return(res_df)
   }
-  if (!requireNamespace("TFBSTools", quietly = TRUE)) {
-    message("Motif family annotation skipped: install 'TFBSTools' package.")
+  if (!.require_pkg("TFBSTools", "Motif family annotation", "return")) {
     return(res_df)
   }
   if (is.null(jaspar_db)) {
-    if (!requireNamespace("JASPAR2020", quietly = TRUE)) {
-      message("Motif family annotation skipped: install 'JASPAR2020' package.")
+    if (!.require_pkg("JASPAR2020", "Motif family annotation", "return")) {
       return(res_df)
     }
     jaspar_db <- JASPAR2020::JASPAR2020
@@ -2955,9 +2941,7 @@ looplook_report <- function(
   universe_genes = NULL,
   ...
 ) {
-  if (!is.character(species) || length(species) != 1L || is.na(species) || !nzchar(species)) {
-    stop("`species` must be a single non-empty string", call. = FALSE)
-  }
+  .assert_nonempty_string(species, "species")
   normalize_report_path <- function(path) {
     if (!is.character(path) || length(path) != 1L || is.na(path) || !nzchar(path)) {
       return(path)
@@ -2974,9 +2958,7 @@ looplook_report <- function(
     package = "looplook"
   )
   if (!nzchar(template)) stop("Report template not found. Reinstall looplook.")
-  if (!requireNamespace("rmarkdown", quietly = TRUE)) {
-    stop("Package 'rmarkdown' is required for looplook_report(). Install it with: install.packages('rmarkdown')", call. = FALSE)
-  }
+  .require_pkg("rmarkdown", "looplook_report()", "stop")
 
   # Create output directory
   if (!dir.exists(out_dir)) {

@@ -200,6 +200,7 @@ test_that("consolidate_chromatin_loops roundtrip preserves 0-based BEDPE start",
   looplook::consolidate_chromatin_loops(
     files = c(f1, f2),
     out_file = out_file,
+    write_output = TRUE,
     quiet = TRUE
   )
   skip_if(!file.exists(out_file), "consolidation produced no output")
@@ -317,12 +318,14 @@ test_that("consolidate_chromatin_loops exports cluster member count", {
     mode = "union",
     gap = 1e9,
     out_file = out_file,
+    write_output = TRUE,
     quiet = TRUE
   )
   exported <- read.table(out_file, header = FALSE, sep = "\t", stringsAsFactors = FALSE)
   expect_equal(nrow(exported), 1)
-  expect_equal(exported[1, 9], S4Vectors::mcols(gi)$n_members[1])
-  expect_false(exported[1, 9] == S4Vectors::mcols(gi)$n_reps[1])
+  expect_equal(as.integer(exported[1, 11]), S4Vectors::mcols(gi)$n_members[1])
+  expect_false(as.integer(exported[1, 11]) == S4Vectors::mcols(gi)$n_reps[1])
+  expect_true(all(exported[1, c(9, 10)] == "."))
 })
 
 
@@ -450,15 +453,6 @@ test_that("draw_karyo_heatmap_internal stores self-contained image payload", {
   grDevices::pdf(tmp_pdf)
   on.exit(grDevices::dev.off(), add = TRUE)
   expect_error(print(obj), NA)
-})
-
-
-# ── 17. refinement plots skip karyotype when annotation packages unavailable ─
-
-test_that("build_refinement_plots skips refined karyotype plots if TxDb/OrgDb are missing", {
-  skip("testthat cannot mock base::requireNamespace")
-  expect_false("Refined_Karyo_Active" %in% names(plots))
-  expect_false("Refined_Karyo_TargetGenes" %in% names(plots))
 })
 
 

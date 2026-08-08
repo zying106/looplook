@@ -379,25 +379,6 @@ test_that("draw_flower_simplified returns NULL for <2 non-empty groups", {
   )
 })
 
-test_that("draw_upset_intersections returns invisibly for 2+ gene sets", {
-  skip_if_not_installed("UpSetR")
-  gene_sets <- list(
-    Up = c("TP53", "BRCA1", "MYC"),
-    Down = c("BRCA1", "MYC", "CDKN1A")
-  )
-  g <- withVisible(draw_upset_intersections(gene_sets, "Test"))$value
-  if (!is.null(g)) {
-    expect_s3_class(g, "grob")
-  }
-})
-
-test_that("draw_upset_intersections returns NULL for <2 gene sets", {
-  expect_message(
-    draw_upset_intersections(list(A = "TP53"), "One"),
-    "Less than 2"
-  )
-})
-
 # --- visualization.R deep coverage: gene track, full plot_peaks_interactions ---
 
 test_that("plot_peaks_interactions with gene_track=TRUE renders full multi-track plot", {
@@ -498,13 +479,6 @@ test_that("draw_flower_simplified with NA in colors triggers fallback", {
   gene_sets <- list(A = c("G1", "G2"), B = c("G2", "G3"))
   p <- draw_flower_simplified(gene_sets, "TestNA", c(A = "#E41A1C", B = NA))
   expect_s3_class(p, "ggplot")
-})
-
-test_that("draw_upset_intersections handles UpSetR error gracefully", {
-  skip_if_not_installed("UpSetR")
-  # 2 valid sets should work
-  sets <- list(S1 = c("A", "B", "C"), S2 = c("B", "C", "D"))
-  expect_no_error(draw_upset_intersections(sets, "TestSets"))
 })
 
 test_that("prepare_track_data auto-inferred chr/from/to when all NULL", {
@@ -673,7 +647,7 @@ test_that("consolidate_chromatin_loops intersect mode: output structure", {
 
   res <- consolidate_chromatin_loops(
     files = c(f1, f2), mode = "intersect", gap = 1000,
-    out_file = tempfile(fileext = ".bedpe"), quiet = TRUE
+    quiet = TRUE
   )
   expect_s4_class(res, "GInteractions")
   mc <- S4Vectors::mcols(res)
@@ -695,7 +669,7 @@ test_that("consolidate_chromatin_loops consensus mode: output structure", {
 
   res <- consolidate_chromatin_loops(
     files = c(f1, f2), mode = "consensus", gap = 1000,
-    out_file = tempfile(fileext = ".bedpe"), quiet = TRUE
+    quiet = TRUE
   )
   expect_s4_class(res, "GInteractions")
   mc <- S4Vectors::mcols(res)
@@ -709,7 +683,7 @@ test_that("consolidate_chromatin_loops union mode: output structure", {
 
   res <- consolidate_chromatin_loops(
     files = c(f1, f2), mode = "union", gap = 1000,
-    out_file = tempfile(fileext = ".bedpe"), quiet = TRUE
+    quiet = TRUE
   )
   expect_s4_class(res, "GInteractions")
   mc <- S4Vectors::mcols(res)
@@ -1105,7 +1079,7 @@ test_that("profile_target_genes validates seed parameter", {
     annotation_res = res, diff_file = diff_path,
     expr_matrix_file = expr_path, metadata_file = meta_path,
     run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
-    gsea_nSample = 20, heatmap_nSample = 20
+    gsea_nSample = 10, heatmap_nSample = 20
   )
 
   # seed must be positive integer or NULL
@@ -1151,7 +1125,7 @@ test_that("profile_target_genes different target_source modes", {
     annotation_res = res, diff_file = diff_path,
     expr_matrix_file = expr_path, metadata_file = meta_path,
     run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
-    gsea_nSample = 20, heatmap_nSample = 20
+    gsea_nSample = 10, heatmap_nSample = 20
   )
 
   # targets only
@@ -1201,7 +1175,7 @@ test_that("profile_target_genes stat_test modes", {
     annotation_res = res, diff_file = diff_path,
     expr_matrix_file = expr_path, metadata_file = meta_path,
     run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
-    gsea_nSample = 20, heatmap_nSample = 20
+    gsea_nSample = 10, heatmap_nSample = 20
   )
 
   # t.test mode (caught by .safe_run so won't error, just handles internally)
@@ -1209,11 +1183,11 @@ test_that("profile_target_genes stat_test modes", {
   expect_type(out_t, "list")
 
   # match.arg validates at the run_lfc_violin level, caught by .safe_run
-  # So invalid stat_test produces warnings but not errors
-  expect_warning(
-    do.call(profile_target_genes, c(base_args, list(stat_test = "invalid"))),
-    "should be one of"
-  )
+  # So invalid stat_test produces recorded warnings (in the `warnings`
+  # element of the returned object) but not errors
+  out_bad <- do.call(profile_target_genes, c(base_args, list(stat_test = "invalid")))
+  all_warnings <- unlist(lapply(out_bad, function(x) x$warnings))
+  expect_true(any(grepl("should be one of", all_warnings)))
 })
 
 test_that("profile_target_genes group_order parameter", {
@@ -1233,7 +1207,7 @@ test_that("profile_target_genes group_order parameter", {
     annotation_res = res, diff_file = diff_path,
     expr_matrix_file = expr_path, metadata_file = meta_path,
     run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
-    gsea_nSample = 20, heatmap_nSample = 20
+    gsea_nSample = 10, heatmap_nSample = 20
   )
 
   out <- do.call(

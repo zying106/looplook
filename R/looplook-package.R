@@ -37,9 +37,9 @@
 #'   \item \strong{Automated Profiling:} End-to-end multi-omics analysis including
 #'     GSEA, GO enrichment, motif scanning, and PPI networks
 #'     (\code{\link{profile_target_genes}}).
-#'   \item \strong{Visualization:} IGV-style multi-track plots, flower plots, and
-#'     UpSet intersection diagrams (\code{\link{plot_peaks_interactions}},
-#'     \code{\link{draw_flower_simplified}}, \code{\link{draw_upset_intersections}}).
+#'   \item \strong{Visualization:} IGV-style multi-track plots and flower plots
+#'     (\code{\link{plot_peaks_interactions}},
+#'     \code{\link{draw_flower_simplified}}).
 #' }
 #'
 #' @section Data I/O:

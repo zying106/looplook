@@ -684,14 +684,19 @@ test_that("chromatin reclassification propagates anchor type changes into loop_t
   skip_if(sample_txdb_path == "", "Sample TxDb not available")
   txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
 
+  # Anchor A1 (chr6:10412000-10412600) overlaps both a promoter and the
+  # H3K4me1/H3K27ac marks but NOT H3K4me3 -> P + H3K4me1+ H3K4me3- H3K27ac+
+  # must be reclassified to E. A2 receives no marks and stays P.
   tiny_bedpe <- tempfile(fileext = ".bedpe")
   target_bed <- tempfile(fileext = ".bed")
   h3k4me1 <- tempfile(fileext = ".bed")
   h3k4me3 <- tempfile(fileext = ".bed")
+  h3k27ac <- tempfile(fileext = ".bed")
   writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tiny_bedpe)
   writeLines("chr6\t10412000\t10413000", target_bed)
   writeLines("chr6\t10411900\t10412700", h3k4me1)
-  writeLines("chr6\t10411900\t10412700", h3k4me3)
+  writeLines("chr6\t20000000\t20001000", h3k4me3)
+  writeLines("chr6\t10411900\t10412700", h3k27ac)
 
   base_res <- annotate_peaks_and_loops(
     bedpe_file = tiny_bedpe, target_bed = target_bed,
@@ -700,7 +705,7 @@ test_that("chromatin reclassification propagates anchor type changes into loop_t
   )
 
   cr <- refine_loop_anchors_by_chromatin(base_res,
-    chromatin_beds = list(H3K4me1 = h3k4me1, H3K4me3 = h3k4me3),
+    chromatin_beds = list(H3K4me1 = h3k4me1, H3K4me3 = h3k4me3, H3K27ac = h3k27ac),
     recompute_targets = TRUE, write_output = FALSE, quiet = TRUE
   )
 
@@ -708,13 +713,15 @@ test_that("chromatin reclassification propagates anchor type changes into loop_t
   pos_type <- as.character(cv$positional_type)
   fin_type <- as.character(cv$final_type)
   changed <- pos_type != fin_type
-  if (any(changed)) {
-    changed_ids <- cv$anchor_id[changed]
-    expect_true(length(changed_ids) > 0)
-    expect_true(all(pos_type[changed] != fin_type[changed]))
-  }
+  expect_true(any(changed)) # the crafted marks must actually reclassify an anchor
+  changed_ids <- cv$anchor_id[changed]
+  expect_true(length(changed_ids) > 0)
+  expect_true(all(pos_type[changed] != fin_type[changed]))
+  # The reclassified anchor type propagates into the loop topology.
+  expect_true("E" %in% c(cr$loop_annotation$anchor1_type, cr$loop_annotation$anchor2_type))
+  expect_true("E-P" %in% cr$loop_annotation$loop_type)
 
-  unlink(c(tiny_bedpe, target_bed, h3k4me1, h3k4me3))
+  unlink(c(tiny_bedpe, target_bed, h3k4me1, h3k4me3, h3k27ac))
 })
 
 test_that("recomputed target_gene_links carry chromatin provenance columns", {

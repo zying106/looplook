@@ -28,7 +28,7 @@ annotate_peaks_and_loops(
   anchor_gap = -1L,
   anchor_min_overlap = 1L,
   anchor_min_frac = 0,
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE,
   target_priority = c("promoter_then_distance", "distance_then_role")
 )
@@ -130,7 +130,7 @@ spurious boundary overlaps.}
 
 \item{anchor_min_frac}{Numeric (0-1). After the first two filters, what fraction of the \emph{peak} width must physically overlap the anchor? Default \code{0}: any fraction accepted. Set to \code{0.1-0.5} when peaks are broad (e.g. H3K27ac domains, 2-5 kb) so a 1 bp overlap does not link the entire broad peak. Ignored for point features (SNPs, eQTLs). Applied last, only to pairs that passed \code{anchor_gap} and \code{anchor_min_overlap}.}
 
-\item{write_output}{Logical. If \code{TRUE} (default), write the Excel workbook to \code{out_dir}. If \code{FALSE}, return results without creating directories or files.}
+\item{write_output}{Logical. If \code{TRUE}, write the Excel workbook to \code{out_dir} (default: \code{FALSE}). If \code{FALSE}, return results without creating directories or files.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.}
 

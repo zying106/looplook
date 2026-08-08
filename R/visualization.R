@@ -6,18 +6,14 @@
     return(arg)
   }
   if (is.character(arg) && length(arg) == 1L && nzchar(arg)) {
-    if (!requireNamespace(arg, quietly = TRUE)) {
-      stop(desc, " '", arg, "' not installed")
-    }
+    .require_pkg(arg, desc, "stop")
     return(utils::getFromNamespace(arg, arg))
   }
   pkg <- species_map[[species]]
   if (is.null(pkg)) {
     stop("Species not supported: ", species)
   }
-  if (!requireNamespace(pkg, quietly = TRUE)) {
-    stop(desc, " '", pkg, "' not installed")
-  }
+  .require_pkg(pkg, desc, "stop")
   utils::getFromNamespace(pkg, pkg)
 }
 
@@ -947,72 +943,4 @@ draw_flower_simplified <- function(gene_lists, project_name, group_colors) {
     labs(title = paste0(project_name, ": Simplified Flower Plot\n(Core vs. Unique)"))
 
   return(invisible(p))
-}
-
-
-#' Generate UpSet Plot for Gene Set Intersections
-#'
-#' Visualizes intersections among multiple gene sets using the classic UpSetR package.
-#' Uses grid graphics capture to ensure plot generation in all environments.
-#'
-#' @param gene_lists A named list of character vectors of gene identifiers.
-#' @param project_name Character. Used for the file title.
-#' @param group_colors Reserved for future use. Currently ignored.
-#' @return Invisibly returns the \code{grob} object.
-#' @importFrom UpSetR fromList upset
-#' @importFrom grid grid.grabExpr grid.draw
-#' @export
-#' @examples
-#' gene_sets <- list(
-#'   Upregulated = c("TP53", "BRCA1", "MYC", "EGFR"),
-#'   Downregulated = c("BRCA1", "MYC", "CDKN1A", "BAX"),
-#'   Bound_by_TF = c("MYC", "EGFR", "CDKN1A", "KRAS")
-#' )
-#' draw_upset_intersections(
-#'   gene_lists = gene_sets,
-#'   project_name = "Transcriptional Regulation"
-#' )
-draw_upset_intersections <- function(gene_lists, project_name = "UpSet Plot", group_colors = NULL) {
-  gene_lists <- gene_lists[lengths(gene_lists) > 0]
-  if (length(gene_lists) < 2) {
-    message("Less than 2 non-empty gene lists; skipping UpSet plot.")
-    return(invisible(NULL))
-  }
-
-  input_data <- UpSetR::fromList(gene_lists)
-
-  if (nrow(input_data) == 0 || ncol(input_data) == 0) {
-    warning("Input data for UpSet plot is empty. Skipping.")
-    return(invisible(NULL))
-  }
-
-
-  upset_grob <- tryCatch(
-    {
-      .with_known_upstream_noise_suppressed(
-        grid::grid.grabExpr({
-          UpSetR::upset(
-            input_data,
-            nsets = length(gene_lists),
-            nintersects = 40,
-            mb.ratio = c(0.55, 0.45),
-            order.by = "freq",
-            mainbar.y.label = "Gene Intersection Size",
-            sets.x.label = "Set Size",
-            text.scale = c(1.3, 1.3, 1, 1, 1.3, 1)
-          )
-        })
-      )
-    },
-    error = function(e) {
-      warning("UpSetR plotting failed: ", e$message)
-      return(NULL)
-    }
-  )
-
-  if (is.null(upset_grob)) {
-    return(invisible(NULL))
-  }
-
-  return(invisible(upset_grob))
 }

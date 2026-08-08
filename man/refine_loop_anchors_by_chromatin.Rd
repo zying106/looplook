@@ -16,7 +16,7 @@ refine_loop_anchors_by_chromatin(
   color_palette = "Paired",
   candidate_types = NULL,
   recompute_targets = TRUE,
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE,
   sankey_colors = NULL,
   chromatin_bw = NULL,
@@ -77,7 +77,7 @@ assignment using updated anchor types. Requires the input
 attribute (present when using \code{\link{annotate_peaks_and_loops}}
 output). Default \code{TRUE}.}
 
-\item{write_output}{Logical. Write Excel workbook. Default \code{TRUE}.}
+\item{write_output}{Logical. Write Excel workbook. Default \code{FALSE}.}
 
 \item{quiet}{Logical. Suppress messages. Default \code{FALSE}.}
 

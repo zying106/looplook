@@ -1,0 +1,22 @@
+citHeader("To cite looplook in publications use:")
+
+bibentry(
+    bibtype = "Article",
+    title = "looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions",
+    author = c(
+        person(given = "Ying", family = "Zhang"),
+        person(given = "Xingze", family = "Huang"),
+        person(given = "Ye", family = "Chen"),
+        person(given = "Liang", family = "Xu")
+    ),
+    year = 2026,
+    journal = "bioRxiv",
+    doi = "10.64898/2026.04.03.715516",
+    key = "looplook2026",
+    textVersion = paste(
+        "Ying Zhang, Xingze Huang, Ye Chen, Liang Xu (2026).",
+        "looplook: An integrative suite for expression-aware target assignment",
+        "and functional annotation of chromatin interactions.",
+        "bioRxiv. doi:10.64898/2026.04.03.715516."
+    )
+)

@@ -17,7 +17,7 @@ consolidate_chromatin_loops(
   region_of_interest = NULL,
   roi_mode = c("any", "both"),
   out_file = NULL,
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE
 )
 }
@@ -93,7 +93,7 @@ bundled blacklist is used; otherwise the value is treated as a file path.}
 
 \item{out_file}{Character. The file name (including the file path) for saving results in the extended BEDPE format.}
 
-\item{write_output}{Logical. If \code{TRUE} (default), write the consolidated BEDPE file when \code{out_file} is provided. If \code{FALSE}, return the \code{GInteractions} object without creating directories or files.}
+\item{write_output}{Logical. If \code{TRUE}, write the consolidated BEDPE file when \code{out_file} is provided (default: \code{FALSE}). If \code{FALSE}, return the \code{GInteractions} object without creating directories or files.}
 
 \item{quiet}{Logical. If \code{TRUE}, suppress progress messages while preserving warnings. Default: \code{FALSE}.}
 }
@@ -111,9 +111,10 @@ order changes output.}
 The returned object carries a \code{looplook_metadata} attribute (access via
 \code{attr(x, "looplook_metadata")}) with package version, call parameters,
 diagnostics, and database versions.
-When \code{write_output = TRUE} and \code{out_file} is provided, an extended
-BEDPE file is written with the additional columns \code{n_members} and
-\code{n_reps} appended after the standard BEDPE fields.
+When \code{write_output = TRUE} and \code{out_file} is provided, a standard
+10-column BEDPE file is written (columns 9-10 are \code{strand1}/
+\code{strand2}, set to \code{"."} as the data are not stranded), followed by
+the documented extension columns 11-12 \code{n_members} and \code{n_reps}.
 }
 \description{
 This function consolidates chromatin loops from multiple BEDPE files. It is designed for two main purposes:
@@ -162,7 +163,8 @@ res_intersect <- consolidate_chromatin_loops(
   files = c(f1, f2),
   mode = "intersect",
   gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+  out_file = tempfile(fileext = ".bedpe"),
+  write_output = TRUE
 )
 
 # Example B: Consensus Mode (formerly Reproducible)
@@ -171,7 +173,8 @@ res_consensus <- consolidate_chromatin_loops(
   files = c(f1, f2),
   mode = "consensus",
   gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+  out_file = tempfile(fileext = ".bedpe"),
+  write_output = TRUE
 )
 
 # Example C: Union Mode
@@ -180,7 +183,8 @@ res_union <- consolidate_chromatin_loops(
   files = c(f1, f2),
   mode = "union",
   gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+  out_file = tempfile(fileext = ".bedpe"),
+  write_output = TRUE
 )
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
@@ -193,7 +197,8 @@ res_clean <- consolidate_chromatin_loops(
   min_raw_score = 2, # Pre-filter (remove noise)
   min_score = 5, # Post-filter (keep strong loops)
   gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+  out_file = tempfile(fileext = ".bedpe"),
+  write_output = TRUE
 )
 
 # Inspect results

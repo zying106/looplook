@@ -105,13 +105,19 @@ test_that("run_go_enrichment handles unmapped genes gracefully", {
   skip_if_not_installed("clusterProfiler")
   skip_if_not_installed("org.Hs.eg.db")
 
-  # Mix of real and fake gene names
+  # All-fake gene names: run_go_enrichment drops every gene during OrgDb
+  # symbol canonicalization and returns early (list(result = NULL, plot = NULL))
+  # instead of erroring. Using only unmapped genes keeps this test on the fast
+  # early-return path rather than paying clusterProfiler::enrichGO's cold-cache
+  # cost (which builds the full GO annotation environment once per session).
   out <- looplook:::run_go_enrichment(
-    c("TP53", "FAKEGENE123", "BRCA1"), "org.Hs.eg.db",
-    setNames(c(1, 2, 3), c("TP53", "FAKEGENE123", "BRCA1")),
+    c("FAKEGENE123", "FAKEGENE456"), "org.Hs.eg.db",
+    setNames(c(1, 2), c("FAKEGENE123", "FAKEGENE456")),
     cnet_nSample = 3, project_name = "Test_unmapped"
   )
   expect_type(out, "list")
+  expect_null(out$result)
+  expect_null(out$plot)
 })
 
 test_that("run_ppi_analysis returns ggplot for valid input", {
@@ -141,6 +147,40 @@ test_that("run_ppi_analysis returns ggplot for valid input", {
     ppi_score = 700, ppi_ntop = 20, "Test_PPI"
   )
   # may return NULL if no interactions found — not a failure
+  if (!is.null(p)) {
+    expect_s3_class(p, "gg")
+  }
+})
+
+test_that("run_ppi_analysis errors when species cannot be resolved", {
+  skip_if_not_installed("STRINGdb")
+  expect_error(
+    looplook:::run_ppi_analysis(c("TP53", "BRCA1"), c(TP53 = 1, BRCA1 = -1),
+      "org.Unknown.eg.db", ppi_score = 700, ppi_ntop = 20, "Test_PPI"
+    ),
+    "Please provide `ppi_species_id`"
+  )
+})
+
+test_that("run_ppi_analysis uses explicit ppi_species_id", {
+  skip_if_not_installed("STRINGdb")
+  skip_if(tolower(Sys.getenv("LOOPLOOK_RUN_NETWORK_TESTS", unset = "false")) != "true",
+    "Network test disabled; set LOOPLOOK_RUN_NETWORK_TESTS=true to run.")
+  species_id <- tryCatch(
+    {
+      con <- url("https://string-db.org", open = "r")
+      close(con)
+      9606L
+    },
+    error = function(e) NULL
+  )
+  skip_if(is.null(species_id), "STRINGdb not reachable")
+
+  p <- looplook:::run_ppi_analysis(c("TP53", "BRCA1"),
+    c(TP53 = 1, BRCA1 = -1), "org.Hs.eg.db",
+    ppi_score = 700, ppi_ntop = 20, "Test_PPI",
+    ppi_species_id = 9606L
+  )
   if (!is.null(p)) {
     expect_s3_class(p, "gg")
   }
