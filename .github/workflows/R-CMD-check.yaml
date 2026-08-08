@@ -81,6 +81,9 @@ jobs:
         shell: Rscript {0}
         run: |
           .libPaths(c(Sys.getenv("R_LIBS_USER"), .libPaths()))
+          # R-devel CI runners can be slow to reach the Bioc/CRAN mirrors;
+          # allow longer download timeouts and retry transient download failures.
+          options(timeout = 600)
           install.packages("BiocManager", repos = "https://cloud.r-project.org")
           repos <- BiocManager::repositories()
           repos["CRAN"] <- "https://cloud.r-project.org"
@@ -89,37 +92,27 @@ jobs:
             c("remotes", "rcmdcheck", "sessioninfo", "knitr", "rmarkdown", "testthat", "RSQLite"),
             dependencies = c("Depends", "Imports", "LinkingTo")
           )
-          ensure_bioc <- function(pkgs, optional = FALSE, force = FALSE) {
-            tryCatch(
-              BiocManager::install(pkgs, ask = FALSE, update = FALSE, force = force),
-              error = function(e) {
-                if (optional) {
-                  warning(paste(pkgs, collapse = ", "), " not available: ", e$message)
-                } else {
-                  stop(e)
-                }
+          ensure_bioc <- function(pkgs, optional = FALSE, force = FALSE, attempts = 3L) {
+            for (i in seq_len(attempts)) {
+              ok <- tryCatch(
+                {
+                  BiocManager::install(pkgs, ask = FALSE, update = FALSE, force = force)
+                  all(vapply(pkgs, function(pkg) requireNamespace(pkg, quietly = TRUE), logical(1)))
+                },
+                error = function(e) FALSE
+              )
+              if (ok) return(invisible(TRUE))
+              if (i < attempts) {
+                message("Retrying install of ", paste(pkgs, collapse = ", "), " (attempt ", i, "/", attempts, ")")
+                Sys.sleep(10)
               }
-            )
+            }
             missing <- pkgs[!vapply(pkgs, function(pkg) requireNamespace(pkg, quietly = TRUE), logical(1))]
-            if (!length(missing)) return(invisible(TRUE))
-            tryCatch(
-              BiocManager::install(missing, ask = FALSE, update = FALSE, force = TRUE),
-              error = function(e) {
-                if (optional) {
-                  warning(paste(missing, collapse = ", "), " not available after retry: ", e$message)
-                } else {
-                  stop(e)
-                }
-              }
-            )
-            missing <- missing[!vapply(missing, function(pkg) requireNamespace(pkg, quietly = TRUE), logical(1))]
-            if (length(missing)) {
-              msg <- paste("Failed to install/load:", paste(missing, collapse = ", "))
-              if (optional) {
-                warning(msg)
-              } else {
-                stop(msg)
-              }
+            msg <- paste("Failed to install/load:", paste(missing, collapse = ", "))
+            if (optional) {
+              warning(msg)
+            } else {
+              stop(msg)
             }
           }
           ensure_bioc(c("AnnotationDbi", "GO.db", "GOSemSim"), force = TRUE)

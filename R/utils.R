@@ -78,9 +78,10 @@ utils::globalVariables(c(
 # Used by exported pipeline functions to provide progress feedback without
 # polluting R CMD check or user sessions when quiet = TRUE.
 .make_log_message <- function(quiet) {
-  function(...) {
-    if (!quiet) message(...)
+  if (quiet) {
+    return(function(...) invisible(NULL))
   }
+  function(...) message(...)
 }
 
 # Internal: validate/ensure an output directory when writing is requested.

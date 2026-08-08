@@ -1837,3 +1837,11 @@ cluster_loops_dt <- function(dt, gap) {
   dt
 }
 
+utils::globalVariables(c(
+    "V1", "V2", "V3", "V4", "V5", "V6", "V7",
+    "chr1", "start1", "end1", "chr2", "start2", "end2",
+    "idx", "i.idx", "cluster", "score", "source", "n_members", "n_reps", "src_mean",
+    "a1_l", "a1_r", "a2_l", "a2_r", ".N", ".I", ".SD", ".SDcols", "..coord_cols",
+    ".dt1", ".dt2", ".g1", ".g2", ".p1", ".p2",
+    ".topo_genes", ".topo_promoter"
+  ))

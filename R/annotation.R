@@ -9763,3 +9763,20 @@ validate_epeG_by_chromatin <- function(
   result
 }
 
+utils::globalVariables(c(
+    "contact_id", "contact_id1", "contact_id2",
+    "Distal_Type", "dual_ratio_state",
+    "Gene_Assignment_Confidence", "Gene_Assignment_Evidence",
+    "h3k4me1_not_called", "h3k4me3_not_called",
+    "is_promoter_after",
+    "loop_ID_path",
+    "measured",
+    "n_Linked_EnhancerLike", "n_Linked_EnhancerLike_Filtered",
+    "Expanded_Target_Genes",
+    "n_Unique_Contacts", "n_Unique_Contacts_Filtered",
+    "pair", "path_length", "path_rank",
+    "proximate_promoter_gene",
+    "res", "res_promoter", "role_rank",
+    "TSS_support_status", "TSS_supported",
+    "was_promoter_before"
+  ))
