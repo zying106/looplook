@@ -3859,8 +3859,9 @@ build_annotation_plots <- function(
 
   .add_sheet(wb, "Filtered Loop Annotation", loop_export)
 
-  functional_loops <- loop_export %>% dplyr::filter(Retained_In_Functional_Network == TRUE)
+  functional_loops <- loop_export %>% dplyr::filter(Retained_In_Functional_Network)
   .add_sheet(wb, "Functional Loop Annotation", functional_loops)
+
 
   .add_sheet(wb, "Filtered Anchor Loci Annotation", clust_info)
   .add_sheet(wb, "Filtered Promoter Stats", promoter_centric_df)

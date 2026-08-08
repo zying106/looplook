@@ -19,7 +19,7 @@
     df[[cc]] <- suppressWarnings(as.numeric(df[[cc]]))
   }
   coord_mat <- cbind(df[[2]], df[[3]], df[[5]], df[[6]])
-  if (any(is.na(coord_mat))) {
+  if (anyNA(coord_mat)) {
     stop("BEDPE file contains non-numeric coordinate columns.", call. = FALSE)
   }
   if (any(!is.finite(coord_mat))) {
