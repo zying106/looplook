@@ -1,3 +1,30 @@
+Changes in version 0.99.16 (2026-08-08)
+---------------------------------------
+
+Bioconductor Review Round 2
+
+* `consolidate_chromatin_loops()` now writes standard 10-column BEDPE
+  (strand1/strand2 = ".") with `n_members`/`n_reps` as documented extension
+  columns 11-12, making exports readable by standard tools (e.g. rtracklayer).
+* `bedpe_to_gi()` tolerates header rows via explicit header tokens and
+  recovers the `n_members`/`n_reps` extension columns on re-import.
+* All pipeline functions return complete in-memory objects; Excel/BEDPE
+  export is opt-in (`write_output = FALSE` by default).
+* New internal `.require_pkg()` unifies optional-package guards; `.assert_*`
+  validation family extended; `match.arg()` choices moved to signatures.
+* `run_go_enrichment()` and `run_ppi_analysis()` use deterministic
+  OrgDb-package-based species resolution (no fragile introspection).
+* README and vignette: all demos runnable with packaged example data;
+  profiling, track, and chromatin figures displayed; `reduce_ginteractions()`
+  documented as a standalone utility.
+* Merged reviewer PR #2 (style improvements: `anyNA`, `lengths()`, `!all()`,
+  drop obsolete `getRversion` guards) and applied the same style across the
+  codebase.
+* Removed unused `draw_upset_intersections()` and the UpSetR hard dependency.
+* Test optimisations (smaller GSEA down-sampling, fast GO unmapped-gene path,
+  fixed vacuous chromatin-reclassification test); 1344 assertions passing.
+* `CITATION.cff` added for GitHub homepage citation.
+
 Changes in version 0.99.15 (2026-07-23)
 -----------------------------------------
 

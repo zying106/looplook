@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions"
-version: "0.99.15"
+version: "0.99.16"
 date-released: "2026-08-08"
 authors:
   - family-names: Zhang
