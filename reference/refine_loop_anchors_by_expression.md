@@ -32,7 +32,7 @@ refine_loop_anchors_by_expression(
   hub_percentile = 0.95,
   hub_metric = c("unique_contacts", "total_loops"),
   chromatin_beds = list(),
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE,
   allow_rerefine = FALSE
 )
@@ -152,9 +152,9 @@ refine_loop_anchors_by_expression(
 
 - write_output:
 
-  Logical. If `TRUE` (default), write the refined Excel workbook to
-  `out_dir`. If `FALSE`, return results without creating directories or
-  files.
+  Logical. If `TRUE`, write the refined Excel workbook to `out_dir`
+  (default: `FALSE`). If `FALSE`, return results without creating
+  directories or files.
 
 - quiet:
 

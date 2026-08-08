@@ -25,7 +25,7 @@ profile_target_genes(
   project_name = "Analysis",
   org_db = "org.Hs.eg.db",
   run_motif = FALSE,
-  genome_id = "hg38",
+  genome_id = c("hg38", "hg19", "mm10", "mm9"),
   motif_p_thresh = 1e-04,
   motif_ntop = 5,
   motif_n_perm = 0L,
@@ -119,7 +119,7 @@ profile_target_genes(
 - genome_id:
 
   Character. Reference genome assembly for motif sequence extraction.
-  Default `"hg38"`.
+  Default `"hg38"`. One of `c("hg38", "hg19", "mm10", "mm9")`.
 
 - motif_p_thresh:
 
@@ -163,10 +163,12 @@ profile_target_genes(
 - ppi_species_id:
 
   Integer or `NULL`. NCBI taxonomy ID for STRING PPI analysis (e.g.\\
-  9606 for human, 10090 for mouse). `NULL` (default) attempts automatic
-  inference from the OrgDb package name. Set explicitly for species
-  whose OrgDb naming is not recognised. See <https://string-db.org> for
-  a complete taxonomy list.
+  9606 for human, 10090 for mouse). When `NULL` (default), the ID is
+  resolved from the `org_db` package name (only standard `org.*.eg.db`
+  packages are recognised: human, mouse, rat, fruit fly, worm, yeast,
+  zebrafish). An error is raised when the species cannot be resolved –
+  no implicit guessing. Set explicitly for any other species. See
+  <https://string-db.org> for a complete taxonomy list.
 
 - heatmap_nSample:
 

@@ -36,7 +36,7 @@ refine_loop_anchors_by_chromatin(
   color_palette = "Paired",
   candidate_types = NULL,
   recompute_targets = TRUE,
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE,
   sankey_colors = NULL,
   chromatin_bw = NULL,
@@ -123,7 +123,7 @@ refine_loop_anchors_by_chromatin(
 
 - write_output:
 
-  Logical. Write Excel workbook. Default `TRUE`.
+  Logical. Write Excel workbook. Default `FALSE`.
 
 - quiet:
 

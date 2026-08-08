@@ -199,7 +199,7 @@ from forming.</p>
 <span>  region_of_interest <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  roi_mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"any"</span>, <span class="st">"both"</span><span class="op">)</span>,</span>
 <span>  out_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  write_output <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  write_output <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -296,7 +296,7 @@ bundled blacklist is used; otherwise the value is treated as a file path.</p></d
 
 
 <dt id="arg-write-output">write_output<a class="anchor" aria-label="anchor" href="#arg-write-output"></a></dt>
-<dd><p>Logical. If <code>TRUE</code> (default), write the consolidated BEDPE file when <code>out_file</code> is provided. If <code>FALSE</code>, return the <code>GInteractions</code> object without creating directories or files.</p></dd>
+<dd><p>Logical. If <code>TRUE</code>, write the consolidated BEDPE file when <code>out_file</code> is provided (default: <code>FALSE</code>). If <code>FALSE</code>, return the <code>GInteractions</code> object without creating directories or files.</p></dd>
 
 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
@@ -324,9 +324,10 @@ order changes output.</p></dd>
 </dl><p>The returned object carries a <code>looplook_metadata</code> attribute (access via
 <code>attr(x, "looplook_metadata")</code>) with package version, call parameters,
 diagnostics, and database versions.
-When <code>write_output = TRUE</code> and <code>out_file</code> is provided, an extended
-BEDPE file is written with the additional columns <code>n_members</code> and
-<code>n_reps</code> appended after the standard BEDPE fields.</p>
+When <code>write_output = TRUE</code> and <code>out_file</code> is provided, a standard
+10-column BEDPE file is written (columns 9-10 are <code>strand1</code>/
+<code>strand2</code>, set to <code>"."</code> as the data are not stranded), followed by
+the documented extension columns 11-12 <code>n_members</code> and <code>n_reps</code>.</p>
     </div>
 
     <div class="section level2">
@@ -342,7 +343,8 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-in"><span>  files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  mode <span class="op">=</span> <span class="st">"intersect"</span>,</span></span>
 <span class="r-in"><span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
-<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  write_output <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 300 loops (raw: 300)</span>
@@ -351,7 +353,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Base: File 1 (first input). Output coordinates and scores come exclusively from File 1.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     Intersecting with File 2...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpN6uFes/file9dde14d1a98.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpW6R58j/file9de67faa2fad.bedpe</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example B: Consensus Mode (formerly Reproducible)</span></span></span>
 <span class="r-in"><span><span class="co"># Finds consensus loops supported by both replicates (default for N=2)</span></span></span>
@@ -359,7 +361,8 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-in"><span>  files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  mode <span class="op">=</span> <span class="st">"consensus"</span>,</span></span>
 <span class="r-in"><span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
-<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  write_output <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 300 loops (raw: 300)</span>
@@ -386,7 +389,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/12 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 12</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpN6uFes/file9dde2ca8dbd3.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpW6R58j/file9de64840b72f.bedpe</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example C: Union Mode</span></span></span>
 <span class="r-in"><span><span class="co"># Merges all loops into a single map</span></span></span>
@@ -394,7 +397,8 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-in"><span>  files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">f1</span>, <span class="va">f2</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  mode <span class="op">=</span> <span class="st">"union"</span>,</span></span>
 <span class="r-in"><span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
-<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  write_output <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 300 loops (raw: 300)</span>
@@ -420,7 +424,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/586 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 586</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpN6uFes/file9dde596fcef4.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpW6R58j/file9de66e6a2178.bedpe</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example D: Dual Filtering Strategy (Recommended for HiChIP)</span></span></span>
 <span class="r-in"><span><span class="co"># 1. Pre-filter: Discard singletons (score &lt; 2) to remove noise.</span></span></span>
@@ -432,7 +436,8 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-in"><span>  min_raw_score <span class="op">=</span> <span class="fl">2</span>, <span class="co"># Pre-filter (remove noise)</span></span></span>
 <span class="r-in"><span>  min_score <span class="op">=</span> <span class="fl">5</span>, <span class="co"># Post-filter (keep strong loops)</span></span></span>
 <span class="r-in"><span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span></span>
-<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  out_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span>fileext <span class="op">=</span> <span class="st">".bedpe"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  write_output <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> &gt;&gt;&gt; Reading BEDPE files</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>     File 1: 115 loops (raw: 300)</span>
@@ -459,7 +464,7 @@ BEDPE file is written with the additional columns <code>n_members</code> and
 <span class="r-msg co"><span class="r-pr">#&gt;</span>   Chaining: 0/7 above threshold -- PASS.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> --- End Post-Clustering Diagnosis ---</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Final loops: 4</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpN6uFes/file9dde64fe53a1.bedpe</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Finished! Saved to /tmp/RtmpW6R58j/file9de629782a14.bedpe</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Inspect results</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">res_intersect</span><span class="op">)</span></span></span>

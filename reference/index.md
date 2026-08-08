@@ -55,8 +55,6 @@ summaries.
   : Integrative visualization of 3D chromatin loops and genomic features
 - [`draw_flower_simplified()`](https://zying106.github.io/looplook/reference/draw_flower_simplified.md)
   : Draw Simplified Flower Plot for Core vs. Unique Genes
-- [`draw_upset_intersections()`](https://zying106.github.io/looplook/reference/draw_upset_intersections.md)
-  : Generate UpSet Plot for Gene Set Intersections
 
 ## Package Overview & Report
 

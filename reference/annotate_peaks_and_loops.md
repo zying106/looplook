@@ -42,7 +42,7 @@ annotate_peaks_and_loops(
   anchor_gap = -1L,
   anchor_min_overlap = 1L,
   anchor_min_frac = 0,
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE,
   target_priority = c("promoter_then_distance", "distance_then_role")
 )
@@ -230,8 +230,9 @@ annotate_peaks_and_loops(
 
 - write_output:
 
-  Logical. If `TRUE` (default), write the Excel workbook to `out_dir`.
-  If `FALSE`, return results without creating directories or files.
+  Logical. If `TRUE`, write the Excel workbook to `out_dir` (default:
+  `FALSE`). If `FALSE`, return results without creating directories or
+  files.
 
 - quiet:
 

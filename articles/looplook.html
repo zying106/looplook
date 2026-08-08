@@ -384,17 +384,19 @@ sequencing depths.</p></li>
 <li><p><strong>Chromatin-Aware Anchor Refinement</strong>: Validates and
 systematically refines loop anchors using orthogonal chromatin mark data
 (ChIP-seq, CUT&amp;Tag, ATAC-seq). Anchors are scored against
-ENCODE-inspired active-enhancer criteria across five evidence levels (
-to ). these levels assess enhancer-like chromatin evidence, not overall
-classification confidence — a strong promoter (H3K4me3+) may receive
-only because the criteria are enhancer-oriented. Anchor types are
-updated based on mark combinations — for instance, an eP anchor with
-H3K4me3+ promoter-like chromatin (without conflicting marks) is reverted
-to P, while a P anchor with H3K4me1+ H3K4me3+ dual marks is upgraded to
-dual-signature. Triple-positive anchors (H3K4me1+ H3K4me3+ H3K27me3+)
-are classified as and retain their original type. Refinement is fully
-auditable through per-anchor chromatin state, evidence level, and
-before/after type columns.</p></li>
+ENCODE-inspired active-enhancer criteria across five evidence levels
+(<code>canonical</code> to <code>uncertain</code>).
+<strong>Important:</strong> these levels assess enhancer-like chromatin
+evidence, not overall classification confidence — a strong promoter
+(H3K4me3+) may receive only <code>supported</code> because the criteria
+are enhancer-oriented. Anchor types are updated based on mark
+combinations — for instance, an eP anchor with H3K4me3+ promoter-like
+chromatin (without conflicting marks) is reverted to P, while a P anchor
+with H3K4me1+ H3K4me3+ dual marks is upgraded to dual-signature.
+Triple-positive anchors (H3K4me1+ H3K4me3+ H3K27me3+) are classified as
+<code>conflicting_marks</code> and retain their original type.
+Refinement is fully auditable through per-anchor chromatin state,
+evidence level, and before/after type columns.</p></li>
 <li><p><strong>Replicate Consolidation and Multi-Source
 Consensus</strong>: Employs graph-theoretic connected-component
 clustering to harmonize biological replicates and suppress technical
@@ -906,27 +908,33 @@ non-standard column layout. If <code>NULL</code> (default), columns 8
 and 7 are auto-detected by checking the proportion of numeric
 values.</li>
 </ul>
-<p> If your BEDPE score column contains p-values (values in [0, 1]),
-convert them to <code>-log10(p-value)</code> before using
-<code>min_raw_score</code> or <code>min_score</code>. The function will
-warn if it auto-detects a p-value-like column, but explicit conversion
-is the safest approach. * <strong><code>quiet</code></strong>: Logical.
-If <code>TRUE</code>, suppress progress messages while preserving
-warnings (default: <code>FALSE</code>).</p>
+<p><strong>Score direction: All score-based filtering assumes higher
+scores = better interactions.</strong> If your BEDPE score column
+contains p-values (values in [0, 1]), convert them to
+<code>-log10(p-value)</code> before using <code>min_raw_score</code> or
+<code>min_score</code>. The function will warn if it auto-detects a
+p-value-like column, but explicit conversion is the safest approach. *
+<strong><code>quiet</code></strong>: Logical. If <code>TRUE</code>,
+suppress progress messages while preserving warnings (default:
+<code>FALSE</code>).</p>
 <p>For <strong>single-sample filtering</strong> (without replicate
 merging), use <code><a href="../reference/filter_chromatin_loops.html">filter_chromatin_loops()</a></code> — it applies the
 same blacklist and ROI logic to an existing <code>GInteractions</code>
-object. See <code><a href="../reference/filter_chromatin_loops.html">?filter_chromatin_loops</a></code> for details.</p>
+object. See <code><a href="../reference/filter_chromatin_loops.html">?filter_chromatin_loops</a></code> for details. To merge
+proximal loops on an in-memory <code>GInteractions</code> object without
+the file-based pipeline (returning the reduced object plus per-loop
+cluster membership), use <code><a href="../reference/reduce_ginteractions.html">reduce_ginteractions()</a></code>.</p>
 <p>The exported BEDPE file (when <code>write_output = TRUE</code> and
-<code>out_file</code> is set) contains 10 columns: the standard BEDPE
-fields (chr1, start1, end1, chr2, start2, end2, name, score) plus two
-metadata columns: - <strong><code>n_members</code></strong> (column 9):
-Number of raw loops merged into this consensus entry, giving a sense of
-cluster size. In intersect mode this is <code>1</code> (no merging, each
-retained loop stands alone); in consensus/union modes it reflects the
-number of loops clustered. - <strong><code>n_reps</code></strong>
-(column 10): Number of input files that support this entry, useful for
-filtering by replication evidence.</p>
+<code>out_file</code> is set) is standard 10-column BEDPE (chr1, start1,
+end1, chr2, start2, end2, name, score, strand1, strand2) with two
+documented extension columns appended (columns 11-12): -
+<strong><code>n_members</code></strong> (column 11): Number of raw loops
+merged into this consensus entry, giving a sense of cluster size. In
+intersect mode this is <code>1</code> (no merging, each retained loop
+stands alone); in consensus/union modes it reflects the number of loops
+clustered. - <strong><code>n_reps</code></strong> (column 12): Number of
+input files that support this entry, useful for filtering by replication
+evidence.</p>
 </div>
 <div class="section level3">
 <h3 id="example-1-building-a-global-consensus-interactome">Example 1: Building a Global Consensus Interactome<a class="anchor" aria-label="anchor" href="#example-1-building-a-global-consensus-interactome"></a>
@@ -947,7 +955,8 @@ biological replicates and removal of blacklist-associated artifacts.</p>
 <span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span>
 <span>  min_raw_score <span class="op">=</span> <span class="fl">2</span>, <span class="co"># Pre-filter sequencing noise</span></span>
 <span>  blacklist_species <span class="op">=</span> <span class="st">"hg38"</span>, <span class="co"># Apply artifact blacklist</span></span>
-<span>  out_file <span class="op">=</span> <span class="va">global_out</span></span>
+<span>  out_file <span class="op">=</span> <span class="va">global_out</span>,</span>
+<span>  write_output <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -972,7 +981,8 @@ anchors overlap with the specified functional regions.</p>
 <span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span>
 <span>  min_raw_score <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>  region_of_interest <span class="op">=</span> <span class="va">h3k27ac_peaks</span>,</span>
-<span>  out_file <span class="op">=</span> <span class="va">targeted_out</span></span>
+<span>  out_file <span class="op">=</span> <span class="va">targeted_out</span>,</span>
+<span>  write_output <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -999,7 +1009,8 @@ supported by multiple assays.</p>
 <span>  mode <span class="op">=</span> <span class="st">"consensus"</span>,</span>
 <span>  gap <span class="op">=</span> <span class="fl">1000</span>,</span>
 <span>  min_raw_score <span class="op">=</span> <span class="fl">2</span>,</span>
-<span>  out_file <span class="op">=</span> <span class="va">dual_functional_out</span></span>
+<span>  out_file <span class="op">=</span> <span class="va">dual_functional_out</span>,</span>
+<span>  write_output <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <hr>
 <div class="section level4">
@@ -1263,6 +1274,9 @@ regions by weighing gene expression.</p>
 <code class="sourceCode R"><span><span class="co"># Locate auxiliary genomic features and RNA-seq expression matrix</span></span>
 <span><span class="va">expr_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_tpm.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span><span class="va">atac_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<span><span class="co"># Live annotation requires the TxDb/OrgDb packages; when they are missing,</span></span>
+<span><span class="co"># res_integrated stays NULL and the pre-computed fallback below is used.</span></span>
+<span><span class="va">res_integrated</span> <span class="op">&lt;-</span> <span class="cn">NULL</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"TxDb.Hsapiens.UCSC.hg38.knownGene"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">res_integrated</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></span><span class="op">(</span></span>
@@ -1356,15 +1370,38 @@ ties within a tier, except direct strict promoter–promoter contacts
 Logic)</strong>: Columns suffixed with <code>_Filled</code> (e.g.,
 <code>Assigned_Target_Genes_Filled</code>,
 <code>Regulated_promoter_genes_Filled</code>) provide complete, gapless
-annotations. They use strict 3D assignments first and add the nearest
-linear gene (<code>SYMBOL</code>/<code>geneId</code>) only when the
-corresponding strict column is empty.</li>
+annotations when the strict 3D assignment is empty. All three
+<code>*_Filled</code> columns use the <em>same one-level fallback</em>:
+strict 3D assignment first; expression-filtered linear nearest genes
+(<code>SYMBOL</code>/<code>geneId</code>) only when strict is empty. No
+loop-connected gene layer exists in the final output: the unified
+finalizer re-aggregates all strict/Filled columns from the current
+target links, so filled genes are always strict winners or
+linear-annotation genes — never loop-topology genes that failed strict
+evaluation. The fallback is deliberately <em>one-level</em>: a gene that
+lost strict evaluation (or was filtered by expression) must not re-enter
+through the <code>_Filled</code> columns, which would bypass the
+strict/expression gates.
+<ul>
+<li>A filled gene is not necessarily a promoter gene — always read
+<code>*_Filled</code> together with its evidence column (see below). For
+stringent functional analyses (GSEA/GO), use the strict columns
+(<code>include_Filled = FALSE</code>).</li>
+</ul>
+</li>
 <li>
 <strong><code>Regulated_promoter_Fallback_Evidence</code></strong>:
-Records why <code>Regulated_promoter_genes_Filled</code> used a linear
-fallback (<code>local_promoter</code>, <code>local_gene_body</code>,
+Records why <code>Regulated_promoter_genes_Filled</code> used a fallback
+(<code>local_promoter</code>, <code>local_gene_body</code>,
 <code>linear_nearest</code>, or <code>linear_fallback</code>); it is
-<code>none</code> when strict loop-derived promoter targets exist.</li>
+<code>none</code> when strict loop-derived promoter targets exist. The
+label is inferred from the feature’s own ChIPseeker annotation:
+<code>promoter</code> annotation → <code>local_promoter</code>,
+<code>exon</code>/<code>intron</code>/<code>utr</code> →
+<code>local_gene_body</code>, other/intergenic →
+<code>linear_nearest</code>, no annotation →
+<code>linear_fallback</code>. It tells you the <em>type</em> of gene
+used for the fill, not its 3D evidence.</li>
 <li>
 <strong><code>Expanded_Target_Genes</code></strong>: Multi-hop
 target genes reachable through 3D shortest-path expansion beyond the
@@ -1413,7 +1450,8 @@ among the 3D interactions that overlap the feature.</li>
 <li>
 <strong><code>All_Loop_Connected_Genes_Filled</code></strong>:
 Lineage column that preserves the original loop-connected gene set and
-fills empty entries with the nearest linear gene fallback.</li>
+fills empty entries with the expression-filtered linear gene fallback
+(same one-level logic as the other <code>*_Filled</code> columns).</li>
 </ul>
 <div style="page-break-after: always;"></div>
 <div class="section level6">
@@ -1621,11 +1659,12 @@ with the deduplicated anchor loci.</li>
 <code>anchor_annotation</code> is retained as an alias of
 <code>anchor_loci_annotation</code> for older scripts.</li>
 </ul>
-<p> The <code>anchor_type</code> column in
+<p><strong>Important:</strong> The <code>anchor_type</code> column in
 <code>anchor_loci_annotation</code> reflects the original positional
-classification (P/G/E from TSS and gene-body overlap) and is updated by
-expression-aware or chromatin-aware refinement. Refined anchor types are
-found in <code>loop_annotation$anchor1_type</code> and
+classification (P/G/E from TSS and gene-body overlap) and is
+<strong>not</strong> updated by expression-aware or chromatin-aware
+refinement. Refined anchor types are found in
+<code>loop_annotation$anchor1_type</code> and
 <code>loop_annotation$anchor2_type</code>. For a full per-anchor audit
 trail — including the original annotation type, the expression-refined
 type, and the chromatin-corrected type — see
@@ -1699,6 +1738,19 @@ network topology, independent of expression status.</li>
 <code>res_integrated$plots$</code>, enabling direct inspection and
 customisation with standard <strong>ggplot2</strong> layers without
 re-running the pipeline.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Representative diagnostic plots from the Module 2 annotation result</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Basic_Donut</span><span class="op">)</span></span></code></pre></div>
+<p><img src="looplook_files/figure-html/show-annotation-plots-1.png" class="r-plt" alt="" width="864"></p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Basic_Circular</span><span class="op">)</span></span></code></pre></div>
+<p><img src="looplook_files/figure-html/show-annotation-plots-2.png" class="r-plt" alt="" width="864"></p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Basic_Flower</span><span class="op">)</span></span></code></pre></div>
+<p><img src="looplook_files/figure-html/show-annotation-plots-3.png" class="r-plt" alt="" width="864"></p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Karyo_Anchors</span><span class="op">)</span></span></code></pre></div>
+<p><img src="looplook_files/figure-html/show-annotation-plots-4.png" class="r-plt" alt="" width="864"></p>
 <div class="section level5">
 <h5 id="global-3d-network-profiling">1. Global 3D Network Profiling<a class="anchor" aria-label="anchor" href="#global-3d-network-profiling"></a>
 </h5>
@@ -1778,8 +1830,8 @@ re-running the pipeline.</p>
 </h5>
 <p>All ggplot-based plots accept standard <strong>ggplot2</strong>
 layers for recolouring, theme adjustment, or annotation:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"res_integrated"</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Basic_Donut</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Basic_Donut</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="co"># Access a stored plot</span></span>
 <span>  <span class="va">p</span> <span class="op">&lt;-</span> <span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Basic_Donut</span></span>
 <span></span>
@@ -1795,20 +1847,16 @@ layers for recolouring, theme adjustment, or annotation:</p>
 <span><span class="op">}</span></span></code></pre></div>
 <p><img src="looplook_files/figure-html/plot-customise-1.png" class="r-plt" alt="" width="864"></p>
 <p>To save any plot to disk, use <code><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggplot2::ggsave()</a></code>:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"res_integrated"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggsave</a></span><span class="op">(</span></span>
-<span>    filename <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">out_dir</span>, <span class="st">"my_custom_donut.pdf"</span><span class="op">)</span>,</span>
-<span>    plot <span class="op">=</span> <span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Basic_Donut</span>,</span>
-<span>    width <span class="op">=</span> <span class="fl">8</span>, height <span class="op">=</span> <span class="fl">6</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggsave.html" class="external-link">ggsave</a></span><span class="op">(</span></span>
+<span>  filename <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">out_dir</span>, <span class="st">"my_custom_donut.pdf"</span><span class="op">)</span>,</span>
+<span>  plot <span class="op">=</span> <span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Basic_Donut</span>,</span>
+<span>  width <span class="op">=</span> <span class="fl">8</span>, height <span class="op">=</span> <span class="fl">6</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p>For <code>looplook_karyo</code> objects (karyotype heatmaps), use
 <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> to display:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"res_integrated"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Karyo_Anchors</span><span class="op">)</span> <span class="co"># renders via grid or opens in browser</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">res_integrated</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Karyo_Anchors</span><span class="op">)</span> <span class="co"># renders via grid or opens in browser</span></span></code></pre></div>
 <p><img src="looplook_files/figure-html/plot-karyo-1.png" class="r-plt" alt="" width="864"></p>
 <hr>
 </div>
@@ -1829,12 +1877,14 @@ combines both — expression marks silent anchors as testable hypotheses
 (eP/eG), chromatin supports their reclassification into evidence-based
 types (E, P, G, dual). When only one data type is available, either
 module can be used independently.</p>
-<p> When using both modules, expression refinement must run before
-chromatin refinement. Running on a chromatin-refined object will raise
-an error — the reverse order (chromatin → expression) is not supported.
-Chromatin refinement can be applied directly to output (chromatin-only
-mode) with the understanding that expression-dependent fields will be
-reported as not assessed.</p>
+<p><strong>Workflow order is enforced:</strong> When using both modules,
+expression refinement must run before chromatin refinement. Running
+<code><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression()</a></code> on a chromatin-refined
+object will raise an error — the reverse order (chromatin → expression)
+is not supported. Chromatin refinement can be applied directly to
+<code><a href="../reference/annotate_peaks_and_loops.html">annotate_peaks_and_loops()</a></code> output (chromatin-only mode)
+with the understanding that expression-dependent fields will be reported
+as not assessed.</p>
 <div class="section level4">
 <h4 id="submodule-3a-expression-aware-refinement">Submodule 3A: Expression-Aware Refinement<a class="anchor" aria-label="anchor" href="#submodule-3a-expression-aware-refinement"></a>
 </h4>
@@ -1893,7 +1943,8 @@ state.</li>
 <strong><code>karyo_bin_size</code></strong>: Genome assembly,
 hub-detection quantile, and heatmap bin width (see Module 2).</li>
 </ul>
-<p> <code><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression()</a></code> assigns each loop a
+<p><strong>Expression state semantics:</strong>
+<code><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression()</a></code> assigns each loop a
 <code>Target_Expression_State</code> and each target gene link a
 <code>Passes_Expression_Filter</code> status using a three-class
 model:</p>
@@ -1927,15 +1978,16 @@ model:</p>
 </tr>
 </tbody>
 </table>
-<p> A gene absent from the expression matrix may reflect annotation
-mismatch, transcript-level filtering, or platform limitations — it
-cannot be interpreted as biologically silent. Genes measured at true
-zero (TPM = 0) are correctly classified as <code>measured_silent</code>,
-not <code>unmeasured</code>. When <code>threshold = 0</code>, the code
-uses strict <code>&gt; 0</code> (not <code>&gt;= 0</code>) to prevent
-all measured genes from being unconditionally classified as active. The
-<code>Has_Active_Target</code> flag is <code>NA</code> for loops whose
-targets are <code>unmeasured</code>, rather than falsely reporting
+<p><strong>Why this matters:</strong> A gene absent from the expression
+matrix may reflect annotation mismatch, transcript-level filtering, or
+platform limitations — it cannot be interpreted as biologically silent.
+Genes measured at true zero (TPM = 0) are correctly classified as
+<code>measured_silent</code>, not <code>unmeasured</code>. When
+<code>threshold = 0</code>, the code uses strict <code>&gt; 0</code>
+(not <code>&gt;= 0</code>) to prevent all measured genes from being
+unconditionally classified as active. The <code>Has_Active_Target</code>
+flag is <code>NA</code> for loops whose targets are
+<code>unmeasured</code>, rather than falsely reporting
 <code>FALSE</code>.</p>
 </div>
 </div>
@@ -2054,19 +2106,17 @@ always included (even if empty) for schema stability.</p>
 transcriptionally active target genes. All structural loops are
 retained; the <code>Retained_In_Functional_Network</code> flag indicates
 which loops belong to the functional subset.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"res_integrated"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">res_basic</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
-<span>    annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
-<span>    expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span>
-<span>    sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span>
-<span>    threshold <span class="op">=</span> <span class="fl">1.0</span>,</span>
-<span>    unit_type <span class="op">=</span> <span class="st">"TPM"</span>,</span>
-<span>    reclassify_by_expression <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>    out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
-<span>    project_name <span class="op">=</span> <span class="st">"Example_Basic_Filter"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">res_basic</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
+<span>  annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
+<span>  expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span>
+<span>  sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span>
+<span>  threshold <span class="op">=</span> <span class="fl">1.0</span>,</span>
+<span>  unit_type <span class="op">=</span> <span class="st">"TPM"</span>,</span>
+<span>  reclassify_by_expression <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
+<span>  project_name <span class="op">=</span> <span class="st">"Example_Basic_Filter"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="example-b-expression-aware-reclassification-recommended">Example B: Expression-Aware Reclassification (Recommended)<a class="anchor" aria-label="anchor" href="#example-b-expression-aware-reclassification-recommended"></a>
@@ -2077,19 +2127,17 @@ A silent promoter anchor is reclassified as an enhancer
 (<code>eP</code>), acknowledging that while its reference gene is
 transcriptionally inactive, this region itself may function as an active
 regulatory element for a distant gene.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"res_integrated"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">refined_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
-<span>    annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
-<span>    expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span>
-<span>    sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span>
-<span>    threshold <span class="op">=</span> <span class="fl">1.0</span>,</span>
-<span>    unit_type <span class="op">=</span> <span class="st">"TPM"</span>,</span>
-<span>    reclassify_by_expression <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>    out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
-<span>    project_name <span class="op">=</span> <span class="st">"Example_Reclassified_Filter"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">refined_res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
+<span>  annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
+<span>  expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span>
+<span>  sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span>
+<span>  threshold <span class="op">=</span> <span class="fl">1.0</span>,</span>
+<span>  unit_type <span class="op">=</span> <span class="st">"TPM"</span>,</span>
+<span>  reclassify_by_expression <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
+<span>  project_name <span class="op">=</span> <span class="st">"Example_Reclassified_Filter"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="example-c-refinement-orthogonal-chromatin-validation">Example C: Refinement + Orthogonal Chromatin Validation<a class="anchor" aria-label="anchor" href="#example-c-refinement-orthogonal-chromatin-validation"></a>
@@ -2098,29 +2146,27 @@ regulatory element for a distant gene.</p>
 anchors against chromatin mark data. The result is added to the Excel
 workbook and returned as
 <code>refined_res$chromatin_validation</code>.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"res_integrated"</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"out_dir"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">h3k27ac_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_k27ac_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
-<span>  <span class="va">h3k4me1_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_h3k4me1_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
-<span>  <span class="va">h3k4me3_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_h3k4me3_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">h3k27ac_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_k27ac_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<span><span class="va">h3k4me1_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_h3k4me1_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<span><span class="va">h3k4me3_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_h3k4me3_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="va">refined_val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
-<span>    annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
-<span>    expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span>
-<span>    sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span>
-<span>    threshold <span class="op">=</span> <span class="fl">1.0</span>,</span>
-<span>    reclassify_by_expression <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>    chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      H3K27ac  <span class="op">=</span> <span class="va">h3k27ac_path</span>,</span>
-<span>      H3K4me1  <span class="op">=</span> <span class="va">h3k4me1_path</span>,</span>
-<span>      H3K4me3  <span class="op">=</span> <span class="va">h3k4me3_path</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
-<span>    project_name <span class="op">=</span> <span class="st">"Example_Validated"</span></span>
-<span>  <span class="op">)</span></span>
-<span>  <span class="co"># View enhancer evidence distribution</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">refined_val</span><span class="op">$</span><span class="va">chromatin_validation</span><span class="op">$</span><span class="va">enhancer_evidence</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
+<span><span class="va">refined_val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span></span>
+<span>  annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
+<span>  expr_matrix_file <span class="op">=</span> <span class="va">expr_path</span>,</span>
+<span>  sample_columns <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"con1"</span>, <span class="st">"con2"</span><span class="op">)</span>,</span>
+<span>  threshold <span class="op">=</span> <span class="fl">1.0</span>,</span>
+<span>  reclassify_by_expression <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    H3K27ac  <span class="op">=</span> <span class="va">h3k27ac_path</span>,</span>
+<span>    H3K4me1  <span class="op">=</span> <span class="va">h3k4me1_path</span>,</span>
+<span>    H3K4me3  <span class="op">=</span> <span class="va">h3k4me3_path</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  out_dir <span class="op">=</span> <span class="va">out_dir</span>,</span>
+<span>  project_name <span class="op">=</span> <span class="st">"Example_Validated"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># View enhancer evidence distribution</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">refined_val</span><span class="op">$</span><span class="va">chromatin_validation</span><span class="op">$</span><span class="va">enhancer_evidence</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; canonical    strong supported   limited uncertain </span></span>
 <span><span class="co">#&gt;         0         0         6       376         3</span></span></code></pre></div>
@@ -2201,27 +2247,21 @@ candidates.</p>
 <div class="section level5">
 <h5 id="workflow">Workflow<a class="anchor" aria-label="anchor" href="#workflow"></a>
 </h5>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"refined_res"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">h3k27ac_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_k27ac_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
-<span>  <span class="va">h3k4me1_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_h3k4me1_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
-<span>  <span class="va">h3k4me3_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_h3k4me3_peaks.bed"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Validate the eP/eG anchors from the refined result above</span></span>
+<span><span class="va">val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/validate_epeG_by_chromatin.html">validate_epeG_by_chromatin</a></span><span class="op">(</span></span>
+<span>  annotation_res <span class="op">=</span> <span class="va">refined_res</span>,</span>
+<span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    H3K4me1  <span class="op">=</span> <span class="va">h3k4me1_path</span>,</span>
+<span>    H3K27ac  <span class="op">=</span> <span class="va">h3k27ac_path</span>,</span>
+<span>    H3K4me3  <span class="op">=</span> <span class="va">h3k4me3_path</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  anchor_gap <span class="op">=</span> <span class="fl">200</span>, <span class="co"># proximity tolerance (bp)</span></span>
+<span>  anchor_min_overlap <span class="op">=</span> <span class="fl">100</span> <span class="co"># minimum overlap (bp)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="co"># Validate the eP/eG anchors from the refined result above</span></span>
-<span>  <span class="va">val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/validate_epeG_by_chromatin.html">validate_epeG_by_chromatin</a></span><span class="op">(</span></span>
-<span>    annotation_res <span class="op">=</span> <span class="va">refined_res</span>,</span>
-<span>    chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      H3K4me1  <span class="op">=</span> <span class="va">h3k4me1_path</span>,</span>
-<span>      H3K27ac  <span class="op">=</span> <span class="va">h3k27ac_path</span>,</span>
-<span>      H3K4me3  <span class="op">=</span> <span class="va">h3k4me3_path</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    anchor_gap <span class="op">=</span> <span class="fl">200</span>, <span class="co"># proximity tolerance (bp)</span></span>
-<span>    anchor_min_overlap <span class="op">=</span> <span class="fl">100</span> <span class="co"># minimum overlap (bp)</span></span>
-<span>  <span class="op">)</span></span>
-<span></span>
-<span>  <span class="co"># View enhancer evidence distribution</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">val</span><span class="op">$</span><span class="va">enhancer_evidence</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
+<span><span class="co"># View enhancer evidence distribution</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">val</span><span class="op">$</span><span class="va">enhancer_evidence</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; canonical    strong supported   limited uncertain </span></span>
 <span><span class="co">#&gt;         0         0         6       376         3</span></span></code></pre></div>
@@ -2230,9 +2270,11 @@ candidates.</p>
 <h5 id="enhancer-evidence-levels">Enhancer Evidence Levels<a class="anchor" aria-label="anchor" href="#enhancer-evidence-levels"></a>
 </h5>
 <p>Each eP/eG anchor is tested for overlap with up to 5 marks and
-assigned an enhancer evidence level (highest to lowest). A promoter
-(H3K4me3+) may score only <code>supported</code> because the criteria
-are enhancer-oriented.</p>
+assigned an enhancer evidence level (highest to lowest). <strong>These
+levels assess how strongly the chromatin marks match an active enhancer,
+not the overall confidence in the anchor’s classification.</strong> A
+promoter (H3K4me3+) may score only <code>supported</code> because the
+criteria are enhancer-oriented.</p>
 <table class="table">
 <colgroup>
 <col width="52%">
@@ -2401,16 +2443,18 @@ match first): <code>conflicting_marks</code> &gt; <code>dual_like</code>
 <code>other_enhancer_like</code> &gt; <code>promoter_like</code> &gt;
 <code>repressed</code> &gt; <code>uncertain</code> &gt;
 <code>no_data</code>.</p>
-<p> Rules that test for H3K4me3 <em>absence</em> (e.g., P→E, G→E)
-require H3K4me3 to be provided in <code>chromatin_beds</code>. When
-H3K4me3 is omitted, its value is <code>NA</code> for all anchors, and
-these rules are skipped conservatively — no reclassification without
-explicit data. Include H3K4me3 (and optionally H3K27me3) to enable the
-full set of reclassification rules.</p>
-<p> The two refinement modules serve distinct roles that complement each
-other — they do not replace one another. Expression-aware refinement
-evaluates <em>transcriptional activity</em> (is the gene expressed?) and
-provides activity metrics (<code>Putative_Target_Genes</code>,
+<p><strong>Important — H3K4me3 dependency:</strong> Rules that test for
+H3K4me3 <em>absence</em> (e.g., P→E, G→E) require H3K4me3 to be provided
+in <code>chromatin_beds</code>. When H3K4me3 is omitted, its value is
+<code>NA</code> for all anchors, and these rules are skipped
+conservatively — no reclassification without explicit data. Include
+H3K4me3 (and optionally H3K27me3) to enable the full set of
+reclassification rules.</p>
+<p><strong>Pipeline guidance:</strong> The two refinement modules serve
+distinct roles that complement each other — they do not replace one
+another. Expression-aware refinement evaluates <em>transcriptional
+activity</em> (is the gene expressed?) and provides activity metrics
+(<code>Putative_Target_Genes</code>,
 <code>Retained_In_Functional_Network</code>,
 <code>Refinement_Action</code>) required for downstream GSEA, GO
 enrichment, and differential expression profiling. Chromatin-aware
@@ -2428,36 +2472,45 @@ on <code><a href="../reference/annotate_peaks_and_loops.html">annotate_peaks_and
 <strong>only expression data</strong> (RNA-seq, NET-seq, or CAGE-seq),
 run expression refinement alone — eP/eG labels serve as testable
 hypotheses for future chromatin validation.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"refined_res"</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"out_dir"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># Run on expression-refined output (tests eP/eG anchors)</span></span>
-<span>  <span class="va">cr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></span><span class="op">(</span></span>
-<span>    annotation_res <span class="op">=</span> <span class="va">refined_res</span>,</span>
-<span>    chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>      H3K4me1  <span class="op">=</span> <span class="va">h3k4me1_path</span>,</span>
-<span>      H3K4me3  <span class="op">=</span> <span class="va">h3k4me3_path</span>,</span>
-<span>      H3K27ac  <span class="op">=</span> <span class="va">h3k27ac_path</span></span>
-<span>    <span class="op">)</span>,</span>
-<span>    anchor_gap <span class="op">=</span> <span class="fl">200</span>,</span>
-<span>    anchor_min_overlap <span class="op">=</span> <span class="fl">100</span>,</span>
-<span>    recompute_targets <span class="op">=</span> <span class="cn">TRUE</span>, <span class="co"># Rebuild target links with updated types</span></span>
-<span>    species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
-<span>    project_name <span class="op">=</span> <span class="st">"Chromatin_Refined"</span>,</span>
-<span>    out_dir <span class="op">=</span> <span class="va">out_dir</span></span>
-<span>  <span class="op">)</span></span>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Run on expression-refined output (tests eP/eG anchors)</span></span>
+<span><span class="va">cr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_chromatin.html">refine_loop_anchors_by_chromatin</a></span><span class="op">(</span></span>
+<span>  annotation_res <span class="op">=</span> <span class="va">refined_res</span>,</span>
+<span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    H3K4me1  <span class="op">=</span> <span class="va">h3k4me1_path</span>,</span>
+<span>    H3K4me3  <span class="op">=</span> <span class="va">h3k4me3_path</span>,</span>
+<span>    H3K27ac  <span class="op">=</span> <span class="va">h3k27ac_path</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  anchor_gap <span class="op">=</span> <span class="fl">200</span>,</span>
+<span>  anchor_min_overlap <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  recompute_targets <span class="op">=</span> <span class="cn">TRUE</span>, <span class="co"># Rebuild target links with updated types</span></span>
+<span>  species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
+<span>  project_name <span class="op">=</span> <span class="st">"Chromatin_Refined"</span>,</span>
+<span>  out_dir <span class="op">=</span> <span class="va">out_dir</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="co"># Summary of reclassification</span></span>
-<span>  <span class="va">cr</span><span class="op">$</span><span class="va">qc_summary</span></span>
+<span><span class="co"># Summary of reclassification</span></span>
+<span><span class="va">cr</span><span class="op">$</span><span class="va">qc_summary</span></span>
+<span><span class="co">#&gt;   n_candidate_anchors n_reclassified n_canonical n_strong n_supported n_limited</span></span>
+<span><span class="co">#&gt; 1                 385              0           0        0           6       376</span></span>
+<span><span class="co">#&gt;   n_dual n_promoter_like n_TSS_supported n_TSS_provisional n_TSS_unresolved</span></span>
+<span><span class="co">#&gt; 1      0               3               0                 0                0</span></span>
+<span><span class="co">#&gt;   n_TSS_validation_unavailable</span></span>
+<span><span class="co">#&gt; 1                            0</span></span>
 <span></span>
-<span>  <span class="co"># Updated loop types reflect chromatin evidence</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">cr</span><span class="op">$</span><span class="va">loop_annotation</span><span class="op">$</span><span class="va">loop_type</span><span class="op">)</span></span>
+<span><span class="co"># Updated loop types reflect chromatin evidence</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">cr</span><span class="op">$</span><span class="va">loop_annotation</span><span class="op">$</span><span class="va">loop_type</span><span class="op">)</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;   E-E  E-eG  E-eP   E-G   E-P eG-eG eG-eP  eG-G  eG-P eP-eP  eP-G  eP-P   G-G </span></span>
+<span><span class="co">#&gt;     4     3     3    13    26    12     5    11    21     1     8    27    13 </span></span>
+<span><span class="co">#&gt;   G-P   P-P </span></span>
+<span><span class="co">#&gt;    73    80</span></span>
 <span></span>
 <span>  <span class="co"># Chromatin provenance columns in target links</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">cr</span><span class="op">$</span><span class="va">target_gene_links</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
 <span>    <span class="st">"gene"</span>, <span class="st">"anchor_type_before_chromatin"</span>,</span>
 <span>    <span class="st">"anchor_type_after_chromatin"</span>, <span class="st">"chromatin_target_action"</span></span>
 <span>  <span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
 <span><span class="co">#&gt;    gene anchor_type_before_chromatin anchor_type_after_chromatin</span></span>
 <span><span class="co">#&gt; 1 LRIG2                            G                           G</span></span>
 <span><span class="co">#&gt; 2 LRIG2                            G                           G</span></span>
@@ -2543,14 +2596,16 @@ types.</td>
 the heatmap, which is a <strong>ComplexHeatmap</strong> grob) and accept
 standard <code>+</code> layers for customisation. To access a specific
 plot:</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"cr"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_Dumbbell</span></span>
-<span>  <span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_Sankey</span></span>
-<span>  <span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_MarkHeatmap</span></span>
-<span>  <span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_UpSet</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_Dumbbell</span></span></code></pre></div>
 <p><img src="looplook_files/figure-html/chromatin-plots-1.png" class="r-plt" alt="" width="864"></p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_Sankey</span></span>
+<span><span class="co">#&gt; NULL</span></span>
+<span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_MarkHeatmap</span></span>
+<span><span class="co">#&gt; NULL</span></span>
+<span><span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_UpSet</span></span></code></pre></div>
+<p><img src="looplook_files/figure-html/chromatin-plots-2.png" class="r-plt" alt="" width="864"></p>
 <p><strong>Interpreting the MarkHeatmap:</strong> Rows represent
 reclassification outcomes (e.g., “P → dual” means a promoter was
 reclassified as a dual-signature element). Columns represent chromatin
@@ -2572,15 +2627,16 @@ multi-omics analysis pipeline. It integrates 3D genomic interactions
 with transcriptomic data to systematically characterize the functional
 landscape and regulatory mechanisms underlying the identified target
 genes.</p>
-<p> The GO enrichment, motif scanning, and PPI network modules are
-designed as (hypothesis-generating) analyses. Statistical tests
-(Wilcoxon/t-test p-values, GSEA) are reported per-module without global
-multiple-testing correction across loop types or analysis branches. GSEA
-uses random down-sampling of target genes controlled by , introducing
-stochasticity. Motif enrichment uses GC-matched background sampling with
-Fisher’s exact test. All exploratory results should be validated with
-independent experimental approaches before drawing definitive biological
-conclusions.</p>
+<p><strong>Important:</strong> The GO enrichment, motif scanning, and
+PPI network modules are designed as <em>exploratory</em>
+(hypothesis-generating) analyses. Statistical tests (Wilcoxon/t-test
+p-values, GSEA) are reported per-module without global multiple-testing
+correction across loop types or analysis branches. GSEA uses random
+down-sampling of target genes controlled by <code>gsea_nSample</code>,
+introducing stochasticity. Motif enrichment uses GC-matched background
+sampling with Fisher’s exact test. All exploratory results should be
+validated with independent experimental approaches before drawing
+definitive biological conclusions.</p>
 <div class="section level4">
 <h4 id="parameter-strategy-a-highly-modular-pipeline">Parameter Strategy: A Highly Modular Pipeline<a class="anchor" aria-label="anchor" href="#parameter-strategy-a-highly-modular-pipeline"></a>
 </h4>
@@ -2656,6 +2712,42 @@ ensuring no data loss and a complete functional overview.</li>
 It only keeps 3D loop-derived targets with clear annotation.</li>
 </ul>
 </li>
+</ul>
+<p><strong>Important — reading <code>_Filled</code> columns
+correctly:</strong> All <code>*_Filled</code> columns use the <em>same
+one-level fallback</em>: strict 3D assignment first; expression-filtered
+linear nearest genes only when strict is empty. Loop-connected genes
+that failed strict evaluation never enter <code>_Filled</code> columns
+(the unified finalizer re-aggregates from current target links only). In
+practice this means: peaks with loop connections keep
+<code>Filled = strict</code>; peaks without loop connections are filled
+with the linear nearest gene — subject to the expression filter whenever
+the object carries expression data (an unexpressed linear gene leaves
+the cell <code>NA</code> rather than being filled). Two usage rules
+follow:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Always read <code>*_Filled</code> together with its evidence
+column.</strong> <code>Regulated_promoter_genes_Filled</code> can
+contain genes from <em>any</em> fallback source — a filled gene is not
+necessarily a promoter gene. Consult
+<code>Regulated_promoter_Fallback_Evidence</code> (values:
+<code>local_promoter</code>, <code>local_gene_body</code>,
+<code>linear_nearest</code>, <code>linear_fallback</code>; inferred from
+the feature’s ChIPseeker annotation) to know what each filled gene
+actually is.</li>
+<li>
+<strong>Use strict columns for stringent functional analyses
+(GSEA/GO).</strong> <code>_Filled</code> columns provide complete
+genome-wide coverage (the <em>“gapless annotation”</em> semantics) and
+therefore mix 3D-derived and linear-nearest genes. When running GSEA or
+GO enrichment, prefer <code>include_Filled = FALSE</code> (strict
+<code>Assigned_Target_Genes</code> /
+<code>Regulated_promoter_genes</code>) so the gene set reflects only
+spatial regulation; reserve <code>include_Filled = TRUE</code> for
+exploratory overviews or modules that need complete coverage.</li>
+</ol>
+<ul>
 <li>
 <strong><code>use_nearest_gene</code></strong>: Logical parameter.
 If <code>TRUE</code>, the pipeline bypasses 3D loop-based assignment and
@@ -2731,14 +2823,11 @@ table.</li>
 <p>Ideal for complete multi-omics integration (e.g., HiChIP + ATAC-seq).
 This mode comprehensively maps and profiles target genes of
 interest.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">deps</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ggpointdensity"</span>, <span class="st">"viridis"</span>, <span class="st">"ggpubr"</span>, <span class="st">"ggdist"</span><span class="op">)</span></span>
-<span><span class="va">deps_ok</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">deps</span>, <span class="va">requireNamespace</span>, <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">logical</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"res_integrated"</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="va">deps_ok</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">diff_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_deg.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
-<span>  <span class="va">meta_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_coldata.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">diff_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_deg.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
+<span><span class="va">meta_path</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"example_coldata.txt"</span>, package <span class="op">=</span> <span class="st">"looplook"</span><span class="op">)</span></span>
 <span></span>
-<span>  <span class="va">res_A</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/profile_target_genes.html">profile_target_genes</a></span><span class="op">(</span></span>
+<span><span class="va">res_A</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/profile_target_genes.html">profile_target_genes</a></span><span class="op">(</span></span>
 <span>    annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
 <span>    diff_file <span class="op">=</span> <span class="va">diff_path</span>,</span>
 <span>    lfc_col <span class="op">=</span> <span class="st">"log2FoldChange"</span>,</span>
@@ -2752,8 +2841,7 @@ interest.</p>
 <span>    run_motif <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>    run_go <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>    run_ppi <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<span>  <span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="example-b-peak-driven-strict-promoter-profiling-high-stringency">Example B: Peak-Driven Strict Promoter Profiling (High
@@ -2770,11 +2858,8 @@ directly contact canonical or reference promoters (i.e., strict
 <code>E-P</code> or <code>P-P</code> loops), excluding more permissive
 connections such as enhancer-gene body (<code>E-G</code>)
 interactions.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">deps</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ggpointdensity"</span>, <span class="st">"viridis"</span>, <span class="st">"ggpubr"</span>, <span class="st">"ggdist"</span><span class="op">)</span></span>
-<span><span class="va">deps_ok</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">deps</span>, <span class="va">requireNamespace</span>, <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">logical</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"res_integrated"</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="va">deps_ok</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">res_B</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/profile_target_genes.html">profile_target_genes</a></span><span class="op">(</span></span>
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">res_B</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/profile_target_genes.html">profile_target_genes</a></span><span class="op">(</span></span>
 <span>    annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
 <span>    diff_file <span class="op">=</span> <span class="va">diff_path</span>,</span>
 <span>    lfc_col <span class="op">=</span> <span class="st">"log2FoldChange"</span>,</span>
@@ -2788,8 +2873,7 @@ interactions.</p>
 <span>    run_motif <span class="op">=</span> <span class="cn">FALSE</span>, <span class="co"># Set TRUE in real analysis to scan JASPAR motifs</span></span>
 <span>    run_go <span class="op">=</span> <span class="cn">FALSE</span>, <span class="co"># Set TRUE in real analysis for pathway enrichment</span></span>
 <span>    run_ppi <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<span>  <span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="example-c-1d-linear-annotation-baseline-the-control">Example C: 1D Linear Annotation Baseline (The Control)<a class="anchor" aria-label="anchor" href="#example-c-1d-linear-annotation-baseline-the-control"></a>
@@ -2800,11 +2884,8 @@ exclusively to their nearest neighboring gene. It serves as a
 conventional “baseline control.” Comparing results against Example A or
 B enables rigorous demonstration of the novel functional insights gained
 from 3D chromatin looping analyses relative to conventional method.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">deps</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ggpointdensity"</span>, <span class="st">"viridis"</span>, <span class="st">"ggpubr"</span>, <span class="st">"ggdist"</span><span class="op">)</span></span>
-<span><span class="va">deps_ok</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">deps</span>, <span class="va">requireNamespace</span>, <span class="fu"><a href="https://rdrr.io/r/base/logical.html" class="external-link">logical</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"res_integrated"</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="va">deps_ok</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">res_C</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/profile_target_genes.html">profile_target_genes</a></span><span class="op">(</span></span>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">res_C</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/profile_target_genes.html">profile_target_genes</a></span><span class="op">(</span></span>
 <span>    annotation_res <span class="op">=</span> <span class="va">res_integrated</span>,</span>
 <span>    diff_file <span class="op">=</span> <span class="va">diff_path</span>,</span>
 <span>    lfc_col <span class="op">=</span> <span class="st">"log2FoldChange"</span>,</span>
@@ -2818,8 +2899,7 @@ from 3D chromatin looping analyses relative to conventional method.</p>
 <span>    run_motif <span class="op">=</span> <span class="cn">FALSE</span>, <span class="co"># Set TRUE in real analysis to scan JASPAR motifs</span></span>
 <span>    run_go <span class="op">=</span> <span class="cn">FALSE</span>, <span class="co"># Set TRUE in real analysis for pathway enrichment</span></span>
 <span>    run_ppi <span class="op">=</span> <span class="cn">FALSE</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<span>  <span class="op">)</span></span></code></pre></div>
 <div class="section level4">
 <h4 id="deep-dive-functional-visualizations">Deep Dive: Functional Visualizations<a class="anchor" aria-label="anchor" href="#deep-dive-functional-visualizations"></a>
 </h4>
@@ -2828,27 +2908,34 @@ from 3D chromatin looping analyses relative to conventional method.</p>
 <code>"targets"</code>). Each element contains <code>plots</code>
 (ggplot objects), <code>target_gene_sets</code> (character vectors), and
 <code>go_results</code> (data frames).</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"res_A"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># Accessing results from a profiling run</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_A</span><span class="op">)</span> <span class="co"># one element per target_source ("loops", "targets")</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">)</span> <span class="co"># "go_results" "target_gene_sets" "plots"</span></span>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Accessing results from a profiling run</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_A</span><span class="op">)</span> <span class="co"># one element per target_source ("loops", "targets")</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">)</span> <span class="co"># "go_results" "target_gene_sets" "plots"</span></span>
 <span></span>
-<span>  <span class="co"># --- Target genes ---</span></span>
-<span>  <span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">target_gene_sets</span> <span class="co"># named list of character vectors</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">target_gene_sets</span><span class="op">)</span> <span class="co"># gene set keys (e.g. "All", "Up", "Down")</span></span>
+<span><span class="co"># --- Target genes ---</span></span>
+<span><span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">target_gene_sets</span> <span class="co"># named list of character vectors</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">target_gene_sets</span><span class="op">)</span> <span class="co"># gene set keys (e.g. "All", "Up", "Down")</span></span>
 <span></span>
-<span>  <span class="co"># --- GO enrichment table (requires run_go = TRUE) ---</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">go_results</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="va">go_df</span> <span class="op">&lt;-</span> <span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">go_results</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">go_df</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">go_df</span><span class="op">$</span><span class="va">pvalue</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Description"</span>, <span class="st">"ONTOLOGY"</span>, <span class="st">"pvalue"</span>, <span class="st">"Count"</span>, <span class="st">"geneID"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span>  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"GO enrichment was not run. Set run_go = TRUE to enable."</span><span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
+<span><span class="co"># --- GO enrichment table (requires run_go = TRUE) ---</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">go_results</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">go_df</span> <span class="op">&lt;-</span> <span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">go_results</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">go_df</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">go_df</span><span class="op">$</span><span class="va">pvalue</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Description"</span>, <span class="st">"ONTOLOGY"</span>, <span class="st">"pvalue"</span>, <span class="st">"Count"</span>, <span class="st">"geneID"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">message</a></span><span class="op">(</span><span class="st">"GO enrichment was not run. Set run_go = TRUE to enable."</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
 <span></span>
-<span>  <span class="co"># --- All plot keys ---</span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">plots</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<span><span class="co"># --- All plot keys ---</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res_A</span><span class="op">$</span><span class="va">loops</span><span class="op">$</span><span class="va">plots</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># --- Representative profiling plots ---</span></span>
+<span><span class="co"># Plots are grouped per analysis task (see names(res_A$loops$plots)); here we</span></span>
+<span><span class="co"># show the core plots for the "targets" task.</span></span>
+<span><span class="va">tg_plots</span> <span class="op">&lt;-</span> <span class="va">res_A</span><span class="op">$</span><span class="va">targets</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Target_Genes</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">tg_plots</span><span class="op">$</span><span class="va">LFC_Violin</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">tg_plots</span><span class="op">$</span><span class="va">LFC_Violin</span><span class="op">)</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">tg_plots</span><span class="op">$</span><span class="va">Heatmap</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">tg_plots</span><span class="op">$</span><span class="va">Heatmap</span><span class="op">)</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">tg_plots</span><span class="op">$</span><span class="va">Scatter</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">tg_plots</span><span class="op">$</span><span class="va">Scatter</span><span class="op">)</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">tg_plots</span><span class="op">$</span><span class="va">Raincloud_LFC</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">tg_plots</span><span class="op">$</span><span class="va">Raincloud_LFC</span><span class="op">)</span></span></code></pre></div>
 <div class="section level5">
 <h5 id="available-plot-keys">Available Plot Keys<a class="anchor" aria-label="anchor" href="#available-plot-keys"></a>
 </h5>
@@ -3036,22 +3123,21 @@ tracks.</li>
 Specifies the output file path and format (e.g., <code>".pdf"</code>)
 for exporting the final ggplot object.</li>
 </ul>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"f1"</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="fu"><a href="https://rdrr.io/r/base/exists.html" class="external-link">exists</a></span><span class="op">(</span><span class="st">"atac_path"</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggplot2"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"TxDb.Hsapiens.UCSC.hg38.knownGene"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>    <span class="co"># If 'from' and 'to' are omitted, it automatically detects the densest viewport.</span></span>
-<span>    <span class="va">track_plot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/plot_peaks_interactions.html">plot_peaks_interactions</a></span><span class="op">(</span></span>
-<span>      bedpe_file <span class="op">=</span> <span class="va">f1</span>,</span>
-<span>      target_bed <span class="op">=</span> <span class="va">atac_path</span>,</span>
-<span>      chr <span class="op">=</span> <span class="st">"chr1"</span>,</span>
-<span>      from <span class="op">=</span> <span class="fl">11884299</span>,</span>
-<span>      to <span class="op">=</span> <span class="fl">12106581</span>,</span>
-<span>      species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
-<span>      save_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">out_dir</span>, <span class="st">"Locus_Track.pdf"</span><span class="op">)</span></span>
-<span>    <span class="op">)</span></span>
-<span>  <span class="op">}</span></span>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggplot2"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"TxDb.Hsapiens.UCSC.hg38.knownGene"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">&amp;&amp;</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="co"># If 'from' and 'to' are omitted, it automatically detects the densest viewport.</span></span>
+<span>  <span class="va">track_plot</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/plot_peaks_interactions.html">plot_peaks_interactions</a></span><span class="op">(</span></span>
+<span>    bedpe_file <span class="op">=</span> <span class="va">f1</span>,</span>
+<span>    target_bed <span class="op">=</span> <span class="va">atac_path</span>,</span>
+<span>    chr <span class="op">=</span> <span class="st">"chr1"</span>,</span>
+<span>    from <span class="op">=</span> <span class="fl">11884299</span>,</span>
+<span>    to <span class="op">=</span> <span class="fl">12106581</span>,</span>
+<span>    species <span class="op">=</span> <span class="st">"hg38"</span>,</span>
+<span>    save_file <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">out_dir</span>, <span class="st">"Locus_Track.pdf"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">track_plot</span><span class="op">)</span></span>
 <span><span class="op">}</span></span></code></pre></div>
 <hr>
 </div>
@@ -3065,7 +3151,7 @@ for exporting the final ggplot object.</li>
 can be generated with a single function call. The template automatically
 detects which pipeline stages are configured and hides unavailable
 sections:</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/zying106/looplook" class="external-link">looplook</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># ── Required ──────────────────────────────────────────────────</span></span>
@@ -3159,11 +3245,11 @@ New File → R Markdown → From Template → looplook Report</strong>.</p>
 <p><strong>Cause:</strong> The required annotation database package is
 not installed. These are Bioconductor packages, not CRAN.</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"TxDb.Hsapiens.UCSC.hg38.knownGene"</span><span class="op">)</span></span>
 <span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"org.Hs.eg.db"</span><span class="op">)</span></span></code></pre></div>
 <p>For mouse data:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"TxDb.Mmusculus.UCSC.mm10.knownGene"</span><span class="op">)</span></span>
 <span><span class="fu">BiocManager</span><span class="fu">::</span><span class="fu"><a href="https://bioconductor.github.io/BiocManager/reference/install.html" class="external-link">install</a></span><span class="op">(</span><span class="st">"org.Mm.eg.db"</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -3175,7 +3261,7 @@ and <code>OrgDb</code> package. Pass them explicitly via the
 <code>txdb</code> and <code>org_db</code> parameters, and set
 <code>species</code> to any genome assembly string (used for karyotype
 ideograms and motif filtering):</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Drosophila melanogaster (dm6)</span></span>
 <span><span class="fu"><a href="../reference/annotate_peaks_and_loops.html">annotate_peaks_and_loops</a></span><span class="op">(</span></span>
 <span>    bedpe_file  <span class="op">=</span> <span class="st">"dm6_loops.bedpe"</span>,</span>
@@ -3195,7 +3281,7 @@ ideograms and motif filtering):</p>
 <p>Refinement and profiling functions consume the
 <code>annotation_res</code> object produced above, so no
 species-specific parameters are needed downstream:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">refined</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/refine_loop_anchors_by_expression.html">refine_loop_anchors_by_expression</a></span><span class="op">(</span>annotation_res <span class="op">=</span> <span class="va">anno</span>, <span class="va">...</span><span class="op">)</span></span>
 <span><span class="va">result</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/profile_target_genes.html">profile_target_genes</a></span><span class="op">(</span>annotation_res <span class="op">=</span> <span class="va">refined</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
 <p><strong>Limitations for non-built-in species:</strong></p>
@@ -3273,7 +3359,7 @@ are optional and retained in the output.</p>
 start position is greater than or equal to the end position.</p>
 <p><strong>Solution:</strong> Filter out invalid rows before
 importing:</p>
-<div class="sourceCode" id="cb27"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="fu">awk</span> <span class="st">'$2 &lt; $3 &amp;&amp; $5 &lt; $6'</span> input.bedpe <span class="op">&gt;</span> clean.bedpe</span></code></pre></div>
+<div class="sourceCode" id="cb32"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a><span class="fu">awk</span> <span class="st">'$2 &lt; $3 &amp;&amp; $5 &lt; $6'</span> input.bedpe <span class="op">&gt;</span> clean.bedpe</span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="expression-matrix-contains-non-numeric-values">Expression matrix contains non-numeric values<a class="anchor" aria-label="anchor" href="#expression-matrix-contains-non-numeric-values"></a>
@@ -3302,7 +3388,7 @@ Expression matrix uses Ensembl IDs (ENSG00000141510) but OrgDb returns
 gene symbols (TP53) - Case mismatch: expression matrix has “tp53” but
 OrgDb returns “TP53”</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check current gene names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">expr_matrix</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -3331,7 +3417,7 @@ practice to use consistent naming.</p>
 <p><strong>Cause:</strong> The connected-component clustering algorithm
 has O(N²) worst-case complexity per chromosome pair.</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Pre-filter low-confidence loops</span></span>
 <span><span class="fu"><a href="../reference/consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></span><span class="op">(</span></span>
 <span>    files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"rep1.bedpe"</span>, <span class="st">"rep2.bedpe"</span><span class="op">)</span>,</span>
@@ -3349,7 +3435,7 @@ has O(N²) worst-case complexity per chromosome pair.</p>
 transitively merge distant loops through intermediate anchors (A-B + B-C
 merges A and C).</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Option 1: Drop chained clusters</span></span>
 <span><span class="fu"><a href="../reference/consolidate_chromatin_loops.html">consolidate_chromatin_loops</a></span><span class="op">(</span><span class="va">...</span>, chaining_policy <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span></span>
 <span></span>
@@ -3375,7 +3461,7 @@ merges A and C).</p>
 the data.</p>
 <p><strong>Solution:</strong> Lower the threshold or disable
 pre-filtering:</p>
-<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb40"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check score distribution first</span></span>
 <span><span class="va">gi</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/bedpe_to_gi.html">bedpe_to_gi</a></span><span class="op">(</span><span class="st">"my_loops.bedpe"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="fu">mcols</span><span class="op">(</span><span class="va">gi</span><span class="op">)</span><span class="op">$</span><span class="va">score</span><span class="op">)</span></span>
@@ -3391,7 +3477,7 @@ pre-filtering:</p>
 different genome builds (e.g., hg38 vs hg19) or different chromosome
 naming conventions (chr1 vs 1).</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check chromosome names</span></span>
 <span><span class="fu">seqlevelsStyle</span><span class="op">(</span><span class="va">gr_peaks</span><span class="op">)</span> <span class="co"># Should match</span></span>
 <span><span class="fu">seqlevelsStyle</span><span class="op">(</span><span class="va">gr_anchors</span><span class="op">)</span> <span class="co"># Should match</span></span>
@@ -3410,7 +3496,7 @@ naming conventions (chr1 vs 1).</p>
 <p><strong>Cause:</strong> The expression threshold is too high, or the
 expression matrix does not match the gene annotation.</p>
 <p><strong>Solution:</strong></p>
-<div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check expression distribution</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log2</a></span><span class="op">(</span><span class="va">vals</span> <span class="op">+</span> <span class="fl">1</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Expression Distribution"</span><span class="op">)</span></span>
 <span></span>
@@ -3438,7 +3524,7 @@ cannot resolve a method for it. This manifests in interactive printing,
 <code>ggsave</code>, and knitr rendering contexts.</p>
 <p><strong>Solution:</strong> Either render via <code>ggsave()</code>
 which bypasses the issue, or upgrade to patchwork ≥ 1.4.0:</p>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb46"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">ggsave</span><span class="op">(</span><span class="st">"upset.pdf"</span>, <span class="va">cr</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">Chromatin_UpSet</span>, width <span class="op">=</span> <span class="fl">10</span>, height <span class="op">=</span> <span class="fl">6</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># or upgrade patchwork</span></span>
@@ -3450,7 +3536,7 @@ which bypasses the issue, or upgrade to patchwork ≥ 1.4.0:</p>
 <div class="section level2">
 <h2 id="session-info">Session Info<a class="anchor" aria-label="anchor" href="#session-info"></a>
 </h2>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb47"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
@@ -3477,9 +3563,9 @@ which bypasses the issue, or upgrade to patchwork ≥ 1.4.0:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span><span class="co">#&gt;   [1] splines_4.6.1               BiocIO_1.22.0              </span></span>
-<span><span class="co">#&gt;   [3] ggplotify_0.1.3             bitops_1.0-9               </span></span>
+<span><span class="co">#&gt;   [3] ggplotify_0.1.3             bitops_1.1-0               </span></span>
 <span><span class="co">#&gt;   [5] fields_17.3                 tibble_3.3.1               </span></span>
-<span><span class="co">#&gt;   [7] polyclip_1.10-7             enrichit_0.2.0             </span></span>
+<span><span class="co">#&gt;   [7] polyclip_1.10-7             enrichit_0.2.1             </span></span>
 <span><span class="co">#&gt;   [9] XML_3.99-0.23               rpart_4.1.27               </span></span>
 <span><span class="co">#&gt;  [11] karyoploteR_1.38.0          lifecycle_1.0.5            </span></span>
 <span><span class="co">#&gt;  [13] httr2_1.3.0                 processx_3.9.0             </span></span>
@@ -3490,7 +3576,7 @@ which bypasses the issue, or upgrade to patchwork ≥ 1.4.0:</p>
 <span><span class="co">#&gt;  [23] rmarkdown_2.31              jquerylib_0.1.4            </span></span>
 <span><span class="co">#&gt;  [25] yaml_2.3.12                 ggtangle_0.1.2             </span></span>
 <span><span class="co">#&gt;  [27] otel_0.2.0                  spam_2.11-4                </span></span>
-<span><span class="co">#&gt;  [29] zip_3.0.1                   DBI_1.3.0                  </span></span>
+<span><span class="co">#&gt;  [29] zip_3.0.2                   DBI_1.3.0                  </span></span>
 <span><span class="co">#&gt;  [31] RColorBrewer_1.1-3          maps_3.4.3                 </span></span>
 <span><span class="co">#&gt;  [33] abind_1.4-8                 GenomicRanges_1.64.0       </span></span>
 <span><span class="co">#&gt;  [35] purrr_1.2.2                 AnnotationFilter_1.36.0    </span></span>
@@ -3499,8 +3585,8 @@ which bypasses the issue, or upgrade to patchwork ≥ 1.4.0:</p>
 <span><span class="co">#&gt;  [41] nnet_7.3-20                 VariantAnnotation_1.58.0   </span></span>
 <span><span class="co">#&gt;  [43] tweenr_2.0.3                rappdirs_0.3.4             </span></span>
 <span><span class="co">#&gt;  [45] aisdk_1.4.12                gdtools_0.5.1              </span></span>
-<span><span class="co">#&gt;  [47] enrichplot_1.32.0           IRanges_2.46.0             </span></span>
-<span><span class="co">#&gt;  [49] S4Vectors_0.50.1            ggrepel_0.9.8              </span></span>
+<span><span class="co">#&gt;  [47] IRanges_2.46.0              S4Vectors_0.50.1           </span></span>
+<span><span class="co">#&gt;  [49] enrichplot_1.32.0           ggrepel_0.9.8              </span></span>
 <span><span class="co">#&gt;  [51] tidytree_0.4.8              pkgdown_2.2.1              </span></span>
 <span><span class="co">#&gt;  [53] codetools_0.2-20            DelayedArray_0.38.2        </span></span>
 <span><span class="co">#&gt;  [55] DOSE_4.6.0                  ggforce_0.5.0              </span></span>
@@ -3509,7 +3595,7 @@ which bypasses the issue, or upgrade to patchwork ≥ 1.4.0:</p>
 <span><span class="co">#&gt;  [61] matrixStats_1.5.0           stats4_4.6.1               </span></span>
 <span><span class="co">#&gt;  [63] base64enc_0.1-6             Seqinfo_1.2.0              </span></span>
 <span><span class="co">#&gt;  [65] bamsignals_1.44.1           GenomicAlignments_1.48.0   </span></span>
-<span><span class="co">#&gt;  [67] jsonlite_2.0.0              Formula_1.2-5              </span></span>
+<span><span class="co">#&gt;  [67] jsonlite_2.0.0              Formula_1.2-6              </span></span>
 <span><span class="co">#&gt;  [69] systemfonts_1.3.2           ggnewscale_0.5.2           </span></span>
 <span><span class="co">#&gt;  [71] tools_4.6.1                 treeio_1.36.1              </span></span>
 <span><span class="co">#&gt;  [73] ragg_1.5.2                  Rcpp_1.1.2                 </span></span>
@@ -3523,47 +3609,46 @@ which bypasses the issue, or upgrade to patchwork ≥ 1.4.0:</p>
 <span><span class="co">#&gt;  [89] textshaping_1.0.5           colorspace_2.1-3           </span></span>
 <span><span class="co">#&gt;  [91] GO.db_3.23.1                dichromat_2.0-1            </span></span>
 <span><span class="co">#&gt;  [93] RSQLite_3.53.3              cigarillo_1.2.1            </span></span>
-<span><span class="co">#&gt;  [95] UpSetR_1.4.1                tidyr_1.3.2                </span></span>
-<span><span class="co">#&gt;  [97] generics_0.1.4              fontLiberation_0.1.0       </span></span>
-<span><span class="co">#&gt;  [99] data.table_1.18.4           rtracklayer_1.72.0         </span></span>
-<span><span class="co">#&gt; [101] InteractionSet_1.40.0       httr_1.4.8                 </span></span>
-<span><span class="co">#&gt; [103] htmlwidgets_1.6.4           S4Arrays_1.12.0            </span></span>
-<span><span class="co">#&gt; [105] scatterpie_0.2.6            regioneR_1.44.0            </span></span>
-<span><span class="co">#&gt; [107] pkgconfig_2.0.3             gtable_0.3.6               </span></span>
-<span><span class="co">#&gt; [109] blob_1.3.0                  S7_0.2.2                   </span></span>
-<span><span class="co">#&gt; [111] XVector_0.52.0              clusterProfiler_4.20.0     </span></span>
-<span><span class="co">#&gt; [113] htmltools_0.5.9             fontBitstreamVera_0.1.1    </span></span>
-<span><span class="co">#&gt; [115] dotCall64_1.2               bookdown_0.47              </span></span>
-<span><span class="co">#&gt; [117] ProtGenerics_1.44.0         scales_1.4.0               </span></span>
-<span><span class="co">#&gt; [119] Biobase_2.72.0              png_0.1-9                  </span></span>
-<span><span class="co">#&gt; [121] ggfun_0.2.1                 knitr_1.51                 </span></span>
-<span><span class="co">#&gt; [123] rstudioapi_0.19.0           reshape2_1.4.5             </span></span>
-<span><span class="co">#&gt; [125] rjson_0.2.23                nlme_3.1-169               </span></span>
-<span><span class="co">#&gt; [127] checkmate_2.3.4             curl_7.1.0                 </span></span>
-<span><span class="co">#&gt; [129] cachem_1.1.0                stringr_1.6.0              </span></span>
-<span><span class="co">#&gt; [131] parallel_4.6.1              foreign_0.8-91             </span></span>
-<span><span class="co">#&gt; [133] AnnotationDbi_1.74.0        restfulr_0.0.17            </span></span>
-<span><span class="co">#&gt; [135] desc_1.4.3                  pillar_1.11.1              </span></span>
-<span><span class="co">#&gt; [137] grid_4.6.1                  vctrs_0.7.3                </span></span>
-<span><span class="co">#&gt; [139] tidydr_0.0.6                cluster_2.1.8.2            </span></span>
-<span><span class="co">#&gt; [141] htmlTable_2.5.0             evaluate_1.0.5             </span></span>
-<span><span class="co">#&gt; [143] GenomicFeatures_1.64.0      cli_3.6.6                  </span></span>
-<span><span class="co">#&gt; [145] compiler_4.6.1              bezier_1.1.2               </span></span>
-<span><span class="co">#&gt; [147] Rsamtools_2.28.0            rlang_1.3.0                </span></span>
-<span><span class="co">#&gt; [149] crayon_1.5.3                labeling_0.4.3             </span></span>
-<span><span class="co">#&gt; [151] ps_1.9.3                    plyr_1.8.9                 </span></span>
-<span><span class="co">#&gt; [153] fs_2.1.0                    ggiraph_0.9.6              </span></span>
-<span><span class="co">#&gt; [155] stringi_1.8.7               viridisLite_0.4.3          </span></span>
-<span><span class="co">#&gt; [157] BiocParallel_1.46.0         Biostrings_2.80.1          </span></span>
-<span><span class="co">#&gt; [159] lazyeval_0.2.3              GOSemSim_2.38.3            </span></span>
-<span><span class="co">#&gt; [161] fontquiver_0.2.1            Matrix_1.7-5               </span></span>
-<span><span class="co">#&gt; [163] BSgenome_1.80.0             patchwork_1.3.2            </span></span>
-<span><span class="co">#&gt; [165] bit64_4.8.2                 ggplot2_4.0.3              </span></span>
-<span><span class="co">#&gt; [167] KEGGREST_1.52.2             SummarizedExperiment_1.42.0</span></span>
-<span><span class="co">#&gt; [169] igraph_2.3.3                memoise_2.0.1              </span></span>
-<span><span class="co">#&gt; [171] bslib_0.11.0                ggtree_4.2.0               </span></span>
-<span><span class="co">#&gt; [173] bit_4.6.0                   gson_0.2.0                 </span></span>
-<span><span class="co">#&gt; [175] ape_5.8-1</span></span></code></pre></div>
+<span><span class="co">#&gt;  [95] tidyr_1.3.2                 generics_0.1.4             </span></span>
+<span><span class="co">#&gt;  [97] fontLiberation_0.1.0        data.table_1.18.4          </span></span>
+<span><span class="co">#&gt;  [99] rtracklayer_1.72.0          InteractionSet_1.40.0      </span></span>
+<span><span class="co">#&gt; [101] httr_1.4.8                  htmlwidgets_1.6.4          </span></span>
+<span><span class="co">#&gt; [103] S4Arrays_1.12.0             scatterpie_0.2.6           </span></span>
+<span><span class="co">#&gt; [105] regioneR_1.44.0             pkgconfig_2.0.3            </span></span>
+<span><span class="co">#&gt; [107] gtable_0.3.6                blob_1.3.0                 </span></span>
+<span><span class="co">#&gt; [109] S7_0.2.2                    XVector_0.52.0             </span></span>
+<span><span class="co">#&gt; [111] clusterProfiler_4.20.0      htmltools_0.5.9            </span></span>
+<span><span class="co">#&gt; [113] fontBitstreamVera_0.1.1     dotCall64_1.2              </span></span>
+<span><span class="co">#&gt; [115] bookdown_0.47               ProtGenerics_1.44.0        </span></span>
+<span><span class="co">#&gt; [117] scales_1.4.0                Biobase_2.72.0             </span></span>
+<span><span class="co">#&gt; [119] png_0.1-9                   ggfun_0.2.1                </span></span>
+<span><span class="co">#&gt; [121] knitr_1.51                  rstudioapi_0.19.0          </span></span>
+<span><span class="co">#&gt; [123] reshape2_1.4.5              rjson_0.2.23               </span></span>
+<span><span class="co">#&gt; [125] nlme_3.1-169                checkmate_2.3.4            </span></span>
+<span><span class="co">#&gt; [127] curl_7.1.0                  cachem_1.1.0               </span></span>
+<span><span class="co">#&gt; [129] stringr_1.6.0               parallel_4.6.1             </span></span>
+<span><span class="co">#&gt; [131] foreign_0.8-91              AnnotationDbi_1.74.0       </span></span>
+<span><span class="co">#&gt; [133] restfulr_0.0.17             desc_1.4.3                 </span></span>
+<span><span class="co">#&gt; [135] pillar_1.11.1               grid_4.6.1                 </span></span>
+<span><span class="co">#&gt; [137] vctrs_0.7.3                 tidydr_0.0.6               </span></span>
+<span><span class="co">#&gt; [139] cluster_2.1.8.2             htmlTable_2.5.0            </span></span>
+<span><span class="co">#&gt; [141] evaluate_1.0.5              GenomicFeatures_1.64.0     </span></span>
+<span><span class="co">#&gt; [143] cli_3.6.6                   compiler_4.6.1             </span></span>
+<span><span class="co">#&gt; [145] bezier_1.1.2                Rsamtools_2.28.0           </span></span>
+<span><span class="co">#&gt; [147] rlang_1.3.0                 crayon_1.5.3               </span></span>
+<span><span class="co">#&gt; [149] labeling_0.4.3              ps_1.9.3                   </span></span>
+<span><span class="co">#&gt; [151] plyr_1.8.9                  fs_2.1.0                   </span></span>
+<span><span class="co">#&gt; [153] ggiraph_0.9.6               stringi_1.8.9              </span></span>
+<span><span class="co">#&gt; [155] viridisLite_0.4.3           BiocParallel_1.46.0        </span></span>
+<span><span class="co">#&gt; [157] Biostrings_2.80.1           lazyeval_0.2.3             </span></span>
+<span><span class="co">#&gt; [159] GOSemSim_2.38.3             fontquiver_0.2.1           </span></span>
+<span><span class="co">#&gt; [161] Matrix_1.7-5                BSgenome_1.80.0            </span></span>
+<span><span class="co">#&gt; [163] patchwork_1.3.2             bit64_4.8.2                </span></span>
+<span><span class="co">#&gt; [165] ggplot2_4.0.3               KEGGREST_1.52.2            </span></span>
+<span><span class="co">#&gt; [167] SummarizedExperiment_1.42.0 igraph_2.3.3               </span></span>
+<span><span class="co">#&gt; [169] memoise_2.0.1               bslib_0.12.0               </span></span>
+<span><span class="co">#&gt; [171] ggtree_4.2.0                bit_4.6.0                  </span></span>
+<span><span class="co">#&gt; [173] gson_0.2.1                  ape_5.8-1</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

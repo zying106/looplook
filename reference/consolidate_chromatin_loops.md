@@ -73,7 +73,7 @@ consolidate_chromatin_loops(
   region_of_interest = NULL,
   roi_mode = c("any", "both"),
   out_file = NULL,
-  write_output = TRUE,
+  write_output = FALSE,
   quiet = FALSE
 )
 ```
@@ -198,9 +198,9 @@ consolidate_chromatin_loops(
 
 - write_output:
 
-  Logical. If `TRUE` (default), write the consolidated BEDPE file when
-  `out_file` is provided. If `FALSE`, return the `GInteractions` object
-  without creating directories or files.
+  Logical. If `TRUE`, write the consolidated BEDPE file when `out_file`
+  is provided (default: `FALSE`). If `FALSE`, return the `GInteractions`
+  object without creating directories or files.
 
 - quiet:
 
@@ -234,9 +234,10 @@ object with metadata columns:
 The returned object carries a `looplook_metadata` attribute (access via
 `attr(x, "looplook_metadata")`) with package version, call parameters,
 diagnostics, and database versions. When `write_output = TRUE` and
-`out_file` is provided, an extended BEDPE file is written with the
-additional columns `n_members` and `n_reps` appended after the standard
-BEDPE fields.
+`out_file` is provided, a standard 10-column BEDPE file is written
+(columns 9-10 are `strand1`/ `strand2`, set to `"."` as the data are not
+stranded), followed by the documented extension columns 11-12
+`n_members` and `n_reps`.
 
 ## Examples
 
@@ -252,7 +253,8 @@ res_intersect <- consolidate_chromatin_loops(
   files = c(f1, f2),
   mode = "intersect",
   gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+  out_file = tempfile(fileext = ".bedpe"),
+  write_output = TRUE
 )
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops (raw: 300)
@@ -261,7 +263,7 @@ res_intersect <- consolidate_chromatin_loops(
 #>     Base: File 1 (first input). Output coordinates and scores come exclusively from File 1.
 #>     Intersecting with File 2...
 #> Finished! Final loops: 12
-#> Finished! Saved to /tmp/RtmpN6uFes/file9dde14d1a98.bedpe
+#> Finished! Saved to /tmp/RtmpW6R58j/file9de67faa2fad.bedpe
 
 # Example B: Consensus Mode (formerly Reproducible)
 # Finds consensus loops supported by both replicates (default for N=2)
@@ -269,7 +271,8 @@ res_consensus <- consolidate_chromatin_loops(
   files = c(f1, f2),
   mode = "consensus",
   gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+  out_file = tempfile(fileext = ".bedpe"),
+  write_output = TRUE
 )
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops (raw: 300)
@@ -296,7 +299,7 @@ res_consensus <- consolidate_chromatin_loops(
 #>   Chaining: 0/12 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Finished! Final loops: 12
-#> Finished! Saved to /tmp/RtmpN6uFes/file9dde2ca8dbd3.bedpe
+#> Finished! Saved to /tmp/RtmpW6R58j/file9de64840b72f.bedpe
 
 # Example C: Union Mode
 # Merges all loops into a single map
@@ -304,7 +307,8 @@ res_union <- consolidate_chromatin_loops(
   files = c(f1, f2),
   mode = "union",
   gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+  out_file = tempfile(fileext = ".bedpe"),
+  write_output = TRUE
 )
 #> >>> Reading BEDPE files
 #>     File 1: 300 loops (raw: 300)
@@ -330,7 +334,7 @@ res_union <- consolidate_chromatin_loops(
 #>   Chaining: 0/586 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Finished! Final loops: 586
-#> Finished! Saved to /tmp/RtmpN6uFes/file9dde596fcef4.bedpe
+#> Finished! Saved to /tmp/RtmpW6R58j/file9de66e6a2178.bedpe
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
 # 1. Pre-filter: Discard singletons (score < 2) to remove noise.
@@ -342,7 +346,8 @@ res_clean <- consolidate_chromatin_loops(
   min_raw_score = 2, # Pre-filter (remove noise)
   min_score = 5, # Post-filter (keep strong loops)
   gap = 1000,
-  out_file = tempfile(fileext = ".bedpe")
+  out_file = tempfile(fileext = ".bedpe"),
+  write_output = TRUE
 )
 #> >>> Reading BEDPE files
 #>     File 1: 115 loops (raw: 300)
@@ -369,7 +374,7 @@ res_clean <- consolidate_chromatin_loops(
 #>   Chaining: 0/7 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Finished! Final loops: 4
-#> Finished! Saved to /tmp/RtmpN6uFes/file9dde64fe53a1.bedpe
+#> Finished! Saved to /tmp/RtmpW6R58j/file9de629782a14.bedpe
 
 # Inspect results
 length(res_intersect)

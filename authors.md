@@ -18,16 +18,17 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/zying106/looplook/blob/main/DESCRIPTION)
+[`inst/CITATION`](https://github.com/zying106/looplook/blob/main/inst/CITATION)
 
-ZHANG Y (2026). *looplook: Integrative Suite for Target Assignment and
-Functional Annotation of Chromatin Interactions*. R package version
-0.99.15, <https://github.com/zying106/looplook>.
+Ying Zhang, Xingze Huang, Ye Chen, Liang Xu (2026). looplook: An
+integrative suite for expression-aware target assignment and functional
+annotation of chromatin interactions. bioRxiv.
+doi:10.64898/2026.04.03.715516.
 
-    @Manual{,
-      title = {looplook: Integrative Suite for Target Assignment and Functional Annotation of Chromatin Interactions},
-      author = {Ying ZHANG},
+    @Article{looplook2026,
+      title = {looplook: An integrative suite for expression-aware target assignment and functional annotation of chromatin interactions},
+      author = {Ying Zhang and Xingze Huang and Ye Chen and Liang Xu},
       year = {2026},
-      note = {R package version 0.99.15},
-      url = {https://github.com/zying106/looplook},
+      journal = {bioRxiv},
+      doi = {10.64898/2026.04.03.715516},
     }

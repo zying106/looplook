@@ -135,7 +135,7 @@ protein-protein interaction (PPI) network construction.</p>
 <span>  project_name <span class="op">=</span> <span class="st">"Analysis"</span>,</span>
 <span>  org_db <span class="op">=</span> <span class="st">"org.Hs.eg.db"</span>,</span>
 <span>  run_motif <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  genome_id <span class="op">=</span> <span class="st">"hg38"</span>,</span>
+<span>  genome_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"hg38"</span>, <span class="st">"hg19"</span>, <span class="st">"mm10"</span>, <span class="st">"mm9"</span><span class="op">)</span>,</span>
 <span>  motif_p_thresh <span class="op">=</span> <span class="fl">1e-04</span>,</span>
 <span>  motif_ntop <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  motif_n_perm <span class="op">=</span> <span class="fl">0L</span>,</span>
@@ -230,7 +230,7 @@ Default <code>FALSE</code>.</p></dd>
 
 <dt id="arg-genome-id">genome_id<a class="anchor" aria-label="anchor" href="#arg-genome-id"></a></dt>
 <dd><p>Character. Reference genome assembly for motif sequence extraction.
-Default <code>"hg38"</code>.</p></dd>
+Default <code>"hg38"</code>. One of <code>c("hg38", "hg19", "mm10", "mm9")</code>.</p></dd>
 
 
 <dt id="arg-motif-p-thresh">motif_p_thresh<a class="anchor" aria-label="anchor" href="#arg-motif-p-thresh"></a></dt>
@@ -276,10 +276,12 @@ Default <code>400</code>.</p></dd>
 
 <dt id="arg-ppi-species-id">ppi_species_id<a class="anchor" aria-label="anchor" href="#arg-ppi-species-id"></a></dt>
 <dd><p>Integer or <code>NULL</code>. NCBI taxonomy ID for STRING
-PPI analysis (e.g.\ 9606 for human, 10090 for mouse). <code>NULL</code> (default)
-attempts automatic inference from the OrgDb package name. Set explicitly
-for species whose OrgDb naming is not recognised. See
-<a href="https://string-db.org" class="external-link">https://string-db.org</a> for a complete taxonomy list.</p></dd>
+PPI analysis (e.g.\ 9606 for human, 10090 for mouse). When <code>NULL</code>
+(default), the ID is resolved from the <code>org_db</code> package name (only
+standard <code>org.*.eg.db</code> packages are recognised: human, mouse, rat,
+fruit fly, worm, yeast, zebrafish). An error is raised when the species
+cannot be resolved – no implicit guessing. Set explicitly for any other
+species. See <a href="https://string-db.org" class="external-link">https://string-db.org</a> for a complete taxonomy list.</p></dd>
 
 
 <dt id="arg-heatmap-nsample">heatmap_nSample<a class="anchor" aria-label="anchor" href="#arg-heatmap-nsample"></a></dt>

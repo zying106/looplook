@@ -48,11 +48,9 @@ data modalities.
   GSEA, GO enrichment, motif scanning, and PPI networks
   ([`profile_target_genes`](https://zying106.github.io/looplook/reference/profile_target_genes.md)).
 
-- **Visualization:** IGV-style multi-track plots, flower plots, and
-  UpSet intersection diagrams
+- **Visualization:** IGV-style multi-track plots and flower plots
   ([`plot_peaks_interactions`](https://zying106.github.io/looplook/reference/plot_peaks_interactions.md),
-  [`draw_flower_simplified`](https://zying106.github.io/looplook/reference/draw_flower_simplified.md),
-  [`draw_upset_intersections`](https://zying106.github.io/looplook/reference/draw_upset_intersections.md)).
+  [`draw_flower_simplified`](https://zying106.github.io/looplook/reference/draw_flower_simplified.md)).
 
 ## Data I/O
 

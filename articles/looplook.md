@@ -117,17 +117,18 @@ classifications than any single data modality alone.
 4.  **Chromatin-Aware Anchor Refinement**: Validates and systematically
     refines loop anchors using orthogonal chromatin mark data (ChIP-seq,
     CUT&Tag, ATAC-seq). Anchors are scored against ENCODE-inspired
-    active-enhancer criteria across five evidence levels ( to ). these
-    levels assess enhancer-like chromatin evidence, not overall
-    classification confidence — a strong promoter (H3K4me3+) may receive
-    only because the criteria are enhancer-oriented. Anchor types are
-    updated based on mark combinations — for instance, an eP anchor with
-    H3K4me3+ promoter-like chromatin (without conflicting marks) is
-    reverted to P, while a P anchor with H3K4me1+ H3K4me3+ dual marks is
-    upgraded to dual-signature. Triple-positive anchors (H3K4me1+
-    H3K4me3+ H3K27me3+) are classified as and retain their original
-    type. Refinement is fully auditable through per-anchor chromatin
-    state, evidence level, and before/after type columns.
+    active-enhancer criteria across five evidence levels (`canonical` to
+    `uncertain`). **Important:** these levels assess enhancer-like
+    chromatin evidence, not overall classification confidence — a strong
+    promoter (H3K4me3+) may receive only `supported` because the
+    criteria are enhancer-oriented. Anchor types are updated based on
+    mark combinations — for instance, an eP anchor with H3K4me3+
+    promoter-like chromatin (without conflicting marks) is reverted to
+    P, while a P anchor with H3K4me1+ H3K4me3+ dual marks is upgraded to
+    dual-signature. Triple-positive anchors (H3K4me1+ H3K4me3+
+    H3K27me3+) are classified as `conflicting_marks` and retain their
+    original type. Refinement is fully auditable through per-anchor
+    chromatin state, evidence level, and before/after type columns.
 
 5.  **Replicate Consolidation and Multi-Source Consensus**: Employs
     graph-theoretic connected-component clustering to harmonize
@@ -289,29 +290,33 @@ and functional interpretation.
   `NULL` (default), columns 8 and 7 are auto-detected by checking the
   proportion of numeric values.
 
-If your BEDPE score column contains p-values (values in \[0, 1\]),
-convert them to `-log10(p-value)` before using `min_raw_score` or
-`min_score`. The function will warn if it auto-detects a p-value-like
-column, but explicit conversion is the safest approach. \* **`quiet`**:
-Logical. If `TRUE`, suppress progress messages while preserving warnings
-(default: `FALSE`).
+**Score direction: All score-based filtering assumes higher scores =
+better interactions.** If your BEDPE score column contains p-values
+(values in \[0, 1\]), convert them to `-log10(p-value)` before using
+`min_raw_score` or `min_score`. The function will warn if it
+auto-detects a p-value-like column, but explicit conversion is the
+safest approach. \* **`quiet`**: Logical. If `TRUE`, suppress progress
+messages while preserving warnings (default: `FALSE`).
 
 For **single-sample filtering** (without replicate merging), use
 [`filter_chromatin_loops()`](https://zying106.github.io/looplook/reference/filter_chromatin_loops.md)
 — it applies the same blacklist and ROI logic to an existing
 `GInteractions` object. See
 [`?filter_chromatin_loops`](https://zying106.github.io/looplook/reference/filter_chromatin_loops.md)
-for details.
+for details. To merge proximal loops on an in-memory `GInteractions`
+object without the file-based pipeline (returning the reduced object
+plus per-loop cluster membership), use
+[`reduce_ginteractions()`](https://zying106.github.io/looplook/reference/reduce_ginteractions.md).
 
 The exported BEDPE file (when `write_output = TRUE` and `out_file` is
-set) contains 10 columns: the standard BEDPE fields (chr1, start1, end1,
-chr2, start2, end2, name, score) plus two metadata columns: -
-**`n_members`** (column 9): Number of raw loops merged into this
-consensus entry, giving a sense of cluster size. In intersect mode this
-is `1` (no merging, each retained loop stands alone); in consensus/union
-modes it reflects the number of loops clustered. - **`n_reps`** (column
-10): Number of input files that support this entry, useful for filtering
-by replication evidence.
+set) is standard 10-column BEDPE (chr1, start1, end1, chr2, start2,
+end2, name, score, strand1, strand2) with two documented extension
+columns appended (columns 11-12): - **`n_members`** (column 11): Number
+of raw loops merged into this consensus entry, giving a sense of cluster
+size. In intersect mode this is `1` (no merging, each retained loop
+stands alone); in consensus/union modes it reflects the number of loops
+clustered. - **`n_reps`** (column 12): Number of input files that
+support this entry, useful for filtering by replication evidence.
 
 ### Example 1: Building a Global Consensus Interactome
 
@@ -333,7 +338,8 @@ consensus_global <- consolidate_chromatin_loops(
   gap = 1000,
   min_raw_score = 2, # Pre-filter sequencing noise
   blacklist_species = "hg38", # Apply artifact blacklist
-  out_file = global_out
+  out_file = global_out,
+  write_output = TRUE
 )
 ```
 
@@ -361,7 +367,8 @@ consensus_targeted <- consolidate_chromatin_loops(
   gap = 1000,
   min_raw_score = 2,
   region_of_interest = h3k27ac_peaks,
-  out_file = targeted_out
+  out_file = targeted_out,
+  write_output = TRUE
 )
 ```
 
@@ -389,7 +396,8 @@ consensus_dual <- consolidate_chromatin_loops(
   mode = "consensus",
   gap = 1000,
   min_raw_score = 2,
-  out_file = dual_functional_out
+  out_file = dual_functional_out,
+  write_output = TRUE
 )
 ```
 
@@ -566,6 +574,9 @@ by weighing gene expression.
 # Locate auxiliary genomic features and RNA-seq expression matrix
 expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
 atac_path <- system.file("extdata", "example_peaks.bed", package = "looplook")
+# Live annotation requires the TxDb/OrgDb packages; when they are missing,
+# res_integrated stays NULL and the pre-computed fallback below is used.
+res_integrated <- NULL
 if (requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
   requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   res_integrated <- annotate_peaks_and_loops(
@@ -646,14 +657,30 @@ hierarchical structure of its columns:
 - **`*_Filled` Columns (The “Smart Fallback” Logic)**: Columns suffixed
   with `_Filled` (e.g., `Assigned_Target_Genes_Filled`,
   `Regulated_promoter_genes_Filled`) provide complete, gapless
-  annotations. They use strict 3D assignments first and add the nearest
-  linear gene (`SYMBOL`/`geneId`) only when the corresponding strict
-  column is empty.
+  annotations when the strict 3D assignment is empty. All three
+  `*_Filled` columns use the *same one-level fallback*: strict 3D
+  assignment first; expression-filtered linear nearest genes
+  (`SYMBOL`/`geneId`) only when strict is empty. No loop-connected gene
+  layer exists in the final output: the unified finalizer re-aggregates
+  all strict/Filled columns from the current target links, so filled
+  genes are always strict winners or linear-annotation genes — never
+  loop-topology genes that failed strict evaluation. The fallback is
+  deliberately *one-level*: a gene that lost strict evaluation (or was
+  filtered by expression) must not re-enter through the `_Filled`
+  columns, which would bypass the strict/expression gates.
+  - A filled gene is not necessarily a promoter gene — always read
+    `*_Filled` together with its evidence column (see below). For
+    stringent functional analyses (GSEA/GO), use the strict columns
+    (`include_Filled = FALSE`).
 - **`Regulated_promoter_Fallback_Evidence`**: Records why
-  `Regulated_promoter_genes_Filled` used a linear fallback
-  (`local_promoter`, `local_gene_body`, `linear_nearest`, or
-  `linear_fallback`); it is `none` when strict loop-derived promoter
-  targets exist.
+  `Regulated_promoter_genes_Filled` used a fallback (`local_promoter`,
+  `local_gene_body`, `linear_nearest`, or `linear_fallback`); it is
+  `none` when strict loop-derived promoter targets exist. The label is
+  inferred from the feature’s own ChIPseeker annotation: `promoter`
+  annotation → `local_promoter`, `exon`/`intron`/`utr` →
+  `local_gene_body`, other/intergenic → `linear_nearest`, no annotation
+  → `linear_fallback`. It tells you the *type* of gene used for the
+  fill, not its 3D evidence.
 - **`Expanded_Target_Genes`**: Multi-hop target genes reachable through
   3D shortest-path expansion beyond the primary loop neighbor. These
   have `path_length > 1` and aggregate only strict expanded links. The
@@ -691,7 +718,8 @@ hierarchical structure of its columns:
   that overlap the feature.
 - **`All_Loop_Connected_Genes_Filled`**: Lineage column that preserves
   the original loop-connected gene set and fills empty entries with the
-  nearest linear gene fallback.
+  expression-filtered linear gene fallback (same one-level logic as the
+  other `*_Filled` columns).
 
 ###### 1a. Evidence label reference
 
@@ -778,10 +806,10 @@ contain the gene; refined links additionally carry `Mean_Expression` and
 - **Backward compatibility**: `anchor_annotation` is retained as an
   alias of `anchor_loci_annotation` for older scripts.
 
-The `anchor_type` column in `anchor_loci_annotation` reflects the
-original positional classification (P/G/E from TSS and gene-body
-overlap) and is updated by expression-aware or chromatin-aware
-refinement. Refined anchor types are found in
+**Important:** The `anchor_type` column in `anchor_loci_annotation`
+reflects the original positional classification (P/G/E from TSS and
+gene-body overlap) and is **not** updated by expression-aware or
+chromatin-aware refinement. Refined anchor types are found in
 `loop_annotation$anchor1_type` and `loop_annotation$anchor2_type`. For a
 full per-anchor audit trail — including the original annotation type,
 the expression-refined type, and the chromatin-corrected type — see
@@ -836,6 +864,35 @@ All plots are returned as objects in `res_integrated$plots$`, enabling
 direct inspection and customisation with standard **ggplot2** layers
 without re-running the pipeline.
 
+``` r
+
+# Representative diagnostic plots from the Module 2 annotation result
+print(res_integrated$plots$Basic_Donut)
+```
+
+![](looplook_files/figure-html/show-annotation-plots-1.png)
+
+``` r
+
+print(res_integrated$plots$Basic_Circular)
+```
+
+![](looplook_files/figure-html/show-annotation-plots-2.png)
+
+``` r
+
+print(res_integrated$plots$Basic_Flower)
+```
+
+![](looplook_files/figure-html/show-annotation-plots-3.png)
+
+``` r
+
+print(res_integrated$plots$Karyo_Anchors)
+```
+
+![](looplook_files/figure-html/show-annotation-plots-4.png)
+
 ##### 1. Global 3D Network Profiling
 
 *(Always Generated)*
@@ -867,7 +924,7 @@ recolouring, theme adjustment, or annotation:
 
 ``` r
 
-if (exists("res_integrated") && !is.null(res_integrated$plots$Basic_Donut)) {
+if (!is.null(res_integrated$plots$Basic_Donut)) {
   # Access a stored plot
   p <- res_integrated$plots$Basic_Donut
 
@@ -890,13 +947,11 @@ To save any plot to disk, use
 
 ``` r
 
-if (exists("res_integrated")) {
-  ggplot2::ggsave(
-    filename = file.path(out_dir, "my_custom_donut.pdf"),
-    plot = res_integrated$plots$Basic_Donut,
-    width = 8, height = 6
-  )
-}
+ggplot2::ggsave(
+  filename = file.path(out_dir, "my_custom_donut.pdf"),
+  plot = res_integrated$plots$Basic_Donut,
+  width = 8, height = 6
+)
 ```
 
 For `looplook_karyo` objects (karyotype heatmaps), use
@@ -904,9 +959,7 @@ For `looplook_karyo` objects (karyotype heatmaps), use
 
 ``` r
 
-if (exists("res_integrated")) {
-  print(res_integrated$plots$Karyo_Anchors) # renders via grid or opens in browser
-}
+print(res_integrated$plots$Karyo_Anchors) # renders via grid or opens in browser
 ```
 
 ![](looplook_files/figure-html/plot-karyo-1.png)
@@ -926,12 +979,15 @@ silent anchors as testable hypotheses (eP/eG), chromatin supports their
 reclassification into evidence-based types (E, P, G, dual). When only
 one data type is available, either module can be used independently.
 
-When using both modules, expression refinement must run before chromatin
-refinement. Running on a chromatin-refined object will raise an error —
-the reverse order (chromatin → expression) is not supported. Chromatin
-refinement can be applied directly to output (chromatin-only mode) with
-the understanding that expression-dependent fields will be reported as
-not assessed.
+**Workflow order is enforced:** When using both modules, expression
+refinement must run before chromatin refinement. Running
+[`refine_loop_anchors_by_expression()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
+on a chromatin-refined object will raise an error — the reverse order
+(chromatin → expression) is not supported. Chromatin refinement can be
+applied directly to
+[`annotate_peaks_and_loops()`](https://zying106.github.io/looplook/reference/annotate_peaks_and_loops.md)
+output (chromatin-only mode) with the understanding that
+expression-dependent fields will be reported as not assessed.
 
 #### Submodule 3A: Expression-Aware Refinement
 
@@ -976,6 +1032,7 @@ treated as hypotheses for chromatin validation.
   assembly, hub-detection quantile, and heatmap bin width (see Module
   2).
 
+**Expression state semantics:**
 [`refine_loop_anchors_by_expression()`](https://zying106.github.io/looplook/reference/refine_loop_anchors_by_expression.md)
 assigns each loop a `Target_Expression_State` and each target gene link
 a `Passes_Expression_Filter` status using a three-class model:
@@ -986,14 +1043,15 @@ a `Passes_Expression_Filter` status using a three-class model:
 | `measured_silent` | `FALSE` | Gene is measured but expression below threshold |
 | `unmeasured` | `NA` | Gene is not present in the expression matrix — **not** equivalent to zero expression |
 
-A gene absent from the expression matrix may reflect annotation
-mismatch, transcript-level filtering, or platform limitations — it
-cannot be interpreted as biologically silent. Genes measured at true
-zero (TPM = 0) are correctly classified as `measured_silent`, not
-`unmeasured`. When `threshold = 0`, the code uses strict `> 0` (not
-`>= 0`) to prevent all measured genes from being unconditionally
-classified as active. The `Has_Active_Target` flag is `NA` for loops
-whose targets are `unmeasured`, rather than falsely reporting `FALSE`.
+**Why this matters:** A gene absent from the expression matrix may
+reflect annotation mismatch, transcript-level filtering, or platform
+limitations — it cannot be interpreted as biologically silent. Genes
+measured at true zero (TPM = 0) are correctly classified as
+`measured_silent`, not `unmeasured`. When `threshold = 0`, the code uses
+strict `> 0` (not `>= 0`) to prevent all measured genes from being
+unconditionally classified as active. The `Has_Active_Target` flag is
+`NA` for loops whose targets are `unmeasured`, rather than falsely
+reporting `FALSE`.
 
 #### Submodule 3B: Chromatin-Aware Anchor Refinement
 
@@ -1083,18 +1141,16 @@ loops belong to the functional subset.
 
 ``` r
 
-if (exists("res_integrated")) {
-  res_basic <- refine_loop_anchors_by_expression(
-    annotation_res = res_integrated,
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
-    threshold = 1.0,
-    unit_type = "TPM",
-    reclassify_by_expression = FALSE,
-    out_dir = out_dir,
-    project_name = "Example_Basic_Filter"
-  )
-}
+res_basic <- refine_loop_anchors_by_expression(
+  annotation_res = res_integrated,
+  expr_matrix_file = expr_path,
+  sample_columns = c("con1", "con2"),
+  threshold = 1.0,
+  unit_type = "TPM",
+  reclassify_by_expression = FALSE,
+  out_dir = out_dir,
+  project_name = "Example_Basic_Filter"
+)
 ```
 
 ### Example B: Expression-Aware Reclassification (Recommended)
@@ -1107,18 +1163,16 @@ itself may function as an active regulatory element for a distant gene.
 
 ``` r
 
-if (exists("res_integrated")) {
-  refined_res <- refine_loop_anchors_by_expression(
-    annotation_res = res_integrated,
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
-    threshold = 1.0,
-    unit_type = "TPM",
-    reclassify_by_expression = TRUE,
-    out_dir = out_dir,
-    project_name = "Example_Reclassified_Filter"
-  )
-}
+refined_res <- refine_loop_anchors_by_expression(
+  annotation_res = res_integrated,
+  expr_matrix_file = expr_path,
+  sample_columns = c("con1", "con2"),
+  threshold = 1.0,
+  unit_type = "TPM",
+  reclassify_by_expression = TRUE,
+  out_dir = out_dir,
+  project_name = "Example_Reclassified_Filter"
+)
 ```
 
 ### Example C: Refinement + Orthogonal Chromatin Validation
@@ -1129,28 +1183,26 @@ returned as `refined_res$chromatin_validation`.
 
 ``` r
 
-if (exists("res_integrated") && exists("out_dir")) {
-  h3k27ac_path <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
-  h3k4me1_path <- system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook")
-  h3k4me3_path <- system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook")
+h3k27ac_path <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
+h3k4me1_path <- system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook")
+h3k4me3_path <- system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook")
 
-  refined_val <- refine_loop_anchors_by_expression(
-    annotation_res = res_integrated,
-    expr_matrix_file = expr_path,
-    sample_columns = c("con1", "con2"),
-    threshold = 1.0,
-    reclassify_by_expression = TRUE,
-    chromatin_beds = list(
-      H3K27ac  = h3k27ac_path,
-      H3K4me1  = h3k4me1_path,
-      H3K4me3  = h3k4me3_path
-    ),
-    out_dir = out_dir,
-    project_name = "Example_Validated"
-  )
-  # View enhancer evidence distribution
-  table(refined_val$chromatin_validation$enhancer_evidence)
-}
+refined_val <- refine_loop_anchors_by_expression(
+  annotation_res = res_integrated,
+  expr_matrix_file = expr_path,
+  sample_columns = c("con1", "con2"),
+  threshold = 1.0,
+  reclassify_by_expression = TRUE,
+  chromatin_beds = list(
+    H3K27ac  = h3k27ac_path,
+    H3K4me1  = h3k4me1_path,
+    H3K4me3  = h3k4me3_path
+  ),
+  out_dir = out_dir,
+  project_name = "Example_Validated"
+)
+# View enhancer evidence distribution
+table(refined_val$chromatin_validation$enhancer_evidence)
 #> 
 #> canonical    strong supported   limited uncertain 
 #>         0         0         6       376         3
@@ -1229,26 +1281,20 @@ evidence needed to elevate or discard those candidates.
 
 ``` r
 
-if (exists("refined_res")) {
-  h3k27ac_path <- system.file("extdata", "example_k27ac_peaks.bed", package = "looplook")
-  h3k4me1_path <- system.file("extdata", "example_h3k4me1_peaks.bed", package = "looplook")
-  h3k4me3_path <- system.file("extdata", "example_h3k4me3_peaks.bed", package = "looplook")
+# Validate the eP/eG anchors from the refined result above
+val <- validate_epeG_by_chromatin(
+  annotation_res = refined_res,
+  chromatin_beds = list(
+    H3K4me1  = h3k4me1_path,
+    H3K27ac  = h3k27ac_path,
+    H3K4me3  = h3k4me3_path
+  ),
+  anchor_gap = 200, # proximity tolerance (bp)
+  anchor_min_overlap = 100 # minimum overlap (bp)
+)
 
-  # Validate the eP/eG anchors from the refined result above
-  val <- validate_epeG_by_chromatin(
-    annotation_res = refined_res,
-    chromatin_beds = list(
-      H3K4me1  = h3k4me1_path,
-      H3K27ac  = h3k27ac_path,
-      H3K4me3  = h3k4me3_path
-    ),
-    anchor_gap = 200, # proximity tolerance (bp)
-    anchor_min_overlap = 100 # minimum overlap (bp)
-  )
-
-  # View enhancer evidence distribution
-  table(val$enhancer_evidence)
-}
+# View enhancer evidence distribution
+table(val$enhancer_evidence)
 #> 
 #> canonical    strong supported   limited uncertain 
 #>         0         0         6       376         3
@@ -1257,8 +1303,11 @@ if (exists("refined_res")) {
 ##### Enhancer Evidence Levels
 
 Each eP/eG anchor is tested for overlap with up to 5 marks and assigned
-an enhancer evidence level (highest to lowest). A promoter (H3K4me3+)
-may score only `supported` because the criteria are enhancer-oriented.
+an enhancer evidence level (highest to lowest). **These levels assess
+how strongly the chromatin marks match an active enhancer, not the
+overall confidence in the anchor’s classification.** A promoter
+(H3K4me3+) may score only `supported` because the criteria are
+enhancer-oriented.
 
 | Level | Condition |
 |----|----|
@@ -1343,16 +1392,17 @@ match first): `conflicting_marks` \> `dual_like` \>
 `other_enhancer_like` \> `promoter_like` \> `repressed` \> `uncertain`
 \> `no_data`.
 
-Rules that test for H3K4me3 *absence* (e.g., P→E, G→E) require H3K4me3
-to be provided in `chromatin_beds`. When H3K4me3 is omitted, its value
-is `NA` for all anchors, and these rules are skipped conservatively — no
+**Important — H3K4me3 dependency:** Rules that test for H3K4me3
+*absence* (e.g., P→E, G→E) require H3K4me3 to be provided in
+`chromatin_beds`. When H3K4me3 is omitted, its value is `NA` for all
+anchors, and these rules are skipped conservatively — no
 reclassification without explicit data. Include H3K4me3 (and optionally
 H3K27me3) to enable the full set of reclassification rules.
 
-The two refinement modules serve distinct roles that complement each
-other — they do not replace one another. Expression-aware refinement
-evaluates *transcriptional activity* (is the gene expressed?) and
-provides activity metrics (`Putative_Target_Genes`,
+**Pipeline guidance:** The two refinement modules serve distinct roles
+that complement each other — they do not replace one another.
+Expression-aware refinement evaluates *transcriptional activity* (is the
+gene expressed?) and provides activity metrics (`Putative_Target_Genes`,
 `Retained_In_Functional_Network`, `Refinement_Action`) required for
 downstream GSEA, GO enrichment, and differential expression profiling.
 Chromatin-aware refinement evaluates *chromatin identity* (what *is*
@@ -1372,35 +1422,44 @@ testable hypotheses for future chromatin validation.
 
 ``` r
 
-if (exists("refined_res") && exists("out_dir")) {
-  # Run on expression-refined output (tests eP/eG anchors)
-  cr <- refine_loop_anchors_by_chromatin(
-    annotation_res = refined_res,
-    chromatin_beds = list(
-      H3K4me1  = h3k4me1_path,
-      H3K4me3  = h3k4me3_path,
-      H3K27ac  = h3k27ac_path
-    ),
-    anchor_gap = 200,
-    anchor_min_overlap = 100,
-    recompute_targets = TRUE, # Rebuild target links with updated types
-    species = "hg38",
-    project_name = "Chromatin_Refined",
-    out_dir = out_dir
-  )
+# Run on expression-refined output (tests eP/eG anchors)
+cr <- refine_loop_anchors_by_chromatin(
+  annotation_res = refined_res,
+  chromatin_beds = list(
+    H3K4me1  = h3k4me1_path,
+    H3K4me3  = h3k4me3_path,
+    H3K27ac  = h3k27ac_path
+  ),
+  anchor_gap = 200,
+  anchor_min_overlap = 100,
+  recompute_targets = TRUE, # Rebuild target links with updated types
+  species = "hg38",
+  project_name = "Chromatin_Refined",
+  out_dir = out_dir
+)
 
-  # Summary of reclassification
-  cr$qc_summary
+# Summary of reclassification
+cr$qc_summary
+#>   n_candidate_anchors n_reclassified n_canonical n_strong n_supported n_limited
+#> 1                 385              0           0        0           6       376
+#>   n_dual n_promoter_like n_TSS_supported n_TSS_provisional n_TSS_unresolved
+#> 1      0               3               0                 0                0
+#>   n_TSS_validation_unavailable
+#> 1                            0
 
-  # Updated loop types reflect chromatin evidence
-  table(cr$loop_annotation$loop_type)
+# Updated loop types reflect chromatin evidence
+table(cr$loop_annotation$loop_type)
+#> 
+#>   E-E  E-eG  E-eP   E-G   E-P eG-eG eG-eP  eG-G  eG-P eP-eP  eP-G  eP-P   G-G 
+#>     4     3     3    13    26    12     5    11    21     1     8    27    13 
+#>   G-P   P-P 
+#>    73    80
 
   # Chromatin provenance columns in target links
   head(cr$target_gene_links[, c(
     "gene", "anchor_type_before_chromatin",
     "anchor_type_after_chromatin", "chromatin_target_action"
   )])
-}
 #>    gene anchor_type_before_chromatin anchor_type_after_chromatin
 #> 1 LRIG2                            G                           G
 #> 2 LRIG2                            G                           G
@@ -1449,15 +1508,21 @@ customisation. To access a specific plot:
 
 ``` r
 
-if (exists("cr")) {
-  cr$plots$Chromatin_Dumbbell
-  cr$plots$Chromatin_Sankey
-  cr$plots$Chromatin_MarkHeatmap
-  cr$plots$Chromatin_UpSet
-}
+cr$plots$Chromatin_Dumbbell
 ```
 
 ![](looplook_files/figure-html/chromatin-plots-1.png)
+
+``` r
+
+cr$plots$Chromatin_Sankey
+#> NULL
+cr$plots$Chromatin_MarkHeatmap
+#> NULL
+cr$plots$Chromatin_UpSet
+```
+
+![](looplook_files/figure-html/chromatin-plots-2.png)
 
 **Interpreting the MarkHeatmap:** Rows represent reclassification
 outcomes (e.g., “P → dual” means a promoter was reclassified as a
@@ -1479,13 +1544,14 @@ with transcriptomic data to systematically characterize the functional
 landscape and regulatory mechanisms underlying the identified target
 genes.
 
-The GO enrichment, motif scanning, and PPI network modules are designed
-as (hypothesis-generating) analyses. Statistical tests (Wilcoxon/t-test
-p-values, GSEA) are reported per-module without global multiple-testing
-correction across loop types or analysis branches. GSEA uses random
-down-sampling of target genes controlled by , introducing stochasticity.
-Motif enrichment uses GC-matched background sampling with Fisher’s exact
-test. All exploratory results should be validated with independent
+**Important:** The GO enrichment, motif scanning, and PPI network
+modules are designed as *exploratory* (hypothesis-generating) analyses.
+Statistical tests (Wilcoxon/t-test p-values, GSEA) are reported
+per-module without global multiple-testing correction across loop types
+or analysis branches. GSEA uses random down-sampling of target genes
+controlled by `gsea_nSample`, introducing stochasticity. Motif
+enrichment uses GC-matched background sampling with Fisher’s exact test.
+All exploratory results should be validated with independent
 experimental approaches before drawing definitive biological
 conclusions.
 
@@ -1535,6 +1601,34 @@ the biological scope and stringency of downstream analyses:
     and a complete functional overview.
   - `FALSE` *(Pure Spatial Mode)*: Highly stringent. It only keeps 3D
     loop-derived targets with clear annotation.
+
+**Important — reading `_Filled` columns correctly:** All `*_Filled`
+columns use the *same one-level fallback*: strict 3D assignment first;
+expression-filtered linear nearest genes only when strict is empty.
+Loop-connected genes that failed strict evaluation never enter `_Filled`
+columns (the unified finalizer re-aggregates from current target links
+only). In practice this means: peaks with loop connections keep
+`Filled = strict`; peaks without loop connections are filled with the
+linear nearest gene — subject to the expression filter whenever the
+object carries expression data (an unexpressed linear gene leaves the
+cell `NA` rather than being filled). Two usage rules follow:
+
+1.  **Always read `*_Filled` together with its evidence column.**
+    `Regulated_promoter_genes_Filled` can contain genes from *any*
+    fallback source — a filled gene is not necessarily a promoter gene.
+    Consult `Regulated_promoter_Fallback_Evidence` (values:
+    `local_promoter`, `local_gene_body`, `linear_nearest`,
+    `linear_fallback`; inferred from the feature’s ChIPseeker
+    annotation) to know what each filled gene actually is.
+2.  **Use strict columns for stringent functional analyses (GSEA/GO).**
+    `_Filled` columns provide complete genome-wide coverage (the
+    *“gapless annotation”* semantics) and therefore mix 3D-derived and
+    linear-nearest genes. When running GSEA or GO enrichment, prefer
+    `include_Filled = FALSE` (strict `Assigned_Target_Genes` /
+    `Regulated_promoter_genes`) so the gene set reflects only spatial
+    regulation; reserve `include_Filled = TRUE` for exploratory
+    overviews or modules that need complete coverage.
+
 - **`use_nearest_gene`**: Logical parameter. If `TRUE`, the pipeline
   bypasses 3D loop-based assignment and uses only the nearest
   neighboring gene, serving as a conventional baseline reference for
@@ -1586,13 +1680,10 @@ This mode comprehensively maps and profiles target genes of interest.
 
 ``` r
 
-deps <- c("ggpointdensity", "viridis", "ggpubr", "ggdist")
-deps_ok <- all(vapply(deps, requireNamespace, logical(1), quietly = TRUE))
-if (exists("res_integrated") && deps_ok) {
-  diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
-  meta_path <- system.file("extdata", "example_coldata.txt", package = "looplook")
+diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
+meta_path <- system.file("extdata", "example_coldata.txt", package = "looplook")
 
-  res_A <- profile_target_genes(
+res_A <- profile_target_genes(
     annotation_res = res_integrated,
     diff_file = diff_path,
     lfc_col = "log2FoldChange",
@@ -1607,7 +1698,6 @@ if (exists("res_integrated") && deps_ok) {
     run_go = FALSE,
     run_ppi = FALSE
   )
-}
 ```
 
 ### Example B: Peak-Driven Strict Promoter Profiling (High Stringency)
@@ -1625,10 +1715,7 @@ permissive connections such as enhancer-gene body (`E-G`) interactions.
 
 ``` r
 
-deps <- c("ggpointdensity", "viridis", "ggpubr", "ggdist")
-deps_ok <- all(vapply(deps, requireNamespace, logical(1), quietly = TRUE))
-if (exists("res_integrated") && deps_ok) {
-  res_B <- profile_target_genes(
+res_B <- profile_target_genes(
     annotation_res = res_integrated,
     diff_file = diff_path,
     lfc_col = "log2FoldChange",
@@ -1643,7 +1730,6 @@ if (exists("res_integrated") && deps_ok) {
     run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
     run_ppi = FALSE
   )
-}
 ```
 
 ### Example C: 1D Linear Annotation Baseline (The Control)
@@ -1657,10 +1743,7 @@ looping analyses relative to conventional method.
 
 ``` r
 
-deps <- c("ggpointdensity", "viridis", "ggpubr", "ggdist")
-deps_ok <- all(vapply(deps, requireNamespace, logical(1), quietly = TRUE))
-if (exists("res_integrated") && deps_ok) {
-  res_C <- profile_target_genes(
+res_C <- profile_target_genes(
     annotation_res = res_integrated,
     diff_file = diff_path,
     lfc_col = "log2FoldChange",
@@ -1675,7 +1758,6 @@ if (exists("res_integrated") && deps_ok) {
     run_go = FALSE, # Set TRUE in real analysis for pathway enrichment
     run_ppi = FALSE
   )
-}
 ```
 
 #### Deep Dive: Functional Visualizations
@@ -1687,26 +1769,33 @@ frames).
 
 ``` r
 
-if (exists("res_A")) {
-  # Accessing results from a profiling run
-  names(res_A) # one element per target_source ("loops", "targets")
-  names(res_A$loops) # "go_results" "target_gene_sets" "plots"
+# Accessing results from a profiling run
+names(res_A) # one element per target_source ("loops", "targets")
+names(res_A$loops) # "go_results" "target_gene_sets" "plots"
 
-  # --- Target genes ---
-  res_A$loops$target_gene_sets # named list of character vectors
-  names(res_A$loops$target_gene_sets) # gene set keys (e.g. "All", "Up", "Down")
+# --- Target genes ---
+res_A$loops$target_gene_sets # named list of character vectors
+names(res_A$loops$target_gene_sets) # gene set keys (e.g. "All", "Up", "Down")
 
-  # --- GO enrichment table (requires run_go = TRUE) ---
-  if (length(res_A$loops$go_results) > 0) {
-    go_df <- res_A$loops$go_results
-    head(go_df[order(go_df$pvalue), c("Description", "ONTOLOGY", "pvalue", "Count", "geneID")])
-  } else {
-    message("GO enrichment was not run. Set run_go = TRUE to enable.")
-  }
-
-  # --- All plot keys ---
-  names(res_A$loops$plots)
+# --- GO enrichment table (requires run_go = TRUE) ---
+if (length(res_A$loops$go_results) > 0) {
+  go_df <- res_A$loops$go_results
+  head(go_df[order(go_df$pvalue), c("Description", "ONTOLOGY", "pvalue", "Count", "geneID")])
+} else {
+  message("GO enrichment was not run. Set run_go = TRUE to enable.")
 }
+
+# --- All plot keys ---
+names(res_A$loops$plots)
+
+# --- Representative profiling plots ---
+# Plots are grouped per analysis task (see names(res_A$loops$plots)); here we
+# show the core plots for the "targets" task.
+tg_plots <- res_A$targets$plots$Target_Genes
+if (!is.null(tg_plots$LFC_Violin)) print(tg_plots$LFC_Violin)
+if (!is.null(tg_plots$Heatmap)) print(tg_plots$Heatmap)
+if (!is.null(tg_plots$Scatter)) print(tg_plots$Scatter)
+if (!is.null(tg_plots$Raincloud_LFC)) print(tg_plots$Raincloud_LFC)
 ```
 
 ##### Available Plot Keys
@@ -1808,21 +1897,20 @@ data filtering, and visual aesthetics through the following arguments:
 
 ``` r
 
-if (exists("f1") && exists("atac_path")) {
-  if (requireNamespace("ggplot2", quietly = TRUE) &&
-    requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
-    requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
-    # If 'from' and 'to' are omitted, it automatically detects the densest viewport.
-    track_plot <- plot_peaks_interactions(
-      bedpe_file = f1,
-      target_bed = atac_path,
-      chr = "chr1",
-      from = 11884299,
-      to = 12106581,
-      species = "hg38",
-      save_file = file.path(out_dir, "Locus_Track.pdf")
-    )
-  }
+if (requireNamespace("ggplot2", quietly = TRUE) &&
+  requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE) &&
+  requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+  # If 'from' and 'to' are omitted, it automatically detects the densest viewport.
+  track_plot <- plot_peaks_interactions(
+    bedpe_file = f1,
+    target_bed = atac_path,
+    chr = "chr1",
+    from = 11884299,
+    to = 12106581,
+    species = "hg38",
+    save_file = file.path(out_dir, "Locus_Track.pdf")
+  )
+  print(track_plot)
 }
 ```
 
@@ -2235,9 +2323,9 @@ sessionInfo()
 #> 
 #> loaded via a namespace (and not attached):
 #>   [1] splines_4.6.1               BiocIO_1.22.0              
-#>   [3] ggplotify_0.1.3             bitops_1.0-9               
+#>   [3] ggplotify_0.1.3             bitops_1.1-0               
 #>   [5] fields_17.3                 tibble_3.3.1               
-#>   [7] polyclip_1.10-7             enrichit_0.2.0             
+#>   [7] polyclip_1.10-7             enrichit_0.2.1             
 #>   [9] XML_3.99-0.23               rpart_4.1.27               
 #>  [11] karyoploteR_1.38.0          lifecycle_1.0.5            
 #>  [13] httr2_1.3.0                 processx_3.9.0             
@@ -2248,7 +2336,7 @@ sessionInfo()
 #>  [23] rmarkdown_2.31              jquerylib_0.1.4            
 #>  [25] yaml_2.3.12                 ggtangle_0.1.2             
 #>  [27] otel_0.2.0                  spam_2.11-4                
-#>  [29] zip_3.0.1                   DBI_1.3.0                  
+#>  [29] zip_3.0.2                   DBI_1.3.0                  
 #>  [31] RColorBrewer_1.1-3          maps_3.4.3                 
 #>  [33] abind_1.4-8                 GenomicRanges_1.64.0       
 #>  [35] purrr_1.2.2                 AnnotationFilter_1.36.0    
@@ -2257,8 +2345,8 @@ sessionInfo()
 #>  [41] nnet_7.3-20                 VariantAnnotation_1.58.0   
 #>  [43] tweenr_2.0.3                rappdirs_0.3.4             
 #>  [45] aisdk_1.4.12                gdtools_0.5.1              
-#>  [47] enrichplot_1.32.0           IRanges_2.46.0             
-#>  [49] S4Vectors_0.50.1            ggrepel_0.9.8              
+#>  [47] IRanges_2.46.0              S4Vectors_0.50.1           
+#>  [49] enrichplot_1.32.0           ggrepel_0.9.8              
 #>  [51] tidytree_0.4.8              pkgdown_2.2.1              
 #>  [53] codetools_0.2-20            DelayedArray_0.38.2        
 #>  [55] DOSE_4.6.0                  ggforce_0.5.0              
@@ -2267,7 +2355,7 @@ sessionInfo()
 #>  [61] matrixStats_1.5.0           stats4_4.6.1               
 #>  [63] base64enc_0.1-6             Seqinfo_1.2.0              
 #>  [65] bamsignals_1.44.1           GenomicAlignments_1.48.0   
-#>  [67] jsonlite_2.0.0              Formula_1.2-5              
+#>  [67] jsonlite_2.0.0              Formula_1.2-6              
 #>  [69] systemfonts_1.3.2           ggnewscale_0.5.2           
 #>  [71] tools_4.6.1                 treeio_1.36.1              
 #>  [73] ragg_1.5.2                  Rcpp_1.1.2                 
@@ -2281,45 +2369,44 @@ sessionInfo()
 #>  [89] textshaping_1.0.5           colorspace_2.1-3           
 #>  [91] GO.db_3.23.1                dichromat_2.0-1            
 #>  [93] RSQLite_3.53.3              cigarillo_1.2.1            
-#>  [95] UpSetR_1.4.1                tidyr_1.3.2                
-#>  [97] generics_0.1.4              fontLiberation_0.1.0       
-#>  [99] data.table_1.18.4           rtracklayer_1.72.0         
-#> [101] InteractionSet_1.40.0       httr_1.4.8                 
-#> [103] htmlwidgets_1.6.4           S4Arrays_1.12.0            
-#> [105] scatterpie_0.2.6            regioneR_1.44.0            
-#> [107] pkgconfig_2.0.3             gtable_0.3.6               
-#> [109] blob_1.3.0                  S7_0.2.2                   
-#> [111] XVector_0.52.0              clusterProfiler_4.20.0     
-#> [113] htmltools_0.5.9             fontBitstreamVera_0.1.1    
-#> [115] dotCall64_1.2               bookdown_0.47              
-#> [117] ProtGenerics_1.44.0         scales_1.4.0               
-#> [119] Biobase_2.72.0              png_0.1-9                  
-#> [121] ggfun_0.2.1                 knitr_1.51                 
-#> [123] rstudioapi_0.19.0           reshape2_1.4.5             
-#> [125] rjson_0.2.23                nlme_3.1-169               
-#> [127] checkmate_2.3.4             curl_7.1.0                 
-#> [129] cachem_1.1.0                stringr_1.6.0              
-#> [131] parallel_4.6.1              foreign_0.8-91             
-#> [133] AnnotationDbi_1.74.0        restfulr_0.0.17            
-#> [135] desc_1.4.3                  pillar_1.11.1              
-#> [137] grid_4.6.1                  vctrs_0.7.3                
-#> [139] tidydr_0.0.6                cluster_2.1.8.2            
-#> [141] htmlTable_2.5.0             evaluate_1.0.5             
-#> [143] GenomicFeatures_1.64.0      cli_3.6.6                  
-#> [145] compiler_4.6.1              bezier_1.1.2               
-#> [147] Rsamtools_2.28.0            rlang_1.3.0                
-#> [149] crayon_1.5.3                labeling_0.4.3             
-#> [151] ps_1.9.3                    plyr_1.8.9                 
-#> [153] fs_2.1.0                    ggiraph_0.9.6              
-#> [155] stringi_1.8.7               viridisLite_0.4.3          
-#> [157] BiocParallel_1.46.0         Biostrings_2.80.1          
-#> [159] lazyeval_0.2.3              GOSemSim_2.38.3            
-#> [161] fontquiver_0.2.1            Matrix_1.7-5               
-#> [163] BSgenome_1.80.0             patchwork_1.3.2            
-#> [165] bit64_4.8.2                 ggplot2_4.0.3              
-#> [167] KEGGREST_1.52.2             SummarizedExperiment_1.42.0
-#> [169] igraph_2.3.3                memoise_2.0.1              
-#> [171] bslib_0.11.0                ggtree_4.2.0               
-#> [173] bit_4.6.0                   gson_0.2.0                 
-#> [175] ape_5.8-1
+#>  [95] tidyr_1.3.2                 generics_0.1.4             
+#>  [97] fontLiberation_0.1.0        data.table_1.18.4          
+#>  [99] rtracklayer_1.72.0          InteractionSet_1.40.0      
+#> [101] httr_1.4.8                  htmlwidgets_1.6.4          
+#> [103] S4Arrays_1.12.0             scatterpie_0.2.6           
+#> [105] regioneR_1.44.0             pkgconfig_2.0.3            
+#> [107] gtable_0.3.6                blob_1.3.0                 
+#> [109] S7_0.2.2                    XVector_0.52.0             
+#> [111] clusterProfiler_4.20.0      htmltools_0.5.9            
+#> [113] fontBitstreamVera_0.1.1     dotCall64_1.2              
+#> [115] bookdown_0.47               ProtGenerics_1.44.0        
+#> [117] scales_1.4.0                Biobase_2.72.0             
+#> [119] png_0.1-9                   ggfun_0.2.1                
+#> [121] knitr_1.51                  rstudioapi_0.19.0          
+#> [123] reshape2_1.4.5              rjson_0.2.23               
+#> [125] nlme_3.1-169                checkmate_2.3.4            
+#> [127] curl_7.1.0                  cachem_1.1.0               
+#> [129] stringr_1.6.0               parallel_4.6.1             
+#> [131] foreign_0.8-91              AnnotationDbi_1.74.0       
+#> [133] restfulr_0.0.17             desc_1.4.3                 
+#> [135] pillar_1.11.1               grid_4.6.1                 
+#> [137] vctrs_0.7.3                 tidydr_0.0.6               
+#> [139] cluster_2.1.8.2             htmlTable_2.5.0            
+#> [141] evaluate_1.0.5              GenomicFeatures_1.64.0     
+#> [143] cli_3.6.6                   compiler_4.6.1             
+#> [145] bezier_1.1.2                Rsamtools_2.28.0           
+#> [147] rlang_1.3.0                 crayon_1.5.3               
+#> [149] labeling_0.4.3              ps_1.9.3                   
+#> [151] plyr_1.8.9                  fs_2.1.0                   
+#> [153] ggiraph_0.9.6               stringi_1.8.9              
+#> [155] viridisLite_0.4.3           BiocParallel_1.46.0        
+#> [157] Biostrings_2.80.1           lazyeval_0.2.3             
+#> [159] GOSemSim_2.38.3             fontquiver_0.2.1           
+#> [161] Matrix_1.7-5                BSgenome_1.80.0            
+#> [163] patchwork_1.3.2             bit64_4.8.2                
+#> [165] ggplot2_4.0.3               KEGGREST_1.52.2            
+#> [167] SummarizedExperiment_1.42.0 igraph_2.3.3               
+#> [169] memoise_2.0.1               bslib_0.12.0               
+#> [171] ggtree_4.2.0                bit_4.6.0                  
+#> [173] gson_0.2.1                  ape_5.8-1
 ```

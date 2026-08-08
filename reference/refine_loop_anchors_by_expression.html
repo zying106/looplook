@@ -157,7 +157,7 @@ loops belong to the high-confidence active subset.</p>
 <span>  hub_percentile <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  hub_metric <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"unique_contacts"</span>, <span class="st">"total_loops"</span><span class="op">)</span>,</span>
 <span>  chromatin_beds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  write_output <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  write_output <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  allow_rerefine <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -254,7 +254,7 @@ skip this parameter to avoid redundant BED file reads.</p></dd>
 
 
 <dt id="arg-write-output">write_output<a class="anchor" aria-label="anchor" href="#arg-write-output"></a></dt>
-<dd><p>Logical. If <code>TRUE</code> (default), write the refined Excel workbook to <code>out_dir</code>. If <code>FALSE</code>, return results without creating directories or files.</p></dd>
+<dd><p>Logical. If <code>TRUE</code>, write the refined Excel workbook to <code>out_dir</code> (default: <code>FALSE</code>). If <code>FALSE</code>, return results without creating directories or files.</p></dd>
 
 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
