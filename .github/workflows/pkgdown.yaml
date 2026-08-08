@@ -92,6 +92,14 @@ jobs:
           }
           ensure_bioc(c("AnnotationDbi", "GO.db", "GOSemSim"), force = TRUE)
           ensure_bioc(c("BiocStyle", "karyoploteR", "ChIPseeker"))
+          # Suggests-only packages required to render the vignette's profiling
+          # (deps_ok) and IGV-track figures in the built site.
+          install.packages(
+            c("ggpointdensity", "viridis", "ggpubr", "ggdist"),
+            dependencies = c("Depends", "Imports", "LinkingTo")
+          )
+          ensure_bioc("TxDb.Hsapiens.UCSC.hg38.knownGene")
+          ensure_bioc("org.Hs.eg.db")
           stopifnot(
             requireNamespace("pkgdown", quietly = TRUE),
             requireNamespace("ragg", quietly = TRUE),
@@ -99,7 +107,13 @@ jobs:
             requireNamespace("rmarkdown", quietly = TRUE),
             requireNamespace("BiocStyle", quietly = TRUE),
             requireNamespace("karyoploteR", quietly = TRUE),
-            requireNamespace("ChIPseeker", quietly = TRUE)
+            requireNamespace("ChIPseeker", quietly = TRUE),
+            requireNamespace("ggpointdensity", quietly = TRUE),
+            requireNamespace("viridis", quietly = TRUE),
+            requireNamespace("ggpubr", quietly = TRUE),
+            requireNamespace("ggdist", quietly = TRUE),
+            requireNamespace("TxDb.Hsapiens.UCSC.hg38.knownGene", quietly = TRUE),
+            requireNamespace("org.Hs.eg.db", quietly = TRUE)
           )
           remotes::install_deps(
             dependencies = c("Depends", "Imports", "LinkingTo"),
