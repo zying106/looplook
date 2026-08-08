@@ -309,7 +309,6 @@ profile_res <- profile_target_genes(
 #> >>> Processing Source: [loops]
 #> 
 #> --- Task: EP_Genes (Valid Genes: 13) ---
-#> 
 #> Warning: qvalue::qvalue() failed, returning NA for qvalue. Error: missing values and NaN's not allowed if 'na.rm' is FALSE
 #> Warning: ComplexHeatmap/circlize not installed; skipping heatmap.
 #> 

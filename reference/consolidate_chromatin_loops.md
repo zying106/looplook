@@ -263,7 +263,7 @@ res_intersect <- consolidate_chromatin_loops(
 #>     Base: File 1 (first input). Output coordinates and scores come exclusively from File 1.
 #>     Intersecting with File 2...
 #> Finished! Final loops: 12
-#> Finished! Saved to /tmp/RtmpA1sjMg/file9e4e211646f3.bedpe
+#> Finished! Saved to /tmp/RtmpUnWV8h/fileb5fe58e1e802.bedpe
 
 # Example B: Consensus Mode (formerly Reproducible)
 # Finds consensus loops supported by both replicates (default for N=2)
@@ -299,7 +299,7 @@ res_consensus <- consolidate_chromatin_loops(
 #>   Chaining: 0/12 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Finished! Final loops: 12
-#> Finished! Saved to /tmp/RtmpA1sjMg/file9e4e76e8ee5c.bedpe
+#> Finished! Saved to /tmp/RtmpUnWV8h/fileb5fe93fc5cd.bedpe
 
 # Example C: Union Mode
 # Merges all loops into a single map
@@ -334,7 +334,7 @@ res_union <- consolidate_chromatin_loops(
 #>   Chaining: 0/586 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Finished! Final loops: 586
-#> Finished! Saved to /tmp/RtmpA1sjMg/file9e4e243baada.bedpe
+#> Finished! Saved to /tmp/RtmpUnWV8h/fileb5fe4bca300f.bedpe
 
 # Example D: Dual Filtering Strategy (Recommended for HiChIP)
 # 1. Pre-filter: Discard singletons (score < 2) to remove noise.
@@ -374,7 +374,7 @@ res_clean <- consolidate_chromatin_loops(
 #>   Chaining: 0/7 above threshold -- PASS.
 #> --- End Post-Clustering Diagnosis ---
 #> Finished! Final loops: 4
-#> Finished! Saved to /tmp/RtmpA1sjMg/file9e4e24d98cb2.bedpe
+#> Finished! Saved to /tmp/RtmpUnWV8h/fileb5fe2d9af68e.bedpe
 
 # Inspect results
 length(res_intersect)

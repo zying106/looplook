@@ -469,4 +469,58 @@ if (requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
   )
   head(res$loop_annotation, 1)
 }
+#> 
+#> Loading required package: GenomicFeatures
+#> Loading required package: BiocGenerics
+#> Loading required package: generics
+#> 
+#> Attaching package: 'generics'
+#> The following objects are masked from 'package:base':
+#> 
+#>     as.difftime, as.factor, as.ordered, intersect, is.element, setdiff,
+#>     setequal, union
+#> 
+#> Attaching package: 'BiocGenerics'
+#> The following objects are masked from 'package:stats':
+#> 
+#>     IQR, mad, sd, var, xtabs
+#> The following objects are masked from 'package:base':
+#> 
+#>     Filter, Find, Map, Position, Reduce, anyDuplicated, aperm, append,
+#>     as.data.frame, basename, cbind, colnames, dirname, do.call,
+#>     duplicated, eval, evalq, get, grep, grepl, is.unsorted, lapply,
+#>     mapply, match, mget, order, paste, pmax, pmax.int, pmin, pmin.int,
+#>     rank, rbind, rownames, sapply, saveRDS, table, tapply, unique,
+#>     unsplit, which.max, which.min
+#> Loading required package: S4Vectors
+#> Loading required package: stats4
+#> 
+#> Attaching package: 'S4Vectors'
+#> The following object is masked from 'package:utils':
+#> 
+#>     findMatches
+#> The following objects are masked from 'package:base':
+#> 
+#>     I, expand.grid, unname
+#> Loading required package: IRanges
+#> Loading required package: Seqinfo
+#> Loading required package: GenomicRanges
+#> Loading required package: AnnotationDbi
+#> Loading required package: Biobase
+#> Welcome to Bioconductor
+#> 
+#>     Vignettes contain introductory material; view with
+#>     'browseVignettes()'. To cite Bioconductor, see
+#>     'citation("Biobase")', and for packages 'citation("pkgname")'.
+#> 
+#> Loading required package: org.Hs.eg.db
+#> 'select()' returned 1:1 mapping between keys and columns
+#> # A tibble: 1 × 19
+#>   loop_ID chr1    start1     end1 chr2    start2     end2 cluster_id loop_type
+#>   <chr>   <chr>    <dbl>    <dbl> <chr>    <dbl>    <dbl> <chr>      <chr>    
+#> 1 L1      chr6  10412001 10412600 chr6  10415001 10415600 1          P-P      
+#> # ℹ 10 more variables: anchor1_gene <chr>, anchor1_type <chr>,
+#> #   anchor2_gene <chr>, anchor2_type <chr>, Cluster_All_Genes <chr>,
+#> #   All_Anchor_Genes <chr>, Putative_Target_Genes <chr>,
+#> #   Promoter_Target_Genes <chr>, a1_id <chr>, a2_id <chr>
 ```
