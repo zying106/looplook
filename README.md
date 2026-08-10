@@ -625,10 +625,10 @@ repository](https://github.com/zying106/looplook/issues).
 
 If you use `looplook` in your research, please cite the preprint:
 
-    ## Zhang Y, Huang X, Chen Y, Xu L (2026). "looplook: An integrative suite
-    ## for expression-aware target assignment and functional annotation of
-    ## chromatin interactions." _bioRxiv_. doi:10.64898/2026.04.03.715516
-    ## <https://doi.org/10.64898/2026.04.03.715516>.
+Zhang Y, Huang X, Chen Y, Xu L (2026). “looplook: An integrative suite
+for expression-aware target assignment and functional annotation of
+chromatin interactions.” *bioRxiv*. <doi:10.64898/2026.04.03.715516>
+<https://doi.org/10.64898/2026.04.03.715516>.
 
 The citation above is generated programmatically from `inst/CITATION`
 via `citation("looplook")`, which verifies that the `CITATION` file

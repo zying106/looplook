@@ -353,7 +353,7 @@ For bug reports, feature requests, or questions regarding the package, please op
 
 If you use `looplook` in your research, please cite the preprint:
 
-```{r citation, echo = FALSE}
+```{r citation, echo = FALSE, results = 'asis'}
 cat(format(citation("looplook"), style = "text"))
 ```
 
