@@ -3,7 +3,7 @@ pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   looplook: looplook.html
-last_built: 2026-08-08T16:42Z
+last_built: 2026-08-10T13:09Z
 urls:
   reference: https://zying106.github.io/looplook/reference
   article: https://zying106.github.io/looplook/articles
