@@ -117,7 +117,7 @@ reference:
     desc: "Publication-ready tools for rendering genomic tracks and statistical summaries."
     contents:
       - plot_peaks_interactions
-      - draw_flower_simplified    # 新增：花瓣图/维恩图展示
+      - draw_flower_simplified    # Flower/Venn diagram visualization
 
   - title: "Package Overview & Report"
     desc: "Package-level documentation and one-click HTML report generation."
