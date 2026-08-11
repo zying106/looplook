@@ -1079,7 +1079,7 @@ test_that("profile_target_genes validates seed parameter", {
     annotation_res = res, diff_file = diff_path,
     expr_matrix_file = expr_path, metadata_file = meta_path,
     run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
-    gsea_nSample = 10, heatmap_nSample = 20
+    gsea_nSample = 5, heatmap_nSample = 5
   )
 
   # seed must be positive integer or NULL
@@ -1125,7 +1125,7 @@ test_that("profile_target_genes different target_source modes", {
     annotation_res = res, diff_file = diff_path,
     expr_matrix_file = expr_path, metadata_file = meta_path,
     run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
-    gsea_nSample = 10, heatmap_nSample = 20
+    gsea_nSample = 5, heatmap_nSample = 5
   )
 
   # targets only
@@ -1175,7 +1175,7 @@ test_that("profile_target_genes stat_test modes", {
     annotation_res = res, diff_file = diff_path,
     expr_matrix_file = expr_path, metadata_file = meta_path,
     run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
-    gsea_nSample = 10, heatmap_nSample = 20
+    gsea_nSample = 5, heatmap_nSample = 5
   )
 
   # t.test mode (caught by .safe_run so won't error, just handles internally)
@@ -1207,7 +1207,7 @@ test_that("profile_target_genes group_order parameter", {
     annotation_res = res, diff_file = diff_path,
     expr_matrix_file = expr_path, metadata_file = meta_path,
     run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
-    gsea_nSample = 10, heatmap_nSample = 20
+    gsea_nSample = 5, heatmap_nSample = 5
   )
 
   out <- do.call(

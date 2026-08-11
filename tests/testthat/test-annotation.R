@@ -1,5 +1,28 @@
 # tests/testthat/test-annotation.R
 
+# Memoised tiny-example annotation shared by several refine/chromatin tests.
+# All callers use the same input (chr6:10412000 region, hg19 sample TxDb), so
+# the expensive annotate step runs once per session instead of once per block.
+.base_res_cache <- new.env(parent = emptyenv())
+.get_shared_tiny_base <- function() {
+  if (is.null(.base_res_cache$res)) {
+    sample_txdb_path <- system.file("extdata", "hg19_knownGene_sample.sqlite",
+      package = "GenomicFeatures"
+    )
+    txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
+    tiny_bedpe <- tempfile(fileext = ".bedpe")
+    target_bed <- tempfile(fileext = ".bed")
+    writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tiny_bedpe)
+    writeLines("chr6\t10412000\t10413000", target_bed)
+    .base_res_cache$res <- annotate_peaks_and_loops(
+      bedpe_file = tiny_bedpe, target_bed = target_bed,
+      txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
+      out_dir = tempdir(), write_output = FALSE, quiet = TRUE
+    )
+  }
+  .base_res_cache$res
+}
+
 test_that("packaged annotation example keeps the expected output contract", {
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
   skip_if(rdata_path == "", "Pre-computed test data not available")
@@ -540,18 +563,8 @@ test_that("annotate_peaks_and_loops returns loop_annotation with a1_id / a2_id",
     package = "GenomicFeatures"
   )
   skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
 
-  tiny_bedpe <- tempfile(fileext = ".bedpe")
-  target_bed <- tempfile(fileext = ".bed")
-  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tiny_bedpe)
-  writeLines("chr6\t10412000\t10413000", target_bed)
-
-  res <- annotate_peaks_and_loops(
-    bedpe_file = tiny_bedpe, target_bed = target_bed,
-    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
-    out_dir = tempdir(), write_output = FALSE, quiet = TRUE
-  )
+  res <- .get_shared_tiny_base()
 
   expect_true("a1_id" %in% colnames(res$loop_annotation),
     info = "loop_annotation must carry a1_id for downstream chromatin refinement"
@@ -565,8 +578,6 @@ test_that("annotate_peaks_and_loops returns loop_annotation with a1_id / a2_id",
   expect_true(!is.null(as$target_hit_df))
   expect_true(nrow(as$target_hit_df) > 0)
   expect_true("anchor_id" %in% colnames(as$target_hit_df))
-
-  unlink(c(tiny_bedpe, target_bed))
 })
 
 test_that("annotate_peaks_and_loops without target_bed has anchor_state but NULL hit_df", {
@@ -602,22 +613,13 @@ test_that("recompute_targets=TRUE populates chromatin_target_action", {
     package = "GenomicFeatures"
   )
   skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
 
-  tiny_bedpe <- tempfile(fileext = ".bedpe")
-  target_bed <- tempfile(fileext = ".bed")
   h3k4me1 <- tempfile(fileext = ".bed")
   h3k4me3 <- tempfile(fileext = ".bed")
-  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tiny_bedpe)
-  writeLines("chr6\t10412000\t10413000", target_bed)
   writeLines("chr6\t10411900\t10412700", h3k4me1)
   writeLines("chr6\t10411900\t10412700", h3k4me3)
 
-  base_res <- annotate_peaks_and_loops(
-    bedpe_file = tiny_bedpe, target_bed = target_bed,
-    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
-    out_dir = tempdir(), write_output = FALSE, quiet = TRUE
-  )
+  base_res <- .get_shared_tiny_base()
 
   cr <- refine_loop_anchors_by_chromatin(base_res,
     chromatin_beds = list(H3K4me1 = h3k4me1, H3K4me3 = h3k4me3),
@@ -633,7 +635,7 @@ test_that("recompute_targets=TRUE populates chromatin_target_action", {
     )
   }
 
-  unlink(c(tiny_bedpe, target_bed, h3k4me1, h3k4me3))
+  unlink(c(h3k4me1, h3k4me3))
 })
 
 # --- recompute_targets=FALSE leaves target tables untouched ---
@@ -643,22 +645,13 @@ test_that("recompute_targets=FALSE preserves upstream target_annotation", {
     package = "GenomicFeatures"
   )
   skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
 
-  tiny_bedpe <- tempfile(fileext = ".bedpe")
-  target_bed <- tempfile(fileext = ".bed")
   h3k4me1 <- tempfile(fileext = ".bed")
   h3k4me3 <- tempfile(fileext = ".bed")
-  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tiny_bedpe)
-  writeLines("chr6\t10412000\t10413000", target_bed)
   writeLines("chr6\t10411900\t10412700", h3k4me1)
   writeLines("chr6\t10411900\t10412700", h3k4me3)
 
-  base_res <- annotate_peaks_and_loops(
-    bedpe_file = tiny_bedpe, target_bed = target_bed,
-    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
-    out_dir = tempdir(), write_output = FALSE, quiet = TRUE
-  )
+  base_res <- .get_shared_tiny_base()
 
   cr <- refine_loop_anchors_by_chromatin(base_res,
     chromatin_beds = list(H3K4me1 = h3k4me1, H3K4me3 = h3k4me3),
@@ -672,7 +665,7 @@ test_that("recompute_targets=FALSE preserves upstream target_annotation", {
     info = "recompute_targets=FALSE: target_gene_links should be preserved, not NULL"
   )
 
-  unlink(c(tiny_bedpe, target_bed, h3k4me1, h3k4me3))
+  unlink(c(h3k4me1, h3k4me3))
 })
 
 # --- recompute_targets: biological consequence checks ---
@@ -682,27 +675,18 @@ test_that("chromatin reclassification propagates anchor type changes into loop_t
     package = "GenomicFeatures"
   )
   skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
 
   # Anchor A1 (chr6:10412000-10412600) overlaps both a promoter and the
   # H3K4me1/H3K27ac marks but NOT H3K4me3 -> P + H3K4me1+ H3K4me3- H3K27ac+
   # must be reclassified to E. A2 receives no marks and stays P.
-  tiny_bedpe <- tempfile(fileext = ".bedpe")
-  target_bed <- tempfile(fileext = ".bed")
   h3k4me1 <- tempfile(fileext = ".bed")
   h3k4me3 <- tempfile(fileext = ".bed")
   h3k27ac <- tempfile(fileext = ".bed")
-  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tiny_bedpe)
-  writeLines("chr6\t10412000\t10413000", target_bed)
   writeLines("chr6\t10411900\t10412700", h3k4me1)
   writeLines("chr6\t20000000\t20001000", h3k4me3)
   writeLines("chr6\t10411900\t10412700", h3k27ac)
 
-  base_res <- annotate_peaks_and_loops(
-    bedpe_file = tiny_bedpe, target_bed = target_bed,
-    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
-    out_dir = tempdir(), write_output = FALSE, quiet = TRUE
-  )
+  base_res <- .get_shared_tiny_base()
 
   cr <- refine_loop_anchors_by_chromatin(base_res,
     chromatin_beds = list(H3K4me1 = h3k4me1, H3K4me3 = h3k4me3, H3K27ac = h3k27ac),
@@ -721,7 +705,7 @@ test_that("chromatin reclassification propagates anchor type changes into loop_t
   expect_true("E" %in% c(cr$loop_annotation$anchor1_type, cr$loop_annotation$anchor2_type))
   expect_true("E-P" %in% cr$loop_annotation$loop_type)
 
-  unlink(c(tiny_bedpe, target_bed, h3k4me1, h3k4me3, h3k27ac))
+  unlink(c(h3k4me1, h3k4me3, h3k27ac))
 })
 
 test_that("recomputed target_gene_links carry chromatin provenance columns", {
@@ -730,22 +714,13 @@ test_that("recomputed target_gene_links carry chromatin provenance columns", {
     package = "GenomicFeatures"
   )
   skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
 
-  tiny_bedpe <- tempfile(fileext = ".bedpe")
-  target_bed <- tempfile(fileext = ".bed")
   h3k4me1 <- tempfile(fileext = ".bed")
   h3k4me3 <- tempfile(fileext = ".bed")
-  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tiny_bedpe)
-  writeLines("chr6\t10412000\t10413000", target_bed)
   writeLines("chr6\t10411900\t10412700", h3k4me1)
   writeLines("chr6\t10411900\t10412700", h3k4me3)
 
-  base_res <- annotate_peaks_and_loops(
-    bedpe_file = tiny_bedpe, target_bed = target_bed,
-    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
-    out_dir = tempdir(), write_output = FALSE, quiet = TRUE
-  )
+  base_res <- .get_shared_tiny_base()
 
   cr <- refine_loop_anchors_by_chromatin(base_res,
     chromatin_beds = list(H3K4me1 = h3k4me1, H3K4me3 = h3k4me3),
@@ -759,7 +734,7 @@ test_that("recomputed target_gene_links carry chromatin provenance columns", {
   expect_true("chromatin_confidence" %in% colnames(links))
   expect_true("chromatin_evidence" %in% colnames(links))
 
-  unlink(c(tiny_bedpe, target_bed, h3k4me1, h3k4me3))
+  unlink(c(h3k4me1, h3k4me3))
 })
 
 test_that("recomputed *_Filled columns consistent with strict 3D columns", {
@@ -768,22 +743,13 @@ test_that("recomputed *_Filled columns consistent with strict 3D columns", {
     package = "GenomicFeatures"
   )
   skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
 
-  tiny_bedpe <- tempfile(fileext = ".bedpe")
-  target_bed <- tempfile(fileext = ".bed")
   h3k4me1 <- tempfile(fileext = ".bed")
   h3k4me3 <- tempfile(fileext = ".bed")
-  writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tiny_bedpe)
-  writeLines("chr6\t10412000\t10413000", target_bed)
   writeLines("chr6\t10411900\t10412700", h3k4me1)
   writeLines("chr6\t10411900\t10412700", h3k4me3)
 
-  base_res <- annotate_peaks_and_loops(
-    bedpe_file = tiny_bedpe, target_bed = target_bed,
-    txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
-    out_dir = tempdir(), write_output = FALSE, quiet = TRUE
-  )
+  base_res <- .get_shared_tiny_base()
 
   cr <- refine_loop_anchors_by_chromatin(base_res,
     chromatin_beds = list(H3K4me1 = h3k4me1, H3K4me3 = h3k4me3),
@@ -811,7 +777,7 @@ test_that("recomputed *_Filled columns consistent with strict 3D columns", {
     expect_true(all(reg_evidence[has_strict] == "none"))
   }
 
-  unlink(c(tiny_bedpe, target_bed, h3k4me1, h3k4me3))
+  unlink(c(h3k4me1, h3k4me3))
 })
 
 # --- P0-1: expression refinement preserves and updates anchor_state ---

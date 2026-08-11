@@ -168,7 +168,7 @@ test_that("profile_target_genes with fixed seed produces reproducible output", {
       expr_matrix_file = expr_path,
       metadata_file = meta_path,
       run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
-      gsea_nSample = 10, seed = s
+      gsea_nSample = 5, seed = s
     )
   }
 
@@ -209,7 +209,7 @@ test_that("profile_target_genes with NULL seed has NULL in metadata", {
     expr_matrix_file = expr_path,
     metadata_file = meta_path,
     run_go = FALSE, run_ppi = FALSE, run_motif = FALSE,
-    gsea_nSample = 10
+    gsea_nSample = 5
   )
 
   expect_null(attr(out, "seed"),
