@@ -1,3 +1,9 @@
+Changes in version 0.99.17 (2026-08-11)
+---------------------------------------
+
+* Tests: memoized shared annotation base and smaller GSEA/heatmap
+  down-sampling to keep `R CMD check` within the 15-minute SPB budget.
+
 Changes in version 0.99.16 (2026-08-08)
 ---------------------------------------
 
