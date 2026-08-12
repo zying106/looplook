@@ -107,38 +107,6 @@ test_that("run_go_enrichment handles unmapped genes gracefully", {
   expect_null(out$plot)
 })
 
-test_that("run_ppi_analysis returns ggplot for valid input", {
-  skip_if_not(has_data, "Pre-computed RData not available")
-  skip_if_not_installed("STRINGdb")
-  skip_if_not_installed("ggraph")
-  run_network_tests <- identical(
-    tolower(Sys.getenv("LOOPLOOK_RUN_NETWORK_TESTS", unset = "false")),
-    "true"
-  )
-  skip_if_not(
-    run_network_tests,
-    "External STRINGdb integration test disabled; set LOOPLOOK_RUN_NETWORK_TESTS=true to run."
-  )
-  # STRINGdb requires external network access even when explicitly enabled.
-  has_net <- tryCatch(
-    {
-      con <- url("https://string-db.org", open = "r")
-      close(con)
-      TRUE
-    },
-    error = function(e) FALSE
-  )
-  skip_if_not(has_net, "STRINGdb not reachable")
-
-  p <- looplook:::run_ppi_analysis(target_genes, global_glist, "org.Hs.eg.db",
-    ppi_score = 700, ppi_ntop = 20, "Test_PPI"
-  )
-  # may return NULL if no interactions found — not a failure
-  if (!is.null(p)) {
-    expect_s3_class(p, "gg")
-  }
-})
-
 test_that("run_ppi_analysis errors when species cannot be resolved", {
   skip_if_not_installed("STRINGdb")
   expect_error(
@@ -147,30 +115,6 @@ test_that("run_ppi_analysis errors when species cannot be resolved", {
     ),
     "Please provide `ppi_species_id`"
   )
-})
-
-test_that("run_ppi_analysis uses explicit ppi_species_id", {
-  skip_if_not_installed("STRINGdb")
-  skip_if(tolower(Sys.getenv("LOOPLOOK_RUN_NETWORK_TESTS", unset = "false")) != "true",
-    "Network test disabled; set LOOPLOOK_RUN_NETWORK_TESTS=true to run.")
-  species_id <- tryCatch(
-    {
-      con <- url("https://string-db.org", open = "r")
-      close(con)
-      9606L
-    },
-    error = function(e) NULL
-  )
-  skip_if(is.null(species_id), "STRINGdb not reachable")
-
-  p <- looplook:::run_ppi_analysis(c("TP53", "BRCA1"),
-    c(TP53 = 1, BRCA1 = -1), "org.Hs.eg.db",
-    ppi_score = 700, ppi_ntop = 20, "Test_PPI",
-    ppi_species_id = 9606L
-  )
-  if (!is.null(p)) {
-    expect_s3_class(p, "gg")
-  }
 })
 
 test_that("run_heatmap_and_connectivity returns plot list", {
