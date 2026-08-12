@@ -1,3 +1,11 @@
+Changes in version 0.99.18 (2026-08-12)
+---------------------------------------
+
+* Tests: removed redundant direct `enrichGO` integration test (covered by
+  `run_go_enrichment` tests) and memoised shared annotate inputs across
+  `test-review-fixes.R` blocks to keep `R CMD check` within the SPB
+  timeout budget.
+
 Changes in version 0.99.17 (2026-08-11)
 ---------------------------------------
 
