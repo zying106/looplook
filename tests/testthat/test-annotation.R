@@ -32,8 +32,11 @@ test_that("packaged annotation example keeps the expected output contract", {
   res_integrated <- temp_env[[ls(temp_env)[1]]]
 
   expect_type(res_integrated, "list")
-  expect_true(all(c("target_annotation", "loop_annotation", "anchor_loci_annotation", "anchor_annotation", "plots") %in% names(res_integrated)))
-  expect_type(res_integrated$plots, "list")
+  expect_true(all(c("target_annotation", "loop_annotation", "anchor_loci_annotation", "anchor_annotation") %in% names(res_integrated)))
+  # The packaged fixture intentionally excludes the large pre-computed
+  # `plots`/`plot_list` objects (they are re-generated on demand by the
+  # pipeline functions); only the annotation tables are retained.
+  expect_false("plots" %in% names(res_integrated))
   expect_gt(nrow(res_integrated$loop_annotation), 0)
   expect_gt(nrow(res_integrated$target_annotation), 0)
   expect_true("Assigned_Target_Genes_Filled" %in% colnames(res_integrated$target_annotation))
