@@ -72,13 +72,22 @@ test_that("run_gsea_analysis returns list with result and plot", {
   expect_null(out_null$result)
 })
 
-test_that("run_go_enrichment returns list with result field (NULL universe)", {
+test_that("run_go_enrichment returns list with result field (small universe)", {
   skip_if_not_installed("clusterProfiler")
   skip_if_not_installed("org.Hs.eg.db")
 
+  # A small background universe keeps clusterProfiler::enrichGO fast: with
+  # universe = NULL enrichGO falls back to the full OrgDb background, which is
+  # orders of magnitude slower for a 3-gene query. A ~20-gene universe still
+  # exercises the same code path (mapping, enrichment, list assembly).
+  small_universe <- setNames(
+    c(1, -1, 2, -2, 0.5, -0.5, 3, -3, 1.5, -1.5, 4, -4, 5, -5, 2.5, -2.5, 6, -6, 7, -7, 0.1, -0.1),
+    c("TP53", "BRCA1", "MYC", "EGFR", "KRAS", "PTEN", "CDH1", "RB1", "MAPK1", "AKT1", "JAK2", "STAT3", "MYC", "BRCA2", "TP73", "RB1", "CCND1", "CDK4", "MDM2", "ATM", "BRCA1", "ERBB2")
+  )
+
   out <- looplook:::run_go_enrichment(
-    c("TP53", "BRCA1", "MYC"), "org.Hs.eg.db", NULL,
-    cnet_nSample = 3, project_name = "Test_null_univ"
+    c("TP53", "BRCA1", "MYC"), "org.Hs.eg.db", small_universe,
+    cnet_nSample = 3, project_name = "Test_small_univ"
   )
   expect_type(out, "list")
   expect_true("result" %in% names(out))
