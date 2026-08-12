@@ -2029,6 +2029,10 @@ get_colors <- function(n, palette_input) {
 #' @param plot_species (character) Genome build/species code (e.g., "hg38", "mm10").
 #' @param unit_label (character) Unit for load annotation (e.g., "loops").
 #' @param custom_colors (character vector) Optional custom color palette.
+#' @param dev_width (numeric) Output device width in inches (default 10).
+#' @param dev_height (numeric) Output device height in inches (default 8).
+#'   Together they set the rendered image aspect ratio; e.g. \code{dev_width = 12,
+#'   dev_height = 6} produces a 2:1 figure.
 #' @keywords internal
 #' @importFrom GenomeInfoDb seqinfo seqlevelsStyle keepSeqlevels seqlengths seqlevels
 #' @importFrom GenomicRanges GRanges tileGenome countOverlaps
@@ -2040,7 +2044,7 @@ get_colors <- function(n, palette_input) {
 #' @return A \code{looplook_karyo} object wrapping a rendered PNG payload. Use
 #'   \code{print()} to display.
 #' @noRd
-draw_karyo_heatmap_internal <- function(gr_data, title_prefix, bin_size, sat_level, ref_txdb, plot_species, unit_label, custom_colors = NULL) {
+draw_karyo_heatmap_internal <- function(gr_data, title_prefix, bin_size, sat_level, ref_txdb, plot_species, unit_label, custom_colors = NULL, dev_width = 10, dev_height = 8) {
   # GenomeInfoDb::seqlevelsStyle<- and karyoploteR::plotKaryotype emit
   # genome-info lines via cat(). Suppress via sink.
   sink(file = nullfile(), type = "output")
@@ -2104,7 +2108,7 @@ draw_karyo_heatmap_internal <- function(gr_data, title_prefix, bin_size, sat_lev
     # Render once to PNG and keep the bytes in-memory so deferred report
     # rendering does not depend on a temp file surviving until a later chunk.
     f <- tempfile(fileext = ".png")
-    grDevices::png(f, width = 10, height = 8, units = "in", res = 150)
+    grDevices::png(f, width = dev_width, height = dev_height, units = "in", res = 150)
     needs_close <- TRUE
     on.exit(if (needs_close) try(grDevices::dev.off(), silent = TRUE), add = TRUE)
 
