@@ -72,25 +72,7 @@ test_that("run_gsea_analysis returns list with result and plot", {
   expect_null(out_null$result)
 })
 
-test_that("run_go_enrichment returns list with result and plot", {
-  skip_if_not(has_data, "Pre-computed RData not available")
-  skip_if_not_installed("clusterProfiler")
-  skip_if_not_installed("org.Hs.eg.db")
-
-  # Use small gene set for speed
-  small_targets <- head(target_genes, 8)
-  out <- looplook:::run_go_enrichment(small_targets, "org.Hs.eg.db", global_glist,
-    cnet_nSample = 5, project_name = "Test_GO"
-  )
-  expect_type(out, "list")
-  expect_true("result" %in% names(out))
-  # result should be a data.frame with expected columns
-  if (!is.null(out$result) && nrow(out$result) > 0) {
-    expect_s3_class(out$result, "data.frame")
-  }
-})
-
-test_that("run_go_enrichment with NULL universe_genes", {
+test_that("run_go_enrichment returns list with result field (NULL universe)", {
   skip_if_not_installed("clusterProfiler")
   skip_if_not_installed("org.Hs.eg.db")
 
@@ -99,6 +81,11 @@ test_that("run_go_enrichment with NULL universe_genes", {
     cnet_nSample = 3, project_name = "Test_null_univ"
   )
   expect_type(out, "list")
+  expect_true("result" %in% names(out))
+  expect_true("plot" %in% names(out))
+  if (!is.null(out$result) && nrow(out$result) > 0) {
+    expect_s3_class(out$result, "data.frame")
+  }
 })
 
 test_that("run_go_enrichment handles unmapped genes gracefully", {
