@@ -1,3 +1,14 @@
+Changes in version 0.99.19 (2026-08-13)
+---------------------------------------
+
+* Test runtime compression: mock heavy GSEA/heatmap modules in
+  `profile_target_genes()` branch tests, slim the packaged
+  `analysis_results.RData` fixture, and share TxDb/annotation fixtures
+  session-wide (`tests/testthat/helper-fixtures.R`). `R CMD check` tests
+  roughly halved locally; assertion coverage is unchanged (~77.7%).
+* `draw_karyo_heatmap_internal()` gains `dev_width`/`dev_height` parameters
+  for output image sizing.
+
 Changes in version 0.99.18 (2026-08-12)
 ---------------------------------------
 
