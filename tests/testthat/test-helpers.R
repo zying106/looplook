@@ -234,10 +234,7 @@ test_that("resolve_gene_conflicts processes overlapping promoters", {
   skip_if_not_installed("org.Hs.eg.db")
   skip_if_not_installed("GenomicFeatures")
 
-  txdb <- tryCatch(
-    AnnotationDbi::loadDb(system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")),
-    error = function(e) NULL
-  )
+  txdb <- get_test_txdb()
   skip_if(is.null(txdb), "Sample TxDb unavailable")
 
   genes_gr <- GenomicFeatures::genes(txdb)
@@ -323,10 +320,7 @@ test_that("resolve_gene_conflicts: biotype_first strategy works", {
   skip_if_not_installed("GenomicFeatures")
   skip_if_not_installed("org.Hs.eg.db")
 
-  txdb <- tryCatch(
-    AnnotationDbi::loadDb(system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")),
-    error = function(e) NULL
-  )
+  txdb <- get_test_txdb()
   skip_if(is.null(txdb), "Sample TxDb unavailable")
 
   genes_gr <- GenomicFeatures::genes(txdb)
@@ -388,10 +382,7 @@ test_that("resolve_gene_conflicts: biotype_first retains silent protein-coding o
   skip_if_not_installed("GenomicFeatures")
   skip_if_not_installed("org.Hs.eg.db")
 
-  txdb <- tryCatch(
-    AnnotationDbi::loadDb(system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")),
-    error = function(e) NULL
-  )
+  txdb <- get_test_txdb()
   skip_if(is.null(txdb), "Sample TxDb unavailable")
 
   genes_gr <- GenomicFeatures::genes(txdb)

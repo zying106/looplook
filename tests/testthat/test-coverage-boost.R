@@ -5,11 +5,15 @@
 # Profile_target_genes() branch tests only exercise control flow (parameter
 # routing, target extraction, result assembly). Mock the heavy downstream
 # modules so these tests do not repeatedly pay the real GSEA / heatmap cost.
-mock_heavy_profile_modules <- function() {
+# The `.env` argument must point at the calling test_that() frame: if the mock
+# is scoped to this helper's own frame it is restored as soon as this function
+# returns, so the downstream modules would still run for real.
+mock_heavy_profile_modules <- function(.env = parent.frame()) {
   testthat::local_mocked_bindings(
     run_gsea_analysis = function(...) list(result = NULL, plot = NULL),
     run_heatmap_and_connectivity = function(...) list(),
-    .package = "looplook"
+    .package = "looplook",
+    .env = .env
   )
 }
 

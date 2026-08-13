@@ -447,6 +447,11 @@ test_that("draw_karyo_heatmap_internal stores self-contained image payload", {
 # ── 18. profile_target_genes does not require OrgDb when GO is disabled ─────
 
 test_that("profile_target_genes runs without OrgDb if GO analysis is disabled", {
+  testthat::local_mocked_bindings(
+    run_gsea_analysis = function(...) list(result = NULL, plot = NULL),
+    run_heatmap_and_connectivity = function(...) list(),
+    .package = "looplook"
+  )
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
   expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
   diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
