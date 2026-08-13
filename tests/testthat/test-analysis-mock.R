@@ -148,9 +148,19 @@ test_that(".prepare_motif_anchor_sets deduplicates anchors and matches classes",
 
 # --- GSEA seed reproducibility ---
 test_that("profile_target_genes with fixed seed produces reproducible output", {
+  rng_capture <- new.env(parent = emptyenv())
+  rng_capture$draws <- list()
   testthat::local_mocked_bindings(
     run_gsea_analysis = function(...) list(result = NULL, plot = NULL),
     run_heatmap_and_connectivity = function(...) list(),
+    # Mock the heavy violin resampling with a lightweight RNG draw so the
+    # test verifies that `seed` actually governs downstream RNG (not just
+    # the deterministic gene-set extraction).
+    run_lfc_violin = function(...) {
+      rng_capture$draws[[length(rng_capture$draws) + 1L]] <-
+        sample.int(1e6, 1L)
+      NULL
+    },
     .package = "looplook"
   )
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
@@ -178,14 +188,20 @@ test_that("profile_target_genes with fixed seed produces reproducible output", {
   }
 
   set.seed(42)
+  draws1 <- c()
+  rng_capture$draws <- list()
   run1 <- run_with_seed(123)
-  set.seed(99)
-  run2 <- run_with_seed(123)
+  draws1 <- unlist(rng_capture$draws)
 
-  expect_equal(
-    run1$targets$target_gene_sets,
-    run2$targets$target_gene_sets,
-    info = "Same seed must produce identical gene sets"
+  set.seed(99)
+  rng_capture$draws <- list()
+  run2 <- run_with_seed(123)
+  draws2 <- unlist(rng_capture$draws)
+
+  # Same seed must govern the RNG draws made inside the pipeline, regardless
+  # of the RNG state before the call.
+  expect_equal(draws1, draws2,
+    info = "Same seed must produce identical downstream RNG draws"
   )
   expect_equal(
     attr(run1, "seed"),
