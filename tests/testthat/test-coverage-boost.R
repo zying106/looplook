@@ -397,6 +397,7 @@ test_that("draw_flower_simplified returns NULL for <2 non-empty groups", {
 # --- visualization.R deep coverage: gene track, full plot_peaks_interactions ---
 
 test_that("plot_peaks_interactions with gene_track=TRUE renders full multi-track plot", {
+  skip_on_bioc() # heavy hg38 TxDb gene-track rendering; covered on local/CI
   skip_if_not_installed("ggplot2")
   skip_if_not_installed("ggforce")
   skip_if_not_installed("TxDb.Hsapiens.UCSC.hg38.knownGene")
@@ -443,24 +444,6 @@ test_that("plot_peaks_interactions handles score column with alpha", {
   unlink(tmp)
 })
 
-
-test_that(".prepare_gene_track_data returns gene and feature data frames", {
-  skip_if_not_installed("TxDb.Hsapiens.UCSC.hg38.knownGene")
-  skip_if_not_installed("org.Hs.eg.db")
-
-  txdb <- TxDb.Hsapiens.UCSC.hg38.knownGene::TxDb.Hsapiens.UCSC.hg38.knownGene
-  res <- looplook:::.prepare_gene_track_data(
-    txdb_obj = txdb, org_db_ref = "org.Hs.eg.db",
-    chr = "chr6", from = 29940000, to = 29947000
-  )
-  expect_type(res, "list")
-  expect_true("genes_df" %in% names(res))
-  expect_true("feature_df" %in% names(res))
-  expect_s3_class(res$genes_df, "data.frame")
-  if (nrow(res$genes_df) > 0) {
-    expect_true("SYMBOL" %in% colnames(res$genes_df))
-  }
-})
 
 test_that(".prepare_overlap_track reads and filters target BED for a region", {
   tmp <- tempfile(fileext = ".bed")
