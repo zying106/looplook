@@ -152,12 +152,8 @@ test_that("compute_refined_stats splits semicolon-separated genes", {
 
 test_that("annotate_peaks_and_loops accepts object inputs and keeps BEDPE coordinates consistent", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb_path <- system.file(
-    "extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb_path)
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
+  txdb_obj <- get_test_txdb()
   tmp_bedpe <- tempfile(fileext = ".bedpe")
   tmp_bed <- tempfile(fileext = ".bed")
   writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
@@ -217,12 +213,8 @@ test_that("consolidate_chromatin_loops roundtrip preserves 0-based BEDPE start",
 
 test_that("resolve_gene_conflicts handles empty input", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb_path <- system.file(
-    "extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb <- AnnotationDbi::loadDb(sample_txdb_path)
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
+  txdb <- get_test_txdb()
   empty_df <- data.frame(
     chr = character(0), start = integer(0),
     end = integer(0), stringsAsFactors = FALSE
@@ -236,12 +228,8 @@ test_that("resolve_gene_conflicts handles empty input", {
 
 test_that("resolve_gene_conflicts handles no matching genes", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb_path <- system.file(
-    "extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb_path == "", "Sample TxDb not available")
-  txdb <- AnnotationDbi::loadDb(sample_txdb_path)
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
+  txdb <- get_test_txdb()
   # Region in a gene desert (no promoters nearby)
   df <- data.frame(chr = "chr1", start = 1, end = 100, stringsAsFactors = FALSE)
   res <- looplook:::.with_known_upstream_noise_suppressed(

@@ -3,18 +3,12 @@
 # ════════════════════════════════════════════════════════════════════════════
 # Shared fixtures: cache TxDb / OrgDb once for all integration tests
 # ════════════════════════════════════════════════════════════════════════════
-sim_txdb <- NULL
 sim_org_db <- NULL
 sim_has_bioc <- requireNamespace("org.Hs.eg.db", quietly = TRUE) &&
   requireNamespace("GenomicFeatures", quietly = TRUE)
 
 if (sim_has_bioc) {
-  sim_txdb <- tryCatch(
-    AnnotationDbi::loadDb(
-      system.file("extdata", "hg19_knownGene_sample.sqlite", package = "GenomicFeatures")
-    ),
-    error = function(e) NULL
-  )
+  sim_txdb <- get_test_txdb()
   sim_org_db <- "org.Hs.eg.db"
 }
 

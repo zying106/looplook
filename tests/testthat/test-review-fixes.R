@@ -2,44 +2,11 @@
 # Synthetic tests for P0/P1 fixes (2026-07-14)
 # Dependencies: TxDb/OrgDb installed packages (skip_if_not_installed per-test)
 
-# Memoised tiny-example annotation shared by several annotate/refine tests.
-# Two parameterisations recur across blocks: default (with a target BED) and
-# neighbor_hop = 1 (no target BED). Each is annotated once per session.
-.rf_cache <- new.env(parent = emptyenv())
-.get_shared_target_base <- function() {
-  if (is.null(.rf_cache$target)) {
-    sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-      package = "GenomicFeatures"
-    )
-    txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
-    tmp_bedpe <- tempfile(fileext = ".bedpe")
-    tmp_bed <- tempfile(fileext = ".bed")
-    writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
-    writeLines("chr6\t10412000\t10413000", tmp_bed)
-    .rf_cache$target <- annotate_peaks_and_loops(
-      bedpe_file = tmp_bedpe, target_bed = tmp_bed,
-      txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
-      out_dir = tempdir(), write_output = FALSE, quiet = TRUE
-    )
-  }
-  .rf_cache$target
-}
-.get_shared_hop1_base <- function() {
-  if (is.null(.rf_cache$hop1)) {
-    sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-      package = "GenomicFeatures"
-    )
-    txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
-    tmp_bedpe <- tempfile(fileext = ".bedpe")
-    writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
-    .rf_cache$hop1 <- annotate_peaks_and_loops(
-      bedpe_file = tmp_bedpe,
-      txdb = txdb_obj, org_db = "org.Hs.eg.db", species = "hg19",
-      neighbor_hop = 1, out_dir = tempdir(), write_output = FALSE, quiet = TRUE
-    )
-  }
-  .rf_cache$hop1
-}
+# Shared annotation bases are provided by helper-fixtures.R (built once per
+# test session). `.get_shared_*` aliases are kept for readability and map to
+# the session-wide fixtures.
+.get_shared_target_base <- function() get_base_annotation_target()
+.get_shared_hop1_base <- function() get_base_annotation_hop1()
 
 # ── 1. Expression: case-insensitive matching (P1-3) ──────────────────────────
 
@@ -85,10 +52,7 @@ test_that(".get_expr returns NA for unmatched genes, keeps true zero", {
 
 test_that("recompute_targets = FALSE preserves target_annotation", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb == "", "Sample TxDb not available")
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
   h3k4me1 <- tempfile(fileext = ".bed")
   h3k4me3 <- tempfile(fileext = ".bed")
   writeLines("chr6\t10411900\t10412700", h3k4me1)
@@ -213,10 +177,8 @@ test_that(".is_distal_like excludes eP and eG", {
 
 test_that("basic annotation records neighbor_hop=0 in metadata and state", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures")
-  skip_if(sample_txdb == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
+  txdb_obj <- get_test_txdb()
   tmp_bedpe <- tempfile(fileext = ".bedpe")
   writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
   res <- annotate_peaks_and_loops(bedpe_file = tmp_bedpe,
@@ -234,10 +196,7 @@ test_that("basic annotation records neighbor_hop=0 in metadata and state", {
 
 test_that("refine_loop_anchors_by_chromatin stops on already chromatin-refined object", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb == "", "Sample TxDb not available")
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
   h3k4me1 <- tempfile(fileext = ".bed")
   h3k4me3 <- tempfile(fileext = ".bed")
   writeLines("chr6\t10411900\t10412700", h3k4me1)
@@ -259,10 +218,7 @@ test_that("refine_loop_anchors_by_chromatin stops on already chromatin-refined o
 
 test_that("refine_loop_anchors_by_chromatin allow_rerefine=TRUE proceeds", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb == "", "Sample TxDb not available")
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
   h3k4me1 <- tempfile(fileext = ".bed")
   h3k4me3 <- tempfile(fileext = ".bed")
   writeLines("chr6\t10411900\t10412700", h3k4me1)
@@ -290,11 +246,8 @@ test_that("refine_loop_anchors_by_chromatin allow_rerefine=TRUE proceeds", {
 
 test_that("gene_assignment_policy stored in anchor_state after annotation", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
+  txdb_obj <- get_test_txdb()
   tmp_bedpe <- tempfile(fileext = ".bedpe")
   writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
   base_res <- annotate_peaks_and_loops(
@@ -316,13 +269,10 @@ test_that("gene_assignment_policy stored in anchor_state after annotation", {
 
 test_that("conflict_min_expr preserved after expression refinement (not overwritten)", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb == "", "Sample TxDb not available")
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
   expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
   skip_if(expr_path == "", "Example TPM file not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  txdb_obj <- get_test_txdb()
   tmp_bedpe <- tempfile(fileext = ".bedpe")
   writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
   base_res <- annotate_peaks_and_loops(
@@ -360,11 +310,8 @@ test_that("conflict_min_expr preserved after expression refinement (not overwrit
 
 test_that(".reannotate_tss_genes returns valid structure for single anchor", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
+  txdb_obj <- get_test_txdb()
   validation <- data.frame(
     anchor_id = "A1", chr = "chr6", start = 10412000L, end = 10413000L,
     anchor_type = "E", stringsAsFactors = FALSE
@@ -384,11 +331,8 @@ test_that(".reannotate_tss_genes returns valid structure for single anchor", {
 
 test_that(".reannotate_tss_genes handles duplicate coordinates without crash", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
+  txdb_obj <- get_test_txdb()
   validation <- data.frame(
     anchor_id = c("A1", "A2"),
     chr = c("chr6", "chr6"),
@@ -413,11 +357,8 @@ test_that(".reannotate_tss_genes handles duplicate coordinates without crash", {
 
 test_that(".reannotate_tss_genes returns gene_after=NA for unannotated region", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures"
-  )
-  skip_if(sample_txdb == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
+  txdb_obj <- get_test_txdb()
   # Use chr6 at a coordinate unlikely to overlap any gene in the sample TxDb
   validation <- data.frame(
     anchor_id = "A_Nogene",
@@ -955,9 +896,7 @@ test_that("chromatin validator rejects unnamed chromatin_beds list", {
 
 test_that("basic annotation records neighbor_hop in metadata and state", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures")
-  skip_if(sample_txdb == "", "Sample TxDb not available")
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
 
   res <- .get_shared_hop1_base()
 
@@ -967,9 +906,7 @@ test_that("basic annotation records neighbor_hop in metadata and state", {
 
 test_that("metadata: expression refinement inherits neighbor_hop (state >= metadata)", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures")
-  skip_if(sample_txdb == "", "Sample TxDb not available")
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
 
   res <- .get_shared_hop1_base()
 
@@ -1762,10 +1699,8 @@ test_that("invalid optional BED path warns and skips", {
 
 test_that("annotate_peaks_and_loops with neighbor_hop=1 validates 2-hop results", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures")
-  skip_if(sample_txdb == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
+  txdb_obj <- get_test_txdb()
 
   # A1(100-600) —L1— A2(1100-1600) —L2— A3(10415000-10415600,gene)
   #                                 \_L3— A4(200000-200600,no gene)
@@ -2016,10 +1951,8 @@ test_that("resolver: vectorised form works correctly", {
 
 test_that("chromatin refinement propagates resolver result across layers", {
   skip_if_not_installed("org.Hs.eg.db")
-  sample_txdb <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-    package = "GenomicFeatures")
-  skip_if(sample_txdb == "", "Sample TxDb not available")
-  txdb_obj <- AnnotationDbi::loadDb(sample_txdb)
+  skip_if(is.null(get_test_txdb()), "Sample TxDb not available")
+  txdb_obj <- get_test_txdb()
 
   tmp_bedpe <- tempfile(fileext = ".bedpe")
   writeLines("chr6\t10412000\t10412600\tchr6\t10415000\t10415600", tmp_bedpe)
