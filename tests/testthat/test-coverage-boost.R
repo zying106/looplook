@@ -2,6 +2,17 @@
 # Mock-based tests targeting internal functions in analysis, visualization,
 # annotation, and data-processing modules.
 
+# Profile_target_genes() branch tests only exercise control flow (parameter
+# routing, target extraction, result assembly). Mock the heavy downstream
+# modules so these tests do not repeatedly pay the real GSEA / heatmap cost.
+mock_heavy_profile_modules <- function() {
+  testthat::local_mocked_bindings(
+    run_gsea_analysis = function(...) list(result = NULL, plot = NULL),
+    run_heatmap_and_connectivity = function(...) list(),
+    .package = "looplook"
+  )
+}
+
 # ============================================================================
 # analysis.R — GSEA, motif helpers, heatmap/connectivity, edge cases
 # ============================================================================
@@ -1063,6 +1074,7 @@ test_that(".build_looplook_metadata returns expected structure", {
 # ============================================================================
 
 test_that("profile_target_genes validates seed parameter", {
+  mock_heavy_profile_modules()
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
   diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
   expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
@@ -1109,6 +1121,7 @@ test_that("profile_target_genes validates seed parameter", {
 })
 
 test_that("profile_target_genes different target_source modes", {
+  mock_heavy_profile_modules()
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
   diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
   expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
@@ -1159,6 +1172,7 @@ test_that("profile_target_genes different target_source modes", {
 })
 
 test_that("profile_target_genes stat_test modes", {
+  mock_heavy_profile_modules()
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
   diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
   expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
@@ -1191,6 +1205,7 @@ test_that("profile_target_genes stat_test modes", {
 })
 
 test_that("profile_target_genes group_order parameter", {
+  mock_heavy_profile_modules()
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
   diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
   expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")

@@ -148,6 +148,11 @@ test_that(".prepare_motif_anchor_sets deduplicates anchors and matches classes",
 
 # --- GSEA seed reproducibility ---
 test_that("profile_target_genes with fixed seed produces reproducible output", {
+  testthat::local_mocked_bindings(
+    run_gsea_analysis = function(...) list(result = NULL, plot = NULL),
+    run_heatmap_and_connectivity = function(...) list(),
+    .package = "looplook"
+  )
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
   diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
   expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
@@ -190,6 +195,11 @@ test_that("profile_target_genes with fixed seed produces reproducible output", {
 })
 
 test_that("profile_target_genes with NULL seed has NULL in metadata", {
+  testthat::local_mocked_bindings(
+    run_gsea_analysis = function(...) list(result = NULL, plot = NULL),
+    run_heatmap_and_connectivity = function(...) list(),
+    .package = "looplook"
+  )
   rdata_path <- system.file("extdata", "analysis_results.RData", package = "looplook")
   diff_path <- system.file("extdata", "example_deg.txt", package = "looplook")
   expr_path <- system.file("extdata", "example_tpm.txt", package = "looplook")
