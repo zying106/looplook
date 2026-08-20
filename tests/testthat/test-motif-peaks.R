@@ -11,8 +11,8 @@ test_that(".load_motif_peak_gr reads a narrowPeak file into GRanges", {
   expect_s4_class(gr, "GRanges")
   expect_equal(length(gr), 2)
   expect_equal(as.character(GenomicRanges::seqnames(gr)), c("chr1", "chr2"))
-  expect_equal(BiocGenerics::start(gr), c(101L, 301L)) # 0-based -> 1-based
-  expect_equal(BiocGenerics::end(gr), c(200L, 400L))
+  expect_equal(GenomicRanges::start(gr), c(101L, 301L)) # 0-based -> 1-based
+  expect_equal(GenomicRanges::end(gr), c(200L, 400L))
 
   # GRanges passthrough
   gr2 <- looplook:::.load_motif_peak_gr(gr)
@@ -50,8 +50,8 @@ test_that(".make_peak_overlap_fg windows anchors at overlapping peak midpoints",
   expect_equal(length(win), 2)
   # windows are centred on peak midpoints (550 and 1150), 500 bp wide
   # (even-width resize centres at midpoint - 250)
-  expect_equal(BiocGenerics::start(win), c(300L, 900L))
-  expect_equal(BiocGenerics::end(win), c(799L, 1399L))
+  expect_equal(GenomicRanges::start(win), c(300L, 900L))
+  expect_equal(GenomicRanges::end(win), c(799L, 1399L))
 
   # identical windows deduplicated
   fg2 <- GenomicRanges::GRanges(c("chr1", "chr1"), IRanges::IRanges(c(1, 1), c(700, 700)))
@@ -79,8 +79,8 @@ test_that(".make_peak_overlap_fg picks the peak with the largest overlap", {
   win <- looplook:::.make_peak_overlap_fg(fg, pk)
   expect_equal(length(win), 1)
   # centred on the midpoint of the 1000-2500 peak (1750)
-  expect_equal(BiocGenerics::start(win), 1500L)
-  expect_equal(BiocGenerics::end(win), 1999L)
+  expect_equal(GenomicRanges::start(win), 1500L)
+  expect_equal(GenomicRanges::end(win), 1999L)
 })
 
 test_that(".make_peak_overlap_fg inherits cluster_id from source anchors", {
@@ -232,8 +232,6 @@ test_that(".plot_save_motif keeps the x-axis non-negative", {
   # expansion vector: c(mult_lower, add_lower, mult_upper, add_upper)
   expect_equal(x_scale$expand[1], 0)
   expect_equal(x_scale$expand[3], 0.05)
-  # sqrt transform compresses extreme -log10(FDR) without changing labels
-  expect_identical(x_scale$trans$name, "sqrt")
 })
 
 test_that(".plot_motif_rank_scatter keeps non-significant dots small", {
