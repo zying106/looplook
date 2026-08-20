@@ -32,6 +32,7 @@ looplook_report(
   motif_p_thresh = 1e-04,
   motif_ntop = 5,
   motif_n_perm = 0L,
+  motif_peak_file = NULL,
   ppi_score = 400,
   ppi_nSample = 400,
   heatmap_nSample = 99999,
@@ -113,7 +114,14 @@ Default \code{FALSE}.}
 
 \item{motif_n_perm}{Integer. Number of within-component label permutations
 for empirical motif P-value estimation. Passed to
-\code{\link{profile_target_genes}}. Default \code{0} (Fisher exact test).}
+\code{\link{profile_target_genes}}. Default \code{0} (Fisher exact test);
+\code{-1} enables automatic mode (100 permutations when anchors carry
+\code{cluster_id} metadata).}
+
+\item{motif_peak_file}{Character or \code{NULL}. Optional path to a
+narrowPeak/BED file containing the TF's own ChIP peaks. Passed to
+\code{\link{profile_target_genes}} for peak-overlap motif stratification.
+Default \code{NULL} (no stratification; original behaviour).}
 
 \item{ppi_score}{Numeric. Minimum STRING combined score. Default \code{400}.}
 

@@ -23,6 +23,7 @@ profile_target_genes(
   motif_p_thresh = 1e-04,
   motif_ntop = 5,
   motif_n_perm = 0L,
+  motif_peak_file = NULL,
   run_go = FALSE,
   run_ppi = FALSE,
   ppi_score = 400,
@@ -93,10 +94,22 @@ Default \code{5}.}
 label permutations for empirical motif P-value estimation. When positive,
 labels are shuffled within each loop component to partially account for
 anchor non-independence. \code{0} (default) retains Fisher exact test.
+\code{-1} enables automatic mode: \code{100} permutations when anchors
+carry \code{cluster_id} metadata, otherwise \code{0}.
 Use \code{10-100} for testing. For inference, choose according to the
 number of motifs and desired P-value resolution; \code{1000} may be
 insufficient after multiple-testing correction across a full motif library.
 This is an exploratory calibration, not a fully component-level model.}
+
+\item{motif_peak_file}{Character or \code{NULL}. Optional path to a
+narrowPeak/BED file containing the TF's own ChIP peaks. When provided,
+motif analysis additionally stratifies loop anchors by peak overlap and
+re-analyses overlapping anchors with scan windows centred on the peak
+midpoints (results stored as \code{proximal_peak_overlap} /
+\code{distal_peak_overlap}, with a \code{qc} table). Anchors are loop
+bins, not binding sites; peak stratification avoids diluting the TF's
+own motif signal across non-bound anchors. Default \code{NULL}
+(no stratification; original behaviour).}
 
 \item{run_go}{Logical. Whether to perform Gene Ontology (GO) enrichment.
 Default \code{FALSE}.}
@@ -154,7 +167,7 @@ An invisible nested list indexed by \code{target_source} (e.g., \code{"targets"}
 Each element contains:
 \describe{
 \item{\code{go_results}}{Named list of data frames (one per gene set) containing GO enrichment results (if \code{run_go = TRUE}).}
-\item{\code{motif_results}}{Named list of motif enrichment result tables, indexed by analysis task. Each task contains \code{proximal} and \code{distal} data frames when available (if \code{run_motif = TRUE}).}
+\item{\code{motif_results}}{Named list of motif enrichment result tables, indexed by analysis task. Each task contains \code{proximal} and \code{distal} data frames when available (if \code{run_motif = TRUE}). When \code{motif_peak_file} is supplied, \code{proximal_peak_overlap} / \code{distal_peak_overlap} tables and a \code{qc} table are added.}
 \item{\code{target_gene_sets}}{Named list of character vectors containing target gene symbols.}
 \item{\code{plots}}{Named list of ggplot objects (LFC_Violin, GSEA, Heatmap, Scatter, GO_Network, PPI_Network, etc.).}
 \item{\code{warnings}}{Character vector of module-level warnings (e.g., "\link[AnnotationDbi:colsAndKeytypes]{AnnotationDbi::GO} failed: ..."). Empty if all modules succeeded.}

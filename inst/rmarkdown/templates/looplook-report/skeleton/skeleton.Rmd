@@ -37,6 +37,7 @@ params:
   motif_p_thresh: 1e-4
   motif_ntop: 5
   motif_n_perm: 0
+  motif_peak_file: null
   universe_genes: !r NULL
   ppi_score: 400
   ppi_nSample: 400
@@ -1143,6 +1144,7 @@ profile_res <- tryCatch(
     cnet_nSample = params$cnet_nSample,
     stat_test = params$stat_test,
     motif_n_perm = params$motif_n_perm,
+    motif_peak_file = params$motif_peak_file,
     universe_genes = params$universe_genes,
     seed = params$seed
   )),

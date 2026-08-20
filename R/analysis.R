@@ -66,10 +66,21 @@
 #'   label permutations for empirical motif P-value estimation. When positive,
 #'   labels are shuffled within each loop component to partially account for
 #'   anchor non-independence. \code{0} (default) retains Fisher exact test.
+#'   \code{-1} enables automatic mode: \code{100} permutations when anchors
+#'   carry \code{cluster_id} metadata, otherwise \code{0}.
 #'   Use \code{10-100} for testing. For inference, choose according to the
 #'   number of motifs and desired P-value resolution; \code{1000} may be
 #'   insufficient after multiple-testing correction across a full motif library.
 #'   This is an exploratory calibration, not a fully component-level model.
+#' @param motif_peak_file Character or \code{NULL}. Optional path to a
+#'   narrowPeak/BED file containing the TF's own ChIP peaks. When provided,
+#'   motif analysis additionally stratifies loop anchors by peak overlap and
+#'   re-analyses overlapping anchors with scan windows centred on the peak
+#'   midpoints (results stored as \code{proximal_peak_overlap} /
+#'   \code{distal_peak_overlap}, with a \code{qc} table). Anchors are loop
+#'   bins, not binding sites; peak stratification avoids diluting the TF's
+#'   own motif signal across non-bound anchors. Default \code{NULL}
+#'   (no stratification; original behaviour).
 #' @param run_go Logical. Whether to perform Gene Ontology (GO) enrichment.
 #'   Default \code{FALSE}.
 #' @param universe_genes Named numeric vector or \code{NULL}. GO background
@@ -114,7 +125,7 @@
 #'   Each element contains:
 #'   \describe{
 #'     \item{\code{go_results}}{Named list of data frames (one per gene set) containing GO enrichment results (if \code{run_go = TRUE}).}
-#'     \item{\code{motif_results}}{Named list of motif enrichment result tables, indexed by analysis task. Each task contains \code{proximal} and \code{distal} data frames when available (if \code{run_motif = TRUE}).}
+#'     \item{\code{motif_results}}{Named list of motif enrichment result tables, indexed by analysis task. Each task contains \code{proximal} and \code{distal} data frames when available (if \code{run_motif = TRUE}). When \code{motif_peak_file} is supplied, \code{proximal_peak_overlap} / \code{distal_peak_overlap} tables and a \code{qc} table are added.}
 #'     \item{\code{target_gene_sets}}{Named list of character vectors containing target gene symbols.}
 #'     \item{\code{plots}}{Named list of ggplot objects (LFC_Violin, GSEA, Heatmap, Scatter, GO_Network, PPI_Network, etc.).}
 #'     \item{\code{warnings}}{Character vector of module-level warnings (e.g., "[GO] failed: ..."). Empty if all modules succeeded.}
@@ -171,6 +182,7 @@ profile_target_genes <- function(
   motif_p_thresh = 1e-4,
   motif_ntop = 5,
   motif_n_perm = 0L,
+  motif_peak_file = NULL,
   run_go = FALSE,
   run_ppi = FALSE,
   ppi_score = 400,
@@ -188,7 +200,7 @@ profile_target_genes <- function(
   target_mapping_mode <- match.arg(target_mapping_mode)
   genome_id <- match.arg(genome_id)
 
-  .assert_scalar_count(motif_n_perm, "motif_n_perm")
+  .assert_scalar_count(motif_n_perm, "motif_n_perm", min = -1L)
 
   # Seed management: withr::local_seed provides a local RNG context
   # without leaking .Random.seed into the global environment.
@@ -207,21 +219,38 @@ profile_target_genes <- function(
 
   message(">>> Analysis Init | Root Project: ", root_project_name)
 
+  skipped_modules <- character()
+
   if (run_go) {
     .require_pkg(org_db, "GO analysis", "stop")
   }
 
   if (run_motif) {
-    bs_pkg <- species_bsgenome_pkg(genome_id)
-    if (is.null(bs_pkg) || !requireNamespace(bs_pkg, quietly = TRUE)) {
-      warning("Unsupported genome or missing BSgenome package. Disabling Motif Analysis.")
+    missing_motif_deps <- .missing_motif_dependencies(genome_id)
+    if (length(missing_motif_deps) > 0) {
+      warning(
+        "Motif analysis requires ", paste(missing_motif_deps, collapse = ", "),
+        ". Install with BiocManager::install(c(", paste(sprintf("'%s'", missing_motif_deps), collapse = ", "),
+        ")). Skipping motif analysis.",
+        call. = FALSE
+      )
+      skipped_modules <- c(skipped_modules, "motif")
       run_motif <- FALSE
     }
   }
 
   if (run_ppi) {
-    .require_pkg("STRINGdb", "PPI analysis", "stop")
-    .require_pkg("ggraph", "PPI analysis", "stop")
+    missing_ppi_deps <- .missing_ppi_dependencies()
+    if (length(missing_ppi_deps) > 0) {
+      warning(
+        "PPI analysis requires ", paste(missing_ppi_deps, collapse = ", "),
+        ". Install with BiocManager::install(c(", paste(sprintf("'%s'", missing_ppi_deps), collapse = ", "),
+        ")). Skipping PPI analysis.",
+        call. = FALSE
+      )
+      skipped_modules <- c(skipped_modules, "ppi")
+      run_ppi <- FALSE
+    }
   }
 
   message("--- Reading files...")
@@ -418,6 +447,22 @@ profile_target_genes <- function(
   loop_stats_df <- annotation_res$promoter_centric_stats
   final_master_list <- list()
 
+  # Load the optional TF ChIP peak file once (fail-soft) so that every
+  # motif task shares the same peak set for anchor stratification.
+  motif_peak_gr <- NULL
+  if (run_motif && !is.null(motif_peak_file)) {
+    motif_peak_gr <- tryCatch(
+      .load_motif_peak_gr(motif_peak_file),
+      error = function(e) {
+        warning(
+          "Could not load motif peak file; peak-overlap stratification disabled: ",
+          conditionMessage(e), call. = FALSE
+        )
+        NULL
+      }
+    )
+  }
+
   for (src in target_source) {
     current_source_proj_name <- paste0(root_project_name, "_", src)
     message("\n================================================================")
@@ -451,6 +496,7 @@ profile_target_genes <- function(
       motif_p_thresh = motif_p_thresh,
       motif_ntop = motif_ntop,
       motif_n_perm = motif_n_perm,
+      motif_peak_gr = motif_peak_gr,
       run_go = run_go,
       universe_genes = universe_genes,
       org_db = org_db,
@@ -478,6 +524,7 @@ profile_target_genes <- function(
   }
   message("\n All analysis complete.")
   attr(final_master_list, "seed") <- seed
+  attr(final_master_list, "skipped_modules") <- skipped_modules
   return(invisible(final_master_list))
 }
 
@@ -606,6 +653,7 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
   expr_vals = NULL,
   stat_test, gsea_nSample, heatmap_nSample, cor_method,
   run_motif, genome_id, motif_p_thresh, motif_ntop, motif_n_perm,
+  motif_peak_gr = NULL,
   run_go, universe_genes, org_db, cnet_nSample,
   run_ppi, ppi_score, ppi_nSample, ppi_species_id
 ) {
@@ -708,7 +756,8 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
           target_genes, motif_loop_df,
           genome_id, motif_p_thresh, current_proj_name, motif_ntop,
           motif_n_perm = motif_n_perm,
-          anchor_registry = .get_anchor_registry(annotation_res)
+          anchor_registry = .get_anchor_registry(annotation_res),
+          peak_gr = motif_peak_gr
         )
       )
       if (!is.null(motif_out)) {
@@ -717,6 +766,9 @@ extract_target_gene_sets <- function(annotation_res, src, active_loop_types = NU
         }
         if (!is.null(motif_out$results)) {
           motif_results[[task_name]] <- motif_out$results
+        }
+        if (!is.null(motif_out$qc)) {
+          motif_results[[paste0(task_name, "_peak_qc")]] <- motif_out$qc
         }
       }
     }
@@ -1453,6 +1505,17 @@ run_go_enrichment <- function(genes, org_db, universe_genes, cnet_nSample = 50, 
 #' @keywords internal
 #' @noRd
 run_ppi_analysis <- function(target_genes, global_glist, org_db, ppi_score, ppi_ntop, current_proj_name, ppi_species_id = NULL) {
+  missing_ppi_deps <- .missing_ppi_dependencies()
+  if (length(missing_ppi_deps) > 0) {
+    warning(
+      "PPI analysis requires ", paste(missing_ppi_deps, collapse = ", "),
+      ". Install with BiocManager::install(c(",
+      paste(sprintf("'%s'", missing_ppi_deps), collapse = ", "),
+      ")). Skipping PPI analysis.",
+      call. = FALSE
+    )
+    return(NULL)
+  }
   # STRING species are identified by NCBI taxonomy ID. Resolution is fully
   # deterministic: an explicit ppi_species_id always wins; otherwise the
   # documented org.*.eg.db package name is looked up in a curated map. If
@@ -2422,27 +2485,200 @@ run_heatmap_and_connectivity <- function(target_genes, tpm_mat_raw, meta_raw, lo
 #' @param jaspar_collection Character. JASPAR collection to query (e.g., \code{"CORE"}, \code{"CNE"}). Default: \code{"CORE"}.
 #' @param motif_max_bg Integer passed to \code{\link{.sample_gc_matched_background}}. Default \code{2000L}.
 #' @param motif_gc_bins Integer. Number of GC-content bins for background matching. Default \code{5L}. Increase for regions with highly skewed GC content (e.g., CpG islands).
+#' @param motif_n_perm Integer. Number of within-component label permutations
+#'   for empirical motif P-values. \code{0L} (default) retains Fisher exact
+#'   test; \code{-1L} enables automatic mode: \code{100} permutations when
+#'   anchors carry \code{cluster_id} metadata, otherwise \code{0}.
+#' @param peak_gr A \code{GRanges} object or a path to a narrowPeak/BED file
+#'   containing the TF's own ChIP peaks. When provided, anchors overlapping
+#'   peaks are re-analysed with scan windows centred on the peak midpoints
+#'   (results returned as \code{proximal_peak_overlap} / \code{distal_peak_overlap}),
+#'   and a peak-overlap QC table is returned as \code{$qc}. Default \code{NULL}
+#'   (no peak stratification; original behaviour).
 #' @return A named list containing motif enrichment results and plot objects.
 #' @keywords internal
 #' @noRd
+
+# Internal: Collect missing optional dependencies for a module.
+#
+# Unlike .require_pkg(), which checks one package at a time and stops or warns
+# on the first gap, this collects ALL missing dependencies at once so the
+# caller can emit a single aggregated, actionable message.
+.missing_module_dependencies <- function(pkgs) {
+  missing <- character()
+  for (pkg in pkgs) {
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+      missing <- c(missing, pkg)
+    }
+  }
+  missing
+}
+
+.missing_motif_dependencies <- function(genome_id) {
+  bs_pkg <- species_bsgenome_pkg(genome_id)
+  if (is.null(bs_pkg) || !requireNamespace(bs_pkg, quietly = TRUE)) {
+    label <- if (is.null(bs_pkg)) paste0("BSgenome data package for '", genome_id, "'")
+    else bs_pkg
+    c(label, .missing_module_dependencies(c("motifmatchr", "TFBSTools", "JASPAR2020")))
+  } else {
+    .missing_module_dependencies(c("motifmatchr", "TFBSTools", "JASPAR2020"))
+  }
+}
+
+.missing_ppi_dependencies <- function() {
+  .missing_module_dependencies(c("STRINGdb", "ggraph"))
+}
+
+# Load a TF ChIP peak set (narrowPeak/BED, 0-based) into GRanges.
+# Accepts either a GRanges object or a path. When a reference GRanges is
+# supplied, seqlevel styles are harmonised best-effort so overlaps are not
+# silently lost to "chr1" vs "1" naming mismatches.
+.load_motif_peak_gr <- function(peak_source, ref_gr = NULL) {
+  if (inherits(peak_source, "GRanges")) {
+    gr <- peak_source
+  } else if (is.character(peak_source) && length(peak_source) == 1L && nzchar(peak_source)) {
+    if (!file.exists(peak_source)) {
+      stop("Peak file not found: ", peak_source)
+    }
+    d <- tryCatch(
+      utils::read.table(peak_source, header = FALSE, sep = "\t",
+        comment.char = "#", stringsAsFactors = FALSE),
+      error = function(e) stop(
+        "Failed to read peak file ", peak_source, ": ", conditionMessage(e)
+      )
+    )
+    if (!is.data.frame(d) || ncol(d) < 3L || nrow(d) == 0L) {
+      stop(
+        "Peak file must contain at least three tab-separated columns ",
+        "(chr, start, end): ", peak_source
+      )
+    }
+    chr <- trimws(as.character(d[[1L]]))
+    start0 <- suppressWarnings(as.integer(d[[2L]]))
+    end0 <- suppressWarnings(as.integer(d[[3L]]))
+    invalid <- is.na(chr) | !nzchar(chr) | is.na(start0) | is.na(end0) |
+      start0 < 0L | end0 <= start0
+    if (any(invalid)) {
+      stop(
+        "Peak file contains ", sum(invalid), " malformed interval(s): ",
+        peak_source
+      )
+    }
+    gr <- GenomicRanges::GRanges(chr, IRanges::IRanges(start0 + 1L, end0))
+  } else {
+    stop("peak_gr must be a GRanges object or a path to a peak file.")
+  }
+  gr <- unique(gr)
+  if (length(gr) == 0L) {
+    stop("No valid peak intervals loaded.")
+  }
+  if (!is.null(ref_gr) && length(ref_gr) > 0L) {
+    tryCatch(
+      GenomeInfoDb::seqlevelsStyle(gr) <- GenomeInfoDb::seqlevelsStyle(ref_gr),
+      error = function(e) NULL
+    )
+  }
+  gr
+}
+
+# Window foreground anchors at the midpoint of overlapping TF peaks.
+# Loop anchors are large bins; the TF binds at the peak, so centering the
+# scan window on the peak midpoint (instead of the anchor midpoint) keeps
+# the actual binding-site sequence in the window. When several peaks
+# overlap one anchor, the peak with the largest overlap width is used
+# (ties resolved by peak order). Windows inherit the source anchor's
+# cluster_id so within-component permutation remains available.
+.make_peak_overlap_fg <- function(fg_gr, peak_gr) {
+  if (is.null(fg_gr) || is.null(peak_gr) || length(fg_gr) == 0L || length(peak_gr) == 0L) {
+    return(GenomicRanges::GRanges())
+  }
+  ov <- GenomicRanges::findOverlaps(fg_gr, peak_gr, ignore.strand = TRUE)
+  if (length(ov) == 0L) {
+    return(GenomicRanges::GRanges())
+  }
+  qh <- S4Vectors::queryHits(ov)
+  sh <- S4Vectors::subjectHits(ov)
+  ov_width <- GenomicRanges::width(GenomicRanges::pintersect(
+    fg_gr[qh], peak_gr[sh], ignore.strand = TRUE
+  ))
+  sel <- data.frame(qh = qh, sh = sh, w = ov_width)
+  sel <- sel[order(sel$qh, -sel$w, sel$sh), , drop = FALSE]
+  sel <- sel[!duplicated(sel$qh), , drop = FALSE]
+  mids <- GenomicRanges::resize(peak_gr[sel$sh], width = 1L, fix = "center")
+  win <- GenomicRanges::resize(mids, width = 500L, fix = "center")
+  cluster_ids <- S4Vectors::mcols(fg_gr)$cluster_id
+  if (!is.null(cluster_ids)) {
+    S4Vectors::mcols(win)$cluster_id <- cluster_ids[sel$qh]
+  }
+  unique(win)
+}
+
+# Foreground-vs-peak overlap QC for one anchor set.
+.motif_peak_qc <- function(fg_gr, peak_gr, set_label) {
+  if (is.null(fg_gr) || is.null(peak_gr)) {
+    return(NULL)
+  }
+  ov_fg <- GenomicRanges::findOverlaps(fg_gr, peak_gr, ignore.strand = TRUE)
+  ov_pk <- GenomicRanges::findOverlaps(peak_gr, fg_gr, ignore.strand = TRUE)
+  n_fg <- length(fg_gr)
+  data.frame(
+    Set = set_label,
+    N_FG_Anchors = n_fg,
+    N_FG_Overlap_Peaks = length(unique(S4Vectors::queryHits(ov_fg))),
+    FG_Overlap_Fraction = if (n_fg > 0L) {
+      length(unique(S4Vectors::queryHits(ov_fg))) / n_fg
+    } else {
+      NA_real_
+    },
+    N_Peaks_Total = length(peak_gr),
+    N_Peaks_Overlap_Anchors = length(unique(S4Vectors::queryHits(ov_pk))),
+    stringsAsFactors = FALSE
+  )
+}
+
+# Resolve the motif_n_perm "auto" sentinel (-1L). When anchors carry
+# cluster_id metadata, enable within-component permutation at the given
+# default count; otherwise retain Fisher-only inference.
+.resolve_motif_n_perm <- function(n_perm, motif_sets, auto_perm = 100L) {
+  n_perm <- suppressWarnings(as.integer(n_perm))
+  if (length(n_perm) != 1L || is.na(n_perm)) {
+    return(0L)
+  }
+  if (!identical(n_perm, -1L)) {
+    return(n_perm)
+  }
+  has_cluster_ids <- function(gr) {
+    ids <- S4Vectors::mcols(gr)$cluster_id
+    !is.null(ids) && any(!is.na(ids) & nzchar(as.character(ids)))
+  }
+  if (any(vapply(
+    motif_sets[c("proximal_fg", "distal_fg")],
+    has_cluster_ids, logical(1)
+  ))) {
+    as.integer(auto_perm)
+  } else {
+    0L
+  }
+}
 
 run_distal_motif_analysis <- function(
   target_genes, loop_df, genome_id, pval_thresh,
   current_proj_name, top_n = 5, jaspar_db = NULL,
   jaspar_collection = "CORE", motif_max_bg = 2000L, motif_gc_bins = 5L,
   motif_n_perm = 0L,
-  anchor_registry = NULL
+  anchor_registry = NULL,
+  peak_gr = NULL
 ) {
-  if (!requireNamespace("motifmatchr", quietly = TRUE) ||
-    !requireNamespace("TFBSTools", quietly = TRUE)) {
-    warning("Packages 'motifmatchr' and 'TFBSTools' are required for motif analysis. Skipping.", call. = FALSE)
+  missing <- .missing_motif_dependencies(genome_id)
+  if (length(missing) > 0) {
+    warning(
+      "Motif analysis requires ", paste(missing, collapse = ", "),
+      ". Install with BiocManager::install(c(",
+      paste(sprintf("'%s'", missing), collapse = ", "),
+      ")). Skipping motif analysis.",
+      call. = FALSE
+    )
     return(.empty_motif_output())
-  }
-  if (is.null(jaspar_db)) {
-    if (!.require_pkg("JASPAR2020", "motif analysis", "warn")) {
-      return(.empty_motif_output())
-    }
-    jaspar_db <- JASPAR2020::JASPAR2020
   }
   bs_pkg <- species_bsgenome_pkg(genome_id)
   if (is.null(bs_pkg)) stop("Unsupported genome: ", genome_id)
@@ -2459,6 +2695,43 @@ run_distal_motif_analysis <- function(
     return(.empty_motif_output())
   }
 
+  motif_n_perm <- .resolve_motif_n_perm(motif_n_perm, motif_sets)
+
+  # Optional TF ChIP peak stratification: anchors that overlap the factor's
+  # own peaks are re-analysed with windows centred on the peak midpoints.
+  # This avoids diluting the factor's motif signal across anchors that are
+  # not direct binding sites.
+  peak_gr_norm <- NULL
+  if (!is.null(peak_gr)) {
+    ref_gr <- if (has_proximal) motif_sets$proximal_fg else motif_sets$distal_fg
+    peak_gr_norm <- tryCatch(
+      .load_motif_peak_gr(peak_gr, ref_gr),
+      error = function(e) {
+        warning(
+          "Peak-overlap motif stratification disabled: ",
+          conditionMessage(e), call. = FALSE
+        )
+        NULL
+      }
+    )
+  }
+  motif_qc <- NULL
+  if (!is.null(peak_gr_norm)) {
+    qc_rows <- list()
+    if (has_proximal) {
+      qc_rows[[length(qc_rows) + 1L]] <- .motif_peak_qc(
+        motif_sets$proximal_fg, peak_gr_norm, "proximal"
+      )
+    }
+    if (has_distal) {
+      qc_rows[[length(qc_rows) + 1L]] <- .motif_peak_qc(
+        motif_sets$distal_fg, peak_gr_norm, "distal"
+      )
+    }
+    motif_qc <- do.call(rbind, qc_rows)
+    rownames(motif_qc) <- NULL
+  }
+
   plots_list <- list()
   result_tables <- list(proximal = NULL, distal = NULL)
   if (has_proximal) {
@@ -2472,6 +2745,27 @@ run_distal_motif_analysis <- function(
     plots_list$Proximal_Motif_Bar <- .plot_save_motif(res_prox, paste0(current_proj_name, "_Motif_Proximal"))
     plots_list$Proximal_Motif_Logos <- .plot_top_motif_logos(res_prox, top_n, jaspar_db)
     plots_list$Proximal_Motif_Rank <- .plot_motif_rank_scatter(res_prox, paste0(current_proj_name, "_Motif_Proximal"))
+
+    if (!is.null(peak_gr_norm)) {
+      prox_peak_fg <- .make_peak_overlap_fg(motif_sets$proximal_fg, peak_gr_norm)
+      if (length(prox_peak_fg) >= 5L) {
+        enrich_peak <- .calc_motif_enrichment(
+          prox_peak_fg, motif_sets$proximal_bg,
+          genome_obj, pval_thresh, species_id, jaspar_db, jaspar_collection,
+          max_bg = motif_max_bg, gc_bins = motif_gc_bins, n_perm = motif_n_perm
+        )
+        res_peak <- .annotate_motif_families(enrich_peak, jaspar_db, jaspar_collection)
+        result_tables$proximal_peak_overlap <- res_peak
+        plots_list$Proximal_Motif_PeakOverlap_Bar <- .plot_save_motif(res_peak, paste0(current_proj_name, "_Motif_Proximal_PeakOverlap"))
+        plots_list$Proximal_Motif_PeakOverlap_Logos <- .plot_top_motif_logos(res_peak, top_n, jaspar_db)
+        plots_list$Proximal_Motif_PeakOverlap_Rank <- .plot_motif_rank_scatter(res_peak, paste0(current_proj_name, "_Motif_Proximal_PeakOverlap"))
+      } else {
+        message(
+          "Motif peak-overlap (proximal): ", length(prox_peak_fg),
+          " anchors overlap peaks (minimum 5); enrichment skipped."
+        )
+      }
+    }
   }
 
   if (has_distal) {
@@ -2485,9 +2779,34 @@ run_distal_motif_analysis <- function(
     plots_list$Distal_Motif_Bar <- .plot_save_motif(res_dist, paste0(current_proj_name, "_Motif_Distal"))
     plots_list$Distal_Motif_Logos <- .plot_top_motif_logos(res_dist, top_n, jaspar_db)
     plots_list$Distal_Motif_Rank <- .plot_motif_rank_scatter(res_dist, paste0(current_proj_name, "_Motif_Distal"))
+
+    if (!is.null(peak_gr_norm)) {
+      dist_peak_fg <- .make_peak_overlap_fg(motif_sets$distal_fg, peak_gr_norm)
+      if (length(dist_peak_fg) >= 5L) {
+        enrich_peak <- .calc_motif_enrichment(
+          dist_peak_fg, motif_sets$distal_bg,
+          genome_obj, pval_thresh, species_id, jaspar_db, jaspar_collection,
+          max_bg = motif_max_bg, gc_bins = motif_gc_bins, n_perm = motif_n_perm
+        )
+        res_peak <- .annotate_motif_families(enrich_peak, jaspar_db, jaspar_collection)
+        result_tables$distal_peak_overlap <- res_peak
+        plots_list$Distal_Motif_PeakOverlap_Bar <- .plot_save_motif(res_peak, paste0(current_proj_name, "_Motif_Distal_PeakOverlap"))
+        plots_list$Distal_Motif_PeakOverlap_Logos <- .plot_top_motif_logos(res_peak, top_n, jaspar_db)
+        plots_list$Distal_Motif_PeakOverlap_Rank <- .plot_motif_rank_scatter(res_peak, paste0(current_proj_name, "_Motif_Distal_PeakOverlap"))
+      } else {
+        message(
+          "Motif peak-overlap (distal): ", length(dist_peak_fg),
+          " anchors overlap peaks (minimum 5); enrichment skipped."
+        )
+      }
+    }
   }
 
-  return(list(results = result_tables, plots = plots_list))
+  out <- list(results = result_tables, plots = plots_list)
+  if (!is.null(peak_gr_norm)) {
+    out$qc <- motif_qc
+  }
+  return(out)
 }
 
 #' @title Plot Motif Rank Scatter
@@ -2499,10 +2818,17 @@ run_distal_motif_analysis <- function(
     return(NULL)
   }
   if (!"Family" %in% colnames(res_df)) res_df$Family <- "Unknown"
+  if (!"Log2OddsRatio" %in% colnames(res_df)) {
+    res_df$Log2OddsRatio <- if ("OddsRatio" %in% colnames(res_df)) {
+      log2(as.numeric(res_df$OddsRatio))
+    } else {
+      rep(NA_real_, nrow(res_df))
+    }
+  }
 
   plot_df <- res_df %>%
-    dplyr::mutate(FDR = ifelse(is.na(FDR), 1, FDR), LogFDR = -log10(FDR + 1e-300), Is_Sig = FDR < fdr_thresh, OddsRatio = pmax(0.8, pmin(1.6, as.numeric(OddsRatio)))) %>%
-    dplyr::arrange(dplyr::desc(LogFDR)) %>%
+    dplyr::mutate(FDR = ifelse(is.na(FDR), 1, FDR), LogFDR = -log10(FDR + 1e-300), Is_Sig = FDR < fdr_thresh, Log2OR = ifelse(is.na(Log2OddsRatio), 0, pmax(-1.5, pmin(1.5, as.numeric(Log2OddsRatio)))), SizeVal = ifelse(Is_Sig, abs(Log2OR), 0)) %>%
+    dplyr::arrange(dplyr::desc(LogFDR), dplyr::desc(abs(Log2OR))) %>%
     dplyr::mutate(Rank = dplyr::row_number())
 
   if (sum(plot_df$Is_Sig, na.rm = TRUE) == 0) {
@@ -2517,10 +2843,10 @@ run_distal_motif_analysis <- function(
   color_map["Others"] <- "black"
   color_map["Not Significant"] <- "grey85"
 
-  return(ggplot2::ggplot(plot_df, ggplot2::aes(x = Rank, y = LogFDR, size = OddsRatio, color = PlotFamily)) +
+  return(ggplot2::ggplot(plot_df, ggplot2::aes(x = Rank, y = LogFDR, size = SizeVal, color = PlotFamily)) +
     ggplot2::geom_point(alpha = 0.8) +
     ggplot2::scale_color_manual(values = color_map, name = "TF Family (Top 10)") +
-    ggplot2::scale_radius(name = "Odds Ratio", range = c(1, 7), breaks = c(0.8, 1.0, 1.2, 1.4, 1.6)) +
+    ggplot2::scale_radius(name = "|log2(OR)|", range = c(1, 7), breaks = c(0.25, 0.5, 1, 1.5), limits = c(0, 1.5)) +
     ggplot2::geom_hline(yintercept = -log10(fdr_thresh), linetype = "dashed", color = "black", alpha = 0.5) +
     ggplot2::labs(title = paste0("Motif Enrichment Rank: ", basename(prefix)), x = "Rank", y = "-log10(FDR)") +
     ggplot2::theme_classic() +
@@ -2572,13 +2898,18 @@ run_distal_motif_analysis <- function(
     return(NULL)
   }
 
-  # --- Motif scanning (run once, shared by observed + all permutations) ---
-  fg_counts <- colSums(as.matrix(motifmatchr::motifMatches(motifmatchr::matchMotifs(pfm_list, fg_seq, out = "matches", p.cutoff = pval_thresh))))
-  bg_counts <- colSums(as.matrix(motifmatchr::motifMatches(motifmatchr::matchMotifs(pfm_list, bg_seq, out = "matches", p.cutoff = pval_thresh))))
+  # --- Motif scanning (computed once; matrices shared by observed counts
+  #     and, when requested, by within-component label permutations) ---
+  fg_mat <- as.matrix(motifmatchr::motifMatches(motifmatchr::matchMotifs(pfm_list, fg_seq, out = "matches", p.cutoff = pval_thresh)))
+  bg_mat <- as.matrix(motifmatchr::motifMatches(motifmatchr::matchMotifs(pfm_list, bg_seq, out = "matches", p.cutoff = pval_thresh)))
+  fg_counts <- colSums(fg_mat)
+  bg_counts <- colSums(bg_mat)
   all_motif_ids <- union(names(fg_counts), names(bg_counts))
 
   # --- Observed enrichment (Fisher test) ---
   .motif_log_or <- function(a, b, n_fg, n_bg) {
+    # Natural logarithm: LogOddsRatio = ln(OR). Log2OddsRatio is derived
+    # separately for genomics-style log2 reporting.
     log(((a + 0.5) * (n_bg - b + 0.5)) /
       ((n_fg - a + 0.5) * (b + 0.5)))
   }
@@ -2591,6 +2922,7 @@ run_distal_motif_analysis <- function(
       Pvalue = pval,
       OddsRatio = exp(log_or),
       LogOddsRatio = log_or,
+      Log2OddsRatio = log_or / log(2),
       FG_Hits = fg_hits, FG_Total = n_fg,
       BG_Hits = bg_hits, BG_Total = n_bg,
       stringsAsFactors = FALSE
@@ -2619,7 +2951,7 @@ run_distal_motif_analysis <- function(
   # labels within each component, keeping the component structure intact.
   has_clusters <- FALSE
   permutation_ran <- FALSE
-  if (n_perm > 0L) {
+  if (isTRUE(n_perm > 0L)) {
     fg_cluster <- S4Vectors::mcols(fg_gr)$cluster_id
     bg_cluster <- S4Vectors::mcols(bg_gr)$cluster_id
     has_clusters <- !is.null(fg_cluster) && !is.null(bg_cluster) &&
@@ -2631,12 +2963,6 @@ run_distal_motif_analysis <- function(
       bg_labels <- rep(FALSE, n_bg)
       all_labels <- c(fg_labels, bg_labels)
       all_clusters <- c(fg_cluster, bg_cluster)
-      fg_mat <- as.matrix(motifmatchr::motifMatches(
-        motifmatchr::matchMotifs(pfm_list, fg_seq, out = "matches", p.cutoff = pval_thresh)
-      ))
-      bg_mat <- as.matrix(motifmatchr::motifMatches(
-        motifmatchr::matchMotifs(pfm_list, bg_seq, out = "matches", p.cutoff = pval_thresh)
-      ))
       motif_ids <- all_motif_ids
       all_mat <- rbind(
         fg_mat[, motif_ids, drop = FALSE],
@@ -2714,10 +3040,31 @@ run_distal_motif_analysis <- function(
   if (.is_null_or_empty(res_df)) {
     return(NULL)
   }
+  if (!"Log2OddsRatio" %in% colnames(res_df)) {
+    res_df$Log2OddsRatio <- if ("OddsRatio" %in% colnames(res_df)) {
+      log2(as.numeric(res_df$OddsRatio))
+    } else {
+      rep(NA_real_, nrow(res_df))
+    }
+  }
   top_df <- head(res_df, 15)
+  top_df$FDR_safe <- pmax(ifelse(is.na(top_df$FDR), 1, as.numeric(top_df$FDR)), 1e-300)
   top_df$MotifLabel <- factor(paste0(top_df$MotifName, " (", top_df$MotifID, ")"), levels = rev(paste0(top_df$MotifName, " (", top_df$MotifID, ")")))
-  return(ggplot2::ggplot(top_df, ggplot2::aes(x = -log10(.data$FDR), y = MotifLabel)) +
-    ggplot2::geom_col(fill = "#E7298A", width = 0.7) +
+  top_df$Log2OR <- as.numeric(top_df$Log2OddsRatio)
+  return(ggplot2::ggplot(top_df, ggplot2::aes(x = -log10(.data$FDR_safe), y = MotifLabel, fill = .data$Log2OR)) +
+    ggplot2::geom_col(width = 0.7) +
+    ggplot2::scale_fill_gradient2(
+      low = "#2166AC", mid = "grey90", high = "#B2182B",
+      midpoint = 0, name = "log2(OR)"
+    ) +
+  # x = -log10(FDR) is non-negative by construction; keep the default
+  # padding only on the positive side so the axis never dips below 0
+  # (the default 5% two-sided expansion would otherwise add negative
+  # coordinates, symmetric ones when all bars have FDR = 1).
+  # Linear axis: no sqrt compression of the x-axis.
+  ggplot2::scale_x_continuous(
+    expand = ggplot2::expansion(mult = c(0, 0.05))
+  ) +
     ggplot2::labs(title = paste0("Motif Enrichment: ", basename(prefix)), x = "-log10(FDR)", y = NULL) +
     ggplot2::theme_classic())
 }
@@ -2784,7 +3131,8 @@ run_distal_motif_analysis <- function(
   }
   meta_df <- do.call(rbind, lapply(TFBSTools::getMatrixSet(jaspar_db, list(collection = jaspar_collection)), function(x) data.frame(MotifID = TFBSTools::ID(x), Family = paste(if (is.null(TFBSTools::tags(x)$family)) "Unknown" else TFBSTools::tags(x)$family, collapse = "; "), stringsAsFactors = FALSE)))
   res_df <- merge(res_df[, !colnames(res_df) %in% c("Family", "Class")], meta_df, by = "MotifID", all.x = TRUE)
-  return(res_df[order(res_df$FDR), c(c("MotifID", "MotifName", "Family", "Pvalue", "FDR", "OddsRatio", "FG_Hits", "FG_Total", "BG_Hits", "BG_Total"), setdiff(colnames(res_df), c("MotifID", "MotifName", "Family", "Pvalue", "FDR", "OddsRatio", "FG_Hits", "FG_Total", "BG_Hits", "BG_Total")))])
+  head_cols <- c("MotifID", "MotifName", "Family", "Pvalue", "FDR", "OddsRatio", "LogOddsRatio", "Log2OddsRatio", "FG_Hits", "FG_Total", "BG_Hits", "BG_Total")
+  return(res_df[order(res_df$FDR), c(head_cols, setdiff(colnames(res_df), head_cols))])
 }
 
 
@@ -2853,7 +3201,13 @@ run_distal_motif_analysis <- function(
 #' @param motif_ntop Numeric. Number of top motifs to display. Default \code{5}.
 #' @param motif_n_perm Integer. Number of within-component label permutations
 #'   for empirical motif P-value estimation. Passed to
-#'   \code{\link{profile_target_genes}}. Default \code{0} (Fisher exact test).
+#'   \code{\link{profile_target_genes}}. Default \code{0} (Fisher exact test);
+#'   \code{-1} enables automatic mode (100 permutations when anchors carry
+#'   \code{cluster_id} metadata).
+#' @param motif_peak_file Character or \code{NULL}. Optional path to a
+#'   narrowPeak/BED file containing the TF's own ChIP peaks. Passed to
+#'   \code{\link{profile_target_genes}} for peak-overlap motif stratification.
+#'   Default \code{NULL} (no stratification; original behaviour).
 #' @param ppi_score Numeric. Minimum STRING combined score. Default \code{400}.
 #' @param ppi_nSample Numeric. Maximum genes to include in PPI. Default \code{400}.
 #' @param heatmap_nSample Numeric. Maximum genes in expression heatmap. Default \code{99999}.
@@ -2921,6 +3275,7 @@ looplook_report <- function(
   motif_p_thresh = 1e-4,
   motif_ntop = 5,
   motif_n_perm = 0L,
+  motif_peak_file = NULL,
   ppi_score = 400,
   ppi_nSample = 400,
   heatmap_nSample = 99999,
@@ -3014,6 +3369,7 @@ looplook_report <- function(
       motif_p_thresh = motif_p_thresh,
       motif_ntop = motif_ntop,
       motif_n_perm = motif_n_perm,
+      motif_peak_file = motif_peak_file,
       ppi_score = ppi_score,
       ppi_nSample = ppi_nSample,
       heatmap_nSample = heatmap_nSample,

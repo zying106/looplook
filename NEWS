@@ -8,6 +8,21 @@ Changes in version 0.99.19 (2026-08-13)
   roughly halved locally; assertion coverage is unchanged (~77.7%).
 * `draw_karyo_heatmap_internal()` gains `dev_width`/`dev_height` parameters
   for output image sizing.
+* Motif analysis: optional TF ChIP peak stratification. `profile_target_genes()`
+  gains `motif_peak_file` (and `run_distal_motif_analysis()` gains `peak_gr`)
+  so anchors overlapping the factor's own peaks are re-analysed with scan
+  windows centred on peak midpoints (results: `proximal_peak_overlap` /
+  `distal_peak_overlap` + `qc` table). Peak loading is fail-soft and the
+  default `NULL` preserves the previous behaviour and output schema.
+* Motif results now include `Log2OddsRatio`; `LogOddsRatio` remains the
+  natural-log odds ratio. Motif bar and rank plots display effect size
+  (log2 OR) instead of FDR alone.
+* `motif_n_perm` gains an automatic mode (`-1L`): 100 within-component
+  label permutations when anchors carry `cluster_id` metadata, otherwise
+  Fisher-only. Motif match matrices are now computed once and reused by
+  the permutation step.
+* `looplook_report()` exposes the new `motif_peak_file` argument
+  (forwarded through the report template to `profile_target_genes()`).
 
 Changes in version 0.99.18 (2026-08-12)
 ---------------------------------------
