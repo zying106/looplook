@@ -139,6 +139,7 @@ protein-protein interaction (PPI) network construction.</p>
 <span>  motif_p_thresh <span class="op">=</span> <span class="fl">1e-04</span>,</span>
 <span>  motif_ntop <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  motif_n_perm <span class="op">=</span> <span class="fl">0L</span>,</span>
+<span>  motif_peak_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  run_go <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  run_ppi <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  ppi_score <span class="op">=</span> <span class="fl">400</span>,</span>
@@ -248,10 +249,24 @@ Default <code>5</code>.</p></dd>
 label permutations for empirical motif P-value estimation. When positive,
 labels are shuffled within each loop component to partially account for
 anchor non-independence. <code>0</code> (default) retains Fisher exact test.
+<code>-1</code> enables automatic mode: <code>100</code> permutations when anchors
+carry <code>cluster_id</code> metadata, otherwise <code>0</code>.
 Use <code>10-100</code> for testing. For inference, choose according to the
 number of motifs and desired P-value resolution; <code>1000</code> may be
 insufficient after multiple-testing correction across a full motif library.
 This is an exploratory calibration, not a fully component-level model.</p></dd>
+
+
+<dt id="arg-motif-peak-file">motif_peak_file<a class="anchor" aria-label="anchor" href="#arg-motif-peak-file"></a></dt>
+<dd><p>Character or <code>NULL</code>. Optional path to a
+narrowPeak/BED file containing the TF's own ChIP peaks. When provided,
+motif analysis additionally stratifies loop anchors by peak overlap and
+re-analyses overlapping anchors with scan windows centred on the peak
+midpoints (results stored as <code>proximal_peak_overlap</code> /
+<code>distal_peak_overlap</code>, with a <code>qc</code> table). Anchors are loop
+bins, not binding sites; peak stratification avoids diluting the TF's
+own motif signal across non-bound anchors. Default <code>NULL</code>
+(no stratification; original behaviour).</p></dd>
 
 
 <dt id="arg-run-go">run_go<a class="anchor" aria-label="anchor" href="#arg-run-go"></a></dt>
@@ -336,7 +351,7 @@ Each element contains:</p><dl><dt><code>go_results</code></dt>
 <dd><p>Named list of data frames (one per gene set) containing GO enrichment results (if <code>run_go = TRUE</code>).</p></dd>
 
 <dt><code>motif_results</code></dt>
-<dd><p>Named list of motif enrichment result tables, indexed by analysis task. Each task contains <code>proximal</code> and <code>distal</code> data frames when available (if <code>run_motif = TRUE</code>).</p></dd>
+<dd><p>Named list of motif enrichment result tables, indexed by analysis task. Each task contains <code>proximal</code> and <code>distal</code> data frames when available (if <code>run_motif = TRUE</code>). When <code>motif_peak_file</code> is supplied, <code>proximal_peak_overlap</code> / <code>distal_peak_overlap</code> tables and a <code>qc</code> table are added.</p></dd>
 
 <dt><code>target_gene_sets</code></dt>
 <dd><p>Named list of character vectors containing target gene symbols.</p></dd>

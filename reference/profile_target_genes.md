@@ -29,6 +29,7 @@ profile_target_genes(
   motif_p_thresh = 1e-04,
   motif_ntop = 5,
   motif_n_perm = 0L,
+  motif_peak_file = NULL,
   run_go = FALSE,
   run_ppi = FALSE,
   ppi_score = 400,
@@ -135,11 +136,23 @@ profile_target_genes(
   permutations for empirical motif P-value estimation. When positive,
   labels are shuffled within each loop component to partially account
   for anchor non-independence. `0` (default) retains Fisher exact test.
-  Use `10-100` for testing. For inference, choose according to the
-  number of motifs and desired P-value resolution; `1000` may be
-  insufficient after multiple-testing correction across a full motif
-  library. This is an exploratory calibration, not a fully
-  component-level model.
+  `-1` enables automatic mode: `100` permutations when anchors carry
+  `cluster_id` metadata, otherwise `0`. Use `10-100` for testing. For
+  inference, choose according to the number of motifs and desired
+  P-value resolution; `1000` may be insufficient after multiple-testing
+  correction across a full motif library. This is an exploratory
+  calibration, not a fully component-level model.
+
+- motif_peak_file:
+
+  Character or `NULL`. Optional path to a narrowPeak/BED file containing
+  the TF's own ChIP peaks. When provided, motif analysis additionally
+  stratifies loop anchors by peak overlap and re-analyses overlapping
+  anchors with scan windows centred on the peak midpoints (results
+  stored as `proximal_peak_overlap` / `distal_peak_overlap`, with a `qc`
+  table). Anchors are loop bins, not binding sites; peak stratification
+  avoids diluting the TF's own motif signal across non-bound anchors.
+  Default `NULL` (no stratification; original behaviour).
 
 - run_go:
 
@@ -226,7 +239,9 @@ An invisible nested list indexed by `target_source` (e.g., `"targets"`,
 
   Named list of motif enrichment result tables, indexed by analysis
   task. Each task contains `proximal` and `distal` data frames when
-  available (if `run_motif = TRUE`).
+  available (if `run_motif = TRUE`). When `motif_peak_file` is supplied,
+  `proximal_peak_overlap` / `distal_peak_overlap` tables and a `qc`
+  table are added.
 
 - `target_gene_sets`:
 

@@ -142,6 +142,7 @@ interpretation-ready HTML document suitable for sharing with collaborators.</p>
 <span>  motif_p_thresh <span class="op">=</span> <span class="fl">1e-04</span>,</span>
 <span>  motif_ntop <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  motif_n_perm <span class="op">=</span> <span class="fl">0L</span>,</span>
+<span>  motif_peak_file <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ppi_score <span class="op">=</span> <span class="fl">400</span>,</span>
 <span>  ppi_nSample <span class="op">=</span> <span class="fl">400</span>,</span>
 <span>  heatmap_nSample <span class="op">=</span> <span class="fl">99999</span>,</span>
@@ -280,7 +281,16 @@ Default <code>FALSE</code>.</p></dd>
 <dt id="arg-motif-n-perm">motif_n_perm<a class="anchor" aria-label="anchor" href="#arg-motif-n-perm"></a></dt>
 <dd><p>Integer. Number of within-component label permutations
 for empirical motif P-value estimation. Passed to
-<code><a href="profile_target_genes.html">profile_target_genes</a></code>. Default <code>0</code> (Fisher exact test).</p></dd>
+<code><a href="profile_target_genes.html">profile_target_genes</a></code>. Default <code>0</code> (Fisher exact test);
+<code>-1</code> enables automatic mode (100 permutations when anchors carry
+<code>cluster_id</code> metadata).</p></dd>
+
+
+<dt id="arg-motif-peak-file">motif_peak_file<a class="anchor" aria-label="anchor" href="#arg-motif-peak-file"></a></dt>
+<dd><p>Character or <code>NULL</code>. Optional path to a
+narrowPeak/BED file containing the TF's own ChIP peaks. Passed to
+<code><a href="profile_target_genes.html">profile_target_genes</a></code> for peak-overlap motif stratification.
+Default <code>NULL</code> (no stratification; original behaviour).</p></dd>
 
 
 <dt id="arg-ppi-score">ppi_score<a class="anchor" aria-label="anchor" href="#arg-ppi-score"></a></dt>

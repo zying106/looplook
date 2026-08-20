@@ -36,6 +36,7 @@ looplook_report(
   motif_p_thresh = 1e-04,
   motif_ntop = 5,
   motif_n_perm = 0L,
+  motif_peak_file = NULL,
   ppi_score = 400,
   ppi_nSample = 400,
   heatmap_nSample = 99999,
@@ -184,7 +185,16 @@ looplook_report(
   Integer. Number of within-component label permutations for empirical
   motif P-value estimation. Passed to
   [`profile_target_genes`](https://zying106.github.io/looplook/reference/profile_target_genes.md).
-  Default `0` (Fisher exact test).
+  Default `0` (Fisher exact test); `-1` enables automatic mode (100
+  permutations when anchors carry `cluster_id` metadata).
+
+- motif_peak_file:
+
+  Character or `NULL`. Optional path to a narrowPeak/BED file containing
+  the TF's own ChIP peaks. Passed to
+  [`profile_target_genes`](https://zying106.github.io/looplook/reference/profile_target_genes.md)
+  for peak-overlap motif stratification. Default `NULL` (no
+  stratification; original behaviour).
 
 - ppi_score:
 
