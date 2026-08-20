@@ -2826,10 +2826,14 @@ run_distal_motif_analysis <- function(
     }
   }
 
-  plot_df <- res_df %>%
-    dplyr::mutate(FDR = ifelse(is.na(FDR), 1, FDR), LogFDR = -log10(FDR + 1e-300), Is_Sig = FDR < fdr_thresh, Log2OR = ifelse(is.na(Log2OddsRatio), 0, pmax(-1.5, pmin(1.5, as.numeric(Log2OddsRatio)))), SizeVal = ifelse(Is_Sig, abs(Log2OR), 0)) %>%
-    dplyr::arrange(dplyr::desc(LogFDR), dplyr::desc(abs(Log2OR))) %>%
-    dplyr::mutate(Rank = dplyr::row_number())
+  plot_df <- res_df
+  plot_df$FDR <- ifelse(is.na(plot_df$FDR), 1, plot_df$FDR)
+  plot_df$LogFDR <- -log10(plot_df$FDR + 1e-300)
+  plot_df$Is_Sig <- plot_df$FDR < fdr_thresh
+  plot_df$Log2OR <- ifelse(is.na(plot_df$Log2OddsRatio), 0, pmax(-1.5, pmin(1.5, as.numeric(plot_df$Log2OddsRatio))))
+  plot_df$SizeVal <- ifelse(plot_df$Is_Sig, abs(plot_df$Log2OR), 0)
+  plot_df <- plot_df[order(-plot_df$LogFDR, -abs(plot_df$Log2OR)), , drop = FALSE]
+  plot_df$Rank <- seq_len(nrow(plot_df))
 
   if (sum(plot_df$Is_Sig, na.rm = TRUE) == 0) {
     plot_df$PlotFamily <- "Not Significant"
@@ -2843,7 +2847,7 @@ run_distal_motif_analysis <- function(
   color_map["Others"] <- "black"
   color_map["Not Significant"] <- "grey85"
 
-  return(ggplot2::ggplot(plot_df, ggplot2::aes(x = Rank, y = LogFDR, size = SizeVal, color = PlotFamily)) +
+  return(ggplot2::ggplot(plot_df, ggplot2::aes(x = Rank, y = LogFDR, size = .data$SizeVal, color = PlotFamily)) +
     ggplot2::geom_point(alpha = 0.8) +
     ggplot2::scale_color_manual(values = color_map, name = "TF Family (Top 10)") +
     ggplot2::scale_radius(name = "|log2(OR)|", range = c(1, 7), breaks = c(0.25, 0.5, 1, 1.5), limits = c(0, 1.5)) +

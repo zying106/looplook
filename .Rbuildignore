@@ -53,3 +53,8 @@
 ^results/
 ^lib/
 ^CITATION\.cff$
+^bioc_slack_question\.md$
+^looplook_checktime_compression_plan\.md$
+^tests\.zip$
+^tests_latest_review_and_v2_optimization\.md$
+^tests_runtime_compression_review\.md$
