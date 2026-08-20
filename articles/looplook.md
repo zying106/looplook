@@ -2426,7 +2426,7 @@ sessionInfo()
 #>  [82] fields_17.3                             
 #>  [83] nlme_3.1-169                            
 #>  [84] ggtree_4.2.0                            
-#>  [85] bit64_4.8.2                             
+#>  [85] bit64_4.8.4                             
 #>  [86] fontquiver_0.2.1                        
 #>  [87] GenomeInfoDb_1.48.0                     
 #>  [88] bslib_0.12.0                            
